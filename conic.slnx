@@ -1,0 +1,6 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Conic/Conic.csproj" />
+    <Project Path="src/Conic.Vout/Conic.Vout.csproj" />
+  </Folder>
+</Solution>

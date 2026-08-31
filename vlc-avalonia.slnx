@@ -1,0 +1,6 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/VLCAvalonia/VLCAvalonia.csproj" />
+    <Project Path="src/VLCAvalonia.Vout/VLCAvalonia.Vout.csproj" />
+  </Folder>
+</Solution>

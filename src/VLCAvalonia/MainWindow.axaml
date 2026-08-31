@@ -1,0 +1,50 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:VLCAvalonia.Controls"
+        xmlns:app="clr-namespace:VLCAvalonia"
+        mc:Ignorable="d" d:DesignWidth="1280" d:DesignHeight="720"
+        x:Class="VLCAvalonia.MainWindow"
+        x:DataType="app:MainWindow"
+        Title="VLC Avalonia"
+        Background="#1a1a1a"
+        WindowState="Maximized">
+
+    <Grid RowDefinitions="*,Auto">
+        <Grid x:Name="VideoArea" Grid.Row="0" Background="Black">
+            <local:CompositionVideoSurface x:Name="VideoSurface" MediaPath="{Binding MediaPath}" />
+
+            <!-- Overlay controls - proves composition -->
+            <Border VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,20,0,0"
+                    Background="#80000000" CornerRadius="8" Padding="20,10"
+                    PointerPressed="OnOverlayPressed">
+                <TextBlock Text="AVALONIA OVERLAY ON VIDEO"
+                           Foreground="White" FontSize="24" FontWeight="Bold" />
+            </Border>
+
+            <Border VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,0,0,20"
+                    Background="#80000000" CornerRadius="8" Padding="10,5">
+                <StackPanel Orientation="Horizontal" Spacing="20">
+                    <Button Content="⏮" FontSize="20" Click="OnPrevClick" Background="Transparent" Foreground="White" />
+                    <Button Content="⏯" FontSize="20" Click="OnPlayPauseClick" Background="Transparent" Foreground="White" />
+                    <Button Content="⏭" FontSize="20" Click="OnNextClick" Background="Transparent" Foreground="White" />
+                    <Slider x:Name="PositionSlider" Width="300" Minimum="0" Maximum="1"
+                            Foreground="White" Background="#44FFFFFF" />
+                    <TextBlock x:Name="TimeText" Text="00:00 / 00:00" Foreground="White" VerticalAlignment="Center" FontSize="14" />
+                    <Slider x:Name="VolumeSlider" Width="100" Minimum="0" Maximum="100" Value="50"
+                            Foreground="White" Background="#44FFFFFF" ValueChanged="OnVolumeChanged" />
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <Border Grid.Row="1" Background="#2a2a2a" Padding="10" BorderBrush="#444" BorderThickness="0,1,0,0">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+                <Button Content="Open File" Click="OnOpenFileClick" Background="#3a3a3a" Foreground="White" Padding="15,5" />
+                <Button Content="Test Pattern" Click="OnTestPatternClick" Background="#3a3a3a" Foreground="White" Padding="15,5" />
+                <CheckBox x:Name="TopMostCheck" Content="Always on Top" Foreground="White" VerticalAlignment="Center" IsCheckedChanged="OnTopMostChanged" />
+                <TextBlock x:Name="StatusText" Text="Ready" Foreground="#aaa" VerticalAlignment="Center" Margin="20,0,0,0" />
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>

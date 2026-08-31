@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">win-x64</RuntimeIdentifier>
+    <PublishAot>true</PublishAot>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <AssemblyName>libvlc_avalonia_plugin</AssemblyName>
+    <RootNamespace>VLCAvalonia.Vout</RootNamespace>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>link</TrimMode>
+    <StripSymbols>true</StripSymbols>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="TerraFX.Interop.Windows" Version="10.0.20348-beta1" />
+    <ProjectReference Include="..\..\..\vlclr\src\VLCLR\VLCLR.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(RuntimeIdentifier)' == 'win-x64'">
+    <DirectPInvoke Include="libvlccore" />
+    <NativeLibrary Include="..\..\..\vlclr\lib\libvlccore.lib" />
+  </ItemGroup>
+
+</Project>

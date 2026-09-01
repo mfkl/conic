@@ -289,7 +289,7 @@ public partial class MainWindow : Window
     private void ValidateSettingsLayout(double width, bool compact)
     {
         Control navigation = compact ? CompactSettingsPages : SettingsPages;
-        Control[] required = [SettingsPanel, SettingsSearch, navigation, SettingsContent, SettingsResetRow];
+        Control[] required = [SettingsPanel, SettingsSearch, navigation, SettingsContent, SettingsResetRow, SettingsBadge, OpenSettingsButton];
         bool contained = required.All(control => control.Bounds.Width > 0 && control.Bounds.Height > 0 &&
             control.TranslatePoint(default, this) is Point origin && origin.X >= 0 && origin.Y >= 0 &&
             origin.X + control.Bounds.Width <= ClientSize.Width && origin.Y + control.Bounds.Height <= ClientSize.Height);

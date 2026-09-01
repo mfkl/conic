@@ -64,8 +64,7 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
         _diagnostic = diagnostic;
         if (_settings is not null) _settings.Changed += (_, updated) =>
         {
-            if (!updated.RememberRecentMedia) _history?.ClearRecent();
-            if (!updated.RememberResumeHistory) _history?.ClearResume();
+            TryHistory(() => { if (!updated.RememberRecentMedia) _history?.ClearRecent(); if (!updated.RememberResumeHistory) _history?.ClearResume(); });
             OnPropertyChanged(nameof(SkipBackwardLabel)); OnPropertyChanged(nameof(SkipForwardLabel)); OnPropertyChanged(nameof(RecentItems));
         };
         PlayerCommandRegistry registry = new();
@@ -190,7 +189,7 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
     public void ApplyEngineState(MediaEngineState state)
     {
         _lastObservedGeneration = Math.Max(_lastObservedGeneration, state.Generation);
-        if (_currentSource is not null && state.Source is not null && !string.Equals(state.Source, _currentSource.CanonicalSource, StringComparison.Ordinal))
+        if (_currentSource is not null && (state.Source is null || !string.Equals(MediaHistoryService.KeyFromCanonicalSource(state.Source), MediaHistoryService.KeyFromCanonicalSource(_currentSource.CanonicalSource), StringComparison.Ordinal)))
             return;
         if (_currentSource is not null && state.Generation <= _generationFloor) return;
         if (_activeGeneration < 0 && _currentSource is not null) _activeGeneration = state.Generation;
@@ -217,7 +216,7 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
             IsPlaying = state.Status == PlaybackStatus.Playing;
             if (_currentSource is not null && state.Generation > 0 && state.Generation != _recordedOpenGeneration && state.Status is PlaybackStatus.Playing or PlaybackStatus.Paused)
             {
-                _history?.RecordOpened(_currentSource, _settings?.Current.RememberRecentMedia ?? true);
+                TryHistory(() => _history?.RecordOpened(_currentSource, _settings?.Current.RememberRecentMedia ?? true));
                 _recordedOpenGeneration = state.Generation;
                 if (_pendingResume is not null && state.Generation == _activeGeneration && state.CanSeek && state.Duration > TimeSpan.Zero)
                 { _resumeReady = true; OnPropertyChanged(nameof(HasPendingResume)); (AcceptResumeCommand as RegistryCommand)?.RaiseCanExecuteChanged(); (DeclineResumeCommand as RegistryCommand)?.RaiseCanExecuteChanged(); }
@@ -249,9 +248,7 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
         CheckpointCurrent(true);
         _currentSource = result.Source;
         _generationFloor = _lastObservedGeneration; _activeGeneration = -1; _resumeReady = false; _lastState = null; _recordedOpenGeneration = -1;
-        _pendingResume = (_settings?.Current.ResumePlayback ?? true) && (_settings?.Current.RememberResumeHistory ?? true) ? _history?.FindResume(_currentSource) : null;
-        if (_pendingResume is { } candidate && (candidate.Position < TimeSpan.FromSeconds(_settings?.Current.ResumeMinimumElapsedSeconds ?? 30) || candidate.Duration - candidate.Position <= TimeSpan.FromSeconds(_settings?.Current.ResumeMaximumRemainingSeconds ?? 30)))
-        { _history?.RemoveResume(candidate.Source); _pendingResume = null; }
+        _pendingResume = (_settings?.Current.ResumePlayback ?? true) && (_settings?.Current.RememberResumeHistory ?? true) ? TryFindResume(_currentSource) : null;
         OnPropertyChanged(nameof(HasPendingResume)); OnPropertyChanged(nameof(PendingResumeText));
         OpenError = string.Empty;
         try { _transport.Open(_currentSource.CanonicalSource); }
@@ -282,6 +279,16 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
     {
         if (_pendingResume is { } resume) _history?.RemoveResume(resume.Source);
         _pendingResume = null; _resumeReady = false; OnPropertyChanged(nameof(HasPendingResume));
+    }
+
+    private ResumeEntry? TryFindResume(MediaSource source)
+    {
+        ResumeEntry? result = null; TryHistory(() => result = _history?.FindEligibleResume(source, _settings?.Current.ResumeMinimumElapsedSeconds ?? 30, _settings?.Current.ResumeMaximumRemainingSeconds ?? 30)); return result;
+    }
+    private void TryHistory(Action action)
+    {
+        try { action(); HistoryError = null; OnPropertyChanged(nameof(HistoryError)); }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { HistoryError = "Media history could not be saved."; OnPropertyChanged(nameof(HistoryError)); _diagnostic?.Invoke(e.ToString()); }
     }
 
     private static double ToDouble(object? parameter) => parameter switch

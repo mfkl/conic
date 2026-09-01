@@ -96,7 +96,7 @@ public sealed class MediaHistoryService(IMediaHistoryStorage storage, Func<DateT
         string? raw;
         try { raw = storage.Read(); }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException) { _document = MediaHistoryDocument.Empty; LoadDiagnostic = "Media history could not be read."; return; }
-        if (string.IsNullOrWhiteSpace(raw)) { _document = MediaHistoryDocument.Empty; return; }
+        if (string.IsNullOrWhiteSpace(raw)) { _document = MediaHistoryDocument.Empty; LoadDiagnostic = null; return; }
         try { _document = Normalize(JsonSerializer.Deserialize<MediaHistoryDocument>(raw, Options) is { Version: MediaHistoryDocument.CurrentVersion } value ? value : MediaHistoryDocument.Empty); LoadDiagnostic = null; }
         catch (JsonException) { try { storage.PreserveInvalid(raw); storage.WriteAtomically(JsonSerializer.Serialize(MediaHistoryDocument.Empty, Options)); } catch (Exception e) when (e is IOException or UnauthorizedAccessException) { } _document = MediaHistoryDocument.Empty; LoadDiagnostic = "Media history was invalid and has been reset."; }
     }
@@ -110,22 +110,33 @@ public sealed class MediaHistoryService(IMediaHistoryStorage storage, Func<DateT
     }
     public void Checkpoint(MediaSource source, TimeSpan position, TimeSpan duration, bool enabled, int minimumElapsedSeconds, int maximumRemainingSeconds, bool seekable = true)
     {
-        if (!enabled || !seekable || duration <= TimeSpan.Zero || position < TimeSpan.FromSeconds(minimumElapsedSeconds) || duration - position <= TimeSpan.FromSeconds(maximumRemainingSeconds)) return;
+        if (!enabled || duration > TimeSpan.Zero && duration - position <= TimeSpan.FromSeconds(maximumRemainingSeconds)) { RemoveResumeIfPresent(source); return; }
+        if (!seekable || duration <= TimeSpan.Zero || position < TimeSpan.FromSeconds(minimumElapsedSeconds)) return;
         string key = MediaSourceValidator.Key(source);
         List<ResumeEntry> entries = _document.Resume.Where(x => !Same(x.Source, key)).ToList();
         entries.Insert(0, new(source.CanonicalSource, position, duration, _clock())); Save(_document with { Resume = entries.Take(50).ToList() });
     }
     public ResumeEntry? FindResume(MediaSource source) => _document.Resume.FirstOrDefault(x => Same(x.Source, MediaSourceValidator.Key(source)));
+    public ResumeEntry? FindEligibleResume(MediaSource source, int minimumElapsedSeconds, int maximumRemainingSeconds)
+    {
+        ResumeEntry? entry = FindResume(source);
+        return entry is not null && entry.Position >= TimeSpan.FromSeconds(minimumElapsedSeconds) && entry.Duration - entry.Position > TimeSpan.FromSeconds(maximumRemainingSeconds) ? entry : null;
+    }
     public void RemoveResume(string source) => Save(_document with { Resume = _document.Resume.Where(x => !Same(x.Source, KeyFromCanonicalSource(source))).ToList() });
     public void RemoveRecent(string source) => Save(_document with { Recent = _document.Recent.Where(x => !Same(x.Source, KeyFromCanonicalSource(source))).ToList() });
     public void ClearRecent() => Save(_document with { Recent = [] });
     public void ClearResume() => Save(_document with { Resume = [] });
+    private void RemoveResumeIfPresent(MediaSource source)
+    {
+        string key = MediaSourceValidator.Key(source);
+        if (_document.Resume.Any(x => Same(x.Source, key))) RemoveResume(source.CanonicalSource);
+    }
     private static bool Same(string source, string key)
     {
         string sourceKey = KeyFromCanonicalSource(source);
         return string.Equals(sourceKey, key, StringComparison.Ordinal);
     }
-    private static string KeyFromCanonicalSource(string source)
+    public static string KeyFromCanonicalSource(string source)
     {
         bool url = Uri.TryCreate(source, UriKind.Absolute, out Uri? uri) && !uri.IsFile;
         return url ? "url:" + source : "file:" + source.ToUpperInvariant();

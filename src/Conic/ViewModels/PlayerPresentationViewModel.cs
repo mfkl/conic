@@ -260,8 +260,8 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
     {
         if (_pendingResume is not { } resume) return;
         double duration = Math.Max(_duration.TotalSeconds, 1);
-        _transport.Seek(Math.Clamp(resume.Position.TotalSeconds / duration, 0, 1));
         bool ok = true; TryHistory(() => _history?.RemoveResume(resume.Source), () => ok = false); if (!ok) return;
+        _transport.Seek(Math.Clamp(resume.Position.TotalSeconds / duration, 0, 1));
         _pendingResume = null; _resumeReady = false; OnPropertyChanged(nameof(HasPendingResume)); (AcceptResumeCommand as RegistryCommand)?.RaiseCanExecuteChanged(); (DeclineResumeCommand as RegistryCommand)?.RaiseCanExecuteChanged();
     }
 

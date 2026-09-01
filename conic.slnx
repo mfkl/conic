@@ -1,6 +1,11 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/Player.Contracts/Player.Contracts.csproj" />
+    <Project Path="src/Player.Domain/Player.Domain.csproj" />
     <Project Path="src/Conic/Conic.csproj" />
     <Project Path="src/Conic.Vout/Conic.Vout.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Player.Engine.ContractTests/Player.Engine.ContractTests.csproj" />
   </Folder>
 </Solution>

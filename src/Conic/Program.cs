@@ -1,5 +1,8 @@
 using System.Runtime.InteropServices;
 using Avalonia;
+#if DEBUG
+using Avalonia.Diagnostics;
+#endif
 using Conic.Interop;
 
 namespace Conic;

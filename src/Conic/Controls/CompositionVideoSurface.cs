@@ -6,6 +6,7 @@ using Avalonia.Platform;
 using Avalonia.Rendering.Composition;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using Player.Contracts;
 using Conic.Interop;
 
 namespace Conic.Controls;
@@ -18,7 +19,7 @@ public sealed class CompositionVideoSurface : Control, IDisposable
 
     private readonly DispatcherTimer _frameTimer;
     private CompositionPluginBridge? _bridge;
-    private VLCCorePlayer? _player;
+    private IMediaEngine? _player;
     private WriteableBitmap? _bitmap;
     private ICompositionGpuInterop? _GPUInterop;
     private ICompositionImportedGpuImage? _importedImage;
@@ -33,6 +34,7 @@ public sealed class CompositionVideoSurface : Control, IDisposable
     private bool _attached;
 
     public event Action<string>? StatusChanged;
+    public event EventHandler<MediaEngineState>? EngineStateChanged;
 
     public string? MediaPath
     {
@@ -66,11 +68,11 @@ public sealed class CompositionVideoSurface : Control, IDisposable
         {
             _bridge = new CompositionPluginBridge();
             _player = new VLCCorePlayer();
-            _player.StatusChanged += ReportStatus;
+            _player.StateChanged += OnEngineStateChanged;
             _ = InitializeGPUCompositionAsync();
             _frameTimer.Start();
             if (!string.IsNullOrWhiteSpace(MediaPath))
-                _player.Play(MediaPath);
+                _player.Open(MediaPath);
             ReportStatus("Managed vout ready (initializing D3D11 sharing)");
         }
         catch (Exception exception)
@@ -93,8 +95,38 @@ public sealed class CompositionVideoSurface : Control, IDisposable
         if (_attached && _player is not null &&
             !string.IsNullOrWhiteSpace(path))
         {
-            _player.Play(path);
+            _player.Open(path);
         }
+    }
+
+    public void TogglePause() => _player?.TogglePause();
+
+    public void Seek(double normalizedPosition) =>
+        _player?.Seek(normalizedPosition);
+
+    public void SetVolume(double normalizedVolume) =>
+        _player?.SetVolume(normalizedVolume);
+
+    public void Stop() => _player?.Stop();
+
+    private void OnEngineStateChanged(
+        object? sender,
+        MediaEngineState state)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            EngineStateChanged?.Invoke(this, state);
+            string status = state.Status switch
+            {
+                PlaybackStatus.Faulted => state.Error ?? "Playback failed",
+                PlaybackStatus.Opening => "Opening media",
+                PlaybackStatus.Playing => "Playing",
+                PlaybackStatus.Paused => "Paused",
+                PlaybackStatus.Stopped => "Stopped",
+                _ => "Ready",
+            };
+            StatusChanged?.Invoke(status);
+        });
     }
 
     private async Task InitializeGPUCompositionAsync()
@@ -304,7 +336,7 @@ public sealed class CompositionVideoSurface : Control, IDisposable
     {
         if (_player is not null)
         {
-            _player.StatusChanged -= ReportStatus;
+            _player.StateChanged -= OnEngineStateChanged;
             _player.Dispose();
             _player = null;
         }

@@ -251,13 +251,13 @@ public partial class MainWindow : Window
             try
             {
                 Console.WriteLine($"[layout-smoke] phase={phase}");
-                if (phase == 0) { OpenSettings(); ApplyResponsiveSettings(); phase = 1; return; }
+                if (phase == 0) { OpenSettings(); _settingsViewModel.SelectedPage = _settingsViewModel.Pages[1]; ApplyResponsiveSettings(); phase = 1; return; }
                 if (phase == 1) { ValidateLayout(1280, false); ValidateSettingsLayout(1280, false); Width = 480; phase = 2; return; }
-                if (phase == 2) { ApplyResponsiveSettings(); ValidateLayout(480, true); ValidateSettingsLayout(480, true); timer.Stop(); Console.WriteLine("[settings-layout-smoke] PASS wide-and-compact"); Console.WriteLine("[layout-smoke] PASS normal-and-compact"); desktop.Shutdown(0); }
+                if (phase == 2) { ApplyResponsiveSettings(); ValidateLayout(480, true); ValidateSettingsLayout(480, true); timer.Stop(); timeout.Stop(); Console.WriteLine("[settings-layout-smoke] PASS wide-and-compact"); Console.WriteLine("[layout-smoke] PASS normal-and-compact"); desktop.Shutdown(0); }
             }
             catch (Exception exception)
             {
-                timer.Stop(); Console.Error.WriteLine($"[layout-smoke] FAIL phase={phase} {exception}"); desktop.Shutdown(1);
+                timer.Stop(); timeout.Stop(); Console.Error.WriteLine($"[layout-smoke] FAIL phase={phase} {exception}"); desktop.Shutdown(1);
             }
         };
         DispatcherTimer timeout = new() { Interval = TimeSpan.FromSeconds(8) };
@@ -293,7 +293,7 @@ public partial class MainWindow : Window
         bool contained = required.All(control => control.Bounds.Width > 0 && control.Bounds.Height > 0 &&
             control.TranslatePoint(default, this) is Point origin && origin.X >= 0 && origin.Y >= 0 &&
             origin.X + control.Bounds.Width <= ClientSize.Width && origin.Y + control.Bounds.Height <= ClientSize.Height);
-        Console.WriteLine($"[settings-layout-smoke] width={width} compact={compact} panel={SettingsPanel.Bounds} search={SettingsSearch.Bounds} navigation={navigation.Bounds} content={SettingsContent.Bounds} reset={SettingsResetRow.Bounds} contained={contained}");
+        Console.WriteLine($"[settings-layout-smoke] width={width} compact={compact} panel={SettingsPanel.Bounds} search={SettingsSearch.Bounds} navigation={navigation.Bounds} content={SettingsContent.Bounds} theme={SettingsBadge.Bounds} open={OpenSettingsButton.Bounds} reset={SettingsResetRow.Bounds} contained={contained}");
         if (!contained || !navigation.IsVisible)
             throw new InvalidOperationException("[settings-layout-smoke] FAIL bounds or responsive navigation");
     }

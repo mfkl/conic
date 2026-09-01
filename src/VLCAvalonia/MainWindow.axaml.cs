@@ -1,4 +1,6 @@
 using System;
+using System.ComponentModel;
+using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia;
@@ -42,6 +44,7 @@ public partial class MainWindow : Window
             CreateHistory(),
             showUrlPanel: ShowUrlPanel);
         DataContext = _presentation;
+        _presentation.PropertyChanged += OnPresentationPropertyChanged;
         _settings.Changed += (_, settings) => ApplyLiveSettings(settings);
         ApplyLiveSettings(_settings.Current);
         _autoHideTimer.Tick += (_, _) =>
@@ -155,6 +158,7 @@ public partial class MainWindow : Window
         OpenMenu.IsVisible = false;
         ClearRecentPrompt.IsVisible = false;
         UrlPanel.IsVisible = true;
+        UpdateOpenErrorSurface();
         SetChromeVisibility(true);
         Dispatcher.UIThread.Post(() => { UrlTextBox.Focus(); UrlTextBox.SelectAll(); });
     }
@@ -164,6 +168,7 @@ public partial class MainWindow : Window
     private void CloseUrlPanel()
     {
         UrlPanel.IsVisible = false;
+        UpdateOpenErrorSurface();
         OpenOptionsButton.Focus();
     }
 
@@ -206,16 +211,45 @@ public partial class MainWindow : Window
         ClearRecentButton.IsVisible = _presentation.HasRecentItems;
     }
 
-    private void OnOpenFile(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => CloseOpenMenu();
+    private void OnOpenFile(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        _presentation.Registry.Execute(Player.Application.PlayerCommandId.OpenMedia);
+        CloseOpenMenu();
+    }
 
-    private void OnOpenRecent(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => CloseOpenMenu();
+    private void OnOpenRecent(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (sender is Button { DataContext: RecentMediaEntry recent })
+            _presentation.Registry.Execute(Player.Application.PlayerCommandId.OpenRecent, recent.Source);
+        CloseOpenMenu();
+    }
+
+    private void OnMediaDragOver(object? sender, DragEventArgs e)
+    {
+        IStorageItem[]? items = e.DataTransfer.TryGetFiles();
+        bool local = items is { Length: > 0 } && items.All(item => item.Path.IsFile);
+        e.DragEffects = local ? DragDropEffects.Copy : DragDropEffects.None;
+        e.Handled = true;
+    }
 
     private void OnMediaDrop(object? sender, DragEventArgs e)
     {
         IStorageItem[]? items = e.DataTransfer.TryGetFiles();
-        if (items is not { Length: 1 } || items[0] is not IStorageFile file) return;
-        _presentation.OpenSource(file.Path.LocalPath, MediaSourceKind.DragDrop);
+        string[] localSources = items is null
+            ? []
+            : items.Where(item => item.Path.IsFile).Select(item => item.Path.LocalPath).ToArray();
+        _presentation.OpenDroppedSources(localSources);
+        UpdateOpenErrorSurface();
+        e.Handled = true;
     }
+
+    private void OnPresentationPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(PlayerPresentationViewModel.OpenError) or nameof(PlayerPresentationViewModel.HasOpenError))
+            UpdateOpenErrorSurface();
+    }
+
+    private void UpdateOpenErrorSurface() => OpenErrorToast.IsVisible = !UrlPanel.IsVisible && _presentation.HasOpenError;
 
     private void CloseSettings()
     {

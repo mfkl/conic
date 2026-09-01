@@ -18,15 +18,18 @@ boundaries are in [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md).
 - D3D11 shared-texture transport from the managed vout to Avalonia.
 - Public Avalonia `ICompositionGpuInterop` import and
   `CompositionSurfaceVisual` presentation.
+- Same-adapter D3D11 video-processor conversion from hardware-decoded NV12 or
+  P010 into the shared BGRA composition texture, with zero CPU frame uploads
+  on the validated hardware paths.
 - CPU BGRA fallback when the active Avalonia backend cannot import D3D11
   keyed-mutex images.
 - Cross-device and real-compositor smoke modes.
 - An engine-neutral command/state contract with generation-safe snapshots.
 - Working open, play/pause, seek, volume, stop, dispose, and reopen plumbing.
 
-The current VLC pool is CPU BGRA, so one CPU-to-GPU upload remains inside the
-vout. The handoff from the vout to Avalonia is zero-copy. End-to-end hardware
-decode is the next GPU milestone.
+Windows qualification covers H.264/NV12 and HEVC Main 10/P010 hardware decode
+on Intel Iris Xe, plus software-BGRA GPU upload and CPU-bitmap fallback. See
+the composition document for measured evidence and explicit coverage limits.
 
 ## Repository layout
 
@@ -60,12 +63,18 @@ dotnet run --project src/VLCAvalonia
 Smoke tests use `../vlclr/test_01.mkv` by default:
 
 ```powershell
-dotnet run --project src/VLCAvalonia -- --smoke
+dotnet run --project src/VLCAvalonia -- `
+  --smoke --expect-path=hardware-opaque-gpu
+dotnet run --project src/VLCAvalonia -- `
+  --smoke --expect-path=software-bgra-gpu-upload
+dotnet run --project src/VLCAvalonia -- `
+  --smoke --expect-path=cpu-bitmap
 dotnet run --project src/VLCAvalonia -- --ui-smoke
+dotnet run --project src/VLCAvalonia -- --engine-smoke --cycles=25
 ```
 
 Override local paths with `VLCLR_ROOT`, `VLC_DIRECTORY`, and
 `VLC_AVALONIA_TEST_MEDIA`.
 
-See [docs/D3D11_COMPOSITION.md](docs/D3D11_COMPOSITION.md) for the implementation
-status and next GPU work.
+See [docs/D3D11_COMPOSITION.md](docs/D3D11_COMPOSITION.md) for the validated
+implementation, qualification commands, measured counters, and remaining work.

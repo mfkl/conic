@@ -97,6 +97,74 @@ repository inputs. The repository's current `test_01.mkv` fixture is MPEG-4
 Part 2, so H.264 and P010 qualification must continue to generate or provide a
 codec-specific fixture explicitly through `VLC_AVALONIA_TEST_MEDIA`.
 
+## WP-08 final qualification evidence
+
+WP-08 requalified product parent commit
+`519e763d30e2ff0c1433c1c9014436eab932a825` against VLCLR commit
+`dca5e306785e389257843a9121e10bb500054d9b` on 2026-09-01. The machine used
+Windows, an Intel Iris Xe adapter with LUID `00000000:000196FF`, VLC
+`3.0.24-beta1`, .NET SDK `10.0.102`, and the MSVC 14.51 x64 tools.
+
+| Path/fixture | Observed source | Result and teardown |
+|---|---|---|
+| H.264 High 8-bit, 640x480 | D3D11VA `DX11`, NV12 (DXGI 103) | `hardware-opaque-gpu`; validated frame 1,141 ms after smoke-process start; 40 allocations/40 releases; balance 0; CPU uploads 0 |
+| HEVC Main 10, 640x480 | D3D11VA `DX10`, P010 (DXGI 104) | `hardware-opaque-gpu`; validated frame 1,240 ms after smoke-process start; 46 allocations/46 releases; balance 0; CPU uploads 0 |
+| H.264 with hardware decoding disabled | final `I420` negotiation, BGRA target (DXGI 87) | `software-bgra-gpu-upload`; 2 CPU pictures and 2 CPU uploads; balance 0 |
+| H.264 with adapter sharing disabled | final `I420` negotiation, BGRA target (DXGI 87) | `cpu-bitmap`; 2 CPU pictures; CPU uploads 0; fallback `adapter-not-configured` |
+
+The first-frame figures above are wall-clock measurements from launching the
+already-built smoke process until the first shared BGRA frame was opened and
+successfully synchronized by the consumer probe. They include .NET process and
+VLC initialization, and are not decoder-only latency measurements.
+
+The real Avalonia UI smoke reported matching producer/consumer adapter LUIDs,
+presented the D3D11 frame under Avalonia controls, retained keyed-mutex progress
+through resize and fullscreen transitions, and reopened from device/resource
+generation 1 to generation 2. The lifecycle smoke passed open, pause, seek to
+0.35, resume, volume to 0.42, stop, dispose, reopen, and 25 bounded stress
+cycles. Its final telemetry was 147 opaque pictures received, 28 pool/device
+generations, 1,120 allocations, 1,120 releases, release balance 0, and CPU
+uploads 0.
+
+Qualification commands and results:
+
+```powershell
+# ../vlclr at dca5e306785e389257843a9121e10bb500054d9b
+dotnet build src/VLCLR -c Release --no-incremental
+dotnet test src/VLCLR.Tests -c Release --no-restore
+# Result: build passed with the four known CA1420 warnings; 339/339 tests passed.
+
+# vlc-avalonia at parent 519e763d30e2ff0c1433c1c9014436eab932a825
+dotnet build vlc-avalonia.slnx -c Debug --no-incremental
+dotnet test vlc-avalonia.slnx -c Debug --no-build --no-restore
+dotnet build vlc-avalonia.slnx -c Release --no-incremental
+dotnet test vlc-avalonia.slnx -c Release --no-build --no-restore
+dotnet publish src/VLCAvalonia.Vout -c Release -r win-x64
+# Result: both builds and Native AOT publish passed; 6/6 tests passed in each configuration.
+```
+
+MSVC `dumpbin /exports` reported 11 named exports, including VLC ABI entry
+`vlc_entry__3_0_0f`, the copyright and license entry points, frame/GPU-frame
+callbacks, adapter and telemetry configuration, pool telemetry, and the
+playlist callback. After deployment and cache regeneration, `vlc --list`
+reported both `Pure-C# Avalonia D3D11 composition video output` and `Exposes
+the VLC 3 main playlist to the Avalonia host` for module `vlc_avalonia`.
+
+The native matrix was run from Git Bash with bounded `timeout` commands and
+`VLC_AVALONIA_TEST_MEDIA` set to the generated codec-specific fixture:
+
+```bash
+timeout 45s dotnet run --no-build --project src/VLCAvalonia -- \
+  --smoke --expect-path=hardware-opaque-gpu
+timeout 45s dotnet run --no-build --project src/VLCAvalonia -- \
+  --smoke --expect-path=software-bgra-gpu-upload
+timeout 45s dotnet run --no-build --project src/VLCAvalonia -- \
+  --smoke --expect-path=cpu-bitmap
+timeout 45s dotnet run --no-build --project src/VLCAvalonia -- --ui-smoke
+timeout 120s dotnet run --no-build --project src/VLCAvalonia -- \
+  --engine-smoke --cycles=25
+```
+
 ## Build and validation
 
 ```powershell

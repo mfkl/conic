@@ -218,6 +218,26 @@ public sealed class PlayerPresentationViewModelTests
         Assert.Null(history.FindResume(new("a.mp4", MediaSourceKind.File, "a")));
     }
 
+    [Fact]
+    public void StopWritesHistoryBeforeTransportStop()
+    {
+        List<string> events = []; OrderedStorage storage = new(events); MediaHistoryService history = new(storage); OrderedTransport transport = new(events); PlayerPresentationViewModel vm = CreateOpeningViewModel(transport, history);
+        vm.OpenSource("a.mp4", MediaSourceKind.File); vm.ApplyEngineState(State(.4, PlaybackStatus.Playing, true) with { Generation = 1, Source = "a.mp4" }); vm.Registry.Execute(PlayerCommandId.Stop);
+        Assert.True(events.IndexOf("write") < events.IndexOf("stop"));
+    }
+
+    [Theory]
+    [InlineData("io")]
+    [InlineData("access")]
+    public void ResumeRemovalFailureDoesNotRepeatSeek(string kind)
+    {
+        Exception error = kind == "io" ? new IOException("remove detail") : new UnauthorizedAccessException("remove detail"); SwitchStorage storage = new(error); MediaHistoryService history = new(storage); MediaSource source = new("a.mp4", MediaSourceKind.File, "a");
+        storage.Error = null; history.Checkpoint(source, TimeSpan.FromSeconds(40), TimeSpan.FromSeconds(100), true, 30, 20); storage.Error = error; RecordingTransport transport = new(); List<string> diagnostic = [];
+        PlayerPresentationViewModel vm = new(transport, new EmptyPicker(), () => { }, sourceValidator: new MediaSourceValidator(new ExistingFiles()), history: history, diagnostic: diagnostic.Add); vm.OpenSource("a.mp4", MediaSourceKind.File); vm.ApplyEngineState(State(.2, PlaybackStatus.Playing, true) with { Generation = 1, Source = "a.mp4" });
+        vm.Registry.Execute(PlayerCommandId.AcceptResume); vm.Registry.Execute(PlayerCommandId.AcceptResume);
+        Assert.Empty(transport.Seeks); Assert.Equal("Media history could not be saved.", vm.HistoryError); Assert.Contains(diagnostic, x => x.Contains("remove detail"));
+    }
+
     [Theory]
     [InlineData("io")]
     [InlineData("access")]
@@ -229,7 +249,7 @@ public sealed class PlayerPresentationViewModelTests
         Assert.Equal("Media history could not be saved.", vm.HistoryError); Assert.Contains(diagnostics, x => x.Contains("detail"));
     }
 
-    private static PlayerPresentationViewModel CreateOpeningViewModel(RecordingTransport transport, MediaHistoryService? history = null) => new(transport, new EmptyPicker(), () => { }, sourceValidator: new MediaSourceValidator(new ExistingFiles()), history: history);
+    private static PlayerPresentationViewModel CreateOpeningViewModel(IPlayerTransport transport, MediaHistoryService? history = null) => new(transport, new EmptyPicker(), () => { }, sourceValidator: new MediaSourceValidator(new ExistingFiles()), history: history);
     private static MediaHistoryService SeedHistory()
     {
         MediaHistoryService history = new(new HistoryStorage()); history.Checkpoint(new("a.mp4", MediaSourceKind.File, "a"), TimeSpan.FromSeconds(40), TimeSpan.FromSeconds(100), true, 30, 20); return history;
@@ -287,4 +307,11 @@ public sealed class PlayerPresentationViewModelTests
     private sealed class ExistingFiles : IMediaFileSystem { public bool FileExists(string path) => true; public bool DirectoryExists(string path) => false; public string GetFullPath(string path) => path; }
     private sealed class HistoryStorage : IMediaHistoryStorage { public string? Content; public string? Read() => Content; public void WriteAtomically(string content) => Content = content; }
     private sealed class ThrowingHistoryStorage(Exception error) : IMediaHistoryStorage { public string? Read() => null; public void WriteAtomically(string content) => throw error; }
+    private sealed class SwitchStorage(Exception? error = null) : IMediaHistoryStorage { public Exception? Error = error; public string? Content; public string? Read() => Content; public void WriteAtomically(string content) { if (Error is not null) throw Error; Content = content; } }
+    private sealed class OrderedStorage(List<string> events) : IMediaHistoryStorage { public string? Read() => null; public void WriteAtomically(string content) => events.Add("write"); }
+    private sealed class OrderedTransport(List<string> events) : IPlayerTransport
+    {
+        public void Open(string source) { } public void TogglePause() { } public void Stop() => events.Add("stop"); public void Seek(double normalizedPosition) { }
+        public void SetVolume(double normalizedVolume) { } public void SetMuted(bool muted) { } public void Skip(TimeSpan offset) { } public void SetPlaybackRate(double playbackRate) { }
+    }
 }

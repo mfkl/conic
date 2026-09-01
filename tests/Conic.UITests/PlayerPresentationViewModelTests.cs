@@ -181,6 +181,43 @@ public sealed class PlayerPresentationViewModelTests
         Assert.Empty(history.Resume);
     }
 
+    [Fact]
+    public void SourceReplacementFlushesPriorPositionOnly()
+    {
+        HistoryStorage storage = new(); MediaHistoryService history = new(storage); PlayerPresentationViewModel vm = CreateOpeningViewModel(new RecordingTransport(), history);
+        vm.OpenSource("a.mp4", MediaSourceKind.File); vm.ApplyEngineState(State(.4, PlaybackStatus.Playing, true) with { Generation = 1, Source = "a.mp4" });
+        vm.OpenSource("b.mp4", MediaSourceKind.File);
+        Assert.NotNull(history.FindResume(new("a.mp4", MediaSourceKind.File, "a"))); Assert.Null(history.FindResume(new("b.mp4", MediaSourceKind.File, "b")));
+    }
+
+    [Fact]
+    public void StopAndClosingFlushActivePosition()
+    {
+        HistoryStorage storage = new(); MediaHistoryService history = new(storage); RecordingTransport transport = new(); PlayerPresentationViewModel vm = CreateOpeningViewModel(transport, history);
+        vm.OpenSource("a.mp4", MediaSourceKind.File); vm.ApplyEngineState(State(.4, PlaybackStatus.Playing, true) with { Generation = 1, Source = "a.mp4" }); vm.Registry.Execute(PlayerCommandId.Stop);
+        Assert.NotNull(history.FindResume(new("a.mp4", MediaSourceKind.File, "a"))); Assert.True(transport.Stopped);
+        vm.OnClosing(); Assert.NotNull(history.FindResume(new("a.mp4", MediaSourceKind.File, "a")));
+    }
+
+    [Fact]
+    public void OldGenerationAfterReplacementCannotCheckpointNewSource()
+    {
+        HistoryStorage storage = new(); MediaHistoryService history = new(storage); PlayerPresentationViewModel vm = CreateOpeningViewModel(new RecordingTransport(), history);
+        vm.OpenSource("a.mp4", MediaSourceKind.File); vm.ApplyEngineState(State(.4, PlaybackStatus.Playing, true) with { Generation = 1, Source = "a.mp4" }); vm.OpenSource("b.mp4", MediaSourceKind.File);
+        vm.ApplyEngineState(State(.8, PlaybackStatus.Playing, true) with { Generation = 1, Source = "a.mp4" }); vm.CheckpointCurrent(true);
+        Assert.Null(history.FindResume(new("b.mp4", MediaSourceKind.File, "b")));
+    }
+
+    [Fact]
+    public void NearEndPollAndForceRemoveResume()
+    {
+        HistoryStorage storage = new(); MediaHistoryService history = SeedHistory(); PlayerPresentationViewModel vm = CreateOpeningViewModel(new RecordingTransport(), history);
+        vm.OpenSource("a.mp4", MediaSourceKind.File); vm.ApplyEngineState(State(.9, PlaybackStatus.Playing, true) with { Generation = 1, Source = "a.mp4" });
+        Assert.Null(history.FindResume(new("a.mp4", MediaSourceKind.File, "a")));
+        history.Checkpoint(new("a.mp4", MediaSourceKind.File, "a"), TimeSpan.FromSeconds(40), TimeSpan.FromSeconds(100), true, 30, 20); vm.CheckpointCurrent(true);
+        Assert.Null(history.FindResume(new("a.mp4", MediaSourceKind.File, "a")));
+    }
+
     [Theory]
     [InlineData("io")]
     [InlineData("access")]

@@ -4,47 +4,241 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Conic.Controls"
         xmlns:app="clr-namespace:Conic"
-        mc:Ignorable="d" d:DesignWidth="1280" d:DesignHeight="720"
+        mc:Ignorable="d"
+        d:DesignWidth="1280"
+        d:DesignHeight="720"
         x:Class="Conic.MainWindow"
         x:DataType="app:MainWindow"
         Title="Conic"
-        Background="#1a1a1a"
+        Background="#08090B"
         WindowState="Maximized">
 
-    <Grid RowDefinitions="*,Auto">
-        <Grid x:Name="VideoArea" Grid.Row="0" Background="Black">
-            <local:CompositionVideoSurface x:Name="VideoSurface" MediaPath="{Binding MediaPath}" />
+    <Window.Styles>
+        <Style Selector="Button.chrome">
+            <Setter Property="Height" Value="38" />
+            <Setter Property="Padding" Value="15,0" />
+            <Setter Property="CornerRadius" Value="12" />
+            <Setter Property="Background" Value="#B51B1D22" />
+            <Setter Property="BorderBrush" Value="#24FFFFFF" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Foreground" Value="#F4F5F7" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="Button.chrome:pointerover">
+            <Setter Property="Background" Value="#E12A2D34" />
+            <Setter Property="BorderBrush" Value="#45FFFFFF" />
+        </Style>
 
-            <!-- Overlay controls - proves composition -->
-            <Border VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,20,0,0"
-                    Background="#80000000" CornerRadius="8" Padding="20,10"
-                    PointerPressed="OnOverlayPressed">
-                <TextBlock Text="AVALONIA OVERLAY ON VIDEO"
-                           Foreground="White" FontSize="24" FontWeight="Bold" />
+        <Style Selector="Button.transport">
+            <Setter Property="Width" Value="42" />
+            <Setter Property="Height" Value="42" />
+            <Setter Property="Padding" Value="10" />
+            <Setter Property="CornerRadius" Value="21" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Foreground" Value="#DDE0E5" />
+        </Style>
+        <Style Selector="Button.transport:pointerover">
+            <Setter Property="Background" Value="#20FFFFFF" />
+            <Setter Property="Foreground" Value="White" />
+        </Style>
+
+        <Style Selector="Button.play">
+            <Setter Property="Width" Value="56" />
+            <Setter Property="Height" Value="56" />
+            <Setter Property="Padding" Value="16" />
+            <Setter Property="CornerRadius" Value="28" />
+            <Setter Property="Background" Value="#F5F6F8" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Foreground" Value="#111318" />
+        </Style>
+        <Style Selector="Button.play:pointerover">
+            <Setter Property="Background" Value="White" />
+            <Setter Property="RenderTransform" Value="scale(1.05)" />
+        </Style>
+
+        <Style Selector="Slider.timeline">
+            <Setter Property="Height" Value="24" />
+            <Setter Property="Foreground" Value="#FF8A3D" />
+            <Setter Property="Background" Value="#35FFFFFF" />
+        </Style>
+        <Style Selector="Slider.volume">
+            <Setter Property="Width" Value="104" />
+            <Setter Property="Foreground" Value="#F4F5F7" />
+            <Setter Property="Background" Value="#35FFFFFF" />
+        </Style>
+    </Window.Styles>
+
+    <Grid x:Name="VideoArea" Background="#08090B">
+        <local:CompositionVideoSurface x:Name="VideoSurface"
+                                       MediaPath="{Binding MediaPath}" />
+
+        <!-- Lightweight top chrome; all controls stay in Avalonia composition. -->
+        <Grid Margin="24,20,24,0"
+              VerticalAlignment="Top"
+              ColumnDefinitions="Auto,*,Auto">
+            <Border Grid.Column="0"
+                    Padding="6"
+                    CornerRadius="16"
+                    Background="#B8131519"
+                    BorderBrush="#20FFFFFF"
+                    BorderThickness="1"
+                    BoxShadow="0 8 24 0 #70000000">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <Button Classes="chrome"
+                            Click="OnOpenFileClick"
+                            ToolTip.Tip="Open media">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <PathIcon Width="16" Height="16"
+                                      Data="M2,5 L9,5 L11,7 L22,7 L20,19 L2,19 Z" />
+                            <TextBlock Text="Open" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                    <Button Classes="chrome"
+                            Content="Test video"
+                            Click="OnTestPatternClick"
+                            ToolTip.Tip="Play the local test video" />
+                </StackPanel>
             </Border>
 
-            <Border VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,0,0,20"
-                    Background="#80000000" CornerRadius="8" Padding="10,5">
-                <StackPanel Orientation="Horizontal" Spacing="20">
-                    <Button Content="⏮" FontSize="20" Click="OnPrevClick" Background="Transparent" Foreground="White" />
-                    <Button Content="⏯" FontSize="20" Click="OnPlayPauseClick" Background="Transparent" Foreground="White" />
-                    <Button Content="⏭" FontSize="20" Click="OnNextClick" Background="Transparent" Foreground="White" />
-                    <Slider x:Name="PositionSlider" Width="300" Minimum="0" Maximum="1"
-                            Foreground="White" Background="#44FFFFFF" />
-                    <TextBlock x:Name="TimeText" Text="00:00 / 00:00" Foreground="White" VerticalAlignment="Center" FontSize="14" />
-                    <Slider x:Name="VolumeSlider" Width="100" Minimum="0" Maximum="100" Value="50"
-                            Foreground="White" Background="#44FFFFFF" ValueChanged="OnVolumeChanged" />
+            <Border Grid.Column="1"
+                    HorizontalAlignment="Center"
+                    Padding="12,7"
+                    CornerRadius="14"
+                    Background="#9E131519"
+                    BorderBrush="#20FFFFFF"
+                    BorderThickness="1"
+                    PointerPressed="OnOverlayPressed">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Border Width="7" Height="7" CornerRadius="4"
+                            Background="#55D68A"
+                            VerticalAlignment="Center" />
+                    <TextBlock Text="GPU COMPOSITION"
+                               Foreground="#D7DBE2"
+                               FontSize="11"
+                               FontWeight="SemiBold"
+                               VerticalAlignment="Center" />
                 </StackPanel>
+            </Border>
+
+            <Border Grid.Column="2"
+                    Padding="14,8"
+                    CornerRadius="14"
+                    Background="#9E131519"
+                    BorderBrush="#20FFFFFF"
+                    BorderThickness="1">
+                <CheckBox x:Name="TopMostCheck"
+                          Content="Always on top"
+                          Foreground="#D7DBE2"
+                          FontSize="12"
+                          VerticalAlignment="Center"
+                          IsCheckedChanged="OnTopMostChanged" />
             </Border>
         </Grid>
 
-        <Border Grid.Row="1" Background="#2a2a2a" Padding="10" BorderBrush="#444" BorderThickness="0,1,0,0">
-            <StackPanel Orientation="Horizontal" Spacing="10">
-                <Button Content="Open File" Click="OnOpenFileClick" Background="#3a3a3a" Foreground="White" Padding="15,5" />
-                <Button Content="Test Pattern" Click="OnTestPatternClick" Background="#3a3a3a" Foreground="White" Padding="15,5" />
-                <CheckBox x:Name="TopMostCheck" Content="Always on Top" Foreground="White" VerticalAlignment="Center" IsCheckedChanged="OnTopMostChanged" />
-                <TextBlock x:Name="StatusText" Text="Ready" Foreground="#aaa" VerticalAlignment="Center" Margin="20,0,0,0" />
-            </StackPanel>
+        <!-- Floating playback dock. -->
+        <Border VerticalAlignment="Bottom"
+                HorizontalAlignment="Stretch"
+                MaxWidth="1080"
+                Margin="24,0,24,26"
+                Padding="22,16,22,14"
+                CornerRadius="22"
+                Background="#E5121418"
+                BorderBrush="#2FFFFFFF"
+                BorderThickness="1"
+                BoxShadow="0 18 48 0 #A8000000">
+            <Grid RowDefinitions="Auto,Auto" RowSpacing="10">
+                <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto">
+                    <TextBlock x:Name="ElapsedText"
+                               Grid.Column="0"
+                               Text="00:00"
+                               Margin="0,0,12,0"
+                               Foreground="#AEB3BD"
+                               FontSize="12"
+                               FontFeatures="tnum"
+                               VerticalAlignment="Center" />
+                    <Slider x:Name="PositionSlider"
+                            Grid.Column="1"
+                            Classes="timeline"
+                            Minimum="0"
+                            Maximum="1"
+                            PointerReleased="OnPositionReleased"
+                            Value="0" />
+                    <TextBlock x:Name="TimeText"
+                               Grid.Column="2"
+                               Text="00:00"
+                               Margin="12,0,0,0"
+                               Foreground="#AEB3BD"
+                               FontSize="12"
+                               FontFeatures="tnum"
+                               VerticalAlignment="Center" />
+                </Grid>
+
+                <Grid Grid.Row="1" ColumnDefinitions="*,Auto,*">
+                    <StackPanel Grid.Column="0"
+                                Orientation="Horizontal"
+                                Spacing="9"
+                                VerticalAlignment="Center">
+                        <Border Width="7" Height="7" CornerRadius="4"
+                                Background="#55D68A" />
+                        <TextBlock x:Name="StatusText"
+                                   Text="Ready"
+                                   MaxWidth="310"
+                                   Foreground="#8F96A3"
+                                   FontSize="12"
+                                   TextTrimming="CharacterEllipsis"
+                                   VerticalAlignment="Center" />
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="1"
+                                Orientation="Horizontal"
+                                Spacing="8"
+                                VerticalAlignment="Center">
+                        <Button Classes="transport"
+                                Click="OnPrevClick"
+                                IsEnabled="False"
+                                ToolTip.Tip="Queue navigation is not available yet">
+                            <PathIcon Width="19" Height="19"
+                                      Data="M5,5 L8,5 L8,19 L5,19 Z M19,5 L19,19 L9,12 Z" />
+                        </Button>
+                        <Button Classes="play"
+                                Click="OnPlayPauseClick"
+                                ToolTip.Tip="Play or pause">
+                            <PathIcon Width="22" Height="22"
+                                      Data="M8,5 L19,12 L8,19 Z" />
+                        </Button>
+                        <Button Classes="transport"
+                                Click="OnStopClick"
+                                ToolTip.Tip="Stop">
+                            <PathIcon Width="17" Height="17"
+                                      Data="M6,6 L18,6 L18,18 L6,18 Z" />
+                        </Button>
+                        <Button Classes="transport"
+                                Click="OnNextClick"
+                                IsEnabled="False"
+                                ToolTip.Tip="Queue navigation is not available yet">
+                            <PathIcon Width="19" Height="19"
+                                      Data="M5,5 L5,19 L15,12 Z M16,5 L19,5 L19,19 L16,19 Z" />
+                        </Button>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="2"
+                                HorizontalAlignment="Right"
+                                Orientation="Horizontal"
+                                Spacing="10"
+                                VerticalAlignment="Center">
+                        <PathIcon Width="18" Height="18"
+                                  Foreground="#AEB3BD"
+                                  Data="M3,9 L7,9 L12,5 L12,19 L7,15 L3,15 Z M15,9 L18,12 L15,15 Z" />
+                        <Slider x:Name="VolumeSlider"
+                                Classes="volume"
+                                Minimum="0"
+                                Maximum="100"
+                                Value="50"
+                                ValueChanged="OnVolumeChanged" />
+                    </StackPanel>
+                </Grid>
+            </Grid>
         </Border>
     </Grid>
 </Window>

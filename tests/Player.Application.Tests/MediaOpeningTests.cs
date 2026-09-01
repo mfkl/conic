@@ -59,8 +59,8 @@ public sealed class MediaOpeningTests
     [Fact]
     public void LoadNormalizesFileDuplicatesAndPreservesUrlCase()
     {
-        MemoryHistory storage = new() { Content = "{\"Version\":1,\"Recent\":[{\"Source\":\"C:\\\\A.mp4\",\"DisplayName\":\"old\",\"LastOpenedUtc\":\"2020-01-01T00:00:00Z\"},{\"Source\":\"c:\\\\a.mp4\",\"DisplayName\":\"new\",\"LastOpenedUtc\":\"2021-01-01T00:00:00Z\"},{\"Source\":\"https://example.com/A?q=x\",\"DisplayName\":\"A\",\"LastOpenedUtc\":\"2021-01-01T00:00:00Z\"},{\"Source\":\"https://example.com/a?q=x\",\"DisplayName\":\"a\",\"LastOpenedUtc\":\"2021-01-01T00:00:00Z\"}]}" };
-        MediaHistoryService history = new(storage); history.Load(); Assert.Equal(3, history.Recent.Count); Assert.Contains(history.Recent, x => x.DisplayName == "new");
+        MemoryHistory storage = new() { Content = "{\"Version\":1,\"Recent\":[{\"Source\":\"C:\\\\A.mp4\",\"DisplayName\":\"old\",\"LastOpenedUtc\":\"2020-01-01T00:00:00Z\"},{\"Source\":\"c:\\\\a.mp4\",\"DisplayName\":\"new\",\"LastOpenedUtc\":\"2021-01-01T00:00:00Z\"},{\"Source\":\"https://example.com/A?q=x\",\"DisplayName\":\"old-url\",\"LastOpenedUtc\":\"2020-01-01T00:00:00Z\"},{\"Source\":\"https://example.com/A?q=x\",\"DisplayName\":\"new-url\",\"LastOpenedUtc\":\"2021-01-01T00:00:00Z\"},{\"Source\":\"https://example.com/a?q=x\",\"DisplayName\":\"a\",\"LastOpenedUtc\":\"2021-01-01T00:00:00Z\"}]}" };
+        MediaHistoryService history = new(storage); history.Load(); Assert.Equal(3, history.Recent.Count); Assert.Contains(history.Recent, x => x.DisplayName == "new"); Assert.Contains(history.Recent, x => x.DisplayName == "new-url");
     }
     [Fact]
     public void DisabledAndNearEndHistoryWritesFollowPolicy()
@@ -69,6 +69,13 @@ public sealed class MediaOpeningTests
         history.RecordOpened(source, false); history.Checkpoint(source, TimeSpan.FromSeconds(40), TimeSpan.FromSeconds(100), false, 30, 20); Assert.Equal(0, storage.Writes);
         history.Checkpoint(source, TimeSpan.FromSeconds(90), TimeSpan.FromSeconds(100), true, 30, 20); Assert.Equal(0, storage.Writes);
         history.Checkpoint(source, TimeSpan.FromSeconds(40), TimeSpan.FromSeconds(100), true, 30, 20); history.Checkpoint(source, TimeSpan.FromSeconds(90), TimeSpan.FromSeconds(100), true, 30, 20); Assert.Equal(2, storage.Writes);
+    }
+    [Fact]
+    public void UnsupportedVersionIsPreservedAndResetWithDiagnostic()
+    {
+        MemoryHistory storage = new() { Content = "{\"Version\":999,\"Recent\":[],\"Resume\":[]}" }; MediaHistoryService service = new(storage); service.Load();
+        Assert.Equal(storage.Preserved, "{\"Version\":999,\"Recent\":[],\"Resume\":[]}"); Assert.NotNull(service.LoadDiagnostic); Assert.Contains("\"Version\": 1", storage.Content);
+        MediaHistoryService reload = new(storage); reload.Load(); Assert.Null(reload.LoadDiagnostic);
     }
     [Fact]
     public void HistoryDeduplicatesAndHonorsPrivacyAndThresholds()
@@ -85,6 +92,6 @@ public sealed class MediaOpeningTests
         public bool Directory; public bool File = true;
         public bool FileExists(string path) => File; public bool DirectoryExists(string path) => Directory; public string GetFullPath(string path) => path.Replace('/', '\\');
     }
-    private sealed class MemoryHistory : IMediaHistoryStorage { public string? Content; public string? Read() => Content; public void WriteAtomically(string content) => Content = content; }
+    private sealed class MemoryHistory : IMediaHistoryStorage { public string? Content; public string? Preserved; public string? Read() => Content; public void WriteAtomically(string content) => Content = content; public void PreserveInvalid(string content) => Preserved = content; }
     private sealed class CountingHistory : IMediaHistoryStorage { public int Writes; public string? Content; public string? Read() => Content; public void WriteAtomically(string content) { Writes++; Content = content; } }
 }

@@ -13,6 +13,8 @@ namespace Conic;
 public partial class MainWindow : Window
 {
     private bool _updatingControls;
+    private bool _isSeeking;
+    private TimeSpan _duration;
 
     public static readonly StyledProperty<string?> MediaPathProperty =
         AvaloniaProperty.Register<MainWindow, string?>(nameof(MediaPath));
@@ -27,7 +29,21 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
 
-        VideoSurface.StatusChanged += status => StatusText.Text = status;
+        // Slider template parts handle pointer events themselves. Listen on
+        // the tunnel route as well so playback polling cannot overwrite a
+        // seek while the thumb is being dragged.
+        PositionSlider.AddHandler(
+            InputElement.PointerPressedEvent,
+            OnPositionPressed,
+            RoutingStrategies.Tunnel,
+            handledEventsToo: true);
+        PositionSlider.AddHandler(
+            InputElement.PointerReleasedEvent,
+            OnPositionReleased,
+            RoutingStrategies.Tunnel,
+            handledEventsToo: true);
+        PositionSlider.PointerCaptureLost += OnPositionCaptureLost;
+
         VideoSurface.EngineStateChanged += OnEngineStateChanged;
         Loaded += (_, _) =>
         {
@@ -35,7 +51,6 @@ public partial class MainWindow : Window
                 FindTestFile() is { } testFile)
             {
                 VideoSurface.MediaPath = testFile;
-                StatusText.Text = $"Test: {System.IO.Path.GetFileName(testFile)}";
             }
         };
     }
@@ -205,10 +220,53 @@ public partial class MainWindow : Window
             VideoSurface.SetVolume(e.NewValue / 100);
     }
 
+    private void OnPositionPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (PositionSlider.IsEnabled &&
+            e.GetCurrentPoint(PositionSlider).Properties.IsLeftButtonPressed)
+        {
+            _isSeeking = true;
+        }
+    }
+
     private void OnPositionReleased(object? sender, PointerReleasedEventArgs e)
     {
-        if (!_updatingControls)
-            VideoSurface.Seek(PositionSlider.Value);
+        if (_isSeeking)
+            Dispatcher.UIThread.Post(CommitSeek);
+    }
+
+    private void OnPositionCaptureLost(
+        object? sender,
+        PointerCaptureLostEventArgs e)
+    {
+        if (_isSeeking)
+            Dispatcher.UIThread.Post(CommitSeek);
+    }
+
+    private void OnPositionChanged(
+        object? sender,
+        Avalonia.Controls.Primitives.RangeBaseValueChangedEventArgs e)
+    {
+        if (_updatingControls)
+            return;
+
+        if (_isSeeking)
+        {
+            ElapsedText.Text = FormatTime(_duration * e.NewValue);
+            return;
+        }
+
+        // Keyboard interaction has no pointer release, so seek immediately.
+        VideoSurface.Seek(e.NewValue);
+    }
+
+    private void CommitSeek()
+    {
+        if (!_isSeeking)
+            return;
+
+        _isSeeking = false;
+        VideoSurface.Seek(PositionSlider.Value);
     }
 
     private void OnEngineStateChanged(object? sender, MediaEngineState state)
@@ -216,11 +274,17 @@ public partial class MainWindow : Window
         _updatingControls = true;
         try
         {
-            PositionSlider.Value = state.Position;
+            _duration = state.Duration;
+            if (!_isSeeking)
+                PositionSlider.Value = state.Position;
             PositionSlider.IsEnabled = state.CanSeek;
             VolumeSlider.Value = state.Volume * 100;
-            ElapsedText.Text = FormatTime(state.Elapsed);
+            if (!_isSeeking)
+                ElapsedText.Text = FormatTime(state.Elapsed);
             TimeText.Text = FormatTime(state.Duration);
+            bool isPlaying = state.Status == PlaybackStatus.Playing;
+            PlayIcon.IsVisible = !isPlaying;
+            PauseIcon.IsVisible = isPlaying;
         }
         finally
         {
@@ -254,7 +318,6 @@ public partial class MainWindow : Window
         {
             var path = result[0].Path.LocalPath;
             VideoSurface.MediaPath = path;
-            StatusText.Text = $"Playing: {System.IO.Path.GetFileName(path)}";
         }
     }
 
@@ -264,18 +327,12 @@ public partial class MainWindow : Window
         if (testFile != null)
         {
             VideoSurface.MediaPath = testFile;
-            StatusText.Text = $"Test: {System.IO.Path.GetFileName(testFile)}";
         }
     }
 
     private void OnTopMostChanged(object? sender, RoutedEventArgs e)
     {
         Topmost = TopMostCheck.IsChecked == true;
-    }
-
-    private void OnOverlayPressed(object? sender, Avalonia.Input.PointerPressedEventArgs e)
-    {
-        StatusText.Text = "Overlay clicked! Composition works.";
     }
 
     private static string? FindTestFile()

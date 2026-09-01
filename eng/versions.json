@@ -8,7 +8,7 @@
   },
   "vlclr": {
     "branch": "3.x",
-    "commit": "b53d62dd2941c8d6d9530d0dc4fa387458e53042",
+    "commit": "dca5e306785e389257843a9121e10bb500054d9b",
     "consumption": "sibling-project-reference"
   }
 }

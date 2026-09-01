@@ -1,20 +1,126 @@
 <Styles xmlns="https://github.com/avaloniaui">
-  <Style Selector="Button.chrome"><Setter Property="Height" Value="38" /><Setter Property="Padding" Value="15,0" /><Setter Property="CornerRadius" Value="12" /><Setter Property="Background" Value="#B51B1D22" /><Setter Property="BorderBrush" Value="#24FFFFFF" /><Setter Property="BorderThickness" Value="1" /><Setter Property="Foreground" Value="#F4F5F7" /><Setter Property="FontWeight" Value="SemiBold" /></Style>
-  <Style Selector="Button.chrome:pointerover"><Setter Property="Background" Value="#E12A2D34" /><Setter Property="BorderBrush" Value="#45FFFFFF" /></Style>
-  <Style Selector="Button.transport"><Setter Property="Width" Value="42" /><Setter Property="Height" Value="42" /><Setter Property="Padding" Value="10" /><Setter Property="CornerRadius" Value="21" /><Setter Property="Background" Value="Transparent" /><Setter Property="BorderThickness" Value="0" /><Setter Property="Foreground" Value="#DDE0E5" /></Style>
-  <Style Selector="Button.transport:pointerover"><Setter Property="Background" Value="#20FFFFFF" /><Setter Property="Foreground" Value="White" /></Style>
-  <Style Selector="Button.play"><Setter Property="Width" Value="56" /><Setter Property="Height" Value="56" /><Setter Property="Padding" Value="16" /><Setter Property="CornerRadius" Value="28" /><Setter Property="Background" Value="#F5F6F8" /><Setter Property="BorderThickness" Value="0" /><Setter Property="Foreground" Value="#111318" /></Style>
-  <Style Selector="Button.play:pointerover"><Setter Property="Background" Value="White" /><Setter Property="RenderTransform" Value="scale(1.05)" /></Style>
-  <Style Selector="Slider.timeline"><Setter Property="Height" Value="36" /><Setter Property="Foreground" Value="#F5F6F8" /><Setter Property="Background" Value="#3DFFFFFF" /></Style>
-  <Style Selector="Slider.volume"><Setter Property="Width" Value="112" /><Setter Property="Height" Value="52" /><Setter Property="VerticalAlignment" Value="Center" /><Setter Property="Foreground" Value="#F4F5F7" /><Setter Property="Background" Value="#35FFFFFF" /></Style>
-  <Style Selector="Slider.monochrome /template/ RepeatButton#PART_DecreaseButton"><Setter Property="Background" Value="#F5F6F8" /></Style>
-  <Style Selector="Slider.monochrome /template/ RepeatButton#PART_IncreaseButton"><Setter Property="Background" Value="#3DFFFFFF" /></Style>
-  <Style Selector="Slider.monochrome /template/ Thumb"><Setter Property="Background" Value="#F5F6F8" /></Style>
-  <!-- Orange marks elapsed playback; the rest remains neutral. -->
-  <Style Selector="Slider.timeline /template/ RepeatButton#PART_DecreaseButton"><Setter Property="Background" Value="#FF8A3D" /></Style>
-  <Style Selector="Slider.timeline:pointerover /template/ RepeatButton#PART_DecreaseButton"><Setter Property="Background" Value="#FFA465" /></Style>
-  <Style Selector="Slider.timeline:pressed /template/ RepeatButton#PART_DecreaseButton"><Setter Property="Background" Value="#E8752C" /></Style>
-  <Style Selector="Slider.volume /template/ Thumb"><Setter Property="Width" Value="18" /><Setter Property="Height" Value="18" /><Setter Property="Background" Value="#111318" /><Setter Property="BorderBrush" Value="#F5F6F8" /><Setter Property="BorderThickness" Value="2" /></Style>
-  <Style Selector="CheckBox.monochrome:checked /template/ Border#NormalRectangle"><Setter Property="Background" Value="#F5F6F8" /><Setter Property="BorderBrush" Value="#F5F6F8" /></Style>
-  <Style Selector="CheckBox.monochrome:checked /template/ Path#CheckGlyph"><Setter Property="Fill" Value="#111318" /></Style>
+    <Style Selector="Button.chrome">
+        <Setter Property="Height" Value="38" />
+        <Setter Property="Padding" Value="15,0" />
+        <Setter Property="CornerRadius" Value="12" />
+        <Setter Property="Background" Value="#B51B1D22" />
+        <Setter Property="BorderBrush" Value="#24FFFFFF" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Foreground" Value="#F4F5F7" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style Selector="Button.chrome:pointerover">
+        <Setter Property="Background" Value="#E12A2D34" />
+        <Setter Property="BorderBrush" Value="#45FFFFFF" />
+    </Style>
+    <Style Selector="Button.transport">
+        <Setter Property="Width" Value="42" />
+        <Setter Property="Height" Value="42" />
+        <Setter Property="Padding" Value="10" />
+        <Setter Property="CornerRadius" Value="21" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Foreground" Value="#DDE0E5" />
+    </Style>
+    <Style Selector="Button.transport:pointerover">
+        <Setter Property="Background" Value="#20FFFFFF" />
+        <Setter Property="Foreground" Value="White" />
+    </Style>
+    <Style Selector="Button.play">
+        <Setter Property="Width" Value="56" />
+        <Setter Property="Height" Value="56" />
+        <Setter Property="Padding" Value="16" />
+        <Setter Property="CornerRadius" Value="28" />
+        <Setter Property="Background" Value="#F5F6F8" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Foreground" Value="#111318" />
+    </Style>
+    <Style Selector="Button.play:pointerover">
+        <Setter Property="Background" Value="White" />
+        <Setter Property="RenderTransform" Value="scale(1.05)" />
+    </Style>
+    <Style Selector="Slider.timeline">
+        <Setter Property="Height" Value="36" />
+        <Setter Property="Foreground" Value="#F5F6F8" />
+        <Setter Property="Background" Value="#3DFFFFFF" />
+    </Style>
+    <Style Selector="Slider.volume">
+        <Setter Property="Width" Value="112" />
+        <Setter Property="Height" Value="52" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="Foreground" Value="#F4F5F7" />
+        <Setter Property="Background" Value="#35FFFFFF" />
+    </Style>
+
+    <!-- Keep Fluent's system accent from turning the sliders blue. -->
+    <Style Selector="Slider.monochrome /template/ RepeatButton#PART_DecreaseButton">
+        <Setter Property="Background" Value="#F5F6F8" />
+    </Style>
+    <Style Selector="Slider.monochrome:pointerover /template/ RepeatButton#PART_DecreaseButton">
+        <Setter Property="Background" Value="White" />
+    </Style>
+    <Style Selector="Slider.monochrome:pressed /template/ RepeatButton#PART_DecreaseButton">
+        <Setter Property="Background" Value="#D9DCE2" />
+    </Style>
+    <Style Selector="Slider.monochrome /template/ RepeatButton#PART_IncreaseButton">
+        <Setter Property="Background" Value="#3DFFFFFF" />
+    </Style>
+    <Style Selector="Slider.monochrome:pointerover /template/ RepeatButton#PART_IncreaseButton">
+        <Setter Property="Background" Value="#52FFFFFF" />
+    </Style>
+    <Style Selector="Slider.monochrome:pressed /template/ RepeatButton#PART_IncreaseButton">
+        <Setter Property="Background" Value="#2EFFFFFF" />
+    </Style>
+    <Style Selector="Slider.monochrome /template/ Thumb">
+        <Setter Property="Background" Value="#F5F6F8" />
+    </Style>
+    <Style Selector="Slider.monochrome:pointerover /template/ Thumb">
+        <Setter Property="Background" Value="White" />
+    </Style>
+    <Style Selector="Slider.monochrome:pressed /template/ Thumb">
+        <Setter Property="Background" Value="#D9DCE2" />
+    </Style>
+    <!-- Orange marks elapsed playback; the remaining track and thumb stay
+         neutral so the accent remains crisp rather than overpowering. -->
+    <Style Selector="Slider.timeline /template/ RepeatButton#PART_DecreaseButton">
+        <Setter Property="Background" Value="#FF8A3D" />
+    </Style>
+    <Style Selector="Slider.timeline:pointerover /template/ RepeatButton#PART_DecreaseButton">
+        <Setter Property="Background" Value="#FFA465" />
+    </Style>
+    <Style Selector="Slider.timeline:pressed /template/ RepeatButton#PART_DecreaseButton">
+        <Setter Property="Background" Value="#E8752C" />
+    </Style>
+    <!-- A dark center and light rim keep the volume thumb distinct from
+         both the filled and unfilled portions of the track. -->
+    <Style Selector="Slider.volume /template/ Thumb">
+        <Setter Property="Width" Value="18" />
+        <Setter Property="Height" Value="18" />
+        <Setter Property="Background" Value="#111318" />
+        <Setter Property="BorderBrush" Value="#F5F6F8" />
+        <Setter Property="BorderThickness" Value="2" />
+    </Style>
+    <Style Selector="Slider.volume:pointerover /template/ Thumb">
+        <Setter Property="Background" Value="#1B1D22" />
+        <Setter Property="BorderBrush" Value="White" />
+    </Style>
+    <Style Selector="Slider.volume:pressed /template/ Thumb">
+        <Setter Property="Background" Value="#D9DCE2" />
+        <Setter Property="BorderBrush" Value="#111318" />
+    </Style>
+    <Style Selector="CheckBox.monochrome:checked /template/ Border#NormalRectangle">
+        <Setter Property="Background" Value="#F5F6F8" />
+        <Setter Property="BorderBrush" Value="#F5F6F8" />
+    </Style>
+    <Style Selector="CheckBox.monochrome:checked:pointerover /template/ Border#NormalRectangle">
+        <Setter Property="Background" Value="White" />
+        <Setter Property="BorderBrush" Value="White" />
+    </Style>
+    <Style Selector="CheckBox.monochrome:checked:pressed /template/ Border#NormalRectangle">
+        <Setter Property="Background" Value="#D9DCE2" />
+        <Setter Property="BorderBrush" Value="#D9DCE2" />
+    </Style>
+    <Style Selector="CheckBox.monochrome:checked /template/ Path#CheckGlyph">
+        <Setter Property="Fill" Value="#111318" />
+    </Style>
 </Styles>

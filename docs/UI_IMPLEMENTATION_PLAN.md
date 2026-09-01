@@ -462,7 +462,7 @@ Update this table only after validation and commit:
 | UI-02 | pending | `vlc-avalonia` | pending | pending | pending |
 | UI-03 | pending | `vlc-avalonia` | pending | pending | pending |
 | UI-04 | `ui_04` | `vlc-avalonia` / `feature/modern-player-ui` | `012806e..9a7a293` (qualified code tip `9a7a293`) | Debug+Release restore/build; tests 25 app + 72 UI + 7 engine each; Release layout/ui/engine-smoke (`cycles=1`) PASS, including transformed chrome, privacy-confirmation, and toast geometry | complete |
-| UI-05 | pending | TBD by UI-00 | pending | pending | pending |
+| UI-05 | `ui_05` | `vlc-avalonia` / `feature/modern-player-ui` | `9065842..402f1f4` (qualified code tip `402f1f4`; VLCLR pin `914751006ca3c1f859bbdaa5a0144b227efa3ff4`) | Debug+Release forced restore/rebuild; tests 28 app + 77 UI + 8 engine each; Release engine/UI/layout (1280px and 480px)/queue smoke PASS. Native add/reorder/select/remove/navigation/repeat/order are qualified; product Clear resets the core and publishes a new empty generation because synchronous VLC 3 `playlist_Clear` after current-item deletion stalls `libvlc_InternalDestroy`. Fresh enqueue uses an empty core with `playNow=false`; explicit select/play and mode replay are qualified. | complete |
 | UI-06 | pending | TBD by UI-00 | pending | pending | pending |
 | UI-07 | pending | TBD by UI-00 | pending | pending | pending |
 | UI-08 | pending | `vlc-avalonia` | pending | pending | pending |

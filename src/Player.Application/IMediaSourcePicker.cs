@@ -1,0 +1,7 @@
+namespace Player.Application;
+
+/// <summary>Application boundary for choosing a media source from the host UI.</summary>
+public interface IMediaSourcePicker
+{
+    Task<string?> PickMediaAsync(CancellationToken cancellationToken = default);
+}

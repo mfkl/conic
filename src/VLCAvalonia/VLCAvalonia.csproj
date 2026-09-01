@@ -26,6 +26,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Player.Contracts\Player.Contracts.csproj" />
     <ProjectReference Include="..\Player.Domain\Player.Domain.csproj" />
+    <ProjectReference Include="..\Player.Application\Player.Application.csproj" />
     <ProjectReference Include="..\..\..\vlclr\src\VLCLR\VLCLR.csproj" />
   </ItemGroup>
 

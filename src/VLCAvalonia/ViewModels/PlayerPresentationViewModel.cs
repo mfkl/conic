@@ -33,6 +33,8 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
     private string _openError = string.Empty;
     private string _urlText = string.Empty;
     private long _recordedOpenGeneration = -1;
+    private long _activeGeneration = -1;
+    private bool _resumeReady;
 
     public PlayerPresentationViewModel(
         IPlayerTransport transport,
@@ -62,8 +64,8 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
         registry.Register(new(PlayerCommandId.OpenFolder, "Open folder", "Media", "Ctrl+Shift+O"), _ => _ = OpenFolderAsync());
         registry.Register(new(PlayerCommandId.OpenUrl, "Open network URL", "Media", "Ctrl+L"), _ => OpenUrl());
         registry.Register(new(PlayerCommandId.OpenRecent, "Open recent media", "Media"), parameter => OpenSource(parameter as string, MediaSourceKind.Recent));
-        registry.Register(new(PlayerCommandId.AcceptResume, "Resume playback", "Media"), _ => ApplyResume(), _ => _pendingResume is not null);
-        registry.Register(new(PlayerCommandId.DeclineResume, "Start from beginning", "Media"), _ => DeclineResume(), _ => _pendingResume is not null);
+        registry.Register(new(PlayerCommandId.AcceptResume, "Resume playback", "Media"), _ => ApplyResume(), _ => _pendingResume is not null && _resumeReady);
+        registry.Register(new(PlayerCommandId.DeclineResume, "Start from beginning", "Media"), _ => DeclineResume(), _ => _pendingResume is not null && _resumeReady);
         registry.Register(new(PlayerCommandId.OpenTestMedia, "Open test video", "Media"), _ => _openTestMedia());
         registry.Register(new(PlayerCommandId.TogglePause, "Play or pause", "Playback", "Space"), _ => _transport.TogglePause());
         registry.Register(new(PlayerCommandId.Stop, "Stop", "Playback"), _ => _transport.Stop());
@@ -160,7 +162,7 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
     public bool IsFullscreen { get => _isFullscreen; set => Set(ref _isFullscreen, value); }
     public string OpenError { get => _openError; private set => Set(ref _openError, value); }
     public string UrlText { get => _urlText; set => Set(ref _urlText, value); }
-    public bool HasPendingResume => _pendingResume is not null;
+    public bool HasPendingResume => _pendingResume is not null && _resumeReady;
     public string PendingResumeText => _pendingResume is null ? string.Empty : $"Resume from {FormatTime(_pendingResume.Position)}?";
     public IReadOnlyList<RecentMediaEntry> RecentItems => _history?.Recent ?? [];
 
@@ -176,6 +178,10 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
 
     public void ApplyEngineState(MediaEngineState state)
     {
+        if (_currentSource is not null && state.Source is not null && !string.Equals(state.Source, _currentSource.CanonicalSource, StringComparison.Ordinal))
+            return;
+        if (_activeGeneration >= 0 && state.Generation < _activeGeneration) return;
+        if (state.Status == PlaybackStatus.Opening) _activeGeneration = state.Generation;
         _isUpdatingFromEngine = true;
         try
         {
@@ -198,8 +204,8 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
             {
                 _history?.RecordOpened(_currentSource, _settings?.Current.RememberRecentMedia ?? true);
                 _recordedOpenGeneration = state.Generation;
-                if (_pendingResume is not null && state.CanSeek && state.Duration > TimeSpan.Zero)
-                    OnPropertyChanged(nameof(HasPendingResume));
+                if (_pendingResume is not null && state.Generation == _activeGeneration && state.CanSeek && state.Duration > TimeSpan.Zero)
+                { _resumeReady = true; OnPropertyChanged(nameof(HasPendingResume)); (AcceptResumeCommand as RegistryCommand)?.RaiseCanExecuteChanged(); (DeclineResumeCommand as RegistryCommand)?.RaiseCanExecuteChanged(); }
             }
             if (_currentSource is not null && state.Status is PlaybackStatus.Playing or PlaybackStatus.Paused)
                 _history?.Checkpoint(_currentSource, state.Elapsed, state.Duration, _settings?.Current.RememberResumeHistory ?? true, _settings?.Current.ResumeMinimumElapsedSeconds ?? 30, _settings?.Current.ResumeMaximumRemainingSeconds ?? 30, state.CanSeek);
@@ -226,6 +232,7 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
         MediaOpenResult result = _sourceValidator.Validate(rawSource, kind);
         if (!result.Succeeded || result.Source is null) { OpenError = result.UserMessage ?? "Media could not be opened."; return; }
         _currentSource = result.Source;
+        _activeGeneration = -1; _resumeReady = false;
         _pendingResume = (_settings?.Current.ResumePlayback ?? true) && (_settings?.Current.RememberResumeHistory ?? true) ? _history?.FindResume(_currentSource) : null;
         OnPropertyChanged(nameof(HasPendingResume)); OnPropertyChanged(nameof(PendingResumeText));
         OpenError = string.Empty;
@@ -237,12 +244,12 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
     {
         if (_pendingResume is not { } resume) return;
         _transport.Seek(Math.Clamp(resume.Position.TotalSeconds / Math.Max(resume.Duration.TotalSeconds, 1), 0, 1));
-        _history?.RemoveResume(resume.Source); _pendingResume = null; OnPropertyChanged(nameof(HasPendingResume));
+        _history?.RemoveResume(resume.Source); _pendingResume = null; _resumeReady = false; OnPropertyChanged(nameof(HasPendingResume));
     }
     private void DeclineResume()
     {
         if (_pendingResume is { } resume) _history?.RemoveResume(resume.Source);
-        _pendingResume = null; OnPropertyChanged(nameof(HasPendingResume));
+        _pendingResume = null; _resumeReady = false; OnPropertyChanged(nameof(HasPendingResume));
     }
 
     private static double ToDouble(object? parameter) => parameter switch

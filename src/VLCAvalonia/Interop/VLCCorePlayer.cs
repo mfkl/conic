@@ -2,6 +2,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Player.Contracts;
 using Player.Domain;
+using Player.Application;
 using VLCLR;
 using VLCLR.Native;
 
@@ -55,7 +56,7 @@ internal sealed unsafe class VLCCorePlayer : IMediaEngine
                     "The previous VLC playback thread did not stop.");
         }
 
-        string fullPath = Path.GetFullPath(source);
+        string fullPath = MediaEngineSourceNormalizer.Normalize(source);
         long generation = _states.BeginOpen(fullPath);
         ManualResetEventSlim stop = new(false);
         Thread thread = new(() => Run(fullPath, generation, stop))

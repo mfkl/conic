@@ -338,6 +338,16 @@ public sealed class PlayerPresentationViewModelTests
     [Theory]
     [InlineData("io")]
     [InlineData("access")]
+    public void ClearRecentFailurePreservesStateUntilRecovery(string kind)
+    {
+        Exception error = kind == "io" ? new IOException("clear detail") : new UnauthorizedAccessException("clear detail"); SwitchStorage storage = new(); MediaHistoryService history = new(storage); history.RecordOpened(new("a.mp4", MediaSourceKind.File, "a"), true); storage.Error = error; List<string> diagnostic = [];
+        PlayerPresentationViewModel vm = new(new RecordingTransport(), new EmptyPicker(), () => { }, sourceValidator: new MediaSourceValidator(new ExistingFiles()), history: history, diagnostic: diagnostic.Add); vm.Registry.Execute(PlayerCommandId.ClearRecent);
+        Assert.True(vm.HasRecentItems); Assert.NotNull(vm.HistoryError); Assert.Contains(diagnostic, x => x.Contains("clear detail")); storage.Error = null; vm.Registry.Execute(PlayerCommandId.ClearRecent); Assert.False(vm.HasRecentItems); Assert.Null(vm.HistoryError);
+    }
+
+    [Theory]
+    [InlineData("io")]
+    [InlineData("access")]
     public void HistoryFailuresAreSafeAndDiagnostic(string failure)
     {
         Exception error = failure == "io" ? new IOException("disk detail") : new UnauthorizedAccessException("denied detail"); ThrowingHistoryStorage storage = new(error); MediaHistoryService history = new(storage); List<string> diagnostics = [];

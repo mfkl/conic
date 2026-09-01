@@ -80,6 +80,8 @@ public partial class MainWindow : Window
         if (e.Source is TextBox) return;
         switch (e.Key)
         {
+            case Key.OemComma when e.KeyModifiers.HasFlag(KeyModifiers.Control): _presentation.Registry.Execute(Player.Application.PlayerCommandId.OpenSettings); break;
+            case Key.Escape when SettingsPanel.IsVisible: SettingsPanel.IsVisible = false; TopChrome.Focus(); break;
             case Key.F11: _presentation.Registry.Execute(Player.Application.PlayerCommandId.ToggleFullscreen); break;
             case Key.M: _presentation.Registry.Execute(Player.Application.PlayerCommandId.ToggleMute); break;
             case Key.Space: _presentation.Registry.Execute(Player.Application.PlayerCommandId.TogglePause); break;
@@ -110,19 +112,6 @@ public partial class MainWindow : Window
 
     private void OnSettingsClose(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => SettingsPanel.IsVisible = false;
     private void OnSettingsSearchChanged(object? sender, TextChangedEventArgs e) => _settingsViewModel.Search = (sender as TextBox)?.Text ?? string.Empty;
-    private void OnResumeChanged(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => _settingsViewModel.SetResume((sender as CheckBox)?.IsChecked == true);
-    private void OnRememberVolumeChanged(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => _settingsViewModel.SetRememberVolume((sender as CheckBox)?.IsChecked == true);
-    private void OnThemeChanged(object? sender, SelectionChangedEventArgs e) => SetChoice(sender, _settingsViewModel.SetTheme);
-    private void OnDensityChanged(object? sender, SelectionChangedEventArgs e) => SetChoice(sender, _settingsViewModel.SetDensity);
-    private void OnDefaultSpeedChanged(object? sender, SelectionChangedEventArgs e) => SetChoice(sender, _settingsViewModel.SetDefaultSpeed);
-    private void OnTimeoutChanged(object? sender, NumericUpDownValueChangedEventArgs e) { if (e.NewValue is { } value) _settingsViewModel.SetTimeout((double)value); }
-    private void OnBackwardSkipChanged(object? sender, NumericUpDownValueChangedEventArgs e) { if (e.NewValue is { } value) _settingsViewModel.SetBackwardSkip(value.ToString(System.Globalization.CultureInfo.InvariantCulture)); }
-    private void OnForwardSkipChanged(object? sender, NumericUpDownValueChangedEventArgs e) { if (e.NewValue is { } value) _settingsViewModel.SetForwardSkip(value.ToString(System.Globalization.CultureInfo.InvariantCulture)); }
-
-    private static void SetChoice(object? sender, Action<string> apply)
-    {
-        if ((sender as ComboBox)?.SelectedItem is ComboBoxItem { Content: string value }) apply(value);
-    }
 
     private void ApplyLiveSettings(PlayerSettings settings)
     {

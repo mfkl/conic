@@ -39,6 +39,7 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
         _mediaSourcePicker = mediaSourcePicker;
         _openTestMedia = openTestMedia;
         _settings = settings;
+        if (_settings is not null) _settings.Changed += (_, _) => { OnPropertyChanged(nameof(SkipBackwardLabel)); OnPropertyChanged(nameof(SkipForwardLabel)); };
         PlayerCommandRegistry registry = new();
         Registry = registry;
         registry.Register(new(PlayerCommandId.OpenMedia, "Open media", "Media", "Ctrl+O"), _ => _ = OpenMediaAsync());
@@ -80,6 +81,8 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
     public ICommand ToggleFullscreenCommand { get; }
     public ICommand SetAlwaysOnTopCommand { get; }
     public ICommand OpenSettingsCommand { get; }
+    public string SkipBackwardLabel => $"−{_settings?.Current.SkipBackwardSeconds ?? 10}";
+    public string SkipForwardLabel => $"+{_settings?.Current.SkipForwardSeconds ?? 10}";
 
     public event PropertyChangedEventHandler? PropertyChanged;
 

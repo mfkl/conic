@@ -34,7 +34,8 @@ public partial class MainWindow : Window
             bool chromeFocused = PlayerDock.IsKeyboardFocusWithin || TopChrome.IsKeyboardFocusWithin;
             bool popupOpen = menuOpen || VideoArea.IsKeyboardFocusWithin &&
                 (RightTransport.IsKeyboardFocusWithin || TopChrome.IsKeyboardFocusWithin);
-            if (_chromeVisibility.TryHide(_isSeeking || _isVolumeDragging, popupOpen, tooltipOpen: false, chromeFocused))
+            bool chromePointerOver = TopChrome.IsPointerOver || PlayerDock.IsPointerOver;
+            if (_chromeVisibility.TryHide(_isSeeking || _isVolumeDragging, popupOpen, chromePointerOver, chromeFocused))
                 SetChromeVisibility(false);
         };
         VideoSurface.EngineStateChanged += OnEngineStateChanged;
@@ -283,10 +284,16 @@ public partial class MainWindow : Window
 
     private void ApplyResponsiveChrome()
     {
-        bool compact = PlayerLayoutPolicy.IsCompact(Bounds.Width);
-        CenterTransport.Spacing = compact ? 2 : 8;
-        RightTransport.Spacing = compact ? 2 : 8;
-        TopChrome.IsVisible = !compact || !_presentation.IsFullscreen;
+        PlayerLayoutResult layout = PlayerLayoutPolicy.ForWidth(Bounds.Width);
+        CenterTransport.Spacing = layout.Spacing;
+        RightTransport.Spacing = layout.Spacing;
+        Grid.SetRow(RightTransport, layout.RightRow);
+        Grid.SetColumn(RightTransport, layout.RightColumn);
+        Grid.SetColumnSpan(RightTransport, layout.RightColumnSpan);
+        RightTransport.HorizontalAlignment = layout.IsCompact
+            ? Avalonia.Layout.HorizontalAlignment.Center
+            : Avalonia.Layout.HorizontalAlignment.Right;
+        TopChrome.IsVisible = !layout.IsCompact || !_presentation.IsFullscreen;
     }
 
     private void OnEngineStateChanged(object? sender, MediaEngineState state) =>

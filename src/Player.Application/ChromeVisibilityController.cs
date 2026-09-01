@@ -14,12 +14,12 @@ public sealed class ChromeVisibilityController
 
     public void Wake() => IsVisible = true;
 
-    public bool CanHide(bool seekDragging, bool menuOpen, bool tooltipOpen, bool chromeFocused) =>
-        IsFullscreen && !seekDragging && !menuOpen && !tooltipOpen && !chromeFocused;
+    public bool CanHide(bool seekDragging, bool menuOpen, bool chromePointerOver, bool chromeFocused) =>
+        IsFullscreen && !seekDragging && !menuOpen && !chromePointerOver && !chromeFocused;
 
-    public bool TryHide(bool seekDragging, bool menuOpen, bool tooltipOpen, bool chromeFocused)
+    public bool TryHide(bool seekDragging, bool menuOpen, bool chromePointerOver, bool chromeFocused)
     {
-        if (!CanHide(seekDragging, menuOpen, tooltipOpen, chromeFocused)) return false;
+        if (!CanHide(seekDragging, menuOpen, chromePointerOver, chromeFocused)) return false;
         IsVisible = false;
         return true;
     }

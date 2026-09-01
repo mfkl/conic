@@ -259,7 +259,7 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
     public void OpenSource(string? rawSource, MediaSourceKind kind)
     {
         MediaOpenResult result = _sourceValidator.Validate(rawSource, kind);
-        if (!result.Succeeded || result.Source is null) { if (kind == MediaSourceKind.Recent && !string.IsNullOrWhiteSpace(rawSource)) TryHistory(() => _history?.RemoveRecent(rawSource)); _diagnostic?.Invoke(result.Diagnostic ?? "Media source validation failed."); OpenError = result.UserMessage ?? "Media could not be opened."; OnPropertyChanged(nameof(RecentItems)); OnPropertyChanged(nameof(HasRecentItems)); return; }
+        if (!result.Succeeded || result.Source is null) { if (kind == MediaSourceKind.Recent && !string.IsNullOrWhiteSpace(rawSource)) TryHistory(() => _history?.RemoveRecent(rawSource)); _diagnostic?.Invoke(result.Diagnostic ?? "Media source validation failed."); OpenError = result.UserMessage ?? "Media could not be opened."; NotifyRecent(); return; }
         CheckpointCurrent(true);
         _currentSource = result.Source;
         _generationFloor = _lastObservedGeneration; _activeGeneration = -1; _resumeReady = false; _lastState = null; _recordedOpenGeneration = -1;

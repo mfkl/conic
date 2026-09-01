@@ -321,6 +321,20 @@ public sealed class PlayerPresentationViewModelTests
         Assert.True(vm.HasRecentItems); Assert.Contains(nameof(PlayerPresentationViewModel.RecentItems), changed); Assert.Contains(nameof(PlayerPresentationViewModel.HasRecentItems), changed); Assert.True(vm.ClearRecentCommand.CanExecute(null));
     }
 
+    [Fact]
+    public void UnavailableRecentIsRemovedWithSafeErrorAndNotification()
+    {
+        HistoryStorage storage = new(); MediaHistoryService history = new(storage); history.RecordOpened(new("gone.mp4", MediaSourceKind.File, "gone"), true); List<string> diagnostics = []; PlayerPresentationViewModel vm = new(new RecordingTransport(), new EmptyPicker(), () => { }, sourceValidator: new MediaSourceValidator(new MissingFiles()), history: history, diagnostic: diagnostics.Add); List<string?> changed = []; vm.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+        Assert.True(vm.ClearRecentCommand.CanExecute(null)); vm.Registry.Execute(PlayerCommandId.OpenRecent, "gone.mp4"); Assert.Empty(history.Recent); Assert.False(vm.ClearRecentCommand.CanExecute(null)); Assert.NotEmpty(vm.OpenError); Assert.NotEmpty(diagnostics); Assert.Contains(nameof(PlayerPresentationViewModel.RecentItems), changed); Assert.Contains(nameof(PlayerPresentationViewModel.HasRecentItems), changed);
+    }
+
+    [Fact]
+    public void DisablingRecentPrivacyClearsImmediatelyAndStaysClear()
+    {
+        HistoryStorage storage = new(); MediaHistoryService history = new(storage); history.RecordOpened(new("a.mp4", MediaSourceKind.File, "a"), true); PlayerSettingsService settings = new(new SettingsStorage()); PlayerPresentationViewModel vm = new(new RecordingTransport(), new EmptyPicker(), () => { }, settings: settings, sourceValidator: new MediaSourceValidator(new ExistingFiles()), history: history);
+        settings.Update(x => x with { RememberRecentMedia = false }); Assert.False(vm.HasRecentItems); Assert.False(vm.ClearRecentCommand.CanExecute(null)); settings.Update(x => x with { SkipForwardSeconds = 11 }); Assert.Empty(history.Recent);
+    }
+
     [Theory]
     [InlineData("io")]
     [InlineData("access")]
@@ -389,6 +403,7 @@ public sealed class PlayerPresentationViewModelTests
         public void PreserveInvalid(string content) { }
     }
     private sealed class ExistingFiles : IMediaFileSystem { public bool FileExists(string path) => true; public bool DirectoryExists(string path) => false; public string GetFullPath(string path) => path; }
+    private sealed class MissingFiles : IMediaFileSystem { public bool FileExists(string path) => false; public bool DirectoryExists(string path) => false; public string GetFullPath(string path) => path; }
     private sealed class HistoryStorage : IMediaHistoryStorage { public string? Content; public string? Read() => Content; public void WriteAtomically(string content) => Content = content; }
     private sealed class ThrowingHistoryStorage(Exception error) : IMediaHistoryStorage { public string? Read() => null; public void WriteAtomically(string content) => throw error; }
     private sealed class SwitchStorage(Exception? error = null) : IMediaHistoryStorage { public Exception? Error = error; public string? Content; public string? Read() => Content; public void WriteAtomically(string content) { if (Error is not null) throw Error; Content = content; } }

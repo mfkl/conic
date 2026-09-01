@@ -47,6 +47,7 @@ public partial class MainWindow : Window
         ulong firstDeviceGeneration = 0;
         ulong firstResourceGeneration = 0;
         string? firstAdapter = null;
+        int phase = 0;
         DispatcherTimer timeout = new()
         {
             Interval = TimeSpan.FromSeconds(20),
@@ -75,11 +76,32 @@ public partial class MainWindow : Window
         VideoSurface.GPUFramePresentedForSmoke +=
             (deviceGeneration, resourceGeneration, adapter) =>
             {
-                if (firstDeviceGeneration == 0)
+                if (phase == 0)
                 {
                     firstDeviceGeneration = deviceGeneration;
                     firstResourceGeneration = resourceGeneration;
                     firstAdapter = adapter;
+                    phase = 1;
+                    Console.WriteLine(
+                        "[composition-ui-smoke] resize-fullscreen " +
+                        $"device-generation={deviceGeneration} " +
+                        $"resource-generation={resourceGeneration} " +
+                        $"adapter-luid={adapter}");
+                    Width += 120;
+                    Height += 80;
+                    WindowState = WindowState.FullScreen;
+                    return;
+                }
+
+                if (phase == 1)
+                {
+                    phase = 2;
+                    WindowState = WindowState.Normal;
+                    Console.WriteLine(
+                        "[composition-ui-smoke] PASS resize-fullscreen " +
+                        $"device-generation={deviceGeneration} " +
+                        $"resource-generation={resourceGeneration} " +
+                        $"adapter-luid={adapter}");
                     Console.WriteLine(
                         "[composition-ui-smoke] reopening " +
                         $"device-generation={deviceGeneration} " +

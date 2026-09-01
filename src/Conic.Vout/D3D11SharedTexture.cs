@@ -13,6 +13,9 @@ internal enum D3D11AdapterFailure
     MultithreadProtectionUnavailable = 5,
     TextureUploadFailed = 6,
     OpaquePoolCreationFailed = 7,
+    VideoProcessorCreationFailed = 8,
+    VideoProcessorConversionFailed = 9,
+    DeviceRemoved = 10,
 }
 
 internal sealed class D3D11AdapterException : InvalidOperationException
@@ -70,6 +73,9 @@ internal sealed unsafe class D3D11SharedTexture : IDisposable
     /// <summary>Borrowed for this producer object's lifetime.</summary>
     internal ID3D11DeviceContext* Context => _context;
 
+    /// <summary>Borrowed until the resource generation changes.</summary>
+    internal ID3D11Texture2D* Texture => _texture;
+
     public D3D11SharedTexture(uint adapterLowPart, int adapterHighPart)
     {
         CreateDevice(adapterLowPart, adapterHighPart);
@@ -92,13 +98,8 @@ internal sealed unsafe class D3D11SharedTexture : IDisposable
         if (_keyedMutex is null)
             return false;
 
-        int acquireResult = _keyedMutex->AcquireSync(0, 0);
-        if (acquireResult == WaitTimeout)
+        if (!TryBeginProducerWrite())
             return false;
-        CheckHResult(
-            acquireResult,
-            D3D11AdapterFailure.TextureUploadFailed,
-            "IDXGIKeyedMutex.AcquireSync(producer)");
 
         try
         {
@@ -112,16 +113,13 @@ internal sealed unsafe class D3D11SharedTexture : IDisposable
         }
         finally
         {
-            CheckHResult(
-                _keyedMutex->ReleaseSync(1),
-                D3D11AdapterFailure.TextureUploadFailed,
-                "IDXGIKeyedMutex.ReleaseSync(producer)");
+            EndProducerWrite();
         }
 
         return true;
     }
 
-    private void EnsureTexture(uint width, uint height)
+    internal void EnsureTexture(uint width, uint height)
     {
         if (_texture is not null && _width == width && _height == height)
             return;
@@ -203,6 +201,31 @@ internal sealed unsafe class D3D11SharedTexture : IDisposable
             if (texture is not null)
                 texture->Release();
         }
+    }
+
+    internal bool TryBeginProducerWrite()
+    {
+        if (_keyedMutex is null)
+            return false;
+
+        // A bounded wait tolerates a compositor hand-off without ever
+        // blocking VLC's display thread indefinitely.
+        int acquireResult = _keyedMutex->AcquireSync(0, 16);
+        if (acquireResult == WaitTimeout)
+            return false;
+        CheckProducerHResult(
+            acquireResult,
+            "IDXGIKeyedMutex.AcquireSync(producer)");
+        return true;
+    }
+
+    internal void EndProducerWrite()
+    {
+        if (_keyedMutex is null)
+            return;
+        CheckProducerHResult(
+            _keyedMutex->ReleaseSync(1),
+            "IDXGIKeyedMutex.ReleaseSync(producer)");
     }
 
     private void CreateDevice(uint adapterLowPart, int adapterHighPart)
@@ -353,5 +376,18 @@ internal sealed unsafe class D3D11SharedTexture : IDisposable
     {
         if (result < 0)
             throw new D3D11AdapterException(failure, result, operation);
+    }
+
+    private void CheckProducerHResult(int result, string operation)
+    {
+        if (result >= 0)
+            return;
+        int removed = _device is null ? 0 : _device->GetDeviceRemovedReason();
+        throw new D3D11AdapterException(
+            removed < 0
+                ? D3D11AdapterFailure.DeviceRemoved
+                : D3D11AdapterFailure.TextureUploadFailed,
+            removed < 0 ? removed : result,
+            operation);
     }
 }

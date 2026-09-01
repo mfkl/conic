@@ -19,14 +19,16 @@ internal sealed unsafe class VLCCorePlayer : IMediaEngine
     private readonly MediaEngineStateStore _states = new();
     private readonly CompositionPluginBridge _playlistBridge;
     private readonly bool _ownsPlaylistBridge;
+    private readonly bool _hardwareDecoding;
     private Thread? _thread;
     private ManualResetEventSlim? _stop;
     private nint _playlist;
     private long _generation;
     private int _disposed;
 
-    public VLCCorePlayer()
+    public VLCCorePlayer(bool hardwareDecoding = true)
     {
+        _hardwareDecoding = hardwareDecoding;
         _playlistBridge = new CompositionPluginBridge(
             registerFrameCallback: false);
         _ownsPlaylistBridge = true;
@@ -142,7 +144,7 @@ internal sealed unsafe class VLCCorePlayer : IMediaEngine
             "--intf=vlc_avalonia_control",
             "--no-video-title-show",
             "--vout=vlc_avalonia",
-            "--avcodec-hw=any",
+            _hardwareDecoding ? "--avcodec-hw=any" : "--avcodec-hw=none",
             path,
         ];
 

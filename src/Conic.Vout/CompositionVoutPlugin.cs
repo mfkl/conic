@@ -35,6 +35,7 @@ public static unsafe class CompositionVoutPlugin
     private static nint s_telemetryCallback;
     private static nint s_telemetryCallbackOpaque;
     private static bool s_adapterConfigured;
+    private static bool s_forceCPUOutput;
     private static uint s_adapterLowPart;
     private static int s_adapterHighPart;
 
@@ -50,6 +51,7 @@ public static unsafe class CompositionVoutPlugin
     {
         public nint Pool;
         public D3D11SharedTexture? SharedTexture;
+        public D3D11VideoProcessorConverter? Converter;
         public uint RequestedAdapterLowPart;
         public int RequestedAdapterHighPart;
         public uint SourceChroma;
@@ -153,6 +155,15 @@ public static unsafe class CompositionVoutPlugin
             s_adapterHighPart = highPart;
             s_adapterConfigured = configured != 0;
         }
+    }
+
+    [UnmanagedCallersOnly(
+        EntryPoint = "vlc_avalonia_set_force_cpu_output",
+        CallConvs = [typeof(CallConvCdecl)])]
+    public static void SetForceCPUOutput(int enabled)
+    {
+        lock (CallbackGate)
+            s_forceCPUOutput = enabled != 0;
     }
 
     /// <summary>
@@ -278,11 +289,13 @@ public static unsafe class CompositionVoutPlugin
         try
         {
             bool adapterConfigured;
+            bool forceCPUOutput;
             uint adapterLowPart;
             int adapterHighPart;
             lock (CallbackGate)
             {
                 adapterConfigured = s_adapterConfigured;
+                forceCPUOutput = s_forceCPUOutput;
                 adapterLowPart = s_adapterLowPart;
                 adapterHighPart = s_adapterHighPart;
             }
@@ -323,7 +336,7 @@ public static unsafe class CompositionVoutPlugin
             display->Format = display->Source;
             uint outputChroma = SelectOutputChroma(
                 display->Source.Chroma,
-                state.SharedTexture is not null);
+                state.SharedTexture is not null && !forceCPUOutput);
             state.IsOpaque = VLCFourCC.IsD3D11Opaque(outputChroma);
             if (state.IsOpaque)
             {
@@ -394,6 +407,8 @@ public static unsafe class CompositionVoutPlugin
                     VLCCore.PicturePoolRelease(state.Pool);
                     state.Pool = 0;
                 }
+                state.Converter?.Dispose();
+                state.Converter = null;
                 state.SharedTexture?.Dispose();
                 state.SharedTexture = null;
             }
@@ -485,6 +500,45 @@ public static unsafe class CompositionVoutPlugin
                 if (VLCFourCC.IsD3D11Opaque(picture->Format.Chroma))
                 {
                     PicturePoolTelemetry.OpaquePictureReceived();
+                    if (HasGPUFrameCallback() &&
+                        state?.SharedTexture is not null &&
+                        picture->Sys != 0)
+                    {
+                        try
+                        {
+                            state.Converter ??=
+                                new D3D11VideoProcessorConverter(
+                                    state.SharedTexture.Device,
+                                    state.SharedTexture.Context);
+                            if (state.Converter.Convert(
+                                    (VLCD3D11PictureSys*)picture->Sys,
+                                    in picture->Format,
+                                    state.SharedTexture,
+                                    out uint outputWidth,
+                                    out uint outputHeight))
+                            {
+                                D3D11SharedTexture texture =
+                                    state.SharedTexture;
+                                PublishGPUFrame(
+                                    texture.SharedHandle,
+                                    outputWidth,
+                                    outputHeight,
+                                    texture.ResourceGeneration,
+                                    texture.DeviceGeneration,
+                                    texture.AdapterLowPart,
+                                    texture.AdapterHighPart,
+                                    picture->Date);
+                            }
+                        }
+                        catch (D3D11AdapterException exception)
+                        {
+                            state.Converter?.Dispose();
+                            state.Converter = null;
+                            state.FallbackReason = exception.Failure;
+                            state.NativeResult = exception.NativeResult;
+                            PublishTelemetry(state);
+                        }
+                    }
                     return;
                 }
 

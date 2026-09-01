@@ -33,6 +33,7 @@ internal sealed unsafe class VLCCorePlayer : IMediaEngine, IQueueTransport, IMed
     private PlaybackQueueState _queueState = PlaybackQueueState.Initial;
     private MediaCapabilitiesState _mediaCapabilities = MediaCapabilitiesState.Initial;
     private readonly VLCMediaCapabilities _mediaControls;
+    private readonly VLCPlayerCapabilities _playerCapabilities;
     private readonly ConcurrentQueue<Action> _mediaRequests = new();
     private QueueRepeatMode _requestedRepeat = QueueRepeatMode.None;
     private QueueOrder _requestedOrder = QueueOrder.Normal;
@@ -53,6 +54,7 @@ internal sealed unsafe class VLCCorePlayer : IMediaEngine, IQueueTransport, IMed
         _ownsPlaylistBridge = true;
         _playlistBridge.ConnectPlaylist();
         _mediaControls = new VLCMediaCapabilities(TryGetCurrentInputLease);
+        _playerCapabilities = new VLCPlayerCapabilities(TryGetCurrentInputLease);
     }
 
     public MediaEngineState State => _states.State;
@@ -279,6 +281,10 @@ internal sealed unsafe class VLCCorePlayer : IMediaEngine, IQueueTransport, IMed
 
     internal void PollMediaCapabilitiesForSmoke() =>
         _ = InvokeMediaCapabilityForSmoke(adapter => adapter.TryGetTracks(out _));
+
+    /// <summary>Runs the VLCLR capability probe on the VLC owner dispatcher. Unsupported vout features are intentionally skipped.</summary>
+    internal VLCPlayerSmokeReport RunPlayerCapabilitiesForSmoke() =>
+        InvokeMediaCapabilityForSmoke(_ => VLCPlayerCapabilitiesSmoke.Run(_playerCapabilities));
 
     public void Enqueue(IEnumerable<string> sources)
     {

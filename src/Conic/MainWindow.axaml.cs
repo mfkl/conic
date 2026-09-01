@@ -118,19 +118,13 @@ public partial class MainWindow : Window
             e.Handled = true;
             return;
         }
-        if (SettingsPanel.IsVisible || e.Source is TextBox) return;
-        switch (e.Key)
-        {
-            case Key.OemComma when e.KeyModifiers.HasFlag(KeyModifiers.Control): _presentation.Registry.Execute(Player.Application.PlayerCommandId.OpenSettings); break;
-            case Key.O when e.KeyModifiers.HasFlag(KeyModifiers.Control): _presentation.Registry.Execute(Player.Application.PlayerCommandId.OpenMedia); break;
-            case Key.L when e.KeyModifiers.HasFlag(KeyModifiers.Control): _presentation.Registry.Execute(Player.Application.PlayerCommandId.OpenUrl); break;
-            case Key.F11: _presentation.Registry.Execute(Player.Application.PlayerCommandId.ToggleFullscreen); break;
-            case Key.M: _presentation.Registry.Execute(Player.Application.PlayerCommandId.ToggleMute); break;
-            case Key.Space: _presentation.Registry.Execute(Player.Application.PlayerCommandId.TogglePause); break;
-            case Key.Left when e.KeyModifiers.HasFlag(KeyModifiers.Alt): _presentation.Registry.Execute(Player.Application.PlayerCommandId.SkipBackward); break;
-            case Key.Right when e.KeyModifiers.HasFlag(KeyModifiers.Alt): _presentation.Registry.Execute(Player.Application.PlayerCommandId.SkipForward); break;
-            default: return;
-        }
+        if (SettingsPanel.IsVisible || e.Source is TextBox or Slider or NumericUpDown or MenuItem) return;
+        string key = e.Key == Key.OemComma ? "," : e.Key.ToString();
+        string modifiers = (e.KeyModifiers.HasFlag(KeyModifiers.Control) ? "Ctrl+" : "") + (e.KeyModifiers.HasFlag(KeyModifiers.Alt) ? "Alt+" : "") + (e.KeyModifiers.HasFlag(KeyModifiers.Shift) ? "Shift+" : "");
+        string gesture = PlayerShortcutPolicy.Normalize(modifiers + key);
+        PlayerCommandDefinition? command = _presentation.Registry.Commands.FirstOrDefault(x => PlayerShortcutPolicy.Normalize(x.DefaultShortcut) == gesture);
+        if (command is null || !_presentation.Registry.CanExecute(command.Id)) return;
+        _presentation.Registry.Execute(command.Id);
         e.Handled = true;
     }
 

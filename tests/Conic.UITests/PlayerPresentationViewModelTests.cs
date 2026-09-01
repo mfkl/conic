@@ -381,6 +381,44 @@ public sealed class PlayerPresentationViewModelTests
         Assert.Equal("Media history could not be saved.", vm.HistoryError); Assert.Contains(diagnostics, x => x.Contains("detail"));
     }
 
+    [Fact]
+    public void ResumeHistoryStateNotifiesAndUpdatesClearCommand()
+    {
+        MediaHistoryService history = new(new HistoryStorage());
+        PlayerPresentationViewModel vm = CreateOpeningViewModel(new RecordingTransport(), history);
+        List<string?> changed = [];
+        vm.PropertyChanged += (_, args) => changed.Add(args.PropertyName);
+
+        vm.OpenSource("a.mp4", MediaSourceKind.File);
+        vm.ApplyEngineState(State(.4, PlaybackStatus.Playing, true) with { Generation = 1, Source = "a.mp4" });
+
+        Assert.True(vm.HasResumeItems);
+        Assert.True(vm.ClearResumeHistoryCommand.CanExecute(null));
+        Assert.Contains(nameof(PlayerPresentationViewModel.HasResumeItems), changed);
+        vm.Registry.Execute(PlayerCommandId.ClearResumeHistory);
+        Assert.False(vm.HasResumeItems);
+        Assert.False(vm.ClearResumeHistoryCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void HistoryErrorNotifiesPresenceAndRecovery()
+    {
+        SwitchStorage storage = new() { Error = new IOException("write detail") };
+        MediaHistoryService history = new(storage);
+        PlayerPresentationViewModel vm = CreateOpeningViewModel(new RecordingTransport(), history);
+        List<string?> changed = [];
+        vm.PropertyChanged += (_, args) => changed.Add(args.PropertyName);
+
+        vm.OpenSource("a.mp4", MediaSourceKind.File);
+        vm.ApplyEngineState(State(.4, PlaybackStatus.Playing, true) with { Generation = 1, Source = "a.mp4" });
+        Assert.True(vm.HasHistoryError);
+        Assert.Contains(nameof(PlayerPresentationViewModel.HasHistoryError), changed);
+
+        storage.Error = null;
+        vm.CheckpointCurrent(true);
+        Assert.False(vm.HasHistoryError);
+    }
+
     private static PlayerPresentationViewModel CreateOpeningViewModel(IPlayerTransport transport, MediaHistoryService? history = null) => new(transport, new EmptyPicker(), () => { }, sourceValidator: new MediaSourceValidator(new ExistingFiles()), history: history);
     private static MediaHistoryService SeedHistory()
     {

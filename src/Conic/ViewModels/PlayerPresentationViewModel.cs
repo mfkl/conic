@@ -67,7 +67,8 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
         {
             TryHistory(() => { if (!updated.RememberRecentMedia) _history?.ClearRecent(); if (!updated.RememberResumeHistory) _history?.ClearResume(); });
             NotifyRecent();
-            if (!updated.RememberResumeHistory) { _pendingResume = null; _resumeReady = false; OnPropertyChanged(nameof(HasPendingResume)); (AcceptResumeCommand as RegistryCommand)?.RaiseCanExecuteChanged(); (DeclineResumeCommand as RegistryCommand)?.RaiseCanExecuteChanged(); }
+            NotifyResume();
+            if (!updated.RememberResumeHistory) { _pendingResume = null; _resumeReady = false; NotifyPendingResume(); }
             OnPropertyChanged(nameof(SkipBackwardLabel)); OnPropertyChanged(nameof(SkipForwardLabel)); OnPropertyChanged(nameof(RecentItems));
         };
         PlayerCommandRegistry registry = new();
@@ -78,7 +79,7 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
         registry.Register(new(PlayerCommandId.SubmitUrl, "Submit network URL", "Media"), _ => OpenUrl());
         registry.Register(new(PlayerCommandId.RemoveRecent, "Remove recent media", "Media"), p => { TryHistory(() => _history?.RemoveRecent(p as string ?? string.Empty)); NotifyRecent(); }, p => !string.IsNullOrWhiteSpace(p as string));
         registry.Register(new(PlayerCommandId.ClearRecent, "Clear recent media", "Media"), _ => { TryHistory(() => _history?.ClearRecent()); NotifyRecent(); }, _ => HasRecentItems);
-        registry.Register(new(PlayerCommandId.ClearResumeHistory, "Clear resume history", "Media"), _ => { if (TryHistory(() => _history?.ClearResume())) { _pendingResume = null; _resumeReady = false; OnPropertyChanged(nameof(HasPendingResume)); (AcceptResumeCommand as RegistryCommand)?.RaiseCanExecuteChanged(); (DeclineResumeCommand as RegistryCommand)?.RaiseCanExecuteChanged(); } });
+        registry.Register(new(PlayerCommandId.ClearResumeHistory, "Clear resume history", "Media"), _ => { if (TryHistory(() => _history?.ClearResume())) { _pendingResume = null; _resumeReady = false; NotifyPendingResume(); NotifyResume(); } }, _ => HasResumeItems);
         registry.Register(new(PlayerCommandId.OpenRecent, "Open recent media", "Media"), parameter => OpenSource(parameter as string, MediaSourceKind.Recent));
         registry.Register(new(PlayerCommandId.AcceptResume, "Resume playback", "Media"), _ => ApplyResume(), _ => _pendingResume is not null && _resumeReady);
         registry.Register(new(PlayerCommandId.DeclineResume, "Start from beginning", "Media"), _ => DeclineResume(), _ => _pendingResume is not null && _resumeReady);
@@ -193,14 +194,25 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
                 OnPropertyChanged(nameof(HasOpenError));
         }
     }
-    public string? HistoryError { get; private set; }
+    private string? _historyError;
+    public string? HistoryError
+    {
+        get => _historyError;
+        private set
+        {
+            if (Set(ref _historyError, value))
+                OnPropertyChanged(nameof(HasHistoryError));
+        }
+    }
     public string UrlText { get => _urlText; set => Set(ref _urlText, value); }
     public bool HasPendingResume => _pendingResume is not null && _resumeReady;
     public string PendingResumeText => _pendingResume is null ? string.Empty : $"Resume from {FormatTime(_pendingResume.Position)}?";
     public IReadOnlyList<RecentMediaEntry> RecentItems => _history?.Recent ?? [];
     public bool HasRecentItems => RecentItems.Count > 0;
     public bool HasNoRecentItems => !HasRecentItems;
+    public bool HasResumeItems => (_history?.Resume.Count ?? 0) > 0;
     public bool HasOpenError => !string.IsNullOrWhiteSpace(OpenError);
+    public bool HasHistoryError => !string.IsNullOrWhiteSpace(HistoryError);
 
     public void BeginSeek() => _isSeeking = CanSeek;
 
@@ -244,7 +256,7 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
             {
                 if (TryHistory(() => _history?.RecordOpened(_currentSource, _settings?.Current.RememberRecentMedia ?? true))) { _recordedOpenGeneration = state.Generation; NotifyRecent(); }
                 if (_pendingResume is not null && state.Generation == _activeGeneration && state.CanSeek && state.Duration > TimeSpan.Zero)
-                { _resumeReady = true; OnPropertyChanged(nameof(HasPendingResume)); (AcceptResumeCommand as RegistryCommand)?.RaiseCanExecuteChanged(); (DeclineResumeCommand as RegistryCommand)?.RaiseCanExecuteChanged(); }
+                { _resumeReady = true; NotifyPendingResume(); }
             }
             if (_currentSource is not null && state.Status is PlaybackStatus.Playing or PlaybackStatus.Paused && _clock() - _lastCheckpointUtc >= TimeSpan.FromSeconds(10))
                 CheckpointCurrent(false);
@@ -274,7 +286,7 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
         _currentSource = result.Source;
         _generationFloor = _lastObservedGeneration; _activeGeneration = -1; _resumeReady = false; _lastState = null; _recordedOpenGeneration = -1;
         _pendingResume = (_settings?.Current.ResumePlayback ?? true) && (_settings?.Current.RememberResumeHistory ?? true) ? TryFindResume(_currentSource) : null;
-        OnPropertyChanged(nameof(HasPendingResume)); OnPropertyChanged(nameof(PendingResumeText));
+        NotifyPendingResume();
         OpenError = string.Empty;
         try { _transport.Open(_currentSource.CanonicalSource); }
         catch (Exception e) { _diagnostic?.Invoke(e.ToString()); _currentSource = null; _pendingResume = null; OpenError = "Media could not be opened."; }
@@ -292,6 +304,18 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
     {
         OnPropertyChanged(nameof(RecentItems)); OnPropertyChanged(nameof(HasRecentItems)); OnPropertyChanged(nameof(HasNoRecentItems)); (ClearRecentCommand as RegistryCommand)?.RaiseCanExecuteChanged();
     }
+    private void NotifyResume()
+    {
+        OnPropertyChanged(nameof(HasResumeItems));
+        (ClearResumeHistoryCommand as RegistryCommand)?.RaiseCanExecuteChanged();
+    }
+    private void NotifyPendingResume()
+    {
+        OnPropertyChanged(nameof(HasPendingResume));
+        OnPropertyChanged(nameof(PendingResumeText));
+        (AcceptResumeCommand as RegistryCommand)?.RaiseCanExecuteChanged();
+        (DeclineResumeCommand as RegistryCommand)?.RaiseCanExecuteChanged();
+    }
 
     private void ApplyResume()
     {
@@ -299,7 +323,7 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
         double duration = Math.Max(_duration.TotalSeconds, 1);
         bool ok = true; TryHistory(() => _history?.RemoveResume(resume.Source), () => ok = false); if (!ok) return;
         _transport.Seek(Math.Clamp(resume.Position.TotalSeconds / duration, 0, 1));
-        _pendingResume = null; _resumeReady = false; OnPropertyChanged(nameof(HasPendingResume)); (AcceptResumeCommand as RegistryCommand)?.RaiseCanExecuteChanged(); (DeclineResumeCommand as RegistryCommand)?.RaiseCanExecuteChanged();
+        _pendingResume = null; _resumeReady = false; NotifyPendingResume(); NotifyResume();
     }
 
     public void CheckpointCurrent(bool force)
@@ -307,13 +331,13 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
         if (_currentSource is null || _lastState is not { } state) return;
         DateTimeOffset now = _clock();
         if (_activeGeneration < 0 || state.Generation != _activeGeneration || state.Status is not (PlaybackStatus.Playing or PlaybackStatus.Paused) || !state.CanSeek || state.Duration <= TimeSpan.Zero || !(_settings?.Current.RememberResumeHistory ?? true) || (!force && now - _lastCheckpointUtc < TimeSpan.FromSeconds(10))) return;
-        if (TryHistory(() => _history?.Checkpoint(_currentSource, state.Elapsed, state.Duration, true, _settings?.Current.ResumeMinimumElapsedSeconds ?? 30, _settings?.Current.ResumeMaximumRemainingSeconds ?? 30, true))) _lastCheckpointUtc = now;
+        if (TryHistory(() => _history?.Checkpoint(_currentSource, state.Elapsed, state.Duration, true, _settings?.Current.ResumeMinimumElapsedSeconds ?? 30, _settings?.Current.ResumeMaximumRemainingSeconds ?? 30, true))) { _lastCheckpointUtc = now; NotifyResume(); }
     }
     public void OnClosing() => CheckpointCurrent(true);
     private void DeclineResume()
     {
         bool ok = true; if (_pendingResume is { } resume) TryHistory(() => _history?.RemoveResume(resume.Source), () => ok = false); if (!ok) return;
-        _pendingResume = null; _resumeReady = false; OnPropertyChanged(nameof(HasPendingResume));
+        _pendingResume = null; _resumeReady = false; NotifyPendingResume(); NotifyResume();
     }
 
     private ResumeEntry? TryFindResume(MediaSource source)
@@ -322,8 +346,8 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
     }
     private bool TryHistory(Action action, Action? failed = null)
     {
-        try { action(); HistoryError = null; OnPropertyChanged(nameof(HistoryError)); return true; }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { HistoryError = "Media history could not be saved."; OnPropertyChanged(nameof(HistoryError)); _diagnostic?.Invoke(e.ToString()); failed?.Invoke(); return false; }
+        try { action(); HistoryError = null; return true; }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { HistoryError = "Media history could not be saved."; _diagnostic?.Invoke(e.ToString()); failed?.Invoke(); return false; }
     }
 
     private static double ToDouble(object? parameter) => parameter switch

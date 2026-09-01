@@ -66,6 +66,7 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
         if (_settings is not null) _settings.Changed += (_, updated) =>
         {
             TryHistory(() => { if (!updated.RememberRecentMedia) _history?.ClearRecent(); if (!updated.RememberResumeHistory) _history?.ClearResume(); });
+            if (!updated.RememberResumeHistory) { _pendingResume = null; _resumeReady = false; OnPropertyChanged(nameof(HasPendingResume)); (AcceptResumeCommand as RegistryCommand)?.RaiseCanExecuteChanged(); (DeclineResumeCommand as RegistryCommand)?.RaiseCanExecuteChanged(); }
             OnPropertyChanged(nameof(SkipBackwardLabel)); OnPropertyChanged(nameof(SkipForwardLabel)); OnPropertyChanged(nameof(RecentItems));
         };
         PlayerCommandRegistry registry = new();
@@ -74,9 +75,9 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
         registry.Register(new(PlayerCommandId.OpenFolder, "Open folder", "Media", "Ctrl+Shift+O"), _ => _ = OpenFolderAsync(), _ => false);
         registry.Register(new(PlayerCommandId.OpenUrl, "Open network URL", "Media", "Ctrl+L"), _ => showUrlPanel?.Invoke(), _ => showUrlPanel is not null);
         registry.Register(new(PlayerCommandId.SubmitUrl, "Submit network URL", "Media"), _ => OpenUrl());
-        registry.Register(new(PlayerCommandId.RemoveRecent, "Remove recent media", "Media"), p => TryHistory(() => _history?.RemoveRecent(p as string ?? string.Empty)));
-        registry.Register(new(PlayerCommandId.ClearRecent, "Clear recent media", "Media"), _ => TryHistory(() => _history?.ClearRecent()));
-        registry.Register(new(PlayerCommandId.ClearResumeHistory, "Clear resume history", "Media"), _ => TryHistory(() => _history?.ClearResume()));
+        registry.Register(new(PlayerCommandId.RemoveRecent, "Remove recent media", "Media"), p => { TryHistory(() => _history?.RemoveRecent(p as string ?? string.Empty)); NotifyRecent(); }, p => !string.IsNullOrWhiteSpace(p as string));
+        registry.Register(new(PlayerCommandId.ClearRecent, "Clear recent media", "Media"), _ => { TryHistory(() => _history?.ClearRecent()); NotifyRecent(); }, _ => HasRecentItems);
+        registry.Register(new(PlayerCommandId.ClearResumeHistory, "Clear resume history", "Media"), _ => { TryHistory(() => _history?.ClearResume()); _pendingResume = null; _resumeReady = false; OnPropertyChanged(nameof(HasPendingResume)); (AcceptResumeCommand as RegistryCommand)?.RaiseCanExecuteChanged(); (DeclineResumeCommand as RegistryCommand)?.RaiseCanExecuteChanged(); });
         registry.Register(new(PlayerCommandId.OpenRecent, "Open recent media", "Media"), parameter => OpenSource(parameter as string, MediaSourceKind.Recent));
         registry.Register(new(PlayerCommandId.AcceptResume, "Resume playback", "Media"), _ => ApplyResume(), _ => _pendingResume is not null && _resumeReady);
         registry.Register(new(PlayerCommandId.DeclineResume, "Start from beginning", "Media"), _ => DeclineResume(), _ => _pendingResume is not null && _resumeReady);
@@ -275,6 +276,10 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
         if (sources is null || sources.Count == 0) { OpenError = "Drop one local media file to open it."; return; }
         if (sources.Count > 1) { OpenError = "Opening multiple files requires queue support."; return; }
         OpenSource(sources[0], MediaSourceKind.DragDrop);
+    }
+    private void NotifyRecent()
+    {
+        OnPropertyChanged(nameof(RecentItems)); OnPropertyChanged(nameof(HasRecentItems)); (ClearRecentCommand as RegistryCommand)?.RaiseCanExecuteChanged();
     }
 
     private void ApplyResume()

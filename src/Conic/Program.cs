@@ -1,8 +1,5 @@
 using System.Runtime.InteropServices;
 using Avalonia;
-#if DEBUG
-using Avalonia.Diagnostics;
-#endif
 using Conic.Interop;
 
 namespace Conic;
@@ -68,9 +65,6 @@ internal static class Program
     public static AppBuilder BuildAvaloniaApp()
         => AppBuilder.Configure<App>()
             .UsePlatformDetect()
-#if DEBUG
-            .WithDeveloperTools()
-#endif
             .WithInterFont()
             .LogToTrace();
 }

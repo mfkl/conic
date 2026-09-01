@@ -219,6 +219,27 @@ public sealed class PlayerPresentationViewModelTests
     }
 
     [Fact]
+    public void ClosingFreshEligiblePlayerPersistsExactElapsedPosition()
+    {
+        HistoryStorage storage = new(); MediaHistoryService history = new(storage); PlayerPresentationViewModel vm = CreateOpeningViewModel(new RecordingTransport(), history);
+        vm.OpenSource("a.mp4", MediaSourceKind.File); vm.ApplyEngineState(State(.4, PlaybackStatus.Opening, true) with { Generation = 1, Source = "a.mp4" });
+        Assert.Empty(history.Resume); vm.ApplyEngineState(State(.45, PlaybackStatus.Playing, true) with { Generation = 1, Source = "a.mp4" }); history.ClearResume();
+        vm.OnClosing(); ResumeEntry entry = Assert.Single(history.Resume); Assert.Equal(TimeSpan.FromSeconds(45), entry.Position);
+    }
+
+    [Theory]
+    [InlineData(PlaybackStatus.Playing, true, 0d, 100d, true)]
+    [InlineData(PlaybackStatus.Playing, true, .1d, 100d, true)]
+    [InlineData(PlaybackStatus.Playing, true, .4d, 100d, false)]
+    public void ForcedCheckpointRejectsDurationThresholdAndPrivacy(PlaybackStatus status, bool seekable, double position, double duration, bool rememberHistory)
+    {
+        HistoryStorage storage = new(); MediaHistoryService history = new(storage); PlayerSettingsService settings = new(new SettingsStorage()); settings.Update(s => s with { RememberResumeHistory = rememberHistory, ResumeMinimumElapsedSeconds = 30 });
+        PlayerPresentationViewModel vm = new(new RecordingTransport(), new EmptyPicker(), () => { }, settings: settings, sourceValidator: new MediaSourceValidator(new ExistingFiles()), history: history);
+        vm.OpenSource("a.mp4", MediaSourceKind.File); vm.ApplyEngineState(new(1, status, "a.mp4", position, TimeSpan.FromSeconds(position * 100), TimeSpan.FromSeconds(duration), .5, seekable, null)); vm.CheckpointCurrent(true);
+        Assert.Empty(history.Resume);
+    }
+
+    [Fact]
     public void StopWritesHistoryBeforeTransportStop()
     {
         List<string> events = []; OrderedStorage storage = new(events); MediaHistoryService history = new(storage); OrderedTransport transport = new(events); PlayerPresentationViewModel vm = CreateOpeningViewModel(transport, history);

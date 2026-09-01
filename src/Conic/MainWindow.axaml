@@ -2,297 +2,44 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:Conic.Controls"
-        xmlns:app="clr-namespace:Conic"
-        mc:Ignorable="d"
-        d:DesignWidth="1280"
-        d:DesignHeight="720"
-        x:Class="Conic.MainWindow"
-        x:DataType="app:MainWindow"
-        Title="Conic"
-        Background="#08090B"
-        WindowState="Maximized">
-
-    <Window.Styles>
-        <Style Selector="Button.chrome">
-            <Setter Property="Height" Value="38" />
-            <Setter Property="Padding" Value="15,0" />
-            <Setter Property="CornerRadius" Value="12" />
-            <Setter Property="Background" Value="#B51B1D22" />
-            <Setter Property="BorderBrush" Value="#24FFFFFF" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="Foreground" Value="#F4F5F7" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-        </Style>
-        <Style Selector="Button.chrome:pointerover">
-            <Setter Property="Background" Value="#E12A2D34" />
-            <Setter Property="BorderBrush" Value="#45FFFFFF" />
-        </Style>
-
-        <Style Selector="Button.transport">
-            <Setter Property="Width" Value="42" />
-            <Setter Property="Height" Value="42" />
-            <Setter Property="Padding" Value="10" />
-            <Setter Property="CornerRadius" Value="21" />
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="Foreground" Value="#DDE0E5" />
-        </Style>
-        <Style Selector="Button.transport:pointerover">
-            <Setter Property="Background" Value="#20FFFFFF" />
-            <Setter Property="Foreground" Value="White" />
-        </Style>
-
-        <Style Selector="Button.play">
-            <Setter Property="Width" Value="56" />
-            <Setter Property="Height" Value="56" />
-            <Setter Property="Padding" Value="16" />
-            <Setter Property="CornerRadius" Value="28" />
-            <Setter Property="Background" Value="#F5F6F8" />
-            <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="Foreground" Value="#111318" />
-        </Style>
-        <Style Selector="Button.play:pointerover">
-            <Setter Property="Background" Value="White" />
-            <Setter Property="RenderTransform" Value="scale(1.05)" />
-        </Style>
-
-        <Style Selector="Slider.timeline">
-            <Setter Property="Height" Value="36" />
-            <Setter Property="Foreground" Value="#F5F6F8" />
-            <Setter Property="Background" Value="#3DFFFFFF" />
-        </Style>
-        <Style Selector="Slider.volume">
-            <Setter Property="Width" Value="112" />
-            <Setter Property="Height" Value="52" />
-            <Setter Property="VerticalAlignment" Value="Center" />
-            <Setter Property="Foreground" Value="#F4F5F7" />
-            <Setter Property="Background" Value="#35FFFFFF" />
-        </Style>
-
-        <!-- Keep Fluent's system accent from turning the sliders blue. -->
-        <Style Selector="Slider.monochrome /template/ RepeatButton#PART_DecreaseButton">
-            <Setter Property="Background" Value="#F5F6F8" />
-        </Style>
-        <Style Selector="Slider.monochrome:pointerover /template/ RepeatButton#PART_DecreaseButton">
-            <Setter Property="Background" Value="White" />
-        </Style>
-        <Style Selector="Slider.monochrome:pressed /template/ RepeatButton#PART_DecreaseButton">
-            <Setter Property="Background" Value="#D9DCE2" />
-        </Style>
-        <Style Selector="Slider.monochrome /template/ RepeatButton#PART_IncreaseButton">
-            <Setter Property="Background" Value="#3DFFFFFF" />
-        </Style>
-        <Style Selector="Slider.monochrome:pointerover /template/ RepeatButton#PART_IncreaseButton">
-            <Setter Property="Background" Value="#52FFFFFF" />
-        </Style>
-        <Style Selector="Slider.monochrome:pressed /template/ RepeatButton#PART_IncreaseButton">
-            <Setter Property="Background" Value="#2EFFFFFF" />
-        </Style>
-        <Style Selector="Slider.monochrome /template/ Thumb">
-            <Setter Property="Background" Value="#F5F6F8" />
-        </Style>
-        <Style Selector="Slider.monochrome:pointerover /template/ Thumb">
-            <Setter Property="Background" Value="White" />
-        </Style>
-        <Style Selector="Slider.monochrome:pressed /template/ Thumb">
-            <Setter Property="Background" Value="#D9DCE2" />
-        </Style>
-        <!-- Orange marks elapsed playback; the remaining track and thumb stay
-             neutral so the accent remains crisp rather than overpowering. -->
-        <Style Selector="Slider.timeline /template/ RepeatButton#PART_DecreaseButton">
-            <Setter Property="Background" Value="#FF8A3D" />
-        </Style>
-        <Style Selector="Slider.timeline:pointerover /template/ RepeatButton#PART_DecreaseButton">
-            <Setter Property="Background" Value="#FFA465" />
-        </Style>
-        <Style Selector="Slider.timeline:pressed /template/ RepeatButton#PART_DecreaseButton">
-            <Setter Property="Background" Value="#E8752C" />
-        </Style>
-        <!-- A dark center and light rim keep the volume thumb distinct from
-             both the filled and unfilled portions of the track. -->
-        <Style Selector="Slider.volume /template/ Thumb">
-            <Setter Property="Width" Value="18" />
-            <Setter Property="Height" Value="18" />
-            <Setter Property="Background" Value="#111318" />
-            <Setter Property="BorderBrush" Value="#F5F6F8" />
-            <Setter Property="BorderThickness" Value="2" />
-        </Style>
-        <Style Selector="Slider.volume:pointerover /template/ Thumb">
-            <Setter Property="Background" Value="#1B1D22" />
-            <Setter Property="BorderBrush" Value="White" />
-        </Style>
-        <Style Selector="Slider.volume:pressed /template/ Thumb">
-            <Setter Property="Background" Value="#D9DCE2" />
-            <Setter Property="BorderBrush" Value="#111318" />
-        </Style>
-
-        <Style Selector="CheckBox.monochrome:checked /template/ Border#NormalRectangle">
-            <Setter Property="Background" Value="#F5F6F8" />
-            <Setter Property="BorderBrush" Value="#F5F6F8" />
-        </Style>
-        <Style Selector="CheckBox.monochrome:checked:pointerover /template/ Border#NormalRectangle">
-            <Setter Property="Background" Value="White" />
-            <Setter Property="BorderBrush" Value="White" />
-        </Style>
-        <Style Selector="CheckBox.monochrome:checked:pressed /template/ Border#NormalRectangle">
-            <Setter Property="Background" Value="#D9DCE2" />
-            <Setter Property="BorderBrush" Value="#D9DCE2" />
-        </Style>
-        <Style Selector="CheckBox.monochrome:checked /template/ Path#CheckGlyph">
-            <Setter Property="Fill" Value="#111318" />
-        </Style>
-    </Window.Styles>
-
-    <Grid x:Name="VideoArea" Background="#08090B">
-        <local:CompositionVideoSurface x:Name="VideoSurface"
-                                       MediaPath="{Binding MediaPath}" />
-
-        <!-- Lightweight top chrome; all controls stay in Avalonia composition. -->
-        <Grid Margin="24,20,24,0"
-              VerticalAlignment="Top"
-              ColumnDefinitions="Auto,*,Auto">
-            <Border Grid.Column="0"
-                    Padding="6"
-                    CornerRadius="16"
-                    Background="#B8131519"
-                    BorderBrush="#20FFFFFF"
-                    BorderThickness="1"
-                    BoxShadow="0 8 24 0 #70000000">
-                <StackPanel Orientation="Horizontal" Spacing="6">
-                    <Button Classes="chrome"
-                            Click="OnOpenFileClick"
-                            ToolTip.Tip="Open media">
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <PathIcon Width="16" Height="16"
-                                      Data="M2,5 L9,5 L11,7 L22,7 L20,19 L2,19 Z" />
-                            <TextBlock Text="Open" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </Button>
-                    <Button Classes="chrome"
-                            Content="Test video"
-                            Click="OnTestPatternClick"
-                            ToolTip.Tip="Play the local test video" />
-                </StackPanel>
-            </Border>
-
-            <Border Grid.Column="2"
-                    Padding="14,8"
-                    CornerRadius="14"
-                    Background="#9E131519"
-                    BorderBrush="#20FFFFFF"
-                    BorderThickness="1">
-                <CheckBox x:Name="TopMostCheck"
-                          Classes="monochrome"
-                          Content="Always on top"
-                          Foreground="#D7DBE2"
-                          FontSize="12"
-                          VerticalAlignment="Center"
-                          IsCheckedChanged="OnTopMostChanged" />
-            </Border>
-        </Grid>
-
-        <!-- Floating playback dock. -->
-        <Border VerticalAlignment="Bottom"
-                HorizontalAlignment="Stretch"
-                MaxWidth="1080"
-                Margin="24,0,24,26"
-                Padding="22,16,22,14"
-                CornerRadius="22"
-                Background="#E5121418"
-                BorderBrush="#2FFFFFFF"
-                BorderThickness="1"
-                BoxShadow="0 18 48 0 #A8000000">
-            <Grid RowDefinitions="36,Auto" RowSpacing="12">
-                <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto">
-                    <TextBlock x:Name="ElapsedText"
-                               Grid.Column="0"
-                               Text="00:00"
-                               Margin="0,0,12,0"
-                               Foreground="#AEB3BD"
-                               FontSize="12"
-                               FontFeatures="tnum"
-                               VerticalAlignment="Center" />
-                    <Slider x:Name="PositionSlider"
-                            Grid.Column="1"
-                            Classes="timeline monochrome"
-                            Minimum="0"
-                            Maximum="1"
-                            ValueChanged="OnPositionChanged"
-                            Value="0" />
-                    <TextBlock x:Name="TimeText"
-                               Grid.Column="2"
-                               Text="00:00"
-                               Margin="12,0,0,0"
-                               Foreground="#AEB3BD"
-                               FontSize="12"
-                               FontFeatures="tnum"
-                               VerticalAlignment="Center" />
-                </Grid>
-
-                <Grid Grid.Row="1" ColumnDefinitions="*,Auto,*">
-                    <StackPanel Grid.Column="1"
-                                Orientation="Horizontal"
-                                Spacing="8"
-                                VerticalAlignment="Center">
-                        <Button Classes="transport"
-                                Click="OnPrevClick"
-                                IsEnabled="False"
-                                ToolTip.Tip="Queue navigation is not available yet">
-                            <PathIcon Width="19" Height="19"
-                                      Data="M5,5 L8,5 L8,19 L5,19 Z M19,5 L19,19 L9,12 Z" />
-                        </Button>
-                        <Button Classes="play"
-                                Click="OnPlayPauseClick"
-                                ToolTip.Tip="Play or pause">
-                            <Grid>
-                                <PathIcon x:Name="PlayIcon"
-                                          Width="22" Height="22"
-                                          Data="M8,5 L19,12 L8,19 Z" />
-                                <PathIcon x:Name="PauseIcon"
-                                          Width="22" Height="22"
-                                          IsVisible="False"
-                                          Data="M7,5 L11,5 L11,19 L7,19 Z M14,5 L18,5 L18,19 L14,19 Z" />
-                            </Grid>
-                        </Button>
-                        <Button Classes="transport"
-                                Click="OnStopClick"
-                                ToolTip.Tip="Stop">
-                            <PathIcon Width="17" Height="17"
-                                      Data="M6,6 L18,6 L18,18 L6,18 Z" />
-                        </Button>
-                        <Button Classes="transport"
-                                Click="OnNextClick"
-                                IsEnabled="False"
-                                ToolTip.Tip="Queue navigation is not available yet">
-                            <PathIcon Width="19" Height="19"
-                                      Data="M5,5 L5,19 L15,12 Z M16,5 L19,5 L19,19 L16,19 Z" />
-                        </Button>
-                    </StackPanel>
-
-                    <Grid Grid.Column="2"
-                          Width="148"
-                          Height="52"
-                          Margin="0,0,4,0"
-                          HorizontalAlignment="Right"
-                          VerticalAlignment="Center"
-                          ColumnDefinitions="24,12,112">
-                        <PathIcon Grid.Column="0"
-                                  Width="18" Height="18"
-                                  HorizontalAlignment="Center"
-                                  VerticalAlignment="Center"
-                                  Foreground="#FF9A55"
-                                  Data="M3,9 L7,9 L12,5 L12,19 L7,15 L3,15 Z M15,9 L18,12 L15,15 Z" />
-                        <Slider x:Name="VolumeSlider"
-                                Grid.Column="2"
-                                Classes="volume monochrome"
-                                Minimum="0"
-                                Maximum="100"
-                                Value="50"
-                                ValueChanged="OnVolumeChanged" />
-                    </Grid>
-                </Grid>
-            </Grid>
-        </Border>
+        xmlns:controls="clr-namespace:Conic.Controls"
+        xmlns:viewModels="clr-namespace:Conic.ViewModels"
+        mc:Ignorable="d" d:DesignWidth="1280" d:DesignHeight="720"
+        x:Class="Conic.MainWindow" x:DataType="viewModels:PlayerPresentationViewModel"
+        Title="Conic" Background="#08090B" Topmost="{Binding IsAlwaysOnTop}" WindowState="Maximized">
+  <Grid x:Name="VideoArea" Background="#08090B">
+    <controls:CompositionVideoSurface x:Name="VideoSurface" />
+    <Grid Margin="24,20,24,0" VerticalAlignment="Top" ColumnDefinitions="Auto,*,Auto">
+      <Border Grid.Column="0" Padding="6" CornerRadius="16" Background="#B8131519" BorderBrush="#20FFFFFF" BorderThickness="1" BoxShadow="0 8 24 0 #70000000">
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <Button Classes="chrome" Command="{Binding OpenMediaCommand}" ToolTip.Tip="Open media"><StackPanel Orientation="Horizontal" Spacing="8"><PathIcon Width="16" Height="16" Data="M2,5 L9,5 L11,7 L22,7 L20,19 L2,19 Z" /><TextBlock Text="Open" VerticalAlignment="Center" /></StackPanel></Button>
+          <Button Classes="chrome" Content="Test video" Command="{Binding OpenTestMediaCommand}" ToolTip.Tip="Play the local test video" />
+        </StackPanel>
+      </Border>
+      <Border Grid.Column="2" Padding="14,8" CornerRadius="14" Background="#9E131519" BorderBrush="#20FFFFFF" BorderThickness="1">
+        <CheckBox Classes="monochrome" Content="Always on top" Foreground="#D7DBE2" FontSize="12" VerticalAlignment="Center" IsChecked="{Binding IsAlwaysOnTop, Mode=TwoWay}" Command="{Binding SetAlwaysOnTopCommand}" CommandParameter="{Binding IsChecked, RelativeSource={RelativeSource Self}}" />
+      </Border>
     </Grid>
+    <Border VerticalAlignment="Bottom" HorizontalAlignment="Stretch" MaxWidth="1080" Margin="24,0,24,26" Padding="22,16,22,14" CornerRadius="22" Background="#E5121418" BorderBrush="#2FFFFFFF" BorderThickness="1" BoxShadow="0 18 48 0 #A8000000">
+      <Grid RowDefinitions="36,Auto" RowSpacing="12">
+        <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto">
+          <TextBlock Grid.Column="0" Text="{Binding ElapsedText}" Margin="0,0,12,0" Foreground="#AEB3BD" FontSize="12" FontFeatures="tnum" VerticalAlignment="Center" />
+          <controls:PlayerTimeline Grid.Column="1" Classes="timeline monochrome" Minimum="0" Maximum="1" Value="{Binding Position, Mode=TwoWay}" IsEnabled="{Binding CanSeek}" SeekStarted="OnSeekStarted" SeekCommitted="OnSeekCommitted" />
+          <TextBlock Grid.Column="2" Text="{Binding DurationText}" Margin="12,0,0,0" Foreground="#AEB3BD" FontSize="12" FontFeatures="tnum" VerticalAlignment="Center" />
+        </Grid>
+        <Grid Grid.Row="1" ColumnDefinitions="*,Auto,*">
+          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+            <Button Classes="transport" IsEnabled="False" ToolTip.Tip="Queue navigation is not available yet"><PathIcon Width="19" Height="19" Data="M5,5 L8,5 L8,19 L5,19 Z M19,5 L19,19 L9,12 Z" /></Button>
+            <Button Classes="play" Command="{Binding TogglePauseCommand}" ToolTip.Tip="Play or pause"><Grid><PathIcon Width="22" Height="22" IsVisible="{Binding !IsPlaying}" Data="M8,5 L19,12 L8,19 Z" /><PathIcon Width="22" Height="22" IsVisible="{Binding IsPlaying}" Data="M7,5 L11,5 L11,19 L7,19 Z M14,5 L18,5 L18,19 L14,19 Z" /></Grid></Button>
+            <Button Classes="transport" Command="{Binding StopCommand}" ToolTip.Tip="Stop"><PathIcon Width="17" Height="17" Data="M6,6 L18,6 L18,18 L6,18 Z" /></Button>
+            <Button Classes="transport" IsEnabled="False" ToolTip.Tip="Queue navigation is not available yet"><PathIcon Width="19" Height="19" Data="M5,5 L5,19 L15,12 Z M16,5 L19,19 L16,19 Z" /></Button>
+          </StackPanel>
+          <Grid Grid.Column="2" Width="148" Height="52" Margin="0,0,4,0" HorizontalAlignment="Right" VerticalAlignment="Center" ColumnDefinitions="24,12,112">
+            <PathIcon Grid.Column="0" Width="18" Height="18" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#FF9A55" Data="M3,9 L7,9 L12,5 L12,19 L7,15 L3,15 Z M15,9 L18,12 L15,15 Z" />
+            <controls:PlayerVolumeSlider Grid.Column="2" Classes="volume monochrome" Minimum="0" Maximum="100" Value="{Binding Volume, Mode=TwoWay}" />
+          </Grid>
+        </Grid>
+      </Grid>
+    </Border>
+  </Grid>
 </Window>

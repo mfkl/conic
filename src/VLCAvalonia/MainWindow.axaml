@@ -96,7 +96,7 @@
                 <Button Classes="menuAction" Content="Open file" Click="OnOpenFile" ToolTip.Tip="Open a local media file (Ctrl+O)" AutomationProperties.Name="Open media file from menu" />
                 <Button Classes="menuAction" Content="Open network URL" Command="{Binding OpenUrlCommand}" ToolTip.Tip="Open a network URL (Ctrl+L)" />
                 <StackPanel Spacing="2" Opacity="0.58">
-                    <Button x:Name="OpenFolderAction" Classes="menuAction" Content="Open folder" Command="{Binding OpenFolderCommand}" ToolTip.Tip="Requires queue support" AutomationProperties.Name="Open folder (requires queue support)" />
+                    <Button x:Name="OpenFolderAction" Classes="menuAction" Content="Open folder" Command="{Binding OpenFolderCommand}" IsEnabled="False" ToolTip.Tip="Requires queue support" AutomationProperties.Name="Open folder (requires queue support)" />
                     <TextBlock Text="Requires queue support" Classes="settingHint" Margin="12,0" />
                 </StackPanel>
                 <Border Height="1" Background="#2CFFFFFF" Margin="4,4" />

@@ -184,13 +184,23 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
     public double PlaybackRate { get => _playbackRate; private set => Set(ref _playbackRate, value); }
     public string MediaTitle { get => _mediaTitle; private set => Set(ref _mediaTitle, value); }
     public bool IsFullscreen { get => _isFullscreen; set => Set(ref _isFullscreen, value); }
-    public string OpenError { get => _openError; private set => Set(ref _openError, value); }
+    public string OpenError
+    {
+        get => _openError;
+        private set
+        {
+            if (Set(ref _openError, value))
+                OnPropertyChanged(nameof(HasOpenError));
+        }
+    }
     public string? HistoryError { get; private set; }
     public string UrlText { get => _urlText; set => Set(ref _urlText, value); }
     public bool HasPendingResume => _pendingResume is not null && _resumeReady;
     public string PendingResumeText => _pendingResume is null ? string.Empty : $"Resume from {FormatTime(_pendingResume.Position)}?";
     public IReadOnlyList<RecentMediaEntry> RecentItems => _history?.Recent ?? [];
     public bool HasRecentItems => RecentItems.Count > 0;
+    public bool HasNoRecentItems => !HasRecentItems;
+    public bool HasOpenError => !string.IsNullOrWhiteSpace(OpenError);
 
     public void BeginSeek() => _isSeeking = CanSeek;
 
@@ -280,7 +290,7 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
     }
     private void NotifyRecent()
     {
-        OnPropertyChanged(nameof(RecentItems)); OnPropertyChanged(nameof(HasRecentItems)); (ClearRecentCommand as RegistryCommand)?.RaiseCanExecuteChanged();
+        OnPropertyChanged(nameof(RecentItems)); OnPropertyChanged(nameof(HasRecentItems)); OnPropertyChanged(nameof(HasNoRecentItems)); (ClearRecentCommand as RegistryCommand)?.RaiseCanExecuteChanged();
     }
 
     private void ApplyResume()

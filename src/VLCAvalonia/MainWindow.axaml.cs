@@ -39,13 +39,14 @@ public partial class MainWindow : Window
             OpenSettings,
             _settings,
             new MediaSourceValidator(new SystemMediaFileSystem()),
-            CreateHistory());
+            CreateHistory(),
+            showUrlPanel: ShowUrlPanel);
         DataContext = _presentation;
         _settings.Changed += (_, settings) => ApplyLiveSettings(settings);
         ApplyLiveSettings(_settings.Current);
         _autoHideTimer.Tick += (_, _) =>
         {
-            bool menuOpen = VideoArea.ContextMenu?.IsOpen ?? false || SettingsPanel.IsVisible;
+            bool menuOpen = (VideoArea.ContextMenu?.IsOpen ?? false) || SettingsPanel.IsVisible || OpenMenu.IsVisible || UrlPanel.IsVisible;
             bool chromeFocused = PlayerDock.IsKeyboardFocusWithin || TopChrome.IsKeyboardFocusWithin;
             bool popupOpen = menuOpen || VideoArea.IsKeyboardFocusWithin &&
                 (RightTransport.IsKeyboardFocusWithin || TopChrome.IsKeyboardFocusWithin);
@@ -80,6 +81,18 @@ public partial class MainWindow : Window
         _chromeVisibility.Wake();
         SetChromeVisibility(true);
         _autoHideTimer.Stop();
+        if (e.Key == Key.Escape && UrlPanel.IsVisible)
+        {
+            CloseUrlPanel();
+            e.Handled = true;
+            return;
+        }
+        if (e.Key == Key.Escape && OpenMenu.IsVisible)
+        {
+            CloseOpenMenu();
+            e.Handled = true;
+            return;
+        }
         if (e.Key == Key.Escape && SettingsPanel.IsVisible)
         {
             CloseSettings();
@@ -91,8 +104,7 @@ public partial class MainWindow : Window
         {
             case Key.OemComma when e.KeyModifiers.HasFlag(KeyModifiers.Control): _presentation.Registry.Execute(Player.Application.PlayerCommandId.OpenSettings); break;
             case Key.O when e.KeyModifiers.HasFlag(KeyModifiers.Control): _presentation.Registry.Execute(Player.Application.PlayerCommandId.OpenMedia); break;
-            case Key.L when e.KeyModifiers.HasFlag(KeyModifiers.Control): OnUrlOpen(this, e); break;
-            case Key.Escape when SettingsPanel.IsVisible: SettingsPanel.IsVisible = false; TopChrome.Focus(); break;
+            case Key.L when e.KeyModifiers.HasFlag(KeyModifiers.Control): _presentation.Registry.Execute(Player.Application.PlayerCommandId.OpenUrl); break;
             case Key.F11: _presentation.Registry.Execute(Player.Application.PlayerCommandId.ToggleFullscreen); break;
             case Key.M: _presentation.Registry.Execute(Player.Application.PlayerCommandId.ToggleMute); break;
             case Key.Space: _presentation.Registry.Execute(Player.Application.PlayerCommandId.TogglePause); break;
@@ -128,18 +140,75 @@ public partial class MainWindow : Window
         return history;
     }
 
-    private void OnUrlOpen(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    private void OnOpenOptions(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
-        UrlPanel.IsVisible = true;
+        bool open = !OpenMenu.IsVisible;
+        UrlPanel.IsVisible = false;
+        ClearRecentPrompt.IsVisible = false;
+        OpenMenu.IsVisible = open;
         SetChromeVisibility(true);
-        Dispatcher.UIThread.Post(() => UrlTextBox.Focus());
+        if (open) Dispatcher.UIThread.Post(() => OpenMenu.Focus());
     }
 
-    private void OnUrlCancel(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    private void ShowUrlPanel()
+    {
+        OpenMenu.IsVisible = false;
+        ClearRecentPrompt.IsVisible = false;
+        UrlPanel.IsVisible = true;
+        SetChromeVisibility(true);
+        Dispatcher.UIThread.Post(() => { UrlTextBox.Focus(); UrlTextBox.SelectAll(); });
+    }
+
+    private void OnUrlCancel(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => CloseUrlPanel();
+
+    private void CloseUrlPanel()
     {
         UrlPanel.IsVisible = false;
-        TopChrome.Focus();
+        OpenOptionsButton.Focus();
     }
+
+    private void CloseOpenMenu()
+    {
+        OpenMenu.IsVisible = false;
+        ClearRecentPrompt.IsVisible = false;
+        OpenOptionsButton.Focus();
+    }
+
+    private void OnUrlSubmit(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        _presentation.Registry.Execute(Player.Application.PlayerCommandId.SubmitUrl);
+        if (!_presentation.HasOpenError) CloseUrlPanel();
+        else Dispatcher.UIThread.Post(() => { UrlTextBox.Focus(); UrlTextBox.SelectAll(); });
+    }
+
+    private void OnUrlTextKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter) { OnUrlSubmit(sender, e); e.Handled = true; }
+        else if (e.Key == Key.Escape) { CloseUrlPanel(); e.Handled = true; }
+    }
+
+    private void OnClearRecent(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        ClearRecentButton.IsVisible = false;
+        ClearRecentPrompt.IsVisible = true;
+        SetChromeVisibility(true);
+    }
+
+    private void OnCancelClearRecent(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        ClearRecentPrompt.IsVisible = false;
+        ClearRecentButton.IsVisible = _presentation.HasRecentItems;
+    }
+
+    private void OnConfirmClearRecent(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        ClearRecentPrompt.IsVisible = false;
+        ClearRecentButton.IsVisible = _presentation.HasRecentItems;
+    }
+
+    private void OnOpenFile(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => CloseOpenMenu();
+
+    private void OnOpenRecent(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => CloseOpenMenu();
 
     private void OnMediaDrop(object? sender, DragEventArgs e)
     {

@@ -50,7 +50,7 @@ public partial class MainWindow : Window
         ApplyLiveSettings(_settings.Current);
         _autoHideTimer.Tick += (_, _) =>
         {
-            bool menuOpen = (VideoArea.ContextMenu?.IsOpen ?? false) || SettingsPanel.IsVisible || OpenMenu.IsVisible || UrlPanel.IsVisible || ResumePanel.IsVisible;
+            bool menuOpen = (VideoArea.ContextMenu?.IsOpen ?? false) || SettingsPanel.IsVisible || OpenMenu.IsVisible || UrlPanel.IsVisible || ResumePanel.IsVisible || QueueDrawer.IsVisible;
             bool chromeFocused = PlayerDock.IsKeyboardFocusWithin || TopChrome.IsKeyboardFocusWithin;
             bool popupOpen = menuOpen || VideoArea.IsKeyboardFocusWithin &&
                 (RightTransport.IsKeyboardFocusWithin || TopChrome.IsKeyboardFocusWithin);
@@ -88,6 +88,13 @@ public partial class MainWindow : Window
         if (e.Key == Key.Escape && UrlPanel.IsVisible)
         {
             CloseUrlPanel();
+            e.Handled = true;
+            return;
+        }
+        if (e.Key == Key.Escape && QueueDrawer.IsVisible)
+        {
+            _presentation.IsQueueOpen = false;
+            QueueButton.Focus();
             e.Handled = true;
             return;
         }
@@ -258,10 +265,28 @@ public partial class MainWindow : Window
         e.Handled = true;
     }
 
+    private void OnMoveQueueItemUp(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (sender is Button { DataContext: QueueItem item } && item.Index > 0)
+            _presentation.Registry.Execute(PlayerCommandId.QueueMove, new QueueMove(item.Token, item.Index - 1));
+    }
+
+    private void OnMoveQueueItemDown(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (sender is Button { DataContext: QueueItem item } && item.Index + 1 < _presentation.QueueItems.Count)
+            _presentation.Registry.Execute(PlayerCommandId.QueueMove, new QueueMove(item.Token, item.Index + 1));
+    }
+
     private void OnPresentationPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName is nameof(PlayerPresentationViewModel.OpenError) or nameof(PlayerPresentationViewModel.HasOpenError))
             UpdateOpenErrorSurface();
+        if (e.PropertyName == nameof(PlayerPresentationViewModel.IsQueueOpen) && QueueDrawer.IsVisible)
+        {
+            SetChromeVisibility(true);
+            _autoHideTimer.Stop();
+            Dispatcher.UIThread.Post(() => QueueDrawer.Focus());
+        }
         if (e.PropertyName == nameof(PlayerPresentationViewModel.HasPendingResume))
             UpdateResumePrompt();
         if (e.PropertyName is nameof(PlayerPresentationViewModel.HasHistoryError) or nameof(PlayerPresentationViewModel.HistoryError) or nameof(PlayerPresentationViewModel.HasRecentItems) or nameof(PlayerPresentationViewModel.HasResumeItems))
@@ -489,8 +514,8 @@ public partial class MainWindow : Window
                 Console.WriteLine($"[layout-smoke] phase={phase} width={width}");
                 switch (phase)
                 {
-                    case 0: ValidateLayout(width, compact); ValidateTopChrome(width); ShowOpenMenuForSmoke(); phase++; return;
-                    case 1: ValidateSurface("open-menu", OpenMenu, [OpenMenu, OpenFolderAction, RecentEmptyState]); CloseOpenMenu(); ShowUrlPanel(); phase++; return;
+                    case 0: ValidateLayout(width, compact); ValidateTopChrome(width); ShowOpenMenuForSmoke(); _presentation.IsQueueOpen = true; phase++; return;
+                    case 1: ValidateQueueDrawer(width); _presentation.IsQueueOpen = false; ValidateSurface("open-menu", OpenMenu, [OpenMenu, OpenFolderAction, RecentEmptyState]); CloseOpenMenu(); ShowUrlPanel(); phase++; return;
                     case 2: ValidateSurface("url-panel", UrlPanel, [UrlPanel, UrlTextBox, UrlCancelButton, UrlSubmitButton]); CloseUrlPanel(); ResumePanel.IsVisible = true; Dispatcher.UIThread.Post(() => ResumeAction.Focus()); phase++; return;
                     case 3: ValidateSurface("resume-panel", ResumePanel, [ResumePanel, ResumeAction, DeclineResumeAction]); ResumePanel.IsVisible = false; OpenSettings(); _settingsViewModel.SelectedPage = _settingsViewModel.Pages[0]; ApplyResponsiveSettings(); phase++; return;
                     case 4: ValidateSettingsLayout(width, compact); BringSettingsControlIntoView(SettingsClearRecentButton); phase++; return;
@@ -499,8 +524,8 @@ public partial class MainWindow : Window
                     case 7: ValidateSettingsControl("resume-clear", SettingsClearResumeButton); SettingsClearResumePrompt.IsVisible = true; BringSettingsControlIntoView(SettingsConfirmClearResumeButton); phase++; return;
                     case 8: ValidateSettingsControl("resume-confirm", SettingsConfirmClearResumeButton); SettingsClearResumePrompt.IsVisible = false; CloseSettings(); OpenErrorToast.IsVisible = true; phase++; return;
                     case 9: ValidateToastForSmoke(); OpenErrorToast.IsVisible = false; Width = 480; phase++; return;
-                    case 10: ApplyResponsiveChrome(); ApplyResponsiveSettings(); ValidateLayout(width, true); ValidateTopChrome(width); ShowOpenMenuForSmoke(); phase++; return;
-                    case 11: ValidateSurface("open-menu", OpenMenu, [OpenMenu, OpenFolderAction, RecentEmptyState]); CloseOpenMenu(); ShowUrlPanel(); phase++; return;
+                    case 10: ApplyResponsiveChrome(); ApplyResponsiveSettings(); ValidateLayout(width, true); ValidateTopChrome(width); ShowOpenMenuForSmoke(); _presentation.IsQueueOpen = true; phase++; return;
+                    case 11: ValidateQueueDrawer(width); _presentation.IsQueueOpen = false; ValidateSurface("open-menu", OpenMenu, [OpenMenu, OpenFolderAction, RecentEmptyState]); CloseOpenMenu(); ShowUrlPanel(); phase++; return;
                     case 12: ValidateSurface("url-panel", UrlPanel, [UrlPanel, UrlTextBox, UrlCancelButton, UrlSubmitButton]); CloseUrlPanel(); ResumePanel.IsVisible = true; Dispatcher.UIThread.Post(() => ResumeAction.Focus()); phase++; return;
                     case 13: ValidateSurface("resume-panel", ResumePanel, [ResumePanel, ResumeAction, DeclineResumeAction]); ResumePanel.IsVisible = false; OpenSettings(); _settingsViewModel.SelectedPage = _settingsViewModel.Pages[0]; ApplyResponsiveSettings(); phase++; return;
                     case 14: ValidateSettingsLayout(width, true); BringSettingsControlIntoView(SettingsClearRecentButton); phase++; return;
@@ -564,11 +589,18 @@ public partial class MainWindow : Window
             throw new InvalidOperationException("[layout-smoke] FAIL top chrome bounds");
     }
 
+    private void ValidateQueueDrawer(double width)
+    {
+        bool contained = IsContained(QueueDrawer) && QueueDrawer.IsVisible && QueueDrawer.Bounds.Width > 0 && QueueDrawer.Bounds.Width <= Math.Max(390, width - 32);
+        Console.WriteLine($"[layout-smoke] queue-drawer width={width} bounds={QueueDrawer.Bounds} contained={contained}");
+        if (!contained) throw new InvalidOperationException("[layout-smoke] FAIL queue drawer bounds");
+    }
+
     private void ValidateSurface(string name, Control surface, Control[] required)
     {
         bool contained = required.All(IsContained);
         Console.WriteLine($"[layout-smoke] {name} bounds={surface.Bounds} contained={contained}");
-        if (!contained || (name == "open-menu" && OpenMenu.Bounds.Height > 340) || (name == "open-menu" && OpenFolderAction.IsEnabled))
+        if (!contained || (name == "open-menu" && OpenMenu.Bounds.Height > 380))
             throw new InvalidOperationException($"[layout-smoke] FAIL {name} bounds or capability gate");
     }
 

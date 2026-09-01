@@ -139,4 +139,22 @@ public sealed class MediaEngineStateStoreTests
         Assert.False(store.State.CanSeek);
         Assert.Null(store.State.Error);
     }
+
+    [Fact]
+    public void BeginEmptyAdvancesGenerationAndRejectsStalePublication()
+    {
+        MediaEngineStateStore store = new();
+        long playing = store.BeginOpen("movie.mp4");
+        store.Update(playing, PlaybackStatus.Playing, .5, TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(10), .6, true);
+
+        long empty = store.BeginEmpty();
+        store.Fault(playing, "late native teardown");
+
+        Assert.Equal(playing + 1, empty);
+        Assert.Equal(empty, store.State.Generation);
+        Assert.Equal(PlaybackStatus.Stopped, store.State.Status);
+        Assert.Null(store.State.Source);
+        Assert.Null(store.State.Error);
+        Assert.False(store.State.CanSeek);
+    }
 }

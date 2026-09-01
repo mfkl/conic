@@ -7,6 +7,7 @@ using Avalonia.Platform;
 using Avalonia.Rendering.Composition;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using Player.Application;
 using Player.Contracts;
 using Conic.Interop;
 
@@ -35,6 +36,7 @@ public sealed class CompositionVideoSurface : Control, IDisposable
     private bool _reportedFirstGPUFrame;
     private bool _reportedFirstCPUFrame;
     private bool _attached;
+    private IReadOnlyList<string>? _pendingQueueSources;
 
     internal bool ForceUnavailableAdapterForSmoke { get; set; }
 
@@ -42,6 +44,7 @@ public sealed class CompositionVideoSurface : Control, IDisposable
 
     public event Action<string>? StatusChanged;
     public event EventHandler<MediaEngineState>? EngineStateChanged;
+    public event EventHandler<PlaybackQueueState>? QueueStateChanged;
     internal event Action<ulong, ulong, string>? GPUFramePresentedForSmoke;
 
     public string? MediaPath
@@ -100,7 +103,12 @@ public sealed class CompositionVideoSurface : Control, IDisposable
         if (_attached && _player is not null &&
             !string.IsNullOrWhiteSpace(path))
         {
-            _player.Open(path);
+            if (_pendingQueueSources is { } sources && _player is IQueueTransport queue)
+            {
+                _pendingQueueSources = null;
+                queue.OpenQueue(sources);
+            }
+            else _player.Open(path);
         }
     }
 
@@ -119,6 +127,23 @@ public sealed class CompositionVideoSurface : Control, IDisposable
     public void SetPlaybackRate(double playbackRate) => _player?.SetPlaybackRate(playbackRate);
 
     public void Stop() => _player?.Stop();
+
+    public PlaybackQueueState QueueState => (_player as IQueueTransport)?.QueueState ?? PlaybackQueueState.Initial;
+    public void OpenQueue(IReadOnlyList<string> sources)
+    {
+        if (sources.Count == 0) return;
+        if (_player is IQueueTransport queue) queue.OpenQueue(sources);
+        else { _pendingQueueSources = sources.ToArray(); MediaPath = sources[0]; }
+    }
+    public void Enqueue(IEnumerable<string> sources) => (_player as IQueueTransport)?.Enqueue(sources);
+    public void SelectAndPlay(string token) => (_player as IQueueTransport)?.SelectAndPlay(token);
+    public void MoveQueueItem(string token, int destination) => (_player as IQueueTransport)?.Move(token, destination);
+    public void RemoveQueueItem(string token) => (_player as IQueueTransport)?.Remove(token);
+    public void ClearQueue() => (_player as IQueueTransport)?.ClearQueue();
+    public void PreviousQueueItem() => (_player as IQueueTransport)?.Previous();
+    public void NextQueueItem() => (_player as IQueueTransport)?.Next();
+    public void SetQueueRepeat(QueueRepeatMode mode) => (_player as IQueueTransport)?.SetRepeatMode(mode);
+    public void SetQueueOrder(QueueOrder order) => (_player as IQueueTransport)?.SetOrder(order);
 
     internal void ReopenForSmoke()
     {
@@ -237,18 +262,33 @@ public sealed class CompositionVideoSurface : Control, IDisposable
         if (!_attached || _player is not null)
             return;
 
+        if (!OperatingSystem.IsWindows())
+        {
+            ReportStatus("VLC composition playback is available on Windows only.");
+            return;
+        }
+
         try
         {
             _player = new VLCCorePlayer();
             _player.StateChanged += OnEngineStateChanged;
-            if (!string.IsNullOrWhiteSpace(MediaPath))
-                _player.Open(MediaPath);
+            if (_player is IQueueTransport queue)
+                queue.QueueStateChanged += OnQueueStateChanged;
+            if (_pendingQueueSources is { } pending && _player is IQueueTransport pendingQueue)
+            {
+                _pendingQueueSources = null;
+                pendingQueue.OpenQueue(pending);
+            }
+            else if (!string.IsNullOrWhiteSpace(MediaPath)) _player.Open(MediaPath);
         }
         catch (Exception exception)
         {
             ReportStatus($"VLC startup failed: {exception.Message}");
         }
     }
+
+    private void OnQueueStateChanged(object? sender, PlaybackQueueState state) =>
+        Dispatcher.UIThread.Post(() => QueueStateChanged?.Invoke(this, state));
 
     private async Task PresentLatestFrameAsync()
     {
@@ -481,6 +521,8 @@ public sealed class CompositionVideoSurface : Control, IDisposable
         if (_player is not null)
         {
             _player.StateChanged -= OnEngineStateChanged;
+            if (_player is IQueueTransport queue)
+                queue.QueueStateChanged -= OnQueueStateChanged;
             _player.Dispose();
             _player = null;
         }

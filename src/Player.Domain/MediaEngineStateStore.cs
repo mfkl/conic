@@ -42,6 +42,29 @@ public sealed class MediaEngineStateStore
         return next.Generation;
     }
 
+    public long BeginEmpty()
+    {
+        MediaEngineState next;
+        lock (_gate)
+        {
+            next = _state with
+            {
+                Generation = _state.Generation + 1,
+                Status = PlaybackStatus.Stopped,
+                Source = null,
+                Position = 0,
+                Elapsed = TimeSpan.Zero,
+                Duration = TimeSpan.Zero,
+                CanSeek = false,
+                Error = null,
+                Title = null,
+            };
+            _state = next;
+        }
+        Changed?.Invoke(this, next);
+        return next.Generation;
+    }
+
     public void Update(
         long generation,
         PlaybackStatus status,

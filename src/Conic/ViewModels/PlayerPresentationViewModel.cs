@@ -41,6 +41,10 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
     private DateTimeOffset _lastCheckpointUtc;
     private readonly Func<DateTimeOffset> _clock;
     private readonly Action<string>? _diagnostic;
+    private readonly IQueueTransport? _queue;
+    private readonly MediaSourceExpander _sourceExpander;
+    private PlaybackQueueState _queueState = PlaybackQueueState.Initial;
+    private bool _isQueueOpen;
 
     public PlayerPresentationViewModel(
         IPlayerTransport transport,
@@ -63,6 +67,9 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
         _history = history;
         _clock = clock ?? (() => DateTimeOffset.UtcNow);
         _diagnostic = diagnostic;
+        _queue = transport as IQueueTransport;
+        _sourceExpander = new MediaSourceExpander(_sourceValidator);
+        if (_queue is not null) { _queueState = _queue.QueueState; _queue.QueueStateChanged += (_, state) => ApplyQueueState(state); }
         if (_settings is not null) _settings.Changed += (_, updated) =>
         {
             TryHistory(() => { if (!updated.RememberRecentMedia) _history?.ClearRecent(); if (!updated.RememberResumeHistory) _history?.ClearResume(); });
@@ -74,7 +81,7 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
         PlayerCommandRegistry registry = new();
         Registry = registry;
         registry.Register(new(PlayerCommandId.OpenMedia, "Open media", "Media", "Ctrl+O"), _ => _ = OpenMediaAsync());
-        registry.Register(new(PlayerCommandId.OpenFolder, "Open folder", "Media", "Ctrl+Shift+O"), _ => _ = OpenFolderAsync(), _ => false);
+        registry.Register(new(PlayerCommandId.OpenFolder, "Open folder", "Media", "Ctrl+Shift+O"), _ => _ = OpenFolderAsync(), _ => _queue is not null);
         registry.Register(new(PlayerCommandId.OpenUrl, "Open network URL", "Media", "Ctrl+L"), _ => showUrlPanel?.Invoke(), _ => showUrlPanel is not null);
         registry.Register(new(PlayerCommandId.SubmitUrl, "Submit network URL", "Media"), _ => OpenUrl());
         registry.Register(new(PlayerCommandId.RemoveRecent, "Remove recent media", "Media"), p => { TryHistory(() => _history?.RemoveRecent(p as string ?? string.Empty)); NotifyRecent(); }, p => !string.IsNullOrWhiteSpace(p as string));
@@ -95,6 +102,17 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
         registry.Register(new(PlayerCommandId.ToggleFullscreen, "Fullscreen", "Window", "F11"), _ => toggleFullscreen?.Invoke(), _ => toggleFullscreen is not null);
         registry.Register(new(PlayerCommandId.SetAlwaysOnTop, "Always on top", "Window"), parameter => IsAlwaysOnTop = parameter is true);
         registry.Register(new(PlayerCommandId.OpenSettings, "Settings", "Window", "Ctrl+,"), _ => openSettings?.Invoke(), _ => openSettings is not null);
+        registry.Register(new(PlayerCommandId.ToggleQueue, "Playback queue", "Playback", "Ctrl+J"), _ => IsQueueOpen = !IsQueueOpen, _ => _queue is not null);
+        registry.Register(new(PlayerCommandId.QueuePrevious, "Previous item", "Playback"), _ => _queue?.Previous(), _ => QueueState.CanPrevious);
+        registry.Register(new(PlayerCommandId.QueueNext, "Next item", "Playback"), _ => _queue?.Next(), _ => QueueState.CanNext);
+        registry.Register(new(PlayerCommandId.QueueSelect, "Play queue item", "Playback"), p => _queue?.SelectAndPlay(p as string ?? string.Empty), p => p is string token && QueueItems.Any(x => x.Token == token));
+        registry.Register(new(PlayerCommandId.QueueMove, "Move queue item", "Playback"), p => { if (p is QueueMove move) _queue?.Move(move.Token, move.DestinationIndex); }, p => p is QueueMove move && QueueItems.Any(x => x.Token == move.Token));
+        registry.Register(new(PlayerCommandId.QueueRemove, "Remove queue item", "Playback"), p => _queue?.Remove(p as string ?? string.Empty), p => p is string token && QueueItems.Any(x => x.Token == token));
+        registry.Register(new(PlayerCommandId.QueueClear, "Clear queue", "Playback"), _ => _queue?.ClearQueue(), _ => QueueItems.Count > 0);
+        registry.Register(new(PlayerCommandId.QueueRepeat, "Repeat mode", "Playback"), _ => _queue?.SetRepeatMode(QueueState.Repeat switch { QueueRepeatMode.None => QueueRepeatMode.CurrentItem, QueueRepeatMode.CurrentItem => QueueRepeatMode.All, _ => QueueRepeatMode.None }), _ => _queue is not null);
+        registry.Register(new(PlayerCommandId.QueueShuffle, "Shuffle queue", "Playback"), _ => _queue?.SetOrder(QueueState.Order == QueueOrder.Random ? QueueOrder.Normal : QueueOrder.Random), _ => _queue is not null);
+        registry.Register(new(PlayerCommandId.LoadPlaylist, "Load playlist", "Media"), _ => _ = LoadPlaylistAsync(), _ => _mediaSourcePicker is IPlaylistDocumentPicker && _queue is not null);
+        registry.Register(new(PlayerCommandId.SavePlaylist, "Save playlist", "Media"), _ => _ = SavePlaylistAsync(), _ => _mediaSourcePicker is IPlaylistDocumentPicker && QueueItems.Count > 0);
 
         OpenMediaCommand = new RegistryCommand(registry, PlayerCommandId.OpenMedia);
         OpenFolderCommand = new RegistryCommand(registry, PlayerCommandId.OpenFolder);
@@ -116,6 +134,17 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
         ToggleFullscreenCommand = new RegistryCommand(registry, PlayerCommandId.ToggleFullscreen);
         SetAlwaysOnTopCommand = new RegistryCommand(registry, PlayerCommandId.SetAlwaysOnTop);
         OpenSettingsCommand = new RegistryCommand(registry, PlayerCommandId.OpenSettings);
+        ToggleQueueCommand = new RegistryCommand(registry, PlayerCommandId.ToggleQueue);
+        PreviousCommand = new RegistryCommand(registry, PlayerCommandId.QueuePrevious);
+        NextCommand = new RegistryCommand(registry, PlayerCommandId.QueueNext);
+        SelectQueueItemCommand = new RegistryCommand(registry, PlayerCommandId.QueueSelect);
+        MoveQueueItemCommand = new RegistryCommand(registry, PlayerCommandId.QueueMove);
+        RemoveQueueItemCommand = new RegistryCommand(registry, PlayerCommandId.QueueRemove);
+        ClearQueueCommand = new RegistryCommand(registry, PlayerCommandId.QueueClear);
+        CycleRepeatCommand = new RegistryCommand(registry, PlayerCommandId.QueueRepeat);
+        ToggleShuffleCommand = new RegistryCommand(registry, PlayerCommandId.QueueShuffle);
+        LoadPlaylistCommand = new RegistryCommand(registry, PlayerCommandId.LoadPlaylist);
+        SavePlaylistCommand = new RegistryCommand(registry, PlayerCommandId.SavePlaylist);
     }
 
     public IPlayerCommandRegistry Registry { get; }
@@ -139,6 +168,17 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
     public ICommand ToggleFullscreenCommand { get; }
     public ICommand SetAlwaysOnTopCommand { get; }
     public ICommand OpenSettingsCommand { get; }
+    public ICommand ToggleQueueCommand { get; }
+    public ICommand PreviousCommand { get; }
+    public ICommand NextCommand { get; }
+    public ICommand SelectQueueItemCommand { get; }
+    public ICommand MoveQueueItemCommand { get; }
+    public ICommand RemoveQueueItemCommand { get; }
+    public ICommand ClearQueueCommand { get; }
+    public ICommand CycleRepeatCommand { get; }
+    public ICommand ToggleShuffleCommand { get; }
+    public ICommand LoadPlaylistCommand { get; }
+    public ICommand SavePlaylistCommand { get; }
     public string SkipBackwardLabel => $"−{_settings?.Current.SkipBackwardSeconds ?? 10}";
     public string SkipForwardLabel => $"+{_settings?.Current.SkipForwardSeconds ?? 10}";
 
@@ -213,6 +253,16 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
     public bool HasResumeItems => (_history?.Resume.Count ?? 0) > 0;
     public bool HasOpenError => !string.IsNullOrWhiteSpace(OpenError);
     public bool HasHistoryError => !string.IsNullOrWhiteSpace(HistoryError);
+    public PlaybackQueueState QueueState { get => _queueState; private set => Set(ref _queueState, value); }
+    public IReadOnlyList<QueueItem> QueueItems => QueueState.Items;
+    public bool IsQueueOpen { get => _isQueueOpen; set => Set(ref _isQueueOpen, value); }
+    public bool HasQueueError => !string.IsNullOrWhiteSpace(QueueState.Error);
+    public string QueueError => QueueState.Error ?? string.Empty;
+    public bool IsQueueLoading => QueueState.Status == QueueLoadState.Loading;
+    public bool HasQueueItems => QueueItems.Count > 0;
+    public bool HasEmptyQueue => QueueState.Status == QueueLoadState.Empty;
+    public string RepeatLabel => QueueState.Repeat switch { QueueRepeatMode.CurrentItem => "Repeat item", QueueRepeatMode.All => "Repeat all", QueueRepeatMode.Inconsistent => "Repeat unavailable", _ => "Repeat off" };
+    public string ShuffleLabel => QueueState.Order == QueueOrder.Random ? "Shuffle on" : "Shuffle off";
 
     public void BeginSeek() => _isSeeking = CanSeek;
 
@@ -273,7 +323,7 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
     private async Task OpenFolderAsync()
     {
         string? source = await _mediaSourcePicker.PickFolderAsync();
-        if (!string.IsNullOrWhiteSpace(source)) OpenSource(source, MediaSourceKind.Folder);
+        if (!string.IsNullOrWhiteSpace(source)) await OpenFolderSourcesAsync(source);
     }
 
     public void OpenUrl() => OpenSource(UrlText, MediaSourceKind.NetworkUrl);
@@ -288,7 +338,7 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
         _pendingResume = (_settings?.Current.ResumePlayback ?? true) && (_settings?.Current.RememberResumeHistory ?? true) ? TryFindResume(_currentSource) : null;
         NotifyPendingResume();
         OpenError = string.Empty;
-        try { _transport.Open(_currentSource.CanonicalSource); }
+        try { if (_queue is not null) _queue.OpenQueue([_currentSource.CanonicalSource]); else _transport.Open(_currentSource.CanonicalSource); }
         catch (Exception e) { _diagnostic?.Invoke(e.ToString()); _currentSource = null; _pendingResume = null; OpenError = "Media could not be opened."; }
         OnPropertyChanged(nameof(RecentItems));
         OnPropertyChanged(nameof(HasRecentItems));
@@ -297,8 +347,77 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
     public void OpenDroppedSources(IReadOnlyList<string>? sources)
     {
         if (sources is null || sources.Count == 0) { OpenError = "Drop one local media file to open it."; return; }
-        if (sources.Count > 1) { OpenError = "Opening multiple files requires queue support."; return; }
-        OpenSource(sources[0], MediaSourceKind.DragDrop);
+        if (sources.Count == 1) { OpenSource(sources[0], MediaSourceKind.DragDrop); return; }
+        _ = OpenMultipleDroppedAsync(sources);
+    }
+
+    private async Task OpenFolderSourcesAsync(string folder)
+    {
+        MediaSourceExpansion expansion = await _sourceExpander.ExpandAsync(folder, MediaSourceKind.Folder);
+        OpenExpandedSources(expansion, replace: true);
+    }
+
+    private async Task OpenMultipleDroppedAsync(IReadOnlyList<string> sources)
+    {
+        await Task.Yield();
+        List<MediaSource> accepted = []; List<string> failures = [];
+        foreach (string source in sources)
+        {
+            MediaOpenResult result = _sourceValidator.Validate(source, MediaSourceKind.DragDrop);
+            if (result.Succeeded && result.Source is not null) accepted.Add(result.Source); else failures.Add(result.UserMessage ?? source);
+        }
+        OpenExpandedSources(new(accepted, failures, false), replace: true);
+    }
+
+    private void OpenExpandedSources(MediaSourceExpansion expansion, bool replace)
+    {
+        if (expansion.Sources.Count == 0) { OpenError = expansion.Failures.FirstOrDefault() ?? "No usable media files were found."; return; }
+        if (_queue is null) { OpenError = "The playback queue is not ready yet."; return; }
+        _currentSource = expansion.Sources[0]; _generationFloor = _lastObservedGeneration; _activeGeneration = -1; _resumeReady = false; _pendingResume = null; NotifyPendingResume();
+        try { if (replace) _queue.OpenQueue(expansion.Sources.Select(x => x.CanonicalSource).ToArray()); else _queue.Enqueue(expansion.Sources.Select(x => x.CanonicalSource)); }
+        catch (Exception exception) { _diagnostic?.Invoke(exception.ToString()); OpenError = "Media could not be queued."; return; }
+        OpenError = expansion.Failures.Count > 0 || expansion.WasBounded ? $"Queued {expansion.Sources.Count} item(s). {expansion.Failures.Count} item(s) could not be read{(expansion.WasBounded ? "; folder limit reached" : string.Empty)}." : string.Empty;
+    }
+
+    private async Task LoadPlaylistAsync()
+    {
+        if (_mediaSourcePicker is not IPlaylistDocumentPicker picker) return;
+        string? path = await picker.PickPlaylistToOpenAsync();
+        if (string.IsNullOrWhiteSpace(path)) return;
+        try
+        {
+            string content = await File.ReadAllTextAsync(path);
+            List<MediaSource> sources = []; List<string> failures = [];
+            string baseDirectory = Path.GetDirectoryName(path) ?? string.Empty;
+            foreach (string entry in M3uPlaylistDocument.Parse(content))
+            {
+                string candidate = Uri.TryCreate(entry, UriKind.Absolute, out Uri? uri) && !uri.IsFile ? entry : Path.IsPathRooted(entry) ? entry : Path.Combine(baseDirectory, entry);
+                MediaOpenResult result = _sourceValidator.Validate(candidate, MediaSourceKind.File);
+                if (result.Succeeded && result.Source is not null) sources.Add(result.Source); else failures.Add(result.UserMessage ?? entry);
+            }
+            OpenExpandedSources(new(sources, failures, false), replace: true);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidDataException or ArgumentException or NotSupportedException)
+        { _diagnostic?.Invoke(exception.ToString()); OpenError = "That playlist could not be loaded safely."; }
+    }
+
+    private async Task SavePlaylistAsync()
+    {
+        if (_mediaSourcePicker is not IPlaylistDocumentPicker picker) return;
+        string? path = await picker.PickPlaylistToSaveAsync();
+        if (string.IsNullOrWhiteSpace(path)) return;
+        try { await File.WriteAllTextAsync(path, M3uPlaylistDocument.Write(QueueItems.Select(x => x.Source))); OpenError = string.Empty; }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidDataException or ArgumentException or NotSupportedException)
+        { _diagnostic?.Invoke(exception.ToString()); OpenError = "That playlist could not be saved."; }
+    }
+
+    private void ApplyQueueState(PlaybackQueueState state)
+    {
+        if (state.Generation < QueueState.Generation || (_activeGeneration >= 0 && state.Generation > 0 && state.Generation != _activeGeneration)) return;
+        QueueState = state;
+        OnPropertyChanged(nameof(QueueItems)); OnPropertyChanged(nameof(HasQueueError)); OnPropertyChanged(nameof(QueueError)); OnPropertyChanged(nameof(IsQueueLoading)); OnPropertyChanged(nameof(HasQueueItems)); OnPropertyChanged(nameof(HasEmptyQueue)); OnPropertyChanged(nameof(RepeatLabel)); OnPropertyChanged(nameof(ShuffleLabel));
+        foreach (RegistryCommand? command in new[] { PreviousCommand, NextCommand, SelectQueueItemCommand, MoveQueueItemCommand, RemoveQueueItemCommand, ClearQueueCommand, CycleRepeatCommand, ToggleShuffleCommand }.OfType<RegistryCommand>()) command.RaiseCanExecuteChanged();
+        (SavePlaylistCommand as RegistryCommand)?.RaiseCanExecuteChanged();
     }
     private void NotifyRecent()
     {

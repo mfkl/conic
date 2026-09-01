@@ -273,6 +273,28 @@ public sealed class PlayerPresentationViewModelTests
     [Theory]
     [InlineData("io")]
     [InlineData("access")]
+    public void DeclineFailureRemainsActionableUntilRecovery(string kind)
+    {
+        Exception error = kind == "io" ? new IOException("decline detail") : new UnauthorizedAccessException("decline detail"); SwitchStorage storage = new(); MediaHistoryService history = new(storage); MediaSource source = new("a.mp4", MediaSourceKind.File, "a"); history.Checkpoint(source, TimeSpan.FromSeconds(40), TimeSpan.FromSeconds(100), true, 30, 20); storage.Error = error; List<string> diagnostic = [];
+        PlayerPresentationViewModel vm = new(new RecordingTransport(), new EmptyPicker(), () => { }, sourceValidator: new MediaSourceValidator(new ExistingFiles()), history: history, diagnostic: diagnostic.Add); vm.OpenSource("a.mp4", MediaSourceKind.File); vm.ApplyEngineState(State(.2, PlaybackStatus.Playing, true) with { Generation = 1, Source = "a.mp4" }); vm.Registry.Execute(PlayerCommandId.DeclineResume);
+        Assert.True(vm.HasPendingResume); Assert.NotNull(vm.HistoryError); Assert.Contains(diagnostic, x => x.Contains("decline detail")); storage.Error = null; vm.Registry.Execute(PlayerCommandId.DeclineResume);
+        Assert.False(vm.HasPendingResume); Assert.Null(vm.HistoryError); Assert.Null(history.FindResume(source));
+    }
+
+    [Theory]
+    [InlineData("io")]
+    [InlineData("access")]
+    public void RecentRecordingFailureRecoversOnLaterMatchingState(string kind)
+    {
+        Exception error = kind == "io" ? new IOException("recent detail") : new UnauthorizedAccessException("recent detail"); SwitchStorage storage = new(error); MediaHistoryService history = new(storage); List<string> diagnostic = [];
+        PlayerPresentationViewModel vm = new(new RecordingTransport(), new EmptyPicker(), () => { }, sourceValidator: new MediaSourceValidator(new ExistingFiles()), history: history, diagnostic: diagnostic.Add); vm.OpenSource("a.mp4", MediaSourceKind.File); MediaEngineState state = State(.2, PlaybackStatus.Playing, true) with { Generation = 1, Source = "a.mp4" }; vm.ApplyEngineState(state);
+        Assert.NotNull(vm.HistoryError); Assert.Contains(diagnostic, x => x.Contains("recent detail")); storage.Error = null; vm.ApplyEngineState(state);
+        Assert.Null(vm.HistoryError); Assert.Single(history.Recent);
+    }
+
+    [Theory]
+    [InlineData("io")]
+    [InlineData("access")]
     public void HistoryFailuresAreSafeAndDiagnostic(string failure)
     {
         Exception error = failure == "io" ? new IOException("disk detail") : new UnauthorizedAccessException("denied detail"); ThrowingHistoryStorage storage = new(error); MediaHistoryService history = new(storage); List<string> diagnostics = [];

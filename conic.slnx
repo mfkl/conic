@@ -9,5 +9,6 @@
   <Folder Name="/tests/">
     <Project Path="tests/Player.Engine.ContractTests/Player.Engine.ContractTests.csproj" />
     <Project Path="tests/Player.Application.Tests/Player.Application.Tests.csproj" />
+    <Project Path="tests/Conic.UITests/Conic.UITests.csproj" />
   </Folder>
 </Solution>

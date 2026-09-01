@@ -54,7 +54,7 @@ public partial class MainWindow : Window
                 SetChromeVisibility(false);
         };
         VideoSurface.EngineStateChanged += OnEngineStateChanged;
-        Closed += (_, _) => _autoHideTimer.Stop();
+        Closed += (_, _) => { _presentation.OnClosing(); _autoHideTimer.Stop(); };
         SizeChanged += (_, _) => { ApplyResponsiveChrome(); ApplyResponsiveSettings(); };
         Loaded += (_, _) =>
         {

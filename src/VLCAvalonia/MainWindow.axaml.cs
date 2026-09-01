@@ -2,14 +2,18 @@ using System;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
+using Player.Contracts;
 
 namespace VLCAvalonia;
 
 public partial class MainWindow : Window
 {
+    private bool _updatingControls;
+
     public static readonly StyledProperty<string?> MediaPathProperty =
         AvaloniaProperty.Register<MainWindow, string?>(nameof(MediaPath));
 
@@ -24,6 +28,7 @@ public partial class MainWindow : Window
         InitializeComponent();
 
         VideoSurface.StatusChanged += status => StatusText.Text = status;
+        VideoSurface.EngineStateChanged += OnEngineStateChanged;
         Loaded += (_, _) =>
         {
             if (string.IsNullOrWhiteSpace(VideoSurface.MediaPath) &&
@@ -73,15 +78,48 @@ public partial class MainWindow : Window
 
     private void OnPlayPauseClick(object? sender, RoutedEventArgs e)
     {
-        StatusText.Text = "Playback controls are the next core-lifecycle slice.";
+        VideoSurface.TogglePause();
     }
+
+    private void OnStopClick(object? sender, RoutedEventArgs e) =>
+        VideoSurface.Stop();
 
     private void OnPrevClick(object? sender, RoutedEventArgs e) { }
     private void OnNextClick(object? sender, RoutedEventArgs e) { }
 
     private void OnVolumeChanged(object? sender, Avalonia.Controls.Primitives.RangeBaseValueChangedEventArgs e)
     {
+        if (!_updatingControls)
+            VideoSurface.SetVolume(e.NewValue / 100);
     }
+
+    private void OnPositionReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        if (!_updatingControls)
+            VideoSurface.Seek(PositionSlider.Value);
+    }
+
+    private void OnEngineStateChanged(object? sender, MediaEngineState state)
+    {
+        _updatingControls = true;
+        try
+        {
+            PositionSlider.Value = state.Position;
+            PositionSlider.IsEnabled = state.CanSeek;
+            VolumeSlider.Value = state.Volume * 100;
+            ElapsedText.Text = FormatTime(state.Elapsed);
+            TimeText.Text = FormatTime(state.Duration);
+        }
+        finally
+        {
+            _updatingControls = false;
+        }
+    }
+
+    private static string FormatTime(TimeSpan value) =>
+        value.TotalHours >= 1
+            ? value.ToString(@"h\:mm\:ss")
+            : value.ToString(@"m\:ss");
 
     private async void OnOpenFileClick(object? sender, RoutedEventArgs e)
     {

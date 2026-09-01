@@ -58,14 +58,89 @@
         </Style>
 
         <Style Selector="Slider.timeline">
-            <Setter Property="Height" Value="24" />
-            <Setter Property="Foreground" Value="#FF8A3D" />
-            <Setter Property="Background" Value="#35FFFFFF" />
+            <Setter Property="Height" Value="36" />
+            <Setter Property="Foreground" Value="#F5F6F8" />
+            <Setter Property="Background" Value="#3DFFFFFF" />
         </Style>
         <Style Selector="Slider.volume">
-            <Setter Property="Width" Value="104" />
+            <Setter Property="Width" Value="112" />
+            <Setter Property="Height" Value="52" />
+            <Setter Property="VerticalAlignment" Value="Center" />
             <Setter Property="Foreground" Value="#F4F5F7" />
             <Setter Property="Background" Value="#35FFFFFF" />
+        </Style>
+
+        <!-- Keep Fluent's system accent from turning the sliders blue. -->
+        <Style Selector="Slider.monochrome /template/ RepeatButton#PART_DecreaseButton">
+            <Setter Property="Background" Value="#F5F6F8" />
+        </Style>
+        <Style Selector="Slider.monochrome:pointerover /template/ RepeatButton#PART_DecreaseButton">
+            <Setter Property="Background" Value="White" />
+        </Style>
+        <Style Selector="Slider.monochrome:pressed /template/ RepeatButton#PART_DecreaseButton">
+            <Setter Property="Background" Value="#D9DCE2" />
+        </Style>
+        <Style Selector="Slider.monochrome /template/ RepeatButton#PART_IncreaseButton">
+            <Setter Property="Background" Value="#3DFFFFFF" />
+        </Style>
+        <Style Selector="Slider.monochrome:pointerover /template/ RepeatButton#PART_IncreaseButton">
+            <Setter Property="Background" Value="#52FFFFFF" />
+        </Style>
+        <Style Selector="Slider.monochrome:pressed /template/ RepeatButton#PART_IncreaseButton">
+            <Setter Property="Background" Value="#2EFFFFFF" />
+        </Style>
+        <Style Selector="Slider.monochrome /template/ Thumb">
+            <Setter Property="Background" Value="#F5F6F8" />
+        </Style>
+        <Style Selector="Slider.monochrome:pointerover /template/ Thumb">
+            <Setter Property="Background" Value="White" />
+        </Style>
+        <Style Selector="Slider.monochrome:pressed /template/ Thumb">
+            <Setter Property="Background" Value="#D9DCE2" />
+        </Style>
+        <!-- Orange marks elapsed playback; the remaining track and thumb stay
+             neutral so the accent remains crisp rather than overpowering. -->
+        <Style Selector="Slider.timeline /template/ RepeatButton#PART_DecreaseButton">
+            <Setter Property="Background" Value="#FF8A3D" />
+        </Style>
+        <Style Selector="Slider.timeline:pointerover /template/ RepeatButton#PART_DecreaseButton">
+            <Setter Property="Background" Value="#FFA465" />
+        </Style>
+        <Style Selector="Slider.timeline:pressed /template/ RepeatButton#PART_DecreaseButton">
+            <Setter Property="Background" Value="#E8752C" />
+        </Style>
+        <!-- A dark center and light rim keep the volume thumb distinct from
+             both the filled and unfilled portions of the track. -->
+        <Style Selector="Slider.volume /template/ Thumb">
+            <Setter Property="Width" Value="18" />
+            <Setter Property="Height" Value="18" />
+            <Setter Property="Background" Value="#111318" />
+            <Setter Property="BorderBrush" Value="#F5F6F8" />
+            <Setter Property="BorderThickness" Value="2" />
+        </Style>
+        <Style Selector="Slider.volume:pointerover /template/ Thumb">
+            <Setter Property="Background" Value="#1B1D22" />
+            <Setter Property="BorderBrush" Value="White" />
+        </Style>
+        <Style Selector="Slider.volume:pressed /template/ Thumb">
+            <Setter Property="Background" Value="#D9DCE2" />
+            <Setter Property="BorderBrush" Value="#111318" />
+        </Style>
+
+        <Style Selector="CheckBox.monochrome:checked /template/ Border#NormalRectangle">
+            <Setter Property="Background" Value="#F5F6F8" />
+            <Setter Property="BorderBrush" Value="#F5F6F8" />
+        </Style>
+        <Style Selector="CheckBox.monochrome:checked:pointerover /template/ Border#NormalRectangle">
+            <Setter Property="Background" Value="White" />
+            <Setter Property="BorderBrush" Value="White" />
+        </Style>
+        <Style Selector="CheckBox.monochrome:checked:pressed /template/ Border#NormalRectangle">
+            <Setter Property="Background" Value="#D9DCE2" />
+            <Setter Property="BorderBrush" Value="#D9DCE2" />
+        </Style>
+        <Style Selector="CheckBox.monochrome:checked /template/ Path#CheckGlyph">
+            <Setter Property="Fill" Value="#111318" />
         </Style>
     </Window.Styles>
 
@@ -101,26 +176,6 @@
                 </StackPanel>
             </Border>
 
-            <Border Grid.Column="1"
-                    HorizontalAlignment="Center"
-                    Padding="12,7"
-                    CornerRadius="14"
-                    Background="#9E131519"
-                    BorderBrush="#20FFFFFF"
-                    BorderThickness="1"
-                    PointerPressed="OnOverlayPressed">
-                <StackPanel Orientation="Horizontal" Spacing="8">
-                    <Border Width="7" Height="7" CornerRadius="4"
-                            Background="#55D68A"
-                            VerticalAlignment="Center" />
-                    <TextBlock Text="GPU COMPOSITION"
-                               Foreground="#D7DBE2"
-                               FontSize="11"
-                               FontWeight="SemiBold"
-                               VerticalAlignment="Center" />
-                </StackPanel>
-            </Border>
-
             <Border Grid.Column="2"
                     Padding="14,8"
                     CornerRadius="14"
@@ -128,6 +183,7 @@
                     BorderBrush="#20FFFFFF"
                     BorderThickness="1">
                 <CheckBox x:Name="TopMostCheck"
+                          Classes="monochrome"
                           Content="Always on top"
                           Foreground="#D7DBE2"
                           FontSize="12"
@@ -147,7 +203,7 @@
                 BorderBrush="#2FFFFFFF"
                 BorderThickness="1"
                 BoxShadow="0 18 48 0 #A8000000">
-            <Grid RowDefinitions="Auto,Auto" RowSpacing="10">
+            <Grid RowDefinitions="36,Auto" RowSpacing="12">
                 <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto">
                     <TextBlock x:Name="ElapsedText"
                                Grid.Column="0"
@@ -159,10 +215,10 @@
                                VerticalAlignment="Center" />
                     <Slider x:Name="PositionSlider"
                             Grid.Column="1"
-                            Classes="timeline"
+                            Classes="timeline monochrome"
                             Minimum="0"
                             Maximum="1"
-                            PointerReleased="OnPositionReleased"
+                            ValueChanged="OnPositionChanged"
                             Value="0" />
                     <TextBlock x:Name="TimeText"
                                Grid.Column="2"
@@ -175,21 +231,6 @@
                 </Grid>
 
                 <Grid Grid.Row="1" ColumnDefinitions="*,Auto,*">
-                    <StackPanel Grid.Column="0"
-                                Orientation="Horizontal"
-                                Spacing="9"
-                                VerticalAlignment="Center">
-                        <Border Width="7" Height="7" CornerRadius="4"
-                                Background="#55D68A" />
-                        <TextBlock x:Name="StatusText"
-                                   Text="Ready"
-                                   MaxWidth="310"
-                                   Foreground="#8F96A3"
-                                   FontSize="12"
-                                   TextTrimming="CharacterEllipsis"
-                                   VerticalAlignment="Center" />
-                    </StackPanel>
-
                     <StackPanel Grid.Column="1"
                                 Orientation="Horizontal"
                                 Spacing="8"
@@ -204,8 +245,15 @@
                         <Button Classes="play"
                                 Click="OnPlayPauseClick"
                                 ToolTip.Tip="Play or pause">
-                            <PathIcon Width="22" Height="22"
-                                      Data="M8,5 L19,12 L8,19 Z" />
+                            <Grid>
+                                <PathIcon x:Name="PlayIcon"
+                                          Width="22" Height="22"
+                                          Data="M8,5 L19,12 L8,19 Z" />
+                                <PathIcon x:Name="PauseIcon"
+                                          Width="22" Height="22"
+                                          IsVisible="False"
+                                          Data="M7,5 L11,5 L11,19 L7,19 Z M14,5 L18,5 L18,19 L14,19 Z" />
+                            </Grid>
                         </Button>
                         <Button Classes="transport"
                                 Click="OnStopClick"
@@ -222,21 +270,27 @@
                         </Button>
                     </StackPanel>
 
-                    <StackPanel Grid.Column="2"
-                                HorizontalAlignment="Right"
-                                Orientation="Horizontal"
-                                Spacing="10"
-                                VerticalAlignment="Center">
-                        <PathIcon Width="18" Height="18"
-                                  Foreground="#AEB3BD"
+                    <Grid Grid.Column="2"
+                          Width="148"
+                          Height="52"
+                          Margin="0,0,4,0"
+                          HorizontalAlignment="Right"
+                          VerticalAlignment="Center"
+                          ColumnDefinitions="24,12,112">
+                        <PathIcon Grid.Column="0"
+                                  Width="18" Height="18"
+                                  HorizontalAlignment="Center"
+                                  VerticalAlignment="Center"
+                                  Foreground="#FF9A55"
                                   Data="M3,9 L7,9 L12,5 L12,19 L7,15 L3,15 Z M15,9 L18,12 L15,15 Z" />
                         <Slider x:Name="VolumeSlider"
-                                Classes="volume"
+                                Grid.Column="2"
+                                Classes="volume monochrome"
                                 Minimum="0"
                                 Maximum="100"
                                 Value="50"
                                 ValueChanged="OnVolumeChanged" />
-                    </StackPanel>
+                    </Grid>
                 </Grid>
             </Grid>
         </Border>

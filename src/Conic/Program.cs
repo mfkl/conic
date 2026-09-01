@@ -32,8 +32,7 @@ internal static class Program
         if (args.Contains("--smoke", StringComparer.OrdinalIgnoreCase))
             return CompositionSmoke.Run(ParseExpectedPath(args));
 
-        BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
-        return 0;
+        return BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
     }
 
     private static string? ParseExpectedPath(string[] args)

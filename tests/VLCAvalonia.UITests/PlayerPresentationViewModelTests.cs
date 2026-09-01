@@ -78,6 +78,40 @@ public sealed class PlayerPresentationViewModelTests
         Assert.Contains(nameof(PlayerPresentationViewModel.SkipBackwardLabel), changed);
     }
 
+    [Fact]
+    public void DirectPlayingEstablishesGenerationAndIgnoresOlderSameSource()
+    {
+        RecordingTransport transport = new(); PlayerPresentationViewModel vm = CreateOpeningViewModel(transport);
+        vm.OpenSource("a.mp4", MediaSourceKind.File);
+        vm.ApplyEngineState(State(.05, PlaybackStatus.Playing, true) with { Generation = 2, Source = "a.mp4" });
+        vm.ApplyEngineState(State(.8, PlaybackStatus.Playing, true) with { Generation = 1, Source = "a.mp4" });
+        Assert.Equal("0:05", vm.ElapsedText);
+    }
+
+    [Fact]
+    public void DifferentSourceDoesNotEstablishGeneration()
+    {
+        RecordingTransport transport = new(); PlayerPresentationViewModel vm = CreateOpeningViewModel(transport);
+        vm.OpenSource("a.mp4", MediaSourceKind.File);
+        vm.ApplyEngineState(State(.05, PlaybackStatus.Playing, true) with { Generation = 2, Source = "b.mp4" });
+        vm.ApplyEngineState(State(.06, PlaybackStatus.Playing, true) with { Generation = 3, Source = "a.mp4" });
+        Assert.Equal("0:06", vm.ElapsedText);
+    }
+
+    [Fact]
+    public void ResumeAcceptUsesCurrentDurationOnce()
+    {
+        RecordingTransport transport = new(); HistoryStorage storage = new(); MediaHistoryService history = new(storage);
+        MediaSource source = new("a.mp4", MediaSourceKind.File, "a"); history.Checkpoint(source, TimeSpan.FromSeconds(40), TimeSpan.FromSeconds(100), true, 30, 20);
+        PlayerPresentationViewModel vm = new(transport, new EmptyPicker(), () => { }, sourceValidator: new MediaSourceValidator(new ExistingFiles()), history: history);
+        vm.OpenSource("a.mp4", MediaSourceKind.File);
+        vm.ApplyEngineState(State(.1, PlaybackStatus.Playing, true) with { Generation = 1, Source = "a.mp4", Duration = TimeSpan.FromSeconds(200) });
+        vm.Registry.Execute(PlayerCommandId.AcceptResume); vm.Registry.Execute(PlayerCommandId.AcceptResume);
+        Assert.Single(transport.Seeks); Assert.Equal(.2, transport.Seeks[0]); Assert.Null(history.FindResume(source));
+    }
+
+    private static PlayerPresentationViewModel CreateOpeningViewModel(RecordingTransport transport) => new(transport, new EmptyPicker(), () => { }, sourceValidator: new MediaSourceValidator(new ExistingFiles()));
+
     private static PlayerPresentationViewModel CreateViewModel(
         RecordingTransport transport) => new(transport, new EmptyPicker(), () => { });
 
@@ -125,4 +159,6 @@ public sealed class PlayerPresentationViewModelTests
         public void WriteAtomically(string content) { }
         public void PreserveInvalid(string content) { }
     }
+    private sealed class ExistingFiles : IMediaFileSystem { public bool FileExists(string path) => true; public bool DirectoryExists(string path) => false; public string GetFullPath(string path) => path; }
+    private sealed class HistoryStorage : IMediaHistoryStorage { public string? Content; public string? Read() => Content; public void WriteAtomically(string content) => Content = content; }
 }

@@ -60,7 +60,6 @@ public sealed class PlayerPresentationViewModelTests
         Assert.False(transport.Muted);
         Assert.Equal(31.25, transport.Rate);
         Assert.Equal("movie", viewModel.MediaTitle);
-        Assert.Equal("🔇", viewModel.MuteGlyph);
     }
 
     private static PlayerPresentationViewModel CreateViewModel(

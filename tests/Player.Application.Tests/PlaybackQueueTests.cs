@@ -6,6 +6,13 @@ namespace Player.Application.Tests;
 public sealed class PlaybackQueueTests
 {
     [Fact]
+    public void DailyUseDelayPolicyUsesMillisecondsAndAProductBound()
+    {
+        Assert.Equal(-10_000, MediaDelayPolicy.Clamp(-99_000));
+        Assert.Equal(10_000, MediaDelayPolicy.Clamp(99_000));
+        Assert.Equal(100, MediaDelayPolicy.StepMilliseconds);
+    }
+    [Fact]
     public void QueueNavigationOnlyEnablesForSemanticNeighbors()
     {
         QueueItem[] items = [new("a", "A", "a", 0, true), new("b", "B", "b", 1, false)];

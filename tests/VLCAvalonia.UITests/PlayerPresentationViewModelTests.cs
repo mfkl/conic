@@ -443,6 +443,36 @@ public sealed class PlayerPresentationViewModelTests
     }
 
     [Fact]
+    public void MediaCapabilitiesRejectStaleGenerationsAndOnlyReadbackChangesDelay()
+    {
+        CapabilityTransport transport = new();
+        PlayerPresentationViewModel vm = new(transport, new EmptyPicker(), () => { });
+        transport.Publish(new(3, 2, MediaCapabilityLoadState.Ready, [new("1", "English", false, true)], [], [], [], new(0, 0)));
+        transport.Publish(new(2, 99, MediaCapabilityLoadState.Empty, [], [], [], [], new(0, 0)));
+        Assert.Single(vm.AudioTracks);
+        vm.Registry.Execute(PlayerCommandId.AdjustAudioDelay, 100);
+        Assert.Equal(100, transport.LastAudioDelay);
+        Assert.Equal(0, vm.AudioDelayMilliseconds);
+        transport.Publish(new(3, 2, MediaCapabilityLoadState.Ready, [], [], [], [], new(100, 0)));
+        Assert.Equal(100, vm.AudioDelayMilliseconds);
+    }
+
+    [Fact]
+    public async Task ExternalSubtitleCancellationAndPendingLanguageAreHonest()
+    {
+        CapabilityTransport transport = new();
+        PlayerPresentationViewModel vm = new(transport, new ExternalPicker(null), () => { });
+        vm.Registry.Execute(PlayerCommandId.AttachExternalSubtitle);
+        await Task.Yield();
+        Assert.False(vm.HasMediaControlsNotice);
+        vm = new PlayerPresentationViewModel(transport, new ExternalPicker("caption.srt"), () => { });
+        vm.Registry.Execute(PlayerCommandId.AttachExternalSubtitle);
+        await Task.Yield();
+        Assert.Contains("next media open", vm.MediaControlsNotice);
+        Assert.Contains("not a current live track", vm.MediaControlsNotice);
+    }
+
+    [Fact]
     public void OpeningAFileUsesReplaceQueueFlowWhenQueueIsAvailable()
     {
         QueueTransport transport = new(); PlayerPresentationViewModel vm = new(transport, new EmptyPicker(), () => { }, sourceValidator: new MediaSourceValidator(new ExistingFiles()));
@@ -568,12 +598,32 @@ public sealed class PlayerPresentationViewModelTests
         public void OpenQueue(IReadOnlyList<string> sources) => OpenedQueues.Add(sources.ToArray()); public void Enqueue(IEnumerable<string> sources) { } public void SelectAndPlay(string token) => Selected = token; public void Move(string token, int destinationIndex) { } public void Remove(string token) { } public void ClearQueue() { } public void Previous() { } public void Next() { } public void SetRepeatMode(QueueRepeatMode mode) => Repeat = mode; public void SetOrder(QueueOrder order) { }
     }
 
+    private sealed class CapabilityTransport : IPlayerTransport, IMediaCapabilitiesTransport
+    {
+        public MediaCapabilitiesState MediaCapabilities { get; private set; } = MediaCapabilitiesState.Initial;
+        public event EventHandler<MediaCapabilitiesState>? MediaCapabilitiesChanged;
+        public int LastAudioDelay { get; private set; }
+        public void Publish(MediaCapabilitiesState state) { MediaCapabilities = state; MediaCapabilitiesChanged?.Invoke(this, state); }
+        public void SelectTrack(MediaTrackKind kind, string id) { } public void SelectTitle(string id) { } public void SelectChapter(string id) { }
+        public void SetDelayMilliseconds(MediaTrackKind kind, int milliseconds) { if (kind == MediaTrackKind.Audio) LastAudioDelay = milliseconds; }
+        public void ResetDelay(MediaTrackKind kind) { }
+        public ExternalTrackAttachmentState AttachExternalTrack(MediaTrackKind kind, string path) => new(true, true, false);
+        public void Open(string source) { } public void TogglePause() { } public void Stop() { } public void Seek(double normalizedPosition) { } public void SetVolume(double normalizedVolume) { } public void SetMuted(bool muted) { } public void Skip(TimeSpan offset) { } public void SetPlaybackRate(double playbackRate) { }
+    }
+
     private sealed class EmptyPicker : IMediaSourcePicker
     {
         public Task<string?> PickMediaAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult<string?>(null);
         public Task<string?> PickFolderAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult<string?>(null);
+    }
+
+    private sealed class ExternalPicker(string? path) : IMediaSourcePicker, IExternalTrackPicker
+    {
+        public Task<string?> PickMediaAsync(CancellationToken cancellationToken = default) => Task.FromResult<string?>(null);
+        public Task<string?> PickFolderAsync(CancellationToken cancellationToken = default) => Task.FromResult<string?>(null);
+        public Task<string?> PickExternalTrackAsync(MediaTrackKind kind, CancellationToken cancellationToken = default) => Task.FromResult(path);
     }
 
     private sealed class PlaylistPicker(string? openPath, string? savePath = null) : IMediaSourcePicker, IPlaylistDocumentPicker

@@ -42,9 +42,14 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
     private readonly Func<DateTimeOffset> _clock;
     private readonly Action<string>? _diagnostic;
     private readonly IQueueTransport? _queue;
+    private readonly IMediaCapabilitiesTransport? _mediaControls;
     private readonly MediaSourceExpander _sourceExpander;
     private PlaybackQueueState _queueState = PlaybackQueueState.Initial;
     private bool _isQueueOpen;
+    private MediaCapabilitiesState _mediaCapabilities = MediaCapabilitiesState.Initial;
+    private bool _isUpdatingCapabilities;
+    private string _drawerTab = "Queue";
+    private string _mediaControlsNotice = string.Empty;
 
     public PlayerPresentationViewModel(
         IPlayerTransport transport,
@@ -68,8 +73,10 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
         _clock = clock ?? (() => DateTimeOffset.UtcNow);
         _diagnostic = diagnostic;
         _queue = transport as IQueueTransport;
+        _mediaControls = transport as IMediaCapabilitiesTransport;
         _sourceExpander = new MediaSourceExpander(_sourceValidator);
         if (_queue is not null) { _queueState = _queue.QueueState; _queue.QueueStateChanged += (_, state) => ApplyQueueState(state); }
+        if (_mediaControls is not null) { _mediaCapabilities = _mediaControls.MediaCapabilities; _mediaControls.MediaCapabilitiesChanged += (_, state) => ApplyMediaCapabilities(state); }
         if (_settings is not null) _settings.Changed += (_, updated) =>
         {
             TryHistory(() => { if (!updated.RememberRecentMedia) _history?.ClearRecent(); if (!updated.RememberResumeHistory) _history?.ClearResume(); });
@@ -102,7 +109,7 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
         registry.Register(new(PlayerCommandId.ToggleFullscreen, "Fullscreen", "Window", "F11"), _ => toggleFullscreen?.Invoke(), _ => toggleFullscreen is not null);
         registry.Register(new(PlayerCommandId.SetAlwaysOnTop, "Always on top", "Window"), parameter => IsAlwaysOnTop = parameter is true);
         registry.Register(new(PlayerCommandId.OpenSettings, "Settings", "Window", "Ctrl+,"), _ => openSettings?.Invoke(), _ => openSettings is not null);
-        registry.Register(new(PlayerCommandId.ToggleQueue, "Playback queue", "Playback", "Ctrl+J"), _ => IsQueueOpen = !IsQueueOpen, _ => _queue is not null);
+        registry.Register(new(PlayerCommandId.ToggleQueue, "Playback queue", "Playback", "Ctrl+J"), p => { if (p is string tab && tab == "Queue" && DrawerTab != "Queue") { DrawerTab = tab; IsQueueOpen = true; } else IsQueueOpen = !IsQueueOpen; }, _ => _queue is not null);
         registry.Register(new(PlayerCommandId.QueuePrevious, "Previous item", "Playback"), _ => _queue?.Previous(), _ => QueueState.CanPrevious);
         registry.Register(new(PlayerCommandId.QueueNext, "Next item", "Playback"), _ => _queue?.Next(), _ => QueueState.CanNext);
         registry.Register(new(PlayerCommandId.QueueSelect, "Play queue item", "Playback"), p => _queue?.SelectAndPlay(p as string ?? string.Empty), p => p is string token && QueueItems.Any(x => x.Token == token));
@@ -113,6 +120,17 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
         registry.Register(new(PlayerCommandId.QueueShuffle, "Shuffle queue", "Playback"), _ => _queue?.SetOrder(QueueState.Order == QueueOrder.Random ? QueueOrder.Normal : QueueOrder.Random), _ => _queue is not null);
         registry.Register(new(PlayerCommandId.LoadPlaylist, "Load playlist", "Media"), _ => _ = LoadPlaylistAsync(), _ => _mediaSourcePicker is IPlaylistDocumentPicker && _queue is not null);
         registry.Register(new(PlayerCommandId.SavePlaylist, "Save playlist", "Media"), _ => _ = SavePlaylistAsync(), _ => _mediaSourcePicker is IPlaylistDocumentPicker && QueueItems.Count > 0);
+        registry.Register(new(PlayerCommandId.ToggleMediaControls, "Tracks and synchronization", "Playback"), p => { DrawerTab = p as string ?? "Audio"; IsQueueOpen = true; }, _ => _mediaControls is not null);
+        registry.Register(new(PlayerCommandId.SelectAudioTrack, "Select audio track", "Audio"), p => _mediaControls?.SelectTrack(MediaTrackKind.Audio, p as string ?? string.Empty), p => p is string id && AudioTracks.Any(x => x.Id == id && !x.IsDisabled));
+        registry.Register(new(PlayerCommandId.SelectSubtitleTrack, "Select subtitle track", "Subtitles"), p => _mediaControls?.SelectTrack(MediaTrackKind.Subtitle, p as string ?? string.Empty), p => p is string id && SubtitleTracks.Any(x => x.Id == id && !x.IsDisabled));
+        registry.Register(new(PlayerCommandId.SelectTitle, "Select title", "Playback"), p => _mediaControls?.SelectTitle(p as string ?? string.Empty), p => p is string id && Titles.Any(x => x.Id == id));
+        registry.Register(new(PlayerCommandId.SelectChapter, "Select chapter", "Playback"), p => _mediaControls?.SelectChapter(p as string ?? string.Empty), p => p is string id && Chapters.Any(x => x.Id == id));
+        registry.Register(new(PlayerCommandId.AdjustAudioDelay, "Adjust audio delay", "Audio"), p => _mediaControls?.SetDelayMilliseconds(MediaTrackKind.Audio, MediaDelayPolicy.Clamp(AudioDelayMilliseconds + (int)ToDouble(p))), _ => CanAdjustDelays);
+        registry.Register(new(PlayerCommandId.AdjustSubtitleDelay, "Adjust subtitle delay", "Subtitles"), p => _mediaControls?.SetDelayMilliseconds(MediaTrackKind.Subtitle, MediaDelayPolicy.Clamp(SubtitleDelayMilliseconds + (int)ToDouble(p))), _ => CanAdjustDelays);
+        registry.Register(new(PlayerCommandId.ResetAudioDelay, "Reset audio delay", "Audio"), _ => _mediaControls?.ResetDelay(MediaTrackKind.Audio), _ => CanAdjustDelays);
+        registry.Register(new(PlayerCommandId.ResetSubtitleDelay, "Reset subtitle delay", "Subtitles"), _ => _mediaControls?.ResetDelay(MediaTrackKind.Subtitle), _ => CanAdjustDelays);
+        registry.Register(new(PlayerCommandId.AttachExternalAudio, "Add external audio", "Audio"), _ => _ = AttachExternalTrackAsync(MediaTrackKind.Audio), _ => _mediaControls is not null && _mediaSourcePicker is IExternalTrackPicker);
+        registry.Register(new(PlayerCommandId.AttachExternalSubtitle, "Add external subtitle", "Subtitles"), _ => _ = AttachExternalTrackAsync(MediaTrackKind.Subtitle), _ => _mediaControls is not null && _mediaSourcePicker is IExternalTrackPicker);
 
         OpenMediaCommand = new RegistryCommand(registry, PlayerCommandId.OpenMedia);
         OpenFolderCommand = new RegistryCommand(registry, PlayerCommandId.OpenFolder);
@@ -145,6 +163,17 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
         ToggleShuffleCommand = new RegistryCommand(registry, PlayerCommandId.QueueShuffle);
         LoadPlaylistCommand = new RegistryCommand(registry, PlayerCommandId.LoadPlaylist);
         SavePlaylistCommand = new RegistryCommand(registry, PlayerCommandId.SavePlaylist);
+        ToggleMediaControlsCommand = new RegistryCommand(registry, PlayerCommandId.ToggleMediaControls);
+        SelectAudioTrackCommand = new RegistryCommand(registry, PlayerCommandId.SelectAudioTrack);
+        SelectSubtitleTrackCommand = new RegistryCommand(registry, PlayerCommandId.SelectSubtitleTrack);
+        SelectTitleCommand = new RegistryCommand(registry, PlayerCommandId.SelectTitle);
+        SelectChapterCommand = new RegistryCommand(registry, PlayerCommandId.SelectChapter);
+        AdjustAudioDelayCommand = new RegistryCommand(registry, PlayerCommandId.AdjustAudioDelay);
+        AdjustSubtitleDelayCommand = new RegistryCommand(registry, PlayerCommandId.AdjustSubtitleDelay);
+        ResetAudioDelayCommand = new RegistryCommand(registry, PlayerCommandId.ResetAudioDelay);
+        ResetSubtitleDelayCommand = new RegistryCommand(registry, PlayerCommandId.ResetSubtitleDelay);
+        AttachExternalAudioCommand = new RegistryCommand(registry, PlayerCommandId.AttachExternalAudio);
+        AttachExternalSubtitleCommand = new RegistryCommand(registry, PlayerCommandId.AttachExternalSubtitle);
     }
 
     public IPlayerCommandRegistry Registry { get; }
@@ -179,6 +208,17 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
     public ICommand ToggleShuffleCommand { get; }
     public ICommand LoadPlaylistCommand { get; }
     public ICommand SavePlaylistCommand { get; }
+    public ICommand ToggleMediaControlsCommand { get; }
+    public ICommand SelectAudioTrackCommand { get; }
+    public ICommand SelectSubtitleTrackCommand { get; }
+    public ICommand SelectTitleCommand { get; }
+    public ICommand SelectChapterCommand { get; }
+    public ICommand AdjustAudioDelayCommand { get; }
+    public ICommand AdjustSubtitleDelayCommand { get; }
+    public ICommand ResetAudioDelayCommand { get; }
+    public ICommand ResetSubtitleDelayCommand { get; }
+    public ICommand AttachExternalAudioCommand { get; }
+    public ICommand AttachExternalSubtitleCommand { get; }
     public string SkipBackwardLabel => $"−{_settings?.Current.SkipBackwardSeconds ?? 10}";
     public string SkipForwardLabel => $"+{_settings?.Current.SkipForwardSeconds ?? 10}";
 
@@ -263,6 +303,55 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
     public bool HasEmptyQueue => QueueState.Status == QueueLoadState.Empty;
     public string RepeatLabel => QueueState.Repeat switch { QueueRepeatMode.CurrentItem => "Repeat item", QueueRepeatMode.All => "Repeat all", QueueRepeatMode.Inconsistent => "Repeat unavailable", _ => "Repeat off" };
     public string ShuffleLabel => QueueState.Order == QueueOrder.Random ? "Shuffle on" : "Shuffle off";
+    public MediaCapabilitiesState MediaCapabilities { get => _mediaCapabilities; private set => Set(ref _mediaCapabilities, value); }
+    public IReadOnlyList<MediaTrack> AudioTracks => MediaCapabilities.AudioTracks;
+    public IReadOnlyList<MediaTrack> SubtitleTracks => MediaCapabilities.SubtitleTracks;
+    public IReadOnlyList<MediaTitle> Titles => MediaCapabilities.Titles;
+    public IReadOnlyList<MediaChapter> Chapters => MediaCapabilities.Chapters;
+    public bool IsMediaCapabilitiesLoading => MediaCapabilities.Status == MediaCapabilityLoadState.Loading;
+    public bool HasMediaCapabilitiesError => MediaCapabilities.Status == MediaCapabilityLoadState.Failed || !string.IsNullOrWhiteSpace(MediaCapabilities.Error);
+    public bool HasMediaCapabilitiesEmpty => MediaCapabilities.Status == MediaCapabilityLoadState.Empty;
+    public bool AreMediaControlsUnavailable => MediaCapabilities.Status == MediaCapabilityLoadState.Unavailable;
+    public string MediaCapabilitiesError => MediaCapabilities.Error ?? string.Empty;
+    public string DrawerTab
+    {
+        get => _drawerTab;
+        set
+        {
+            if (Set(ref _drawerTab, value))
+            {
+                OnPropertyChanged(nameof(IsQueueTab)); OnPropertyChanged(nameof(IsAudioTab));
+                OnPropertyChanged(nameof(IsSubtitleTab)); OnPropertyChanged(nameof(IsChapterTab));
+            }
+        }
+    }
+    public bool IsQueueTab => DrawerTab == "Queue";
+    public bool IsAudioTab => DrawerTab == "Audio";
+    public bool IsSubtitleTab => DrawerTab == "Subtitles";
+    public bool IsChapterTab => DrawerTab == "Chapters";
+    public bool CanAdjustDelays => _mediaControls is not null && MediaCapabilities.Status is MediaCapabilityLoadState.Ready or MediaCapabilityLoadState.Empty;
+    public int AudioDelayMilliseconds
+    {
+        get => MediaCapabilities.Delays.AudioMilliseconds;
+        set
+        {
+            int bounded = MediaDelayPolicy.Clamp(value);
+            if (_isUpdatingCapabilities || bounded == MediaCapabilities.Delays.AudioMilliseconds) return;
+            _mediaControls?.SetDelayMilliseconds(MediaTrackKind.Audio, bounded);
+        }
+    }
+    public int SubtitleDelayMilliseconds
+    {
+        get => MediaCapabilities.Delays.SubtitleMilliseconds;
+        set
+        {
+            int bounded = MediaDelayPolicy.Clamp(value);
+            if (_isUpdatingCapabilities || bounded == MediaCapabilities.Delays.SubtitleMilliseconds) return;
+            _mediaControls?.SetDelayMilliseconds(MediaTrackKind.Subtitle, bounded);
+        }
+    }
+    public string MediaControlsNotice { get => _mediaControlsNotice; private set => Set(ref _mediaControlsNotice, value); }
+    public bool HasMediaControlsNotice => !string.IsNullOrWhiteSpace(MediaControlsNotice);
 
     public void BeginSeek() => _isSeeking = CanSeek;
 
@@ -418,6 +507,35 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(QueueItems)); OnPropertyChanged(nameof(HasQueueError)); OnPropertyChanged(nameof(QueueError)); OnPropertyChanged(nameof(IsQueueLoading)); OnPropertyChanged(nameof(HasQueueItems)); OnPropertyChanged(nameof(HasEmptyQueue)); OnPropertyChanged(nameof(RepeatLabel)); OnPropertyChanged(nameof(ShuffleLabel));
         foreach (RegistryCommand? command in new[] { PreviousCommand, NextCommand, SelectQueueItemCommand, MoveQueueItemCommand, RemoveQueueItemCommand, ClearQueueCommand, CycleRepeatCommand, ToggleShuffleCommand }.OfType<RegistryCommand>()) command.RaiseCanExecuteChanged();
         (SavePlaylistCommand as RegistryCommand)?.RaiseCanExecuteChanged();
+    }
+
+    private void ApplyMediaCapabilities(MediaCapabilitiesState state)
+    {
+        if (state.QueueGeneration < MediaCapabilities.QueueGeneration ||
+            (_activeGeneration >= 0 && state.QueueGeneration > 0 && state.QueueGeneration != _activeGeneration)) return;
+        if (state.QueueGeneration == MediaCapabilities.QueueGeneration && state.MediaGeneration < MediaCapabilities.MediaGeneration) return;
+        _isUpdatingCapabilities = true;
+        try { MediaCapabilities = state; }
+        finally { _isUpdatingCapabilities = false; }
+        foreach (string property in new[] { nameof(AudioTracks), nameof(SubtitleTracks), nameof(Titles), nameof(Chapters), nameof(IsMediaCapabilitiesLoading), nameof(HasMediaCapabilitiesError), nameof(HasMediaCapabilitiesEmpty), nameof(AreMediaControlsUnavailable), nameof(MediaCapabilitiesError), nameof(AudioDelayMilliseconds), nameof(SubtitleDelayMilliseconds), nameof(CanAdjustDelays) }) OnPropertyChanged(property);
+        foreach (RegistryCommand? command in new[] { SelectAudioTrackCommand, SelectSubtitleTrackCommand, SelectTitleCommand, SelectChapterCommand, AdjustAudioDelayCommand, AdjustSubtitleDelayCommand, ResetAudioDelayCommand, ResetSubtitleDelayCommand, AttachExternalAudioCommand, AttachExternalSubtitleCommand }.OfType<RegistryCommand>()) command.RaiseCanExecuteChanged();
+    }
+
+    private async Task AttachExternalTrackAsync(MediaTrackKind kind)
+    {
+        if (_mediaSourcePicker is not IExternalTrackPicker picker || _mediaControls is null) return;
+        string? path = await picker.PickExternalTrackAsync(kind);
+        if (string.IsNullOrWhiteSpace(path)) return;
+        string extension = Path.GetExtension(path);
+        bool valid = kind == MediaTrackKind.Subtitle
+            ? extension is ".srt" or ".ass" or ".ssa" or ".vtt" or ".sub"
+            : extension is ".mp3" or ".m4a" or ".aac" or ".flac" or ".wav" or ".ogg";
+        if (!valid) { MediaControlsNotice = kind == MediaTrackKind.Subtitle ? "Choose a supported subtitle file." : "Choose a supported audio file."; OnPropertyChanged(nameof(HasMediaControlsNotice)); return; }
+        ExternalTrackAttachmentState result = _mediaControls.AttachExternalTrack(kind, path);
+        MediaControlsNotice = result.AcceptedIntoItem && result.PendingUntilNextOpen
+            ? "Added for the next media open. It is not a current live track."
+            : result.Error ?? "The external track could not be added.";
+        OnPropertyChanged(nameof(HasMediaControlsNotice));
     }
     private void NotifyRecent()
     {

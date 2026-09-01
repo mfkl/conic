@@ -1,6 +1,7 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
+using System.Collections.Concurrent;
 using Player.Contracts;
 using Player.Domain;
 using Player.Application;
@@ -10,7 +11,7 @@ using VLCLR.Native;
 namespace VLCAvalonia.Interop;
 
 [SupportedOSPlatform("windows")]
-internal sealed unsafe class VLCCorePlayer : IMediaEngine, IQueueTransport, IVLCPlaylistQueueSmokeAdapter
+internal sealed unsafe class VLCCorePlayer : IMediaEngine, IQueueTransport, IMediaCapabilitiesTransport, IVLCPlaylistQueueSmokeAdapter, IVLCMediaCapabilitySmokeAdapter
 {
     private const int PlaylistStopped = 0;
     private const int PlaylistRunning = 1;
@@ -30,10 +31,17 @@ internal sealed unsafe class VLCCorePlayer : IMediaEngine, IQueueTransport, IVLC
     private nint _playlist;
     private VLCPlaylistQueue? _queue;
     private PlaybackQueueState _queueState = PlaybackQueueState.Initial;
+    private MediaCapabilitiesState _mediaCapabilities = MediaCapabilitiesState.Initial;
+    private readonly VLCMediaCapabilities _mediaControls;
+    private readonly ConcurrentQueue<Action> _mediaRequests = new();
     private QueueRepeatMode _requestedRepeat = QueueRepeatMode.None;
     private QueueOrder _requestedOrder = QueueOrder.Normal;
     private bool _tearingDown;
     private long _generation;
+    private long _coreGeneration;
+    private long _mediaGeneration;
+    // This is an identity token only. It is never dereferenced or passed back to VLC after its hold is released.
+    private nint _lastObservedInputIdentity;
     private int _disposed;
 
     public VLCCorePlayer(bool hardwareDecoding = true, bool verboseLogging = false)
@@ -44,6 +52,7 @@ internal sealed unsafe class VLCCorePlayer : IMediaEngine, IQueueTransport, IVLC
             registerFrameCallback: false);
         _ownsPlaylistBridge = true;
         _playlistBridge.ConnectPlaylist();
+        _mediaControls = new VLCMediaCapabilities(TryGetCurrentInputLease);
     }
 
     public MediaEngineState State => _states.State;
@@ -60,6 +69,9 @@ internal sealed unsafe class VLCCorePlayer : IMediaEngine, IQueueTransport, IVLC
     }
 
     public event EventHandler<PlaybackQueueState>? QueueStateChanged;
+
+    public MediaCapabilitiesState MediaCapabilities { get { lock (_gate) return _mediaCapabilities; } }
+    public event EventHandler<MediaCapabilitiesState>? MediaCapabilitiesChanged;
 
     public void Open(string source) => OpenQueue([source]);
 
@@ -90,6 +102,7 @@ internal sealed unsafe class VLCCorePlayer : IMediaEngine, IQueueTransport, IVLC
 
         long generation = _states.BeginOpen(stateSource);
         PublishQueue(new PlaybackQueueState(generation, 0, QueueLoadState.Loading, [], -1, _requestedRepeat, _requestedOrder));
+        PublishMediaCapabilities(new MediaCapabilitiesState(generation, 0, MediaCapabilityLoadState.Loading, [], [], [], [], new(0, 0)));
         ManualResetEventSlim stop = new(false);
         Thread thread = new(() => Run(launchSources, initialEnqueueSources, generation, stop))
         {
@@ -102,6 +115,7 @@ internal sealed unsafe class VLCCorePlayer : IMediaEngine, IQueueTransport, IVLC
             _generation = generation;
             _tearingDown = false;
             _queue = null;
+            _lastObservedInputIdentity = 0;
             _stop = stop;
             _thread = thread;
         }
@@ -186,6 +200,62 @@ internal sealed unsafe class VLCCorePlayer : IMediaEngine, IQueueTransport, IVLC
             generation = _generation;
         }
         PublishSnapshot(generation);
+    }
+
+    public void SelectTrack(MediaTrackKind kind, string id)
+    {
+        if (!long.TryParse(id, out long value)) return;
+        QueueMediaRequest(() =>
+        {
+            MediaCapabilitiesState snapshot = MediaCapabilities;
+            _ = _mediaControls.SelectTrack(ToNativeTracks(snapshot), kind == MediaTrackKind.Audio ? VLCTrackKind.Audio : VLCTrackKind.Subtitle, value);
+            PublishMediaCapabilitiesSnapshot(snapshot.QueueGeneration);
+        });
+    }
+
+    public void SelectTitle(string id)
+    {
+        if (!long.TryParse(id, out long value)) return;
+        QueueMediaRequest(() => { MediaCapabilitiesState snapshot = MediaCapabilities; _ = _mediaControls.SelectTitle(ToNativeTitles(snapshot), value); PublishMediaCapabilitiesSnapshot(snapshot.QueueGeneration); });
+    }
+
+    public void SelectChapter(string id)
+    {
+        if (!long.TryParse(id, out long value)) return;
+        QueueMediaRequest(() => { MediaCapabilitiesState snapshot = MediaCapabilities; _ = _mediaControls.SelectChapter(ToNativeTitles(snapshot), value); PublishMediaCapabilitiesSnapshot(snapshot.QueueGeneration); });
+    }
+
+    public void SetDelayMilliseconds(MediaTrackKind kind, int milliseconds)
+    {
+        QueueMediaRequest(() => { _ = _mediaControls.SetDelay(kind == MediaTrackKind.Audio ? VLCMediaDelayKind.Audio : VLCMediaDelayKind.Subtitle, TimeSpan.FromMilliseconds(MediaDelayPolicy.Clamp(milliseconds))); PublishMediaCapabilitiesSnapshot(State.Generation); });
+    }
+
+    public void ResetDelay(MediaTrackKind kind)
+    {
+        QueueMediaRequest(() => { _ = _mediaControls.ResetDelay(kind == MediaTrackKind.Audio ? VLCMediaDelayKind.Audio : VLCMediaDelayKind.Subtitle); PublishMediaCapabilitiesSnapshot(State.Generation); });
+    }
+
+    public ExternalTrackAttachmentState AttachExternalTrack(MediaTrackKind kind, string path)
+    {
+        if (!QueueMediaRequest(() =>
+        {
+            VLCExternalTrackAttachmentResult result = _mediaControls.AttachExternalTrack(path, kind == MediaTrackKind.Audio ? VLCExternalTrackKind.Audio : VLCExternalTrackKind.Subtitle);
+            PublishMediaCapabilitiesSnapshot(State.Generation);
+            if (result.AcceptedIntoItem && result.PendingUntilNextOpen)
+                PublishMediaCapabilities(MediaCapabilities with { Error = "External track added for the next open; it is not a current live track." });
+        }))
+            return new(false, false, false, "Media controls are unavailable while VLC is opening or closing.");
+        return new(true, true, false, null);
+    }
+
+    private bool QueueMediaRequest(Action request)
+    {
+        lock (_gate)
+        {
+            if (_tearingDown || _thread is null || _playlist == 0) return false;
+            _mediaRequests.Enqueue(request);
+            return true;
+        }
     }
 
     public void Enqueue(IEnumerable<string> sources)
@@ -323,6 +393,99 @@ internal sealed unsafe class VLCCorePlayer : IMediaEngine, IQueueTransport, IVLC
             return !_tearingDown && _playlist != 0 ? new VLCPlaylistLease(_playlist, _generation) : null;
     }
 
+    /// <summary>Returns a short-lived capability lease only while the input is live.
+    /// The held pointer is released immediately after comparison; its numeric value is retained solely as an identity token.</summary>
+    private VLCCurrentInputLease? TryGetCurrentInputLease()
+    {
+        nint playlist;
+        long coreGeneration;
+        lock (_gate)
+        {
+            if (_tearingDown || _playlist == 0)
+                return null;
+            playlist = _playlist;
+            coreGeneration = _coreGeneration;
+        }
+
+        nint heldInput = VLCCore.PlaylistCurrentInput(playlist);
+        if (heldInput == 0)
+            return null;
+        try
+        {
+            lock (_gate)
+            {
+                if (_tearingDown || _playlist != playlist || _coreGeneration != coreGeneration)
+                    return null;
+                if (_lastObservedInputIdentity != heldInput)
+                {
+                    _lastObservedInputIdentity = heldInput;
+                    _mediaGeneration++;
+                }
+                return new VLCCurrentInputLease(playlist, _coreGeneration, _mediaGeneration);
+            }
+        }
+        finally
+        {
+            VLCCore.ObjectRelease(heldInput);
+        }
+    }
+
+    private static VLCTrackSnapshot ToNativeTracks(MediaCapabilitiesState state) => new(
+        new VLCInputGeneration(state.QueueGeneration, state.MediaGeneration),
+        state.AudioTracks.Select(x => new VLCTrackChoice(long.Parse(x.Id), x.Label, x.IsDisabled)).ToArray(),
+        state.SubtitleTracks.Select(x => new VLCTrackChoice(long.Parse(x.Id), x.Label, x.IsDisabled)).ToArray(),
+        state.AudioTracks.FirstOrDefault(x => x.IsSelected) is { } audio ? long.Parse(audio.Id) : null,
+        state.SubtitleTracks.FirstOrDefault(x => x.IsSelected) is { } subtitle ? long.Parse(subtitle.Id) : null);
+
+    private static VLCTitleChapterSnapshot ToNativeTitles(MediaCapabilitiesState state) => new(
+        new VLCInputGeneration(state.QueueGeneration, state.MediaGeneration),
+        state.Titles.Select(x => new VLCTitleChoice(long.Parse(x.Id), x.Label)).ToArray(),
+        state.Chapters.Select(x => new VLCChapterChoice(long.Parse(x.Id), x.Label)).ToArray(),
+        state.Titles.FirstOrDefault(x => x.IsSelected) is { } title ? long.Parse(title.Id) : null,
+        state.Chapters.FirstOrDefault(x => x.IsSelected) is { } chapter ? long.Parse(chapter.Id) : null);
+
+    private static string Describe(VLCMediaResult result) => result.Code switch
+    {
+        VLCMediaResultCode.InputUnavailable => "Media controls are unavailable while VLC is opening or closing.",
+        VLCMediaResultCode.StaleSnapshot => "The media changed before the action could be applied. It has been refreshed.",
+        VLCMediaResultCode.OutOfRange => $"Delay must be between −{MediaDelayPolicy.MaximumMilliseconds:N0} and +{MediaDelayPolicy.MaximumMilliseconds:N0} ms.",
+        VLCMediaResultCode.InvalidArgument => "That media control is no longer available.",
+        _ => "VLC could not apply that media control.",
+    };
+
+    private void PublishMediaCapabilitiesSnapshot(long queueGeneration)
+    {
+        if (queueGeneration <= 0) return;
+        VLCTrackSnapshot? tracks = _mediaControls.TryGetTracks(out VLCMediaResult tracksResult);
+        VLCTitleChapterSnapshot? titles = _mediaControls.TryGetTitlesAndChapters(out VLCMediaResult titlesResult);
+        VLCMediaDelaySnapshot? delays = _mediaControls.TryGetDelays(out VLCMediaResult delaysResult);
+        if (tracks is null || titles is null || delays is null)
+        {
+            VLCMediaResult error = !tracksResult.Succeeded ? tracksResult : !titlesResult.Succeeded ? titlesResult : delaysResult;
+            if (error.Code == VLCMediaResultCode.StaleSnapshot) return;
+            PublishMediaCapabilities(new(queueGeneration, MediaCapabilities.MediaGeneration, error.Code == VLCMediaResultCode.InputUnavailable ? MediaCapabilityLoadState.Loading : MediaCapabilityLoadState.Failed, [], [], [], [], MediaCapabilities.Delays, Describe(error)));
+            return;
+        }
+        if (tracks.Generation.CoreGeneration != titles.Generation.CoreGeneration || tracks.Generation.MediaGeneration != titles.Generation.MediaGeneration || tracks.Generation.CoreGeneration != delays.Value.Generation.CoreGeneration || tracks.Generation.MediaGeneration != delays.Value.Generation.MediaGeneration)
+            return;
+        long mediaGeneration = tracks.Generation.MediaGeneration;
+        MediaCapabilitiesState state = new(queueGeneration, mediaGeneration,
+            tracks.AudioTracks.Count == 0 && tracks.SubtitleTracks.Count == 0 && titles.Titles.Count == 0 && titles.Chapters.Count == 0 ? MediaCapabilityLoadState.Empty : MediaCapabilityLoadState.Ready,
+            tracks.AudioTracks.Select(x => new MediaTrack(x.Id.ToString(), string.IsNullOrWhiteSpace(x.Label) ? "Audio track" : x.Label, x.IsDisabled, x.Id == tracks.SelectedAudioId)).ToArray(),
+            tracks.SubtitleTracks.Select(x => new MediaTrack(x.Id.ToString(), string.IsNullOrWhiteSpace(x.Label) ? "Subtitle track" : x.Label, x.IsDisabled, x.Id == tracks.SelectedSubtitleId)).ToArray(),
+            titles.Titles.Select(x => new MediaTitle(x.Id.ToString(), string.IsNullOrWhiteSpace(x.Label) ? "Title" : x.Label, x.Id == titles.SelectedTitleId)).ToArray(),
+            titles.Chapters.Select(x => new MediaChapter(x.Id.ToString(), string.IsNullOrWhiteSpace(x.Label) ? "Chapter" : x.Label, x.Id == titles.SelectedChapterId)).ToArray(),
+            new((int)Math.Clamp(delays.Value.Audio.TotalMilliseconds, int.MinValue, int.MaxValue), (int)Math.Clamp(delays.Value.Subtitle.TotalMilliseconds, int.MinValue, int.MaxValue)));
+        PublishMediaCapabilities(state);
+    }
+
+    private void PublishMediaCapabilities(MediaCapabilitiesState state)
+    {
+        bool changed;
+        lock (_gate) { changed = !Equals(_mediaCapabilities, state); _mediaCapabilities = state; }
+        if (changed) MediaCapabilitiesChanged?.Invoke(this, state);
+    }
+
     private void PublishQueueSnapshot(long generation)
     {
         PlaybackQueueState? next = null;
@@ -437,6 +600,9 @@ internal sealed unsafe class VLCCorePlayer : IMediaEngine, IQueueTransport, IVLC
                 if (_generation == generation)
                 {
                     _playlist = playlist;
+                    _coreGeneration++;
+                    _mediaGeneration = 0;
+                    _lastObservedInputIdentity = 0;
                     _queue = new VLCPlaylistQueue(TryGetPlaylistLease);
                 }
             }
@@ -454,7 +620,10 @@ internal sealed unsafe class VLCCorePlayer : IMediaEngine, IQueueTransport, IVLC
             }
             PublishSnapshot(generation);
             while (!stop.Wait(TimeSpan.FromMilliseconds(200)))
+            {
+                while (_mediaRequests.TryDequeue(out Action? request)) request();
                 PublishSnapshot(generation);
+            }
 
         }
         catch (Exception exception)
@@ -500,6 +669,7 @@ internal sealed unsafe class VLCCorePlayer : IMediaEngine, IQueueTransport, IVLC
             if (_generation == generation)
             {
                 PublishQueue(new PlaybackQueueState(generation, 0, QueueLoadState.Unavailable, [], -1, _requestedRepeat, _requestedOrder));
+                PublishMediaCapabilities(new MediaCapabilitiesState(generation, _mediaGeneration, MediaCapabilityLoadState.Unavailable, [], [], [], [], new(0, 0)));
             }
         }
     }
@@ -568,6 +738,7 @@ internal sealed unsafe class VLCCorePlayer : IMediaEngine, IQueueTransport, IVLC
             isMuted: muted,
             playbackRate: playbackRate);
         PublishQueueSnapshot(generation);
+        PublishMediaCapabilitiesSnapshot(generation);
     }
 
     VLCPlaylistSnapshot? IVLCPlaylistQueueSmokeAdapter.TryGetSnapshot(out VLCPlaylistResult result)
@@ -591,6 +762,16 @@ internal sealed unsafe class VLCCorePlayer : IMediaEngine, IQueueTransport, IVLC
     private static VLCPlaylistSnapshot? Unavailable(out VLCPlaylistResult result) { result = new(VLCPlaylistResultCode.CoreUnavailable); return null; }
     private static bool UnavailableActiveCurrent(out int? itemId, out VLCPlaylistResult result) { itemId = null; result = new(VLCPlaylistResultCode.CoreUnavailable); return false; }
     private static VLCPlaylistModeSnapshot? UnavailableModes(out VLCPlaylistResult result) { result = new(VLCPlaylistResultCode.CoreUnavailable); return null; }
+
+    VLCTrackSnapshot? IVLCMediaCapabilitySmokeAdapter.TryGetTracks(out VLCMediaResult result) => _mediaControls.TryGetTracks(out result);
+    VLCTitleChapterSnapshot? IVLCMediaCapabilitySmokeAdapter.TryGetTitlesAndChapters(out VLCMediaResult result) => _mediaControls.TryGetTitlesAndChapters(out result);
+    VLCMediaDelaySnapshot? IVLCMediaCapabilitySmokeAdapter.TryGetDelays(out VLCMediaResult result) => _mediaControls.TryGetDelays(out result);
+    VLCMediaResult IVLCMediaCapabilitySmokeAdapter.SelectTrack(VLCTrackSnapshot snapshot, VLCTrackKind kind, long id) => _mediaControls.SelectTrack(snapshot, kind, id);
+    VLCMediaResult IVLCMediaCapabilitySmokeAdapter.SelectTitle(VLCTitleChapterSnapshot snapshot, long id) => _mediaControls.SelectTitle(snapshot, id);
+    VLCMediaResult IVLCMediaCapabilitySmokeAdapter.SelectChapter(VLCTitleChapterSnapshot snapshot, long id) => _mediaControls.SelectChapter(snapshot, id);
+    VLCMediaResult IVLCMediaCapabilitySmokeAdapter.SetDelay(VLCMediaDelayKind kind, TimeSpan delay) => _mediaControls.SetDelay(kind, delay);
+    VLCMediaResult IVLCMediaCapabilitySmokeAdapter.ResetDelay(VLCMediaDelayKind kind) => _mediaControls.ResetDelay(kind);
+    VLCExternalTrackAttachmentResult IVLCMediaCapabilitySmokeAdapter.AttachExternalTrack(string path, VLCExternalTrackKind kind) => _mediaControls.AttachExternalTrack(path, kind);
 
     public void Stop()
     {

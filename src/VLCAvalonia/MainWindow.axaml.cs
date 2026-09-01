@@ -515,7 +515,8 @@ public partial class MainWindow : Window
                 switch (phase)
                 {
                     case 0: ValidateLayout(width, compact); ValidateTopChrome(width); ShowOpenMenuForSmoke(); _presentation.IsQueueOpen = true; phase++; return;
-                    case 1: ValidateQueueDrawer(width); _presentation.IsQueueOpen = false; ValidateSurface("open-menu", OpenMenu, [OpenMenu, OpenFolderAction, RecentEmptyState]); CloseOpenMenu(); ShowUrlPanel(); phase++; return;
+                    case 1: ValidateQueueDrawer(width); _presentation.DrawerTab = "Audio"; phase = 20; return;
+                    case 20: ValidateMediaDrawer(width); _presentation.IsQueueOpen = false; ValidateSurface("open-menu", OpenMenu, [OpenMenu, OpenFolderAction, RecentEmptyState]); CloseOpenMenu(); ShowUrlPanel(); phase = 2; return;
                     case 2: ValidateSurface("url-panel", UrlPanel, [UrlPanel, UrlTextBox, UrlCancelButton, UrlSubmitButton]); CloseUrlPanel(); ResumePanel.IsVisible = true; Dispatcher.UIThread.Post(() => ResumeAction.Focus()); phase++; return;
                     case 3: ValidateSurface("resume-panel", ResumePanel, [ResumePanel, ResumeAction, DeclineResumeAction]); ResumePanel.IsVisible = false; OpenSettings(); _settingsViewModel.SelectedPage = _settingsViewModel.Pages[0]; ApplyResponsiveSettings(); phase++; return;
                     case 4: ValidateSettingsLayout(width, compact); BringSettingsControlIntoView(SettingsClearRecentButton); phase++; return;
@@ -525,7 +526,8 @@ public partial class MainWindow : Window
                     case 8: ValidateSettingsControl("resume-confirm", SettingsConfirmClearResumeButton); SettingsClearResumePrompt.IsVisible = false; CloseSettings(); OpenErrorToast.IsVisible = true; phase++; return;
                     case 9: ValidateToastForSmoke(); OpenErrorToast.IsVisible = false; Width = 480; phase++; return;
                     case 10: ApplyResponsiveChrome(); ApplyResponsiveSettings(); ValidateLayout(width, true); ValidateTopChrome(width); ShowOpenMenuForSmoke(); _presentation.IsQueueOpen = true; phase++; return;
-                    case 11: ValidateQueueDrawer(width); _presentation.IsQueueOpen = false; ValidateSurface("open-menu", OpenMenu, [OpenMenu, OpenFolderAction, RecentEmptyState]); CloseOpenMenu(); ShowUrlPanel(); phase++; return;
+                    case 11: ValidateQueueDrawer(width); _presentation.DrawerTab = "Audio"; phase = 21; return;
+                    case 21: ValidateMediaDrawer(width); _presentation.IsQueueOpen = false; ValidateSurface("open-menu", OpenMenu, [OpenMenu, OpenFolderAction, RecentEmptyState]); CloseOpenMenu(); ShowUrlPanel(); phase = 12; return;
                     case 12: ValidateSurface("url-panel", UrlPanel, [UrlPanel, UrlTextBox, UrlCancelButton, UrlSubmitButton]); CloseUrlPanel(); ResumePanel.IsVisible = true; Dispatcher.UIThread.Post(() => ResumeAction.Focus()); phase++; return;
                     case 13: ValidateSurface("resume-panel", ResumePanel, [ResumePanel, ResumeAction, DeclineResumeAction]); ResumePanel.IsVisible = false; OpenSettings(); _settingsViewModel.SelectedPage = _settingsViewModel.Pages[0]; ApplyResponsiveSettings(); phase++; return;
                     case 14: ValidateSettingsLayout(width, true); BringSettingsControlIntoView(SettingsClearRecentButton); phase++; return;
@@ -594,6 +596,14 @@ public partial class MainWindow : Window
         bool contained = IsContained(QueueDrawer) && QueueDrawer.IsVisible && QueueDrawer.Bounds.Width > 0 && QueueDrawer.Bounds.Width <= Math.Max(390, width - 32);
         Console.WriteLine($"[layout-smoke] queue-drawer width={width} bounds={QueueDrawer.Bounds} contained={contained}");
         if (!contained) throw new InvalidOperationException("[layout-smoke] FAIL queue drawer bounds");
+    }
+
+    private void ValidateMediaDrawer(double width)
+    {
+        Control[] controls = [QueueDrawer, AudioDelayInput];
+        bool contained = controls.All(IsContained) && AudioDelayInput.Bounds.Width > 0 && AudioDelayInput.Bounds.Width <= 112.1;
+        Console.WriteLine($"[layout-smoke] media-drawer width={width} drawer={QueueDrawer.Bounds} audio-delay={AudioDelayInput.Bounds} contained={contained}");
+        if (!contained) throw new InvalidOperationException("[layout-smoke] FAIL media drawer bounds");
     }
 
     private void ValidateSurface(string name, Control surface, Control[] required)

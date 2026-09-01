@@ -3,7 +3,7 @@ using Player.Application;
 
 namespace VLCAvalonia.Services;
 
-internal sealed class StorageMediaSourcePicker(IStorageProvider storageProvider) : IMediaSourcePicker, IPlaylistDocumentPicker
+internal sealed class StorageMediaSourcePicker(IStorageProvider storageProvider) : IMediaSourcePicker, IPlaylistDocumentPicker, IExternalTrackPicker
 {
     public async Task<string?> PickMediaAsync(CancellationToken cancellationToken = default)
     {
@@ -44,5 +44,19 @@ internal sealed class StorageMediaSourcePicker(IStorageProvider storageProvider)
     {
         IStorageFile? result = await storageProvider.SaveFilePickerAsync(new FilePickerSaveOptions { Title = "Save playlist", SuggestedFileName = "playlist.m3u8", FileTypeChoices = new[] { new FilePickerFileType("M3U8 playlist") { Patterns = new[] { "*.m3u8" } } } });
         return result?.Path.LocalPath;
+    }
+
+    public async Task<string?> PickExternalTrackAsync(MediaTrackKind kind, CancellationToken cancellationToken = default)
+    {
+        string[] patterns = kind == MediaTrackKind.Subtitle
+            ? ["*.srt", "*.ass", "*.ssa", "*.vtt", "*.sub"]
+            : ["*.mp3", "*.m4a", "*.aac", "*.flac", "*.wav", "*.ogg"];
+        IReadOnlyList<IStorageFile> result = await storageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = kind == MediaTrackKind.Subtitle ? "Add external subtitle file" : "Add external audio file",
+            AllowMultiple = false,
+            FileTypeFilter = [new FilePickerFileType(kind == MediaTrackKind.Subtitle ? "Subtitle files" : "Audio files") { Patterns = patterns }],
+        });
+        return result.Count == 0 ? null : result[0].Path.LocalPath;
     }
 }

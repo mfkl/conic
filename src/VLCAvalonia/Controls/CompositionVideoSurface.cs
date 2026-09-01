@@ -45,6 +45,7 @@ public sealed class CompositionVideoSurface : Control, IDisposable
     public event Action<string>? StatusChanged;
     public event EventHandler<MediaEngineState>? EngineStateChanged;
     public event EventHandler<PlaybackQueueState>? QueueStateChanged;
+    public event EventHandler<MediaCapabilitiesState>? MediaCapabilitiesChanged;
     internal event Action<ulong, ulong, string>? GPUFramePresentedForSmoke;
 
     public string? MediaPath
@@ -129,6 +130,7 @@ public sealed class CompositionVideoSurface : Control, IDisposable
     public void Stop() => _player?.Stop();
 
     public PlaybackQueueState QueueState => (_player as IQueueTransport)?.QueueState ?? PlaybackQueueState.Initial;
+    public MediaCapabilitiesState MediaCapabilities => (_player as IMediaCapabilitiesTransport)?.MediaCapabilities ?? MediaCapabilitiesState.Initial;
     public void OpenQueue(IReadOnlyList<string> sources)
     {
         if (sources.Count == 0) return;
@@ -144,6 +146,12 @@ public sealed class CompositionVideoSurface : Control, IDisposable
     public void NextQueueItem() => (_player as IQueueTransport)?.Next();
     public void SetQueueRepeat(QueueRepeatMode mode) => (_player as IQueueTransport)?.SetRepeatMode(mode);
     public void SetQueueOrder(QueueOrder order) => (_player as IQueueTransport)?.SetOrder(order);
+    public void SelectTrack(MediaTrackKind kind, string id) => (_player as IMediaCapabilitiesTransport)?.SelectTrack(kind, id);
+    public void SelectTitle(string id) => (_player as IMediaCapabilitiesTransport)?.SelectTitle(id);
+    public void SelectChapter(string id) => (_player as IMediaCapabilitiesTransport)?.SelectChapter(id);
+    public void SetDelayMilliseconds(MediaTrackKind kind, int milliseconds) => (_player as IMediaCapabilitiesTransport)?.SetDelayMilliseconds(kind, milliseconds);
+    public void ResetDelay(MediaTrackKind kind) => (_player as IMediaCapabilitiesTransport)?.ResetDelay(kind);
+    public ExternalTrackAttachmentState AttachExternalTrack(MediaTrackKind kind, string path) => (_player as IMediaCapabilitiesTransport)?.AttachExternalTrack(kind, path) ?? new(false, false, false, "Media controls are unavailable.");
 
     internal void ReopenForSmoke()
     {
@@ -274,6 +282,8 @@ public sealed class CompositionVideoSurface : Control, IDisposable
             _player.StateChanged += OnEngineStateChanged;
             if (_player is IQueueTransport queue)
                 queue.QueueStateChanged += OnQueueStateChanged;
+            if (_player is IMediaCapabilitiesTransport capabilities)
+                capabilities.MediaCapabilitiesChanged += OnMediaCapabilitiesChanged;
             if (_pendingQueueSources is { } pending && _player is IQueueTransport pendingQueue)
             {
                 _pendingQueueSources = null;
@@ -289,6 +299,9 @@ public sealed class CompositionVideoSurface : Control, IDisposable
 
     private void OnQueueStateChanged(object? sender, PlaybackQueueState state) =>
         Dispatcher.UIThread.Post(() => QueueStateChanged?.Invoke(this, state));
+
+    private void OnMediaCapabilitiesChanged(object? sender, MediaCapabilitiesState state) =>
+        Dispatcher.UIThread.Post(() => MediaCapabilitiesChanged?.Invoke(this, state));
 
     private async Task PresentLatestFrameAsync()
     {
@@ -523,6 +536,8 @@ public sealed class CompositionVideoSurface : Control, IDisposable
             _player.StateChanged -= OnEngineStateChanged;
             if (_player is IQueueTransport queue)
                 queue.QueueStateChanged -= OnQueueStateChanged;
+            if (_player is IMediaCapabilitiesTransport capabilities)
+                capabilities.MediaCapabilitiesChanged -= OnMediaCapabilitiesChanged;
             _player.Dispose();
             _player = null;
         }

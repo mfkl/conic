@@ -1,6 +1,6 @@
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Threading;
 
 namespace Conic.Interop;
 
@@ -20,18 +20,26 @@ internal sealed unsafe class CompositionPluginBridge : IDisposable
         byte[] Pixels,
         long PresentationTimestamp);
 
-    private static CompositionPluginBridge? s_active;
-
+    private readonly object _lifecycleGate = new();
     private readonly nint _library;
     private readonly delegate* unmanaged[Cdecl]<nint, nint, void> _setCallback;
     private readonly delegate* unmanaged[Cdecl]<nint, nint, void> _setGPUCallback;
+    private readonly delegate* unmanaged[Cdecl]<nint, nint, void>
+        _setPlaylistCallback;
+    private readonly ManualResetEventSlim _playlistReady = new(false);
+    private GCHandle _selfHandle;
+    private nint _opaque;
     private Frame? _latestFrame;
     private GPUFrame? _latestGPUFrame;
-    private bool _disposed;
+    private nint _playlist;
+    private bool _frameConnected;
+    private bool _GPUConnected;
+    private bool _playlistConnected;
+    private int _disposed;
 
     public string PluginDirectory { get; }
 
-    public CompositionPluginBridge()
+    public CompositionPluginBridge(bool registerFrameCallback = true)
     {
         string pluginPath = FindPluginPath();
         PluginDirectory = Path.GetDirectoryName(pluginPath)!;
@@ -46,26 +54,125 @@ internal sealed unsafe class CompositionPluginBridge : IDisposable
             "vlc_avalonia_set_gpu_frame_callback");
         _setGPUCallback =
             (delegate* unmanaged[Cdecl]<nint, nint, void>)GPUSetter;
+        nint playlistSetter = NativeLibrary.GetExport(
+            _library,
+            "vlc_avalonia_set_playlist_callback");
+        _setPlaylistCallback =
+            (delegate* unmanaged[Cdecl]<nint, nint, void>)playlistSetter;
 
-        Volatile.Write(ref s_active, this);
-        _setCallback(
-            (nint)(delegate* unmanaged[Cdecl]<nint, uint, uint, int, nint, long, void>)&OnFrame,
-            0);
+        _selfHandle = GCHandle.Alloc(this);
+        _opaque = GCHandle.ToIntPtr(_selfHandle);
+        try
+        {
+            if (registerFrameCallback)
+            {
+                _setCallback(
+                    (nint)(delegate* unmanaged[Cdecl]<nint, uint, uint, int, nint, long, void>)&OnFrame,
+                    _opaque);
+                _frameConnected = true;
+            }
+        }
+        catch
+        {
+            _opaque = 0;
+            _selfHandle.Free();
+            throw;
+        }
+    }
+
+    public void ConnectPlaylist()
+    {
+        lock (_lifecycleGate)
+        {
+            ThrowIfDisposed();
+            if (_playlistConnected)
+                return;
+
+            Volatile.Write(ref _playlist, 0);
+            _playlistReady.Reset();
+            _setPlaylistCallback(
+                (nint)(delegate* unmanaged[Cdecl]<nint, nint, void>)&OnPlaylist,
+                _opaque);
+            _playlistConnected = true;
+        }
+    }
+
+    public void ResetPlaylist()
+    {
+        lock (_lifecycleGate)
+        {
+            ThrowIfDisposed();
+            Volatile.Write(ref _playlist, 0);
+            _playlistReady.Reset();
+        }
+    }
+
+    public nint WaitForPlaylist(
+        TimeSpan timeout,
+        ManualResetEventSlim stop)
+    {
+        ThrowIfDisposed();
+        Stopwatch elapsed = Stopwatch.StartNew();
+        while (elapsed.Elapsed < timeout)
+        {
+            if (stop.IsSet)
+                throw new OperationCanceledException(
+                    "Playback stopped while waiting for the VLC playlist.");
+
+            nint playlist = Volatile.Read(ref _playlist);
+            if (playlist != 0)
+                return playlist;
+
+            TimeSpan remaining = timeout - elapsed.Elapsed;
+            _playlistReady.Wait(
+                remaining < TimeSpan.FromMilliseconds(50)
+                    ? remaining
+                    : TimeSpan.FromMilliseconds(50));
+        }
+
+        throw new TimeoutException(
+            "VLC interface vlc_avalonia_control did not publish the main " +
+            $"playlist within {timeout.TotalSeconds:0.#} seconds.");
+    }
+
+    public void DisconnectPlaylist()
+    {
+        lock (_lifecycleGate)
+        {
+            if (!_playlistConnected)
+                return;
+            _setPlaylistCallback(0, 0);
+            _playlistConnected = false;
+            Volatile.Write(ref _playlist, 0);
+            _playlistReady.Reset();
+        }
     }
 
     public void EnableGPUFrames()
     {
-        ObjectDisposedException.ThrowIf(_disposed, this);
-        _setGPUCallback(
-            (nint)(delegate* unmanaged[Cdecl]<nint, nint, uint, uint, ulong, long, void>)&OnGPUFrame,
-            0);
+        lock (_lifecycleGate)
+        {
+            ThrowIfDisposed();
+            if (_GPUConnected)
+                return;
+            _setGPUCallback(
+                (nint)(delegate* unmanaged[Cdecl]<nint, nint, uint, uint, ulong, long, void>)&OnGPUFrame,
+                _opaque);
+            _GPUConnected = true;
+        }
     }
 
     public void DisableGPUFrames()
     {
-        if (!_disposed)
-            _setGPUCallback(0, 0);
-        Interlocked.Exchange(ref _latestGPUFrame, null);
+        lock (_lifecycleGate)
+        {
+            if (_GPUConnected)
+            {
+                _setGPUCallback(0, 0);
+                _GPUConnected = false;
+            }
+            Interlocked.Exchange(ref _latestGPUFrame, null);
+        }
     }
 
     public bool TryTakeLatestGPU(out GPUFrame? frame)
@@ -81,6 +188,26 @@ internal sealed unsafe class CompositionPluginBridge : IDisposable
     }
 
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
+    private static void OnPlaylist(nint opaque, nint playlist)
+    {
+        try
+        {
+            CompositionPluginBridge? bridge = GetBridge(opaque);
+            if (bridge is null || bridge.IsDisposed)
+                return;
+
+            Volatile.Write(ref bridge._playlist, playlist);
+            if (playlist == 0)
+                bridge._playlistReady.Reset();
+            else
+                bridge._playlistReady.Set();
+        }
+        catch
+        {
+        }
+    }
+
+    [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
     private static void OnFrame(
         nint opaque,
         uint width,
@@ -91,8 +218,8 @@ internal sealed unsafe class CompositionPluginBridge : IDisposable
     {
         try
         {
-            CompositionPluginBridge? bridge = Volatile.Read(ref s_active);
-            if (bridge is null || bridge._disposed || pixels == 0)
+            CompositionPluginBridge? bridge = GetBridge(opaque);
+            if (bridge is null || bridge.IsDisposed || pixels == 0)
                 return;
             if (width is 0 or > 16384 || height is 0 or > 16384)
                 return;
@@ -135,8 +262,8 @@ internal sealed unsafe class CompositionPluginBridge : IDisposable
     {
         try
         {
-            CompositionPluginBridge? bridge = Volatile.Read(ref s_active);
-            if (bridge is null || bridge._disposed || sharedHandle == 0)
+            CompositionPluginBridge? bridge = GetBridge(opaque);
+            if (bridge is null || bridge.IsDisposed || sharedHandle == 0)
                 return;
             if (width is 0 or > 16384 || height is 0 or > 16384)
                 return;
@@ -154,6 +281,18 @@ internal sealed unsafe class CompositionPluginBridge : IDisposable
         {
         }
     }
+
+    private static CompositionPluginBridge? GetBridge(nint opaque)
+    {
+        if (opaque == 0)
+            return null;
+        return GCHandle.FromIntPtr(opaque).Target as CompositionPluginBridge;
+    }
+
+    private bool IsDisposed => Volatile.Read(ref _disposed) != 0;
+
+    private void ThrowIfDisposed() =>
+        ObjectDisposedException.ThrowIf(IsDisposed, this);
 
     private static string FindPluginPath()
     {
@@ -202,14 +341,39 @@ internal sealed unsafe class CompositionPluginBridge : IDisposable
 
     public void Dispose()
     {
-        if (_disposed)
-            return;
-        _disposed = true;
-        _setGPUCallback(0, 0);
-        _setCallback(0, 0);
-        Interlocked.CompareExchange(ref s_active, null, this);
-        Interlocked.Exchange(ref _latestFrame, null);
-        Interlocked.Exchange(ref _latestGPUFrame, null);
+        lock (_lifecycleGate)
+        {
+            if (IsDisposed)
+                return;
+            Volatile.Write(ref _disposed, 1);
+
+            if (_playlistConnected)
+            {
+                _setPlaylistCallback(0, 0);
+                _playlistConnected = false;
+            }
+            if (_GPUConnected)
+            {
+                _setGPUCallback(0, 0);
+                _GPUConnected = false;
+            }
+            if (_frameConnected)
+            {
+                _setCallback(0, 0);
+                _frameConnected = false;
+            }
+
+            Volatile.Write(ref _playlist, 0);
+            Interlocked.Exchange(ref _latestFrame, null);
+            Interlocked.Exchange(ref _latestGPUFrame, null);
+            _playlistReady.Dispose();
+
+            // The native setters return only after in-flight callbacks have
+            // completed, so callback userdata can now be released safely.
+            _opaque = 0;
+            if (_selfHandle.IsAllocated)
+                _selfHandle.Free();
+        }
 
         // Do not unload: VLC may hold the same module after discovering it.
         GC.SuppressFinalize(this);

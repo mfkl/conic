@@ -20,10 +20,16 @@ public static unsafe class CompositionVoutPlugin
     private static readonly nint License =
         Marshal.StringToCoTaskMemUTF8("LGPL-2.1-or-later");
 
+    // Registration and invocation share this gate. A disconnect therefore
+    // waits for an in-flight callback to return before the host frees its
+    // callback userdata.
+    private static readonly object CallbackGate = new();
     private static nint s_frameCallback;
     private static nint s_frameCallbackOpaque;
     private static nint s_GPUFrameCallback;
     private static nint s_GPUFrameCallbackOpaque;
+    private static nint s_playlistCallback;
+    private static nint s_playlistCallbackOpaque;
 
     private static readonly nint LibVLCCore =
         NativeLibrary.Load("libvlccore.dll");
@@ -54,7 +60,7 @@ public static unsafe class CompositionVoutPlugin
         CallConvs = [typeof(CallConvCdecl)])]
     public static int VLCEntry(nint VLCSetPtr, nint opaque)
     {
-        return ModuleBuilder.Create(VLCSetPtr, opaque)
+        int result = ModuleBuilder.Create(VLCSetPtr, opaque)
             .WithName("vlc_avalonia")
             .WithShortcut("vlc_avalonia")
             .WithShortName("Conic")
@@ -63,6 +69,19 @@ public static unsafe class CompositionVoutPlugin
             .WithScore(0)
             .WithOpenCallback(&Open, "CompositionVoutOpen")
             .WithCloseCallback(&Close, "CompositionVoutClose")
+            .WithNoUnload()
+            .Register();
+        if (result != Success)
+            return result;
+
+        return ModuleBuilder.Create(VLCSetPtr, opaque)
+            .WithShortcut("vlc_avalonia_control")
+            .WithShortName("Conic control host")
+            .WithDescription("Exposes the VLC 3 main playlist to the Avalonia host")
+            .WithCapability("interface")
+            .WithScore(0)
+            .WithOpenCallback(&OpenControlInterface, "ControlInterfaceOpen")
+            .WithCloseCallback(&CloseControlInterface, "ControlInterfaceClose")
             .WithNoUnload()
             .Register();
     }
@@ -76,8 +95,11 @@ public static unsafe class CompositionVoutPlugin
         CallConvs = [typeof(CallConvCdecl)])]
     public static void SetFrameCallback(nint callback, nint opaque)
     {
-        Volatile.Write(ref s_frameCallbackOpaque, opaque);
-        Volatile.Write(ref s_frameCallback, callback);
+        lock (CallbackGate)
+        {
+            s_frameCallback = callback;
+            s_frameCallbackOpaque = opaque;
+        }
     }
 
     /// <summary>
@@ -89,8 +111,64 @@ public static unsafe class CompositionVoutPlugin
         CallConvs = [typeof(CallConvCdecl)])]
     public static void SetGPUFrameCallback(nint callback, nint opaque)
     {
-        Volatile.Write(ref s_GPUFrameCallbackOpaque, opaque);
-        Volatile.Write(ref s_GPUFrameCallback, callback);
+        lock (CallbackGate)
+        {
+            s_GPUFrameCallback = callback;
+            s_GPUFrameCallbackOpaque = opaque;
+        }
+    }
+
+    [UnmanagedCallersOnly(
+        EntryPoint = "vlc_avalonia_set_playlist_callback",
+        CallConvs = [typeof(CallConvCdecl)])]
+    public static void SetPlaylistCallback(nint callback, nint opaque)
+    {
+        lock (CallbackGate)
+        {
+            s_playlistCallback = callback;
+            s_playlistCallbackOpaque = opaque;
+        }
+    }
+
+    [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
+    private static int OpenControlInterface(nint interfacePtr)
+    {
+        try
+        {
+            if (interfacePtr == 0)
+                return GenericError;
+            VLCObjectHeader* header = (VLCObjectHeader*)interfacePtr;
+            PublishPlaylist(header->Parent);
+            return header->Parent == 0 ? GenericError : Success;
+        }
+        catch
+        {
+            return GenericError;
+        }
+    }
+
+    [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
+    private static void CloseControlInterface(nint interfacePtr)
+    {
+        try
+        {
+            PublishPlaylist(0);
+        }
+        catch
+        {
+        }
+    }
+
+    private static void PublishPlaylist(nint playlist)
+    {
+        lock (CallbackGate)
+        {
+            if (s_playlistCallback == 0)
+                return;
+            var callback =
+                (delegate* unmanaged[Cdecl]<nint, nint, void>)s_playlistCallback;
+            callback(s_playlistCallbackOpaque, playlist);
+        }
     }
 
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
@@ -228,11 +306,9 @@ public static unsafe class CompositionVoutPlugin
                     nint pixels = plane.Pixels
                         + checked((nint)picture->Format.YOffset * plane.Pitch)
                         + checked((nint)picture->Format.XOffset * 4);
-                    nint GPUCallbackPointer = Volatile.Read(
-                        ref s_GPUFrameCallback);
                     DisplayState? state = GetState(
                         (VLCVoutDisplay*)displayPtr);
-                    if (GPUCallbackPointer != 0)
+                    if (HasGPUFrameCallback())
                     {
                         if (state?.SharedTexture?.Upload(
                                 pixels,
@@ -242,10 +318,7 @@ public static unsafe class CompositionVoutPlugin
                         {
                             D3D11SharedTexture texture =
                                 state.SharedTexture;
-                            var GPUCallback =
-                                (delegate* unmanaged[Cdecl]<nint, nint, uint, uint, ulong, long, void>)GPUCallbackPointer;
-                            GPUCallback(
-                                Volatile.Read(ref s_GPUFrameCallbackOpaque),
+                            PublishGPUFrame(
                                 texture.SharedHandle,
                                 width,
                                 height,
@@ -255,20 +328,12 @@ public static unsafe class CompositionVoutPlugin
                     }
                     else
                     {
-                        nint callbackPointer = Volatile.Read(
-                            ref s_frameCallback);
-                        if (callbackPointer != 0)
-                        {
-                            var callback =
-                                (delegate* unmanaged[Cdecl]<nint, uint, uint, int, nint, long, void>)callbackPointer;
-                            callback(
-                                Volatile.Read(ref s_frameCallbackOpaque),
-                                width,
-                                height,
-                                plane.Pitch,
-                                pixels,
-                                picture->Date);
-                        }
+                        PublishFrame(
+                            width,
+                            height,
+                            plane.Pitch,
+                            pixels,
+                            picture->Date);
                     }
                 }
             }
@@ -297,5 +362,57 @@ public static unsafe class CompositionVoutPlugin
             return null;
         GCHandle handle = GCHandle.FromIntPtr(display->Sys);
         return handle.Target as DisplayState;
+    }
+
+    private static bool HasGPUFrameCallback()
+    {
+        lock (CallbackGate)
+            return s_GPUFrameCallback != 0;
+    }
+
+    private static void PublishGPUFrame(
+        nint sharedHandle,
+        uint width,
+        uint height,
+        ulong generation,
+        long presentationTimestamp)
+    {
+        lock (CallbackGate)
+        {
+            if (s_GPUFrameCallback == 0)
+                return;
+            var callback =
+                (delegate* unmanaged[Cdecl]<nint, nint, uint, uint, ulong, long, void>)s_GPUFrameCallback;
+            callback(
+                s_GPUFrameCallbackOpaque,
+                sharedHandle,
+                width,
+                height,
+                generation,
+                presentationTimestamp);
+        }
+    }
+
+    private static void PublishFrame(
+        uint width,
+        uint height,
+        int stride,
+        nint pixels,
+        long presentationTimestamp)
+    {
+        lock (CallbackGate)
+        {
+            if (s_frameCallback == 0)
+                return;
+            var callback =
+                (delegate* unmanaged[Cdecl]<nint, uint, uint, int, nint, long, void>)s_frameCallback;
+            callback(
+                s_frameCallbackOpaque,
+                width,
+                height,
+                stride,
+                pixels,
+                presentationTimestamp);
+        }
     }
 }

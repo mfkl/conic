@@ -24,6 +24,8 @@ internal static class Program
     public static int Main(string[] args)
     {
         SetupVLCPath();
+        if (args.Contains("--engine-smoke", StringComparer.OrdinalIgnoreCase))
+            return CompositionSmoke.RunEngine();
         if (args.Contains("--smoke", StringComparer.OrdinalIgnoreCase))
             return CompositionSmoke.Run();
 

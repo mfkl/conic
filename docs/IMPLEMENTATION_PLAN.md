@@ -1,9 +1,32 @@
 # Conic Windows implementation plan
 
-Status: ready for delegated implementation
+Status: WP-01 through WP-07 committed; WP-08 final qualification passed and is
+recorded by the `docs: record validated Windows composition path` commit
 Planning baseline: 2026-09-01
 In scope: Windows product and shared VLCLR work
 Explicitly out of scope for this batch: macOS and Linux rendering spikes
+
+## Completion record
+
+The work packages were executed sequentially against the pinned VLC source and
+validated again during WP-08. Commit hashes are the committed package
+boundaries, not merely planning references:
+
+| Package | Repository | Commit | Result |
+|---|---|---|---|
+| WP-01 | `vlclr` | `b53d62dd2941c8d6d9530d0dc4fa387458e53042` | VLC 3 playback-control bindings |
+| WP-02 | `conic` | `846b343b540a81ba2753ba9b3c3675a383e9fc35` | main-playlist interface bridge and lifecycle controls |
+| WP-03 | `conic` | `e41d2185d4af4a213f4b72ae72180f2367eeb0d0`, `b12de722618222f78005cf89ed157afcf7b551b2` | contracts, UI wiring, and architecture metadata |
+| WP-04 | `vlclr` | `dca5e306785e389257843a9121e10bb500054d9b` | ABI-verified VLC 3 D3D11 picture types |
+| WP-05 | `conic` | `bb93a32399ce83d0fa1323f51cfb97fe32398441` | Avalonia compositor adapter alignment |
+| WP-06 | `conic` | `223135b7353cf317e3e5e695be77b4db27bf628a` | VLC D3D11 opaque picture pool |
+| WP-07 | `conic` | `519e763d30e2ff0c1433c1c9014436eab932a825` | GPU NV12/P010 conversion and Avalonia presentation |
+| WP-08 | `conic` | this documentation commit | final pin and Windows qualification evidence |
+
+The final tested cross-repository baseline is product parent commit
+`519e763d30e2ff0c1433c1c9014436eab932a825` with VLCLR commit
+`dca5e306785e389257843a9121e10bb500054d9b`. Detailed WP-08 commands, results,
+timings, counters, and coverage limits are in `docs/D3D11_COMPOSITION.md`.
 
 ## 1. Target outcome
 
@@ -27,7 +50,10 @@ The work is not complete merely because the solution builds. The final native
 smoke must prove playback controls, reopen, opaque D3D11 input, zero CPU upload
 on the hardware path, Avalonia composition, and clean teardown.
 
-## 2. Current working-tree baseline
+## 2. Original working-tree baseline
+
+This section records the pre-dispatch state and is retained for auditability;
+it is not the current repository status.
 
 Agents must preserve this state; it is intentional work in progress.
 

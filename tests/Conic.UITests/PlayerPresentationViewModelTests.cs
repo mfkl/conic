@@ -62,6 +62,22 @@ public sealed class PlayerPresentationViewModelTests
         Assert.Equal("movie", viewModel.MediaTitle);
     }
 
+    [Fact]
+    public void LiveSkipSettingsUpdateCommandsLabelsAndNotifications()
+    {
+        RecordingTransport transport = new();
+        PlayerSettingsService settings = new(new SettingsStorage());
+        PlayerPresentationViewModel viewModel = new(transport, new EmptyPicker(), () => { }, settings: settings);
+        viewModel.ApplyEngineState(State(.5, PlaybackStatus.Playing, true));
+        List<string?> changed = []; viewModel.PropertyChanged += (_, args) => changed.Add(args.PropertyName);
+        settings.Update(s => s with { SkipBackwardSeconds = 4, SkipForwardSeconds = 17 });
+        viewModel.Registry.Execute(PlayerCommandId.SkipBackward);
+        viewModel.Registry.Execute(PlayerCommandId.SkipForward);
+        Assert.Equal([TimeSpan.FromSeconds(-4), TimeSpan.FromSeconds(17)], transport.Skips);
+        Assert.Equal("−4", viewModel.SkipBackwardLabel); Assert.Equal("+17", viewModel.SkipForwardLabel);
+        Assert.Contains(nameof(PlayerPresentationViewModel.SkipBackwardLabel), changed);
+    }
+
     private static PlayerPresentationViewModel CreateViewModel(
         RecordingTransport transport) => new(transport, new EmptyPicker(), () => { });
 
@@ -99,5 +115,12 @@ public sealed class PlayerPresentationViewModelTests
     {
         public Task<string?> PickMediaAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult<string?>(null);
+    }
+
+    private sealed class SettingsStorage : IPlayerSettingsStorage
+    {
+        public string? Read() => null;
+        public void WriteAtomically(string content) { }
+        public void PreserveInvalid(string content) { }
     }
 }

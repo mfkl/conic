@@ -245,6 +245,7 @@ public partial class MainWindow : Window
         Width = 1280;
         Height = 720;
         int phase = 0;
+        DispatcherTimer? timeout = null;
         DispatcherTimer timer = new() { Interval = TimeSpan.FromMilliseconds(250) };
         timer.Tick += (_, _) =>
         {
@@ -253,14 +254,14 @@ public partial class MainWindow : Window
                 Console.WriteLine($"[layout-smoke] phase={phase}");
                 if (phase == 0) { OpenSettings(); _settingsViewModel.SelectedPage = _settingsViewModel.Pages[1]; ApplyResponsiveSettings(); phase = 1; return; }
                 if (phase == 1) { ValidateLayout(1280, false); ValidateSettingsLayout(1280, false); Width = 480; phase = 2; return; }
-                if (phase == 2) { ApplyResponsiveSettings(); ValidateLayout(480, true); ValidateSettingsLayout(480, true); timer.Stop(); timeout.Stop(); Console.WriteLine("[settings-layout-smoke] PASS wide-and-compact"); Console.WriteLine("[layout-smoke] PASS normal-and-compact"); desktop.Shutdown(0); }
+                if (phase == 2) { ApplyResponsiveSettings(); ValidateLayout(480, true); ValidateSettingsLayout(480, true); timer.Stop(); timeout?.Stop(); Console.WriteLine("[settings-layout-smoke] PASS wide-and-compact"); Console.WriteLine("[layout-smoke] PASS normal-and-compact"); desktop.Shutdown(0); }
             }
             catch (Exception exception)
             {
-                timer.Stop(); timeout.Stop(); Console.Error.WriteLine($"[layout-smoke] FAIL phase={phase} {exception}"); desktop.Shutdown(1);
+                timer.Stop(); timeout?.Stop(); Console.Error.WriteLine($"[layout-smoke] FAIL phase={phase} {exception}"); desktop.Shutdown(1);
             }
         };
-        DispatcherTimer timeout = new() { Interval = TimeSpan.FromSeconds(8) };
+        timeout = new() { Interval = TimeSpan.FromSeconds(8) };
         timeout.Tick += (_, _) => { timeout.Stop(); timer.Stop(); Console.Error.WriteLine("[layout-smoke] FAIL timeout"); desktop.Shutdown(1); };
         timer.Start(); timeout.Start();
     }

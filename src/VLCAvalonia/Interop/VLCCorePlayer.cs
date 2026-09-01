@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 using Player.Contracts;
 using Player.Domain;
 using Player.Application;
@@ -8,7 +9,8 @@ using VLCLR.Native;
 
 namespace VLCAvalonia.Interop;
 
-internal sealed unsafe class VLCCorePlayer : IMediaEngine
+[SupportedOSPlatform("windows")]
+internal sealed unsafe class VLCCorePlayer : IMediaEngine, IQueueTransport, IVLCPlaylistQueueSmokeAdapter
 {
     private const int PlaylistStopped = 0;
     private const int PlaylistRunning = 1;
@@ -17,19 +19,27 @@ internal sealed unsafe class VLCCorePlayer : IMediaEngine
     private static readonly TimeSpan ShutdownTimeout = TimeSpan.FromSeconds(10);
 
     private readonly object _gate = new();
+    private readonly object _disposeGate = new();
     private readonly MediaEngineStateStore _states = new();
     private readonly CompositionPluginBridge _playlistBridge;
     private readonly bool _ownsPlaylistBridge;
     private readonly bool _hardwareDecoding;
+    private readonly bool _verboseLogging;
     private Thread? _thread;
     private ManualResetEventSlim? _stop;
     private nint _playlist;
+    private VLCPlaylistQueue? _queue;
+    private PlaybackQueueState _queueState = PlaybackQueueState.Initial;
+    private QueueRepeatMode _requestedRepeat = QueueRepeatMode.None;
+    private QueueOrder _requestedOrder = QueueOrder.Normal;
+    private bool _tearingDown;
     private long _generation;
     private int _disposed;
 
-    public VLCCorePlayer(bool hardwareDecoding = true)
+    public VLCCorePlayer(bool hardwareDecoding = true, bool verboseLogging = false)
     {
         _hardwareDecoding = hardwareDecoding;
+        _verboseLogging = verboseLogging;
         _playlistBridge = new CompositionPluginBridge(
             registerFrameCallback: false);
         _ownsPlaylistBridge = true;
@@ -44,10 +54,32 @@ internal sealed unsafe class VLCCorePlayer : IMediaEngine
         remove => _states.Changed -= value;
     }
 
-    public void Open(string source)
+    public PlaybackQueueState QueueState
+    {
+        get { lock (_gate) return _queueState; }
+    }
+
+    public event EventHandler<PlaybackQueueState>? QueueStateChanged;
+
+    public void Open(string source) => OpenQueue([source]);
+
+    internal void OpenEmptyQueueSessionForSmoke() =>
+        StartCore([], [], "queue-empty-session");
+
+    public void OpenQueue(IReadOnlyList<string> sources)
     {
         ThrowIfDisposed();
-        ArgumentException.ThrowIfNullOrWhiteSpace(source);
+        ArgumentNullException.ThrowIfNull(sources);
+        if (sources.Count == 0 || sources.Any(string.IsNullOrWhiteSpace)) throw new ArgumentException("At least one non-empty source is required.", nameof(sources));
+        string[] normalized = sources.Select(MediaEngineSourceNormalizer.Normalize).ToArray();
+        StartCore(normalized, [], normalized[0]);
+    }
+
+    private void StartCore(
+        IReadOnlyList<string> launchSources,
+        IReadOnlyList<string> initialEnqueueSources,
+        string stateSource)
+    {
         Stop();
         lock (_gate)
         {
@@ -56,10 +88,10 @@ internal sealed unsafe class VLCCorePlayer : IMediaEngine
                     "The previous VLC playback thread did not stop.");
         }
 
-        string fullPath = MediaEngineSourceNormalizer.Normalize(source);
-        long generation = _states.BeginOpen(fullPath);
+        long generation = _states.BeginOpen(stateSource);
+        PublishQueue(new PlaybackQueueState(generation, 0, QueueLoadState.Loading, [], -1, _requestedRepeat, _requestedOrder));
         ManualResetEventSlim stop = new(false);
-        Thread thread = new(() => Run(fullPath, generation, stop))
+        Thread thread = new(() => Run(launchSources, initialEnqueueSources, generation, stop))
         {
             IsBackground = true,
             Name = "VLCLR composition playback",
@@ -68,6 +100,8 @@ internal sealed unsafe class VLCCorePlayer : IMediaEngine
         lock (_gate)
         {
             _generation = generation;
+            _tearingDown = false;
+            _queue = null;
             _stop = stop;
             _thread = thread;
         }
@@ -154,8 +188,194 @@ internal sealed unsafe class VLCCorePlayer : IMediaEngine
         PublishSnapshot(generation);
     }
 
+    public void Enqueue(IEnumerable<string> sources)
+    {
+        ThrowIfDisposed();
+        string[] values = sources?
+            .Select(MediaEngineSourceNormalizer.Normalize)
+            .Select(ToPlaylistUri)
+            .ToArray() ?? [];
+        if (values.Length == 0) { PublishQueueFailure("Choose one or more media items to enqueue."); return; }
+        VLCPlaylistResult result;
+        long generation;
+        bool startEmptyCore;
+        lock (_gate)
+        {
+            generation = _generation;
+            startEmptyCore = _queue is null && _thread is null;
+            result = startEmptyCore ? VLCPlaylistResult.Success : _queue?.Add(values) ?? new(VLCPlaylistResultCode.CoreUnavailable);
+        }
+        if (startEmptyCore)
+        {
+            // An enqueue after product Clear starts an empty core then adds with
+            // playNow=false; it deliberately does not turn enqueue into play.
+            StartCore([], values, values[0]);
+            return;
+        }
+        if (!result.Succeeded) PublishQueueFailure(Describe(result, values.Length));
+        // Never infer success from a dispatched request; publish only a fresh poll.
+        PublishQueueSnapshot(generation);
+    }
+
+    public void SelectAndPlay(string token) => MutateItem(token, static (q, s, i) => q.SelectAndPlay(s, i));
+    public void Remove(string token) => MutateItem(token, static (q, s, i) => q.Remove(s, i));
+
+    public void Move(string token, int destinationIndex)
+    {
+        if (destinationIndex < 0) { PublishQueueFailure("The requested queue position is invalid."); return; }
+        MutateItem(token, (q, s, i) => q.Move(s, i, destinationIndex));
+    }
+
+    public void ClearQueue()
+    {
+        ThrowIfDisposed();
+        // Do not call VLCPlaylistQueue.Clear on a live VLC 3 core: after a
+        // current-item deletion, playlist_Clear can make InternalDestroy stall.
+        Stop();
+        long generation = _states.BeginEmpty();
+        lock (_gate)
+        {
+            _generation = generation;
+            _tearingDown = false;
+            _playlist = 0;
+            _queue = null;
+        }
+        PublishQueue(new PlaybackQueueState(generation, 0, QueueLoadState.Empty, [], -1, _requestedRepeat, _requestedOrder));
+    }
+
+    public void Previous() => Navigate(previous: true);
+    public void Next() => Navigate(previous: false);
+
+    public void SetRepeatMode(QueueRepeatMode mode)
+    {
+        if (mode == QueueRepeatMode.Inconsistent) return;
+        ThrowIfDisposed(); VLCPlaylistResult result; long generation;
+        lock (_gate)
+        {
+            generation = _generation;
+            result = _queue?.SetRepeatMode(ToNative(mode)) ?? new(VLCPlaylistResultCode.CoreUnavailable);
+            if (result.Succeeded) _requestedRepeat = mode;
+        }
+        if (!result.Succeeded) PublishQueueFailure(Describe(result));
+        PublishQueueSnapshot(generation);
+    }
+
+    public void SetOrder(QueueOrder order)
+    {
+        ThrowIfDisposed(); VLCPlaylistResult result; long generation;
+        lock (_gate)
+        {
+            generation = _generation;
+            result = _queue?.SetOrder(order == QueueOrder.Random ? VLCPlaylistOrder.Random : VLCPlaylistOrder.Normal) ?? new(VLCPlaylistResultCode.CoreUnavailable);
+            if (result.Succeeded) _requestedOrder = order;
+        }
+        if (!result.Succeeded) PublishQueueFailure(Describe(result));
+        PublishQueueSnapshot(generation);
+    }
+
+    private void Navigate(bool previous)
+    {
+        ThrowIfDisposed(); VLCPlaylistResult result; long generation;
+        lock (_gate)
+        {
+            generation = _generation;
+            PlaybackQueueState state = _queueState;
+            bool valid = previous ? state.CanPrevious : state.CanNext;
+            result = !valid ? new(VLCPlaylistResultCode.InvalidArgument) : previous ? _queue?.Previous() ?? new(VLCPlaylistResultCode.CoreUnavailable) : _queue?.Next() ?? new(VLCPlaylistResultCode.CoreUnavailable);
+        }
+        if (!result.Accepted) PublishQueueFailure(Describe(result));
+        PublishQueueSnapshot(generation);
+    }
+
+    private void MutateItem(string token, Func<VLCPlaylistQueue, VLCPlaylistSnapshot, VLCPlaylistItem, VLCPlaylistResult> mutation)
+    {
+        ThrowIfDisposed(); VLCPlaylistResult result; long generation;
+        lock (_gate)
+        {
+            generation = _generation;
+            if (_queue is null) result = new(VLCPlaylistResultCode.CoreUnavailable);
+            else
+            {
+                using VLCPlaylistSnapshot? snapshot = _queue.TryGetSnapshot(out result);
+                VLCPlaylistItem? item = snapshot?.Items.FirstOrDefault(x => Token(generation, x) == token);
+                result = item is null ? new(VLCPlaylistResultCode.StaleSnapshot) : mutation(_queue, snapshot!, item);
+            }
+        }
+        if (!result.Accepted) PublishQueueFailure(Describe(result));
+        PublishQueueSnapshot(generation);
+    }
+
+    private void ApplyRequestedModes(long generation)
+    {
+        lock (_gate)
+        {
+            if (_generation != generation || _queue is null) return;
+            VLCPlaylistResult repeat = _queue.SetRepeatMode(ToNative(_requestedRepeat));
+            VLCPlaylistResult order = _queue.SetOrder(_requestedOrder == QueueOrder.Random ? VLCPlaylistOrder.Random : VLCPlaylistOrder.Normal);
+            if (!repeat.Succeeded || !order.Succeeded) PublishQueueFailure("Playback queue modes could not be restored.");
+        }
+        PublishQueueSnapshot(generation);
+    }
+
+    private VLCPlaylistLease? TryGetPlaylistLease()
+    {
+        lock (_gate)
+            return !_tearingDown && _playlist != 0 ? new VLCPlaylistLease(_playlist, _generation) : null;
+    }
+
+    private void PublishQueueSnapshot(long generation)
+    {
+        PlaybackQueueState? next = null;
+        lock (_gate)
+        {
+            if (_generation != generation || _queue is null || _tearingDown) return;
+            using VLCPlaylistSnapshot? snapshot = _queue.TryGetSnapshot(out VLCPlaylistResult result);
+            if (snapshot is null) { next = new(generation, 0, QueueLoadState.Failed, [], -1, _requestedRepeat, _requestedOrder, Describe(result)); }
+            else
+            {
+                VLCPlaylistModeSnapshot? modes = _queue.TryGetModes(out VLCPlaylistResult modeResult);
+                QueueRepeatMode repeat = modes is null ? _requestedRepeat : FromNative(modes.Value.Repeat);
+                QueueOrder order = modes is null ? _requestedOrder : modes.Value.Order == VLCPlaylistOrder.Random ? QueueOrder.Random : QueueOrder.Normal;
+                IReadOnlyList<QueueItem> items = snapshot.Items.Select((item, index) => new QueueItem(Token(generation, item), item.Name, item.Uri, index, item.IsCurrent)).ToArray();
+                next = new(generation, snapshot.Version, items.Count == 0 ? QueueLoadState.Empty : QueueLoadState.Ready, items, snapshot.CurrentIndex, repeat, order, modes is null ? Describe(modeResult) : null);
+            }
+        }
+        if (next is not null) PublishQueue(next);
+    }
+
+    private void PublishQueueFailure(string message)
+    {
+        PlaybackQueueState old = QueueState;
+        PublishQueue(old with { Status = QueueLoadState.Failed, Error = message });
+    }
+
+    private void PublishQueue(PlaybackQueueState state)
+    {
+        bool changed;
+        lock (_gate) { changed = !Equals(_queueState, state); _queueState = state; }
+        if (changed) QueueStateChanged?.Invoke(this, state);
+    }
+
+    private static string Token(long generation, VLCPlaylistItem item) => $"{generation}:{item.Id}:{item.Uri}";
+    private static string ToPlaylistUri(string source) =>
+        Uri.TryCreate(source, UriKind.Absolute, out Uri? uri) && !uri.IsFile
+            ? source
+            : new Uri(source).AbsoluteUri;
+    private static VLCPlaylistRepeatMode ToNative(QueueRepeatMode mode) => mode switch { QueueRepeatMode.CurrentItem => VLCPlaylistRepeatMode.CurrentItem, QueueRepeatMode.All => VLCPlaylistRepeatMode.All, _ => VLCPlaylistRepeatMode.None };
+    private static QueueRepeatMode FromNative(VLCPlaylistRepeatMode mode) => mode switch { VLCPlaylistRepeatMode.CurrentItem => QueueRepeatMode.CurrentItem, VLCPlaylistRepeatMode.All => QueueRepeatMode.All, VLCPlaylistRepeatMode.Inconsistent => QueueRepeatMode.Inconsistent, _ => QueueRepeatMode.None };
+    private static string Describe(VLCPlaylistResult result, int requested = 0) => result.Code switch
+    {
+        VLCPlaylistResultCode.CoreUnavailable => "The playback queue is unavailable while VLC is opening or closing.",
+        VLCPlaylistResultCode.StaleSnapshot => "The queue changed before the action could be applied. It has been refreshed.",
+        VLCPlaylistResultCode.NestedQueueUnsupported => "This playlist contains nested entries and cannot be loaded safely.",
+        VLCPlaylistResultCode.InvalidArgument => "That queue action is not valid for the current item.",
+        _ when requested > 0 && result.CompletedCount > 0 => $"Added {result.CompletedCount} of {requested} media items; the rest could not be queued.",
+        _ => "The playback queue could not be updated.",
+    };
+
     private void Run(
-        string path,
+        IReadOnlyList<string> sources,
+        IReadOnlyList<string> initialEnqueueSources,
         long generation,
         ManualResetEventSlim stop)
     {
@@ -165,8 +385,9 @@ internal sealed unsafe class VLCCorePlayer : IMediaEngine
             "--intf=vlc_avalonia_control",
             "--no-video-title-show",
             "--vout=vlc_avalonia",
+            .. (_verboseLogging ? new[] { "-vvv" } : []),
             _hardwareDecoding ? "--avcodec-hw=any" : "--avcodec-hw=none",
-            path,
+            .. sources,
         ];
 
         nint[] strings = new nint[arguments.Length];
@@ -214,13 +435,27 @@ internal sealed unsafe class VLCCorePlayer : IMediaEngine
             lock (_gate)
             {
                 if (_generation == generation)
+                {
                     _playlist = playlist;
+                    _queue = new VLCPlaylistQueue(TryGetPlaylistLease);
+                }
             }
 
+            ApplyRequestedModes(generation);
+
             VLCCore.libvlc_InternalPlay(core);
+            if (initialEnqueueSources.Count != 0)
+            {
+                VLCPlaylistResult enqueue;
+                lock (_gate)
+                    enqueue = _queue?.Add(initialEnqueueSources) ?? new(VLCPlaylistResultCode.CoreUnavailable);
+                if (!enqueue.Succeeded)
+                    PublishQueueFailure(Describe(enqueue, initialEnqueueSources.Count));
+            }
             PublishSnapshot(generation);
             while (!stop.Wait(TimeSpan.FromMilliseconds(200)))
                 PublishSnapshot(generation);
+
         }
         catch (Exception exception)
         {
@@ -231,19 +466,26 @@ internal sealed unsafe class VLCCorePlayer : IMediaEngine
         {
             lock (_gate)
             {
+                _tearingDown = true;
                 if (_generation == generation && _playlist == playlist)
+                {
                     _playlist = 0;
+                    _queue = null;
+                }
             }
-
             // The interface callback lends the playlist for the interface/core
             // lifetime. It must be forgotten before core cleanup and is never
             // released independently.
             _playlistBridge.ResetPlaylist();
             playlist = 0;
             if (initialized)
+            {
                 VLCCore.libvlc_InternalCleanup(core);
+            }
             if (core != 0)
+            {
                 VLCCore.libvlc_InternalDestroy(core);
+            }
             if (argv != 0)
                 Marshal.FreeHGlobal(argv);
             foreach (nint value in strings)
@@ -251,9 +493,14 @@ internal sealed unsafe class VLCCorePlayer : IMediaEngine
                 if (value != 0)
                     Marshal.FreeCoTaskMem(value);
             }
-
             if (!faulted)
+            {
                 _states.Stop(generation);
+            }
+            if (_generation == generation)
+            {
+                PublishQueue(new PlaybackQueueState(generation, 0, QueueLoadState.Unavailable, [], -1, _requestedRepeat, _requestedOrder));
+            }
         }
     }
 
@@ -320,7 +567,30 @@ internal sealed unsafe class VLCCorePlayer : IMediaEngine
             canSeek,
             isMuted: muted,
             playbackRate: playbackRate);
+        PublishQueueSnapshot(generation);
     }
+
+    VLCPlaylistSnapshot? IVLCPlaylistQueueSmokeAdapter.TryGetSnapshot(out VLCPlaylistResult result)
+    {
+        lock (_gate) return _queue?.TryGetSnapshot(out result) ?? Unavailable(out result);
+    }
+    bool IVLCPlaylistQueueSmokeAdapter.TryGetActiveCurrentItemId(out int? itemId, out VLCPlaylistResult result)
+    {
+        lock (_gate) return _queue?.TryGetActiveCurrentItemId(out itemId, out result) ?? UnavailableActiveCurrent(out itemId, out result);
+    }
+    VLCPlaylistResult IVLCPlaylistQueueSmokeAdapter.Add(IEnumerable<string> uris, bool playFirst) { lock (_gate) return _queue?.Add(uris, playFirst) ?? new(VLCPlaylistResultCode.CoreUnavailable); }
+    VLCPlaylistResult IVLCPlaylistQueueSmokeAdapter.Clear(VLCPlaylistSnapshot snapshot) { lock (_gate) return _queue?.Clear(snapshot) ?? new(VLCPlaylistResultCode.CoreUnavailable); }
+    VLCPlaylistResult IVLCPlaylistQueueSmokeAdapter.Move(VLCPlaylistSnapshot snapshot, VLCPlaylistItem item, int destinationIndex) { lock (_gate) return _queue?.Move(snapshot, item, destinationIndex) ?? new(VLCPlaylistResultCode.CoreUnavailable); }
+    VLCPlaylistResult IVLCPlaylistQueueSmokeAdapter.SelectAndPlay(VLCPlaylistSnapshot snapshot, VLCPlaylistItem item) { lock (_gate) return _queue?.SelectAndPlay(snapshot, item) ?? new(VLCPlaylistResultCode.CoreUnavailable); }
+    VLCPlaylistResult IVLCPlaylistQueueSmokeAdapter.Remove(VLCPlaylistSnapshot snapshot, VLCPlaylistItem item) { lock (_gate) return _queue?.Remove(snapshot, item) ?? new(VLCPlaylistResultCode.CoreUnavailable); }
+    VLCPlaylistResult IVLCPlaylistQueueSmokeAdapter.Next() { lock (_gate) return _queue?.Next() ?? new(VLCPlaylistResultCode.CoreUnavailable); }
+    VLCPlaylistResult IVLCPlaylistQueueSmokeAdapter.Previous() { lock (_gate) return _queue?.Previous() ?? new(VLCPlaylistResultCode.CoreUnavailable); }
+    VLCPlaylistModeSnapshot? IVLCPlaylistQueueSmokeAdapter.TryGetModes(out VLCPlaylistResult result) { lock (_gate) return _queue?.TryGetModes(out result) ?? UnavailableModes(out result); }
+    VLCPlaylistResult IVLCPlaylistQueueSmokeAdapter.SetRepeatMode(VLCPlaylistRepeatMode mode) { lock (_gate) return _queue?.SetRepeatMode(mode) ?? new(VLCPlaylistResultCode.CoreUnavailable); }
+    VLCPlaylistResult IVLCPlaylistQueueSmokeAdapter.SetOrder(VLCPlaylistOrder order) { lock (_gate) return _queue?.SetOrder(order) ?? new(VLCPlaylistResultCode.CoreUnavailable); }
+    private static VLCPlaylistSnapshot? Unavailable(out VLCPlaylistResult result) { result = new(VLCPlaylistResultCode.CoreUnavailable); return null; }
+    private static bool UnavailableActiveCurrent(out int? itemId, out VLCPlaylistResult result) { itemId = null; result = new(VLCPlaylistResultCode.CoreUnavailable); return false; }
+    private static VLCPlaylistModeSnapshot? UnavailableModes(out VLCPlaylistResult result) { result = new(VLCPlaylistResultCode.CoreUnavailable); return null; }
 
     public void Stop()
     {
@@ -332,16 +602,15 @@ internal sealed unsafe class VLCCorePlayer : IMediaEngine
             thread = _thread;
             stop = _stop;
             generation = _generation;
-            if (_playlist != 0)
-                new VLCTransportControl(_playlist).Stop();
-            stop?.Set();
+            _tearingDown = true;
         }
+        stop?.Set();
 
         if (thread is not null && thread != Thread.CurrentThread &&
             !thread.Join(ShutdownTimeout))
         {
-            const string message =
-                "VLC playback did not stop within 10 seconds.";
+            string message =
+                $"VLC playback did not stop within {ShutdownTimeout.TotalSeconds:0} seconds.";
             if (generation != 0)
                 _states.Fault(generation, message);
             throw new TimeoutException(message);
@@ -359,16 +628,26 @@ internal sealed unsafe class VLCCorePlayer : IMediaEngine
             stop?.Dispose();
         if (generation != 0)
             _states.Stop(generation);
+        if (generation != 0)
+            PublishQueue(new PlaybackQueueState(generation, 0, QueueLoadState.Unavailable, [], -1, _requestedRepeat, _requestedOrder));
     }
 
     public void Dispose()
     {
-        if (Interlocked.Exchange(ref _disposed, 1) != 0)
-            return;
-        Stop();
-        _playlistBridge.DisconnectPlaylist();
-        if (_ownsPlaylistBridge)
-            _playlistBridge.Dispose();
+        lock (_disposeGate)
+        {
+            if (Volatile.Read(ref _disposed) != 0)
+                return;
+
+            // Stop can time out while libvlc is still releasing an input. Keep
+            // the bridge alive and leave this instance retryable in that case;
+            // a later Dispose can join the thread and complete native cleanup.
+            Stop();
+            _playlistBridge.DisconnectPlaylist();
+            if (_ownsPlaylistBridge)
+                _playlistBridge.Dispose();
+            Volatile.Write(ref _disposed, 1);
+        }
     }
 
     private void ThrowIfDisposed() =>
@@ -378,15 +657,9 @@ internal sealed unsafe class VLCCorePlayer : IMediaEngine
 
     private static class VLC3PlaylistControl
     {
-        private const int TogglePauseQuery = 2;
-        private const int StopQuery = 3;
         private const int InputSetPositionQuery = 1;
         private static readonly nint Library =
             NativeLibrary.Load("libvlccore.dll");
-        private static readonly delegate* unmanaged[Cdecl]<nint, int, int, void>
-            Control =
-                (delegate* unmanaged[Cdecl]<nint, int, int, void>)
-                NativeLibrary.GetExport(Library, "playlist_Control");
         private static readonly delegate* unmanaged[Cdecl]<nint, byte*, int>
             AddIntf =
                 (delegate* unmanaged[Cdecl]<nint, byte*, int>)
@@ -409,9 +682,6 @@ internal sealed unsafe class VLCCorePlayer : IMediaEngine
             }
         }
 
-        public static void TogglePause(nint playlist) =>
-            Control(playlist, TogglePauseQuery, 0);
-
         public static int SetInputPosition(nint input, double position)
         {
             // On the pinned Win64 VLC 3 ABI, va_list is a pointer into the
@@ -424,8 +694,5 @@ internal sealed unsafe class VLCCorePlayer : IMediaEngine
                 InputSetPositionQuery,
                 (nint)(void*)(&argument));
         }
-
-        public static void Stop(nint playlist) =>
-            Control(playlist, StopQuery, 0);
     }
 }

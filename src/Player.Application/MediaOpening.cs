@@ -47,7 +47,10 @@ public sealed class MediaSourceValidator(IMediaFileSystem fileSystem)
         {
             string path = fileSystem.GetFullPath(value);
             if (requestedKind == MediaSourceKind.Folder || fileSystem.DirectoryExists(path))
-                return MediaOpenResult.Fail("Opening folders requires playlist support, which is not available yet.", "Folder queue capability Q1 is unavailable.");
+            {
+                if (!fileSystem.DirectoryExists(path)) return MediaOpenResult.Fail("That folder is unavailable.", $"Folder does not exist or cannot be accessed: {path}");
+                return new(true, new(path, MediaSourceKind.Folder, Path.GetFileName(path)), null, null);
+            }
             if (!fileSystem.FileExists(path)) return MediaOpenResult.Fail("That media file is unavailable.", $"File does not exist or cannot be accessed: {path}");
             return new(true, new(path, MediaSourceKind.File, Path.GetFileName(path)), null, null);
         }
@@ -64,8 +67,10 @@ public static class MediaEngineSourceNormalizer
     public static string Normalize(string source)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(source);
-        if (Uri.TryCreate(source, UriKind.Absolute, out Uri? uri) && !uri.IsFile)
+        if (Uri.TryCreate(source, UriKind.Absolute, out Uri? uri))
         {
+            if (uri.IsFile)
+                return Path.GetFullPath(uri.LocalPath);
             if (uri.Scheme is not ("http" or "https") || !string.IsNullOrEmpty(uri.UserInfo) || !string.IsNullOrEmpty(uri.Fragment))
                 throw new ArgumentException("Only credential-free http and https URLs are supported.", nameof(source));
             return source;

@@ -66,7 +66,9 @@
                        FontWeight="SemiBold" VerticalAlignment="Center" HorizontalAlignment="Center"
                        TextTrimming="CharacterEllipsis" Margin="24,0" />
 
-            <Border Grid.Column="2"
+            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
+            <Button Classes="chrome" Content="Settings" Command="{Binding OpenSettingsCommand}" ToolTip.Tip="Settings (Ctrl+,)" />
+            <Border
                     Padding="14,8"
                     CornerRadius="14"
                     Background="#9E131519"
@@ -81,6 +83,7 @@
                           Command="{Binding SetAlwaysOnTopCommand}"
                           CommandParameter="{Binding IsChecked, RelativeSource={RelativeSource Self}}" />
             </Border>
+            </StackPanel>
         </Grid>
 
         <!-- Floating playback dock. -->
@@ -201,6 +204,37 @@
                             </Grid>
                         </Button>
                     </StackPanel>
+            </Grid>
+        </Border>
+
+        <Border x:Name="SettingsPanel" x:DataType="viewModels:SettingsViewModel" IsVisible="False" Width="760" MaxHeight="580"
+                HorizontalAlignment="Center" VerticalAlignment="Center" Padding="24" CornerRadius="18"
+                Background="#F0121418" BorderBrush="#40FFFFFF" BorderThickness="1" BoxShadow="0 24 60 0 #B0000000">
+            <Grid ColumnDefinitions="190,*" RowDefinitions="Auto,*" RowSpacing="18" ColumnSpacing="22">
+                <TextBox x:Name="SettingsSearch" Grid.ColumnSpan="2" PlaceholderText="Search settings" TextChanged="OnSettingsSearchChanged" />
+                <ListBox x:Name="SettingsPages" Grid.Row="1" ItemsSource="{Binding FilteredPages}" SelectedItem="{Binding SelectedPage}">
+                    <ListBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Name}" Margin="8" /></DataTemplate></ListBox.ItemTemplate>
+                </ListBox>
+                <ScrollViewer Grid.Row="1" Grid.Column="1">
+                    <StackPanel Spacing="14">
+                        <DockPanel><TextBlock Text="Settings" FontSize="22" FontWeight="SemiBold" /><Button DockPanel.Dock="Right" Content="Close" Click="OnSettingsClose" /></DockPanel>
+                        <TextBlock Text="{Binding ErrorMessage}" Foreground="#FF9A55" TextWrapping="Wrap" />
+                        <TextBlock Text="General" FontSize="16" FontWeight="SemiBold" />
+                        <CheckBox Content="Resume playback" IsChecked="{Binding Current.ResumePlayback}" Click="OnResumeChanged" />
+                        <TextBlock Text="Takes effect next time media is opened" Classes="settingHint" />
+                        <CheckBox Content="Remember volume" IsChecked="{Binding Current.RememberVolume}" Click="OnRememberVolumeChanged" />
+                        <TextBlock Text="Takes effect next time media is opened" Classes="settingHint" />
+                        <TextBlock Text="Appearance" FontSize="16" FontWeight="SemiBold" />
+                        <StackPanel Orientation="Horizontal" Spacing="8"><TextBlock Text="Theme" Width="155" VerticalAlignment="Center" /><ComboBox SelectionChanged="OnThemeChanged"><ComboBoxItem Content="System" /><ComboBoxItem Content="Dark" /></ComboBox><TextBlock Text="Live" Classes="settingBadge" /></StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="8"><TextBlock Text="Density" Width="155" VerticalAlignment="Center" /><ComboBox SelectionChanged="OnDensityChanged"><ComboBoxItem Content="Comfortable" /><ComboBoxItem Content="Compact" /></ComboBox><TextBlock Text="Live" Classes="settingBadge" /></StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="8"><TextBlock Text="Controls hide after" Width="155" VerticalAlignment="Center" /><NumericUpDown Minimum="1" Maximum="15" Value="{Binding Current.ControlTimeoutSeconds}" ValueChanged="OnTimeoutChanged" /><TextBlock Text="Live" Classes="settingBadge" /></StackPanel>
+                        <TextBlock Text="Playback" FontSize="16" FontWeight="SemiBold" />
+                        <StackPanel Orientation="Horizontal" Spacing="8"><TextBlock Text="Default speed" Width="155" VerticalAlignment="Center" /><ComboBox SelectionChanged="OnDefaultSpeedChanged"><ComboBoxItem Content="0.5" /><ComboBoxItem Content="1" /><ComboBoxItem Content="1.5" /><ComboBoxItem Content="2" /></ComboBox><TextBlock Text="Next open" Classes="settingBadge" /></StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="8"><TextBlock Text="Skip backward (seconds)" Width="155" VerticalAlignment="Center" /><NumericUpDown Minimum="1" Maximum="120" ValueChanged="OnBackwardSkipChanged" /><TextBlock Text="Live" Classes="settingBadge" /></StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="8"><TextBlock Text="Skip forward (seconds)" Width="155" VerticalAlignment="Center" /><NumericUpDown Minimum="1" Maximum="120" ValueChanged="OnForwardSkipChanged" /><TextBlock Text="Live" Classes="settingBadge" /></StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="8"><Button Content="Reset page" Command="{Binding ResetPageCommand}" /><Button Content="Reset all" Command="{Binding ResetAllCommand}" /><TextBlock Text="{Binding ConfirmReset, StringFormat='Click Reset all again to confirm: {0}'}" Classes="settingHint" /></StackPanel>
+                    </StackPanel>
+                </ScrollViewer>
             </Grid>
         </Border>
     </Grid>

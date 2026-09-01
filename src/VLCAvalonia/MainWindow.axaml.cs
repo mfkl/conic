@@ -16,6 +16,8 @@ namespace VLCAvalonia;
 public partial class MainWindow : Window
 {
     private readonly PlayerPresentationViewModel _presentation;
+    private readonly PlayerSettingsService _settings;
+    private readonly SettingsViewModel _settingsViewModel;
     private readonly DispatcherTimer _autoHideTimer = new() { Interval = TimeSpan.FromSeconds(3) };
     private readonly ChromeVisibilityController _chromeVisibility = new();
     private bool _isSeeking;
@@ -24,12 +26,20 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        _settings = new PlayerSettingsService(new FilePlayerSettingsStorage());
+        _settings.Load();
+        _settingsViewModel = new SettingsViewModel(_settings);
+        SettingsPanel.DataContext = _settingsViewModel;
         _presentation = new PlayerPresentationViewModel(
             new CompositionVideoTransport(VideoSurface),
             new StorageMediaSourcePicker(StorageProvider),
             OpenTestMedia,
-            ToggleFullscreen);
+            ToggleFullscreen,
+            OpenSettings,
+            _settings);
         DataContext = _presentation;
+        _settings.Changed += (_, settings) => ApplyLiveSettings(settings);
+        ApplyLiveSettings(_settings.Current);
         _autoHideTimer.Tick += (_, _) =>
         {
             bool menuOpen = VideoArea.ContextMenu?.IsOpen ?? false;
@@ -88,6 +98,37 @@ public partial class MainWindow : Window
         SetChromeVisibility(true);
         _autoHideTimer.Stop();
         if (_presentation.IsFullscreen) _autoHideTimer.Start();
+    }
+
+    private void OpenSettings()
+    {
+        SettingsPanel.IsVisible = true;
+        _chromeVisibility.Wake();
+        SetChromeVisibility(true);
+        Dispatcher.UIThread.Post(() => SettingsSearch.Focus());
+    }
+
+    private void OnSettingsClose(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => SettingsPanel.IsVisible = false;
+    private void OnSettingsSearchChanged(object? sender, TextChangedEventArgs e) => _settingsViewModel.Search = (sender as TextBox)?.Text ?? string.Empty;
+    private void OnResumeChanged(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => _settingsViewModel.SetResume((sender as CheckBox)?.IsChecked == true);
+    private void OnRememberVolumeChanged(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => _settingsViewModel.SetRememberVolume((sender as CheckBox)?.IsChecked == true);
+    private void OnThemeChanged(object? sender, SelectionChangedEventArgs e) => SetChoice(sender, _settingsViewModel.SetTheme);
+    private void OnDensityChanged(object? sender, SelectionChangedEventArgs e) => SetChoice(sender, _settingsViewModel.SetDensity);
+    private void OnDefaultSpeedChanged(object? sender, SelectionChangedEventArgs e) => SetChoice(sender, _settingsViewModel.SetDefaultSpeed);
+    private void OnTimeoutChanged(object? sender, NumericUpDownValueChangedEventArgs e) { if (e.NewValue is { } value) _settingsViewModel.SetTimeout((double)value); }
+    private void OnBackwardSkipChanged(object? sender, NumericUpDownValueChangedEventArgs e) { if (e.NewValue is { } value) _settingsViewModel.SetBackwardSkip(value.ToString(System.Globalization.CultureInfo.InvariantCulture)); }
+    private void OnForwardSkipChanged(object? sender, NumericUpDownValueChangedEventArgs e) { if (e.NewValue is { } value) _settingsViewModel.SetForwardSkip(value.ToString(System.Globalization.CultureInfo.InvariantCulture)); }
+
+    private static void SetChoice(object? sender, Action<string> apply)
+    {
+        if ((sender as ComboBox)?.SelectedItem is ComboBoxItem { Content: string value }) apply(value);
+    }
+
+    private void ApplyLiveSettings(PlayerSettings settings)
+    {
+        RequestedThemeVariant = settings.Theme == "Dark" ? Avalonia.Styling.ThemeVariant.Dark : Avalonia.Styling.ThemeVariant.Default;
+        _autoHideTimer.Interval = TimeSpan.FromSeconds(settings.ControlTimeoutSeconds);
+        Classes.Set("compact-density", settings.Density == "Compact");
     }
 
     private void OnSpeedChanged(object? sender, SelectionChangedEventArgs e)

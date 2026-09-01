@@ -12,6 +12,7 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
     private readonly IPlayerTransport _transport;
     private readonly IMediaSourcePicker _mediaSourcePicker;
     private readonly Action _openTestMedia;
+    private readonly PlayerSettingsService? _settings;
     private bool _isUpdatingFromEngine;
     private bool _isSeeking;
     private TimeSpan _duration;
@@ -30,11 +31,14 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
         IPlayerTransport transport,
         IMediaSourcePicker mediaSourcePicker,
         Action openTestMedia,
-        Action? toggleFullscreen = null)
+        Action? toggleFullscreen = null,
+        Action? openSettings = null,
+        PlayerSettingsService? settings = null)
     {
         _transport = transport;
         _mediaSourcePicker = mediaSourcePicker;
         _openTestMedia = openTestMedia;
+        _settings = settings;
         PlayerCommandRegistry registry = new();
         Registry = registry;
         registry.Register(new(PlayerCommandId.OpenMedia, "Open media", "Media", "Ctrl+O"), _ => _ = OpenMediaAsync());
@@ -44,11 +48,12 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
         registry.Register(new(PlayerCommandId.Seek, "Seek", "Playback"), parameter => _transport.Seek(ToDouble(parameter)));
         registry.Register(new(PlayerCommandId.SetVolume, "Set volume", "Audio"), parameter => _transport.SetVolume(ToDouble(parameter) / 100));
         registry.Register(new(PlayerCommandId.ToggleMute, "Mute", "Audio", "M"), _ => _transport.SetMuted(!IsMuted));
-        registry.Register(new(PlayerCommandId.SkipBackward, "Skip backward", "Playback", "Alt+Left"), _ => _transport.Skip(TimeSpan.FromSeconds(-10)), _ => CanSeek);
-        registry.Register(new(PlayerCommandId.SkipForward, "Skip forward", "Playback", "Alt+Right"), _ => _transport.Skip(TimeSpan.FromSeconds(10)), _ => CanSeek);
+        registry.Register(new(PlayerCommandId.SkipBackward, "Skip backward", "Playback", "Alt+Left"), _ => _transport.Skip(TimeSpan.FromSeconds(-(_settings?.Current.SkipBackwardSeconds ?? 10))), _ => CanSeek);
+        registry.Register(new(PlayerCommandId.SkipForward, "Skip forward", "Playback", "Alt+Right"), _ => _transport.Skip(TimeSpan.FromSeconds(_settings?.Current.SkipForwardSeconds ?? 10)), _ => CanSeek);
         registry.Register(new(PlayerCommandId.SetPlaybackRate, "Playback speed", "Playback"), parameter => _transport.SetPlaybackRate(Math.Clamp(ToDouble(parameter), 1d / 32, 31.25)));
         registry.Register(new(PlayerCommandId.ToggleFullscreen, "Fullscreen", "Window", "F11"), _ => toggleFullscreen?.Invoke(), _ => toggleFullscreen is not null);
         registry.Register(new(PlayerCommandId.SetAlwaysOnTop, "Always on top", "Window"), parameter => IsAlwaysOnTop = parameter is true);
+        registry.Register(new(PlayerCommandId.OpenSettings, "Settings", "Window", "Ctrl+,"), _ => openSettings?.Invoke(), _ => openSettings is not null);
 
         OpenMediaCommand = new RegistryCommand(registry, PlayerCommandId.OpenMedia);
         OpenTestMediaCommand = new RegistryCommand(registry, PlayerCommandId.OpenTestMedia);
@@ -60,6 +65,7 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
         SetPlaybackRateCommand = new RegistryCommand(registry, PlayerCommandId.SetPlaybackRate);
         ToggleFullscreenCommand = new RegistryCommand(registry, PlayerCommandId.ToggleFullscreen);
         SetAlwaysOnTopCommand = new RegistryCommand(registry, PlayerCommandId.SetAlwaysOnTop);
+        OpenSettingsCommand = new RegistryCommand(registry, PlayerCommandId.OpenSettings);
     }
 
     public IPlayerCommandRegistry Registry { get; }
@@ -73,6 +79,7 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
     public ICommand SetPlaybackRateCommand { get; }
     public ICommand ToggleFullscreenCommand { get; }
     public ICommand SetAlwaysOnTopCommand { get; }
+    public ICommand OpenSettingsCommand { get; }
 
     public event PropertyChangedEventHandler? PropertyChanged;
 

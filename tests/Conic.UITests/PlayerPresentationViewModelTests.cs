@@ -348,6 +348,31 @@ public sealed class PlayerPresentationViewModelTests
     [Theory]
     [InlineData("io")]
     [InlineData("access")]
+    public void RemoveRecentFailurePreservesItemUntilRecovery(string kind)
+    {
+        Exception error = kind == "io" ? new IOException("remove recent") : new UnauthorizedAccessException("remove recent"); SwitchStorage storage = new(); MediaHistoryService history = new(storage); history.RecordOpened(new("a.mp4", MediaSourceKind.File, "a"), true); storage.Error = error; PlayerPresentationViewModel vm = new(new RecordingTransport(), new EmptyPicker(), () => { }, sourceValidator: new MediaSourceValidator(new ExistingFiles()), history: history);
+        vm.Registry.Execute(PlayerCommandId.RemoveRecent, "a.mp4"); Assert.True(vm.HasRecentItems); Assert.NotNull(vm.HistoryError); storage.Error = null; vm.Registry.Execute(PlayerCommandId.RemoveRecent, "a.mp4"); Assert.False(vm.HasRecentItems); Assert.Null(vm.HistoryError);
+    }
+
+    [Theory]
+    [InlineData("io")]
+    [InlineData("access")]
+    public void ClearResumeFailureKeepsVisiblePromptUntilRecovery(string kind)
+    {
+        Exception error = kind == "io" ? new IOException("clear resume") : new UnauthorizedAccessException("clear resume"); SwitchStorage storage = new(); MediaHistoryService history = new(storage); MediaSource source = new("a.mp4", MediaSourceKind.File, "a"); history.Checkpoint(source, TimeSpan.FromSeconds(40), TimeSpan.FromSeconds(100), true, 30, 20); storage.Error = error; PlayerPresentationViewModel vm = new(new RecordingTransport(), new EmptyPicker(), () => { }, sourceValidator: new MediaSourceValidator(new ExistingFiles()), history: history); vm.OpenSource("a.mp4", MediaSourceKind.File); vm.ApplyEngineState(State(.2, PlaybackStatus.Playing, true) with { Generation = 1, Source = "a.mp4" });
+        vm.Registry.Execute(PlayerCommandId.ClearResumeHistory); Assert.True(vm.HasPendingResume); Assert.NotNull(history.FindResume(source)); storage.Error = null; vm.Registry.Execute(PlayerCommandId.ClearResumeHistory); Assert.False(vm.HasPendingResume); Assert.Empty(history.Resume); Assert.Null(vm.HistoryError);
+    }
+
+    [Fact]
+    public void ResumePrivacyHidesPromptEvenWhenClearFails()
+    {
+        SwitchStorage storage = new(); MediaHistoryService history = new(storage); MediaSource source = new("a.mp4", MediaSourceKind.File, "a"); history.Checkpoint(source, TimeSpan.FromSeconds(40), TimeSpan.FromSeconds(100), true, 30, 20); PlayerSettingsService settings = new(new SettingsStorage()); PlayerPresentationViewModel vm = new(new RecordingTransport(), new EmptyPicker(), () => { }, settings: settings, sourceValidator: new MediaSourceValidator(new ExistingFiles()), history: history); vm.OpenSource("a.mp4", MediaSourceKind.File); vm.ApplyEngineState(State(.2, PlaybackStatus.Playing, true) with { Generation = 1, Source = "a.mp4" }); storage.Error = new IOException("privacy clear");
+        settings.Update(x => x with { RememberResumeHistory = false }); Assert.False(vm.HasPendingResume); Assert.NotNull(vm.HistoryError); storage.Error = null; settings.Update(x => x with { SkipForwardSeconds = 11 }); Assert.Empty(history.Resume); Assert.Null(vm.HistoryError);
+    }
+
+    [Theory]
+    [InlineData("io")]
+    [InlineData("access")]
     public void HistoryFailuresAreSafeAndDiagnostic(string failure)
     {
         Exception error = failure == "io" ? new IOException("disk detail") : new UnauthorizedAccessException("denied detail"); ThrowingHistoryStorage storage = new(error); MediaHistoryService history = new(storage); List<string> diagnostics = [];

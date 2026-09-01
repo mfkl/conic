@@ -28,7 +28,7 @@ public sealed class PlayerSettingsServiceTests
         PlayerSettingsService service = new(storage); service.Load();
         Assert.Equal(PlayerSettings.CurrentVersion, service.Current.Version);
         Assert.Equal("Dark", service.Current.Theme); Assert.Equal("Compact", service.Current.Density); Assert.Equal(3, service.Current.ControlTimeoutSeconds); Assert.Equal(12, service.Current.SkipForwardSeconds);
-        Assert.Contains("\"Version\": 2", storage.Content);
+        Assert.Contains("\"Version\": 3", storage.Content);
         Assert.Equal(SettingApplyMode.Live, PlayerSettingsService.ApplyMode(nameof(PlayerSettings.SkipForwardSeconds)));
         Assert.Equal(SettingApplyMode.NextOpen, PlayerSettingsService.ApplyMode(nameof(PlayerSettings.DefaultSpeed)));
     }

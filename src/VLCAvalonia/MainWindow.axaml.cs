@@ -122,10 +122,8 @@ public partial class MainWindow : Window
         string key = e.Key == Key.OemComma ? "," : e.Key.ToString();
         string modifiers = (e.KeyModifiers.HasFlag(KeyModifiers.Control) ? "Ctrl+" : "") + (e.KeyModifiers.HasFlag(KeyModifiers.Alt) ? "Alt+" : "") + (e.KeyModifiers.HasFlag(KeyModifiers.Shift) ? "Shift+" : "");
         string gesture = PlayerShortcutPolicy.Normalize(modifiers + key);
-        PlayerCommandDefinition? command = _presentation.Registry.Commands.FirstOrDefault(x => PlayerShortcutPolicy.Normalize(x.DefaultShortcut) == gesture);
-        if (command is null || !_presentation.Registry.CanExecute(command.Id)) return;
-        _presentation.Registry.Execute(command.Id);
-        e.Handled = true;
+        IReadOnlyDictionary<PlayerCommandId, string> active = PlayerShortcutPolicy.Effective(_presentation.Registry, _settings.Current.ShortcutOverrides);
+        e.Handled = PlayerShortcutPolicy.TryDispatch(_presentation.Registry, active, gesture);
     }
 
     private void ToggleFullscreen()

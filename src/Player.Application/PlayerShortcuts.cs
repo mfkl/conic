@@ -5,6 +5,22 @@ public sealed record PlayerShortcut(PlayerCommandId Command, string Gesture);
 
 public static class PlayerShortcutPolicy
 {
+    public static IReadOnlyDictionary<PlayerCommandId, string> Effective(IPlayerCommandRegistry registry, IReadOnlyDictionary<string, string>? overrides)
+    {
+        var result = Defaults(registry).ToDictionary(x => x.Command, x => x.Gesture);
+        if (overrides is null) return result;
+        foreach (var pair in overrides)
+            if (Enum.TryParse(pair.Key, out PlayerCommandId id) && result.ContainsKey(id) && Normalize(pair.Value) is { Length: > 0 } gesture) result[id] = gesture;
+        return result;
+    }
+
+    public static bool TryDispatch(IPlayerCommandRegistry registry, IReadOnlyDictionary<PlayerCommandId, string> active, string gesture)
+    {
+        string normalized = Normalize(gesture);
+        PlayerCommandId? id = active.FirstOrDefault(x => string.Equals(x.Value, normalized, StringComparison.OrdinalIgnoreCase)).Key;
+        if (id is null || !registry.CanExecute(id.Value)) return false;
+        registry.Execute(id.Value); return true;
+    }
     public static string Normalize(string? gesture)
     {
         if (string.IsNullOrWhiteSpace(gesture)) return string.Empty;

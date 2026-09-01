@@ -33,10 +33,18 @@ internal static class Program
         if (args.Contains("--opaque-smoke", StringComparer.OrdinalIgnoreCase))
             return CompositionSmoke.RunOpaque();
         if (args.Contains("--smoke", StringComparer.OrdinalIgnoreCase))
-            return CompositionSmoke.Run();
+            return CompositionSmoke.Run(ParseExpectedPath(args));
 
         BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
         return 0;
+    }
+
+    private static string? ParseExpectedPath(string[] args)
+    {
+        const string prefix = "--expect-path=";
+        return args.FirstOrDefault(value =>
+                value.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))?
+            [prefix.Length..].ToLowerInvariant();
     }
 
     private static int ParseCycles(string[] args)

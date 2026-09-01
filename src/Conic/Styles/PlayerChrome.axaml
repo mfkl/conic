@@ -13,6 +13,55 @@
         <Setter Property="Background" Value="#E12A2D34" />
         <Setter Property="BorderBrush" Value="#45FFFFFF" />
     </Style>
+    <Style Selector="Button.openPrimary">
+        <Setter Property="CornerRadius" Value="12,0,0,12" />
+        <Setter Property="Background" Value="#D724262C" />
+        <Setter Property="BorderBrush" Value="#56FF9A55" />
+    </Style>
+    <Style Selector="Button.openPrimary:pointerover">
+        <Setter Property="Background" Value="#EF353038" />
+        <Setter Property="BorderBrush" Value="#FFFF9A55" />
+    </Style>
+    <Style Selector="Button.openOptions">
+        <Setter Property="Width" Value="38" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="CornerRadius" Value="0,12,12,0" />
+        <Setter Property="Background" Value="#D724262C" />
+        <Setter Property="BorderBrush" Value="#56FF9A55" />
+    </Style>
+    <Style Selector="Button.openOptions:pointerover">
+        <Setter Property="Background" Value="#EF353038" />
+        <Setter Property="Foreground" Value="#FFFF9A55" />
+    </Style>
+    <Style Selector="Button.menuAction">
+        <Setter Property="HorizontalContentAlignment" Value="Left" />
+        <Setter Property="Padding" Value="12,8" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="CornerRadius" Value="8" />
+    </Style>
+    <Style Selector="Button.menuAction:pointerover">
+        <Setter Property="Background" Value="#20FF9A55" />
+    </Style>
+    <Style Selector="Button.recentItem">
+        <Setter Property="HorizontalContentAlignment" Value="Left" />
+        <Setter Property="Padding" Value="12,7" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="CornerRadius" Value="8" />
+    </Style>
+    <Style Selector="Button.recentItem:pointerover">
+        <Setter Property="Background" Value="#1DFF9A55" />
+    </Style>
+    <Style Selector="Button.recentRemove">
+        <Setter Property="Width" Value="30" />
+        <Setter Property="Height" Value="30" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Foreground" Value="#FF9A55" />
+        <Setter Property="FontSize" Value="18" />
+    </Style>
     <Style Selector="Button.transport">
         <Setter Property="Width" Value="42" />
         <Setter Property="Height" Value="42" />

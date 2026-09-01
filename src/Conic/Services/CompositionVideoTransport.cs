@@ -3,16 +3,19 @@ using Conic.Controls;
 
 namespace Conic.Services;
 
-internal sealed class CompositionVideoTransport : IPlayerTransport, IQueueTransport
+internal sealed class CompositionVideoTransport : IPlayerTransport, IQueueTransport, IMediaCapabilitiesTransport
 {
     private readonly CompositionVideoSurface _surface;
     public CompositionVideoTransport(CompositionVideoSurface surface)
     {
         _surface = surface;
         _surface.QueueStateChanged += (_, state) => QueueStateChanged?.Invoke(this, state);
+        _surface.MediaCapabilitiesChanged += (_, state) => MediaCapabilitiesChanged?.Invoke(this, state);
     }
     public PlaybackQueueState QueueState => _surface.QueueState;
     public event EventHandler<PlaybackQueueState>? QueueStateChanged;
+    public MediaCapabilitiesState MediaCapabilities => _surface.MediaCapabilities;
+    public event EventHandler<MediaCapabilitiesState>? MediaCapabilitiesChanged;
     public void Open(string source) => _surface.MediaPath = source;
 
     public void TogglePause() => _surface.TogglePause();
@@ -38,4 +41,10 @@ internal sealed class CompositionVideoTransport : IPlayerTransport, IQueueTransp
     public void Next() => _surface.NextQueueItem();
     public void SetRepeatMode(QueueRepeatMode mode) => _surface.SetQueueRepeat(mode);
     public void SetOrder(QueueOrder order) => _surface.SetQueueOrder(order);
+    public void SelectTrack(MediaTrackKind kind, string id) => _surface.SelectTrack(kind, id);
+    public void SelectTitle(string id) => _surface.SelectTitle(id);
+    public void SelectChapter(string id) => _surface.SelectChapter(id);
+    public void SetDelayMilliseconds(MediaTrackKind kind, int milliseconds) => _surface.SetDelayMilliseconds(kind, milliseconds);
+    public void ResetDelay(MediaTrackKind kind) => _surface.ResetDelay(kind);
+    public ExternalTrackAttachmentState AttachExternalTrack(MediaTrackKind kind, string path) => _surface.AttachExternalTrack(kind, path);
 }

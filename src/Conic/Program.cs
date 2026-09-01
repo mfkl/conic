@@ -25,7 +25,7 @@ internal static class Program
     [STAThread]
     public static int Main(string[] args)
     {
-        bool runsWindowsSmoke = args.Any(arg => arg.Equals("--engine-smoke", StringComparison.OrdinalIgnoreCase) || arg.Equals("--queue-smoke", StringComparison.OrdinalIgnoreCase) || arg.Equals("--opaque-smoke", StringComparison.OrdinalIgnoreCase) || arg.Equals("--smoke", StringComparison.OrdinalIgnoreCase));
+        bool runsWindowsSmoke = args.Any(arg => arg.Equals("--engine-smoke", StringComparison.OrdinalIgnoreCase) || arg.Equals("--queue-smoke", StringComparison.OrdinalIgnoreCase) || arg.Equals("--media-capabilities-smoke", StringComparison.OrdinalIgnoreCase) || arg.Equals("--opaque-smoke", StringComparison.OrdinalIgnoreCase) || arg.Equals("--smoke", StringComparison.OrdinalIgnoreCase));
         if (runsWindowsSmoke && !OperatingSystem.IsWindows())
         {
             Console.Error.WriteLine("VLC smoke modes are available on Windows only.");
@@ -38,6 +38,8 @@ internal static class Program
         if (args.Contains("--queue-smoke", StringComparer.OrdinalIgnoreCase))
             return CompositionSmoke.RunQueue(
                 args.Contains("--queue-smoke-verbose", StringComparer.OrdinalIgnoreCase));
+        if (args.Contains("--media-capabilities-smoke", StringComparer.OrdinalIgnoreCase))
+            return CompositionSmoke.RunMediaCapabilities();
         if (args.Contains("--opaque-smoke", StringComparer.OrdinalIgnoreCase))
             return CompositionSmoke.RunOpaque();
         if (args.Contains("--smoke", StringComparer.OrdinalIgnoreCase))

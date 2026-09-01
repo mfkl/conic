@@ -193,6 +193,30 @@ public partial class MainWindow : Window
         timeout.Start();
     }
 
+    internal void EnableLayoutSmoke(IClassicDesktopStyleApplicationLifetime desktop)
+    {
+        WindowState = WindowState.Normal;
+        Width = 1280;
+        Height = 720;
+        Dispatcher.UIThread.Post(() => CheckLayout(1280, false));
+
+        void CheckLayout(double width, bool compact)
+        {
+            Width = width;
+            Dispatcher.UIThread.Post(() =>
+            {
+                bool inDock = PlayerDock.Bounds.Contains(CenterTransport.Bounds.Position) &&
+                    PlayerDock.Bounds.Contains(RightTransport.Bounds.Position);
+                bool rows = compact ? Grid.GetRow(RightTransport) == 2 : Grid.GetRow(RightTransport) == 1;
+                Console.WriteLine($"[layout-smoke] width={width} dock={PlayerDock.Bounds} center={CenterTransport.Bounds} right={RightTransport.Bounds} rows={rows}");
+                if (!inDock || !rows) { desktop.Shutdown(1); return; }
+                if (!compact) { CheckLayout(480, true); return; }
+                Console.WriteLine("[layout-smoke] PASS normal-and-compact");
+                desktop.Shutdown(0);
+            });
+        }
+    }
+
     internal void EnableAdapterMismatchSmoke(
         IClassicDesktopStyleApplicationLifetime desktop)
     {
@@ -293,7 +317,6 @@ public partial class MainWindow : Window
         RightTransport.HorizontalAlignment = layout.IsCompact
             ? Avalonia.Layout.HorizontalAlignment.Center
             : Avalonia.Layout.HorizontalAlignment.Right;
-        TopChrome.IsVisible = !layout.IsCompact || !_presentation.IsFullscreen;
     }
 
     private void OnEngineStateChanged(object? sender, MediaEngineState state) =>

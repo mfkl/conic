@@ -300,10 +300,10 @@ public sealed class PlayerPresentationViewModelTests
     }
 
     [Fact]
-    public void FolderIsCapabilityGatedAndDropValidatesCardinality()
+    public void FolderIsCapabilityGatedWithoutQueueAndSingleDropStillOpens()
     {
         RecordingTransport transport = new(); PlayerPresentationViewModel vm = CreateOpeningViewModel(transport); Assert.False(vm.OpenFolderCommand.CanExecute(null)); vm.OpenDroppedSources([]); Assert.Contains("one local", vm.OpenError);
-        vm.OpenDroppedSources(["a.mp4", "b.mp4"]); Assert.Contains("multiple", vm.OpenError); Assert.Empty(transport.Opened); vm.OpenDroppedSources(["a.mp4"]); Assert.Single(transport.Opened);
+        vm.OpenDroppedSources(["a.mp4", "b.mp4"]); Assert.Empty(transport.Opened); vm.OpenDroppedSources(["a.mp4"]); Assert.Single(transport.Opened);
     }
 
     [Fact]
@@ -419,6 +419,101 @@ public sealed class PlayerPresentationViewModelTests
         Assert.False(vm.HasHistoryError);
     }
 
+    [Fact]
+    public void QueueSnapshotsRejectStaleGenerationsAndCommandsUseCurrentTokens()
+    {
+        QueueTransport transport = new();
+        PlayerPresentationViewModel vm = new(transport, new EmptyPicker(), () => { });
+        transport.Publish(new(4, 2, QueueLoadState.Ready, [new("live", "Live", "live.mp4", 0, true), new("next", "Next", "next.mp4", 1, false)], 0, QueueRepeatMode.None, QueueOrder.Normal));
+        transport.Publish(new(3, 99, QueueLoadState.Empty, [], -1, QueueRepeatMode.None, QueueOrder.Normal));
+        Assert.Equal(2, vm.QueueItems.Count); Assert.True(vm.NextCommand.CanExecute(null)); Assert.False(vm.PreviousCommand.CanExecute(null));
+        vm.Registry.Execute(PlayerCommandId.QueueSelect, "next");
+        vm.Registry.Execute(PlayerCommandId.QueueRepeat);
+        Assert.Equal("next", transport.Selected); Assert.Equal(QueueRepeatMode.CurrentItem, transport.Repeat);
+    }
+
+    [Fact]
+    public void QueueDrawerStatesExposeLoadingEmptyFailureAndReplayObservedModes()
+    {
+        QueueTransport transport = new(); PlayerPresentationViewModel vm = new(transport, new EmptyPicker(), () => { });
+        transport.Publish(new(6, 1, QueueLoadState.Loading, [], -1, QueueRepeatMode.None, QueueOrder.Normal)); Assert.True(vm.IsQueueLoading);
+        transport.Publish(new(6, 2, QueueLoadState.Empty, [], -1, QueueRepeatMode.None, QueueOrder.Normal)); Assert.True(vm.HasEmptyQueue);
+        transport.Publish(new(6, 3, QueueLoadState.Failed, [], -1, QueueRepeatMode.None, QueueOrder.Normal, "Only 2 of 3 items were queued.")); Assert.True(vm.HasQueueError); Assert.Contains("2 of 3", vm.QueueError);
+        transport.Publish(new(7, 1, QueueLoadState.Ready, [new("a", "A", "a", 0, true)], 0, QueueRepeatMode.All, QueueOrder.Random)); Assert.Equal("Repeat all", vm.RepeatLabel); Assert.Equal("Shuffle on", vm.ShuffleLabel);
+    }
+
+    [Fact]
+    public void OpeningAFileUsesReplaceQueueFlowWhenQueueIsAvailable()
+    {
+        QueueTransport transport = new(); PlayerPresentationViewModel vm = new(transport, new EmptyPicker(), () => { }, sourceValidator: new MediaSourceValidator(new ExistingFiles()));
+        vm.OpenSource("movie.mp4", MediaSourceKind.File);
+        Assert.Equal(["movie.mp4"], Assert.Single(transport.OpenedQueues));
+    }
+
+    [Fact]
+    public async Task LoadPlaylistUsesReplaceQueueAndPickerCancellationLeavesTheQueueUntouched()
+    {
+        string directory = Path.Combine(Path.GetTempPath(), $"conic-playlist-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(directory);
+        try
+        {
+            string playlist = Path.Combine(directory, "items.m3u");
+            await File.WriteAllTextAsync(playlist, "#EXTM3U\nrelative-video.mp4\nhttps://example.test/video.mp4\n");
+            QueueTransport transport = new();
+            PlayerPresentationViewModel vm = new(transport, new PlaylistPicker(playlist), () => { }, sourceValidator: new MediaSourceValidator(new ExistingFiles()));
+
+            vm.Registry.Execute(PlayerCommandId.LoadPlaylist);
+            await WaitForAsync(() => transport.OpenedQueues.Count == 1);
+
+            Assert.Equal([Path.Combine(directory, "relative-video.mp4"), "https://example.test/video.mp4"], Assert.Single(transport.OpenedQueues));
+            PlayerPresentationViewModel cancelled = new(transport, new PlaylistPicker(null), () => { }, sourceValidator: new MediaSourceValidator(new ExistingFiles()));
+            cancelled.Registry.Execute(PlayerCommandId.LoadPlaylist);
+            await Task.Yield();
+            Assert.Single(transport.OpenedQueues);
+        }
+        finally { Directory.Delete(directory, recursive: true); }
+    }
+
+    [Fact]
+    public async Task SavePlaylistWritesBoundedM3uFromQueueItems()
+    {
+        string directory = Path.Combine(Path.GetTempPath(), $"conic-playlist-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(directory);
+        try
+        {
+            string playlist = Path.Combine(directory, "saved.m3u8");
+            QueueTransport transport = new();
+            PlayerPresentationViewModel vm = new(transport, new PlaylistPicker(null, playlist), () => { });
+            transport.Publish(new(1, 1, QueueLoadState.Ready, [new("one", "One", "first.mp4", 0, true), new("two", "Two", "https://example.test/second.mp4", 1, false)], 0, QueueRepeatMode.None, QueueOrder.Normal));
+
+            vm.Registry.Execute(PlayerCommandId.SavePlaylist);
+            string content = await WaitForReadableTextAsync(playlist);
+
+            Assert.Equal(["first.mp4", "https://example.test/second.mp4"], M3uPlaylistDocument.Parse(content));
+        }
+        finally { Directory.Delete(directory, recursive: true); }
+    }
+
+    private static async Task WaitForAsync(Func<bool> condition)
+    {
+        for (int attempt = 0; attempt < 50; attempt++)
+        {
+            if (condition()) return;
+            await Task.Delay(10);
+        }
+        Assert.True(condition(), "The asynchronous playlist operation did not complete.");
+    }
+
+    private static async Task<string> WaitForReadableTextAsync(string path)
+    {
+        for (int attempt = 0; attempt < 50; attempt++)
+        {
+            try { return await File.ReadAllTextAsync(path); }
+            catch (IOException) { await Task.Delay(10); }
+        }
+        return await File.ReadAllTextAsync(path);
+    }
+
     private static PlayerPresentationViewModel CreateOpeningViewModel(IPlayerTransport transport, MediaHistoryService? history = null) => new(transport, new EmptyPicker(), () => { }, sourceValidator: new MediaSourceValidator(new ExistingFiles()), history: history);
     private static MediaHistoryService SeedHistory()
     {
@@ -461,12 +556,32 @@ public sealed class PlayerPresentationViewModelTests
         public void SetPlaybackRate(double playbackRate) => Rate = playbackRate;
     }
 
+    private sealed class QueueTransport : IPlayerTransport, IQueueTransport
+    {
+        public PlaybackQueueState QueueState { get; private set; } = PlaybackQueueState.Initial;
+        public event EventHandler<PlaybackQueueState>? QueueStateChanged;
+        public string? Selected { get; private set; }
+        public QueueRepeatMode Repeat { get; private set; }
+        public List<IReadOnlyList<string>> OpenedQueues { get; } = [];
+        public void Publish(PlaybackQueueState state) { QueueState = state; QueueStateChanged?.Invoke(this, state); }
+        public void Open(string source) { } public void TogglePause() { } public void Stop() { } public void Seek(double normalizedPosition) { } public void SetVolume(double normalizedVolume) { } public void SetMuted(bool muted) { } public void Skip(TimeSpan offset) { } public void SetPlaybackRate(double playbackRate) { }
+        public void OpenQueue(IReadOnlyList<string> sources) => OpenedQueues.Add(sources.ToArray()); public void Enqueue(IEnumerable<string> sources) { } public void SelectAndPlay(string token) => Selected = token; public void Move(string token, int destinationIndex) { } public void Remove(string token) { } public void ClearQueue() { } public void Previous() { } public void Next() { } public void SetRepeatMode(QueueRepeatMode mode) => Repeat = mode; public void SetOrder(QueueOrder order) { }
+    }
+
     private sealed class EmptyPicker : IMediaSourcePicker
     {
         public Task<string?> PickMediaAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult<string?>(null);
         public Task<string?> PickFolderAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult<string?>(null);
+    }
+
+    private sealed class PlaylistPicker(string? openPath, string? savePath = null) : IMediaSourcePicker, IPlaylistDocumentPicker
+    {
+        public Task<string?> PickMediaAsync(CancellationToken cancellationToken = default) => Task.FromResult<string?>(null);
+        public Task<string?> PickFolderAsync(CancellationToken cancellationToken = default) => Task.FromResult<string?>(null);
+        public Task<string?> PickPlaylistToOpenAsync(CancellationToken cancellationToken = default) => Task.FromResult(openPath);
+        public Task<string?> PickPlaylistToSaveAsync(CancellationToken cancellationToken = default) => Task.FromResult(savePath);
     }
 
     private sealed class SettingsStorage : IPlayerSettingsStorage

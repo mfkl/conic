@@ -11,6 +11,8 @@ internal static class Program
 
     private static void SetupVLCPath()
     {
+        if (!OperatingSystem.IsWindows())
+            return;
         string VLCDirectory = RepositoryPaths.VLCDirectory;
         if (!Directory.Exists(VLCDirectory))
             return;
@@ -23,10 +25,19 @@ internal static class Program
     [STAThread]
     public static int Main(string[] args)
     {
+        bool runsWindowsSmoke = args.Any(arg => arg.Equals("--engine-smoke", StringComparison.OrdinalIgnoreCase) || arg.Equals("--queue-smoke", StringComparison.OrdinalIgnoreCase) || arg.Equals("--opaque-smoke", StringComparison.OrdinalIgnoreCase) || arg.Equals("--smoke", StringComparison.OrdinalIgnoreCase));
+        if (runsWindowsSmoke && !OperatingSystem.IsWindows())
+        {
+            Console.Error.WriteLine("VLC smoke modes are available on Windows only.");
+            return 2;
+        }
         SetupVLCPath();
         int cycles = ParseCycles(args);
         if (args.Contains("--engine-smoke", StringComparer.OrdinalIgnoreCase))
             return CompositionSmoke.RunEngine(cycles);
+        if (args.Contains("--queue-smoke", StringComparer.OrdinalIgnoreCase))
+            return CompositionSmoke.RunQueue(
+                args.Contains("--queue-smoke-verbose", StringComparer.OrdinalIgnoreCase));
         if (args.Contains("--opaque-smoke", StringComparer.OrdinalIgnoreCase))
             return CompositionSmoke.RunOpaque();
         if (args.Contains("--smoke", StringComparer.OrdinalIgnoreCase))

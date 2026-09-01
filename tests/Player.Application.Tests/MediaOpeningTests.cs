@@ -17,11 +17,11 @@ public sealed class MediaOpeningTests
     public void RejectsUnsupportedUrls(string source) => Assert.False(new MediaSourceValidator(new FakeFiles()).Validate(source, MediaSourceKind.NetworkUrl).Succeeded);
 
     [Fact]
-    public void RejectsFoldersUntilQueueCapabilityExists()
+    public void AcceptsFoldersForQueueExpansion()
     {
         FakeFiles files = new() { Directory = true };
         MediaOpenResult result = new MediaSourceValidator(files).Validate("c:/media", MediaSourceKind.Folder);
-        Assert.False(result.Succeeded); Assert.Contains("playlist", result.UserMessage!, StringComparison.OrdinalIgnoreCase);
+        Assert.True(result.Succeeded); Assert.Equal(MediaSourceKind.Folder, result.Source!.Kind);
     }
     [Fact]
     public void EngineNormalizerPreservesReviewedUrlsAndCanonicalizesFiles()

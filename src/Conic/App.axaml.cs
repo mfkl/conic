@@ -1,9 +1,6 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
-#if DEBUG
-using Avalonia.Diagnostics;
-#endif
 
 namespace Conic;
 
@@ -12,9 +9,6 @@ public partial class App : Application
     public override void Initialize()
     {
         AvaloniaXamlLoader.Load(this);
-#if DEBUG
-        this.AttachDeveloperTools();
-#endif
     }
 
     public override void OnFrameworkInitializationCompleted()

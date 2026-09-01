@@ -7,3 +7,9 @@ public interface IMediaSourcePicker
 
     Task<string?> PickFolderAsync(CancellationToken cancellationToken = default);
 }
+
+public interface IPlaylistDocumentPicker
+{
+    Task<string?> PickPlaylistToOpenAsync(CancellationToken cancellationToken = default);
+    Task<string?> PickPlaylistToSaveAsync(CancellationToken cancellationToken = default);
+}

@@ -59,7 +59,7 @@ public sealed class MediaOpeningTests
     [Fact]
     public void LoadNormalizesFileDuplicatesAndPreservesUrlCase()
     {
-        MemoryHistory storage = new { Content = "{\"Version\":1,\"Recent\":[{\"Source\":\"C:\\\\A.mp4\",\"DisplayName\":\"old\",\"LastOpenedUtc\":\"2020-01-01T00:00:00Z\"},{\"Source\":\"c:\\\\a.mp4\",\"DisplayName\":\"new\",\"LastOpenedUtc\":\"2021-01-01T00:00:00Z\"},{\"Source\":\"https://example.com/A?q=x\",\"DisplayName\":\"A\",\"LastOpenedUtc\":\"2021-01-01T00:00:00Z\"},{\"Source\":\"https://example.com/a?q=x\",\"DisplayName\":\"a\",\"LastOpenedUtc\":\"2021-01-01T00:00:00Z\"}]}" };
+        MemoryHistory storage = new() { Content = "{\"Version\":1,\"Recent\":[{\"Source\":\"C:\\\\A.mp4\",\"DisplayName\":\"old\",\"LastOpenedUtc\":\"2020-01-01T00:00:00Z\"},{\"Source\":\"c:\\\\a.mp4\",\"DisplayName\":\"new\",\"LastOpenedUtc\":\"2021-01-01T00:00:00Z\"},{\"Source\":\"https://example.com/A?q=x\",\"DisplayName\":\"A\",\"LastOpenedUtc\":\"2021-01-01T00:00:00Z\"},{\"Source\":\"https://example.com/a?q=x\",\"DisplayName\":\"a\",\"LastOpenedUtc\":\"2021-01-01T00:00:00Z\"}]}" };
         MediaHistoryService history = new(storage); history.Load(); Assert.Equal(3, history.Recent.Count); Assert.Contains(history.Recent, x => x.DisplayName == "new");
     }
     [Fact]

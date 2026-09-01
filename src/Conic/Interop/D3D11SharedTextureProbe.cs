@@ -10,6 +10,8 @@ internal static unsafe class D3D11SharedTextureProbe
     {
         ID3D11Device* device = null;
         ID3D11DeviceContext* context = null;
+        IDXGIFactory4* factory = null;
+        IDXGIAdapter* adapter = null;
         ID3D11Texture2D* texture = null;
         IDXGIKeyedMutex* keyedMutex = null;
         try
@@ -22,10 +24,26 @@ internal static unsafe class D3D11SharedTextureProbe
                 D3D_FEATURE_LEVEL.D3D_FEATURE_LEVEL_10_0,
             };
             D3D_FEATURE_LEVEL selectedLevel;
+            Guid factoryId = IID_IDXGIFactory4;
+            CheckHResult(
+                CreateDXGIFactory1(&factoryId, (void**)&factory),
+                "CreateDXGIFactory1(smoke consumer)");
+            LUID requestedAdapter = new()
+            {
+                LowPart = frame.Adapter.LowPart,
+                HighPart = frame.Adapter.HighPart,
+            };
+            Guid adapterId = IID_IDXGIAdapter;
+            CheckHResult(
+                factory->EnumAdapterByLuid(
+                    requestedAdapter,
+                    &adapterId,
+                    (void**)&adapter),
+                "IDXGIFactory4.EnumAdapterByLuid(smoke consumer)");
             CheckHResult(
                 D3D11CreateDevice(
-                    null,
-                    D3D_DRIVER_TYPE.D3D_DRIVER_TYPE_HARDWARE,
+                    adapter,
+                    D3D_DRIVER_TYPE.D3D_DRIVER_TYPE_UNKNOWN,
                     0,
                     (uint)D3D11_CREATE_DEVICE_FLAG
                         .D3D11_CREATE_DEVICE_BGRA_SUPPORT,
@@ -35,7 +53,7 @@ internal static unsafe class D3D11SharedTextureProbe
                     &device,
                     &selectedLevel,
                     &context),
-                "D3D11CreateDevice(smoke consumer)");
+                "D3D11CreateDevice(smoke consumer selected adapter)");
 
             Guid textureId = IID_ID3D11Texture2D;
             CheckHResult(
@@ -78,7 +96,10 @@ internal static unsafe class D3D11SharedTextureProbe
             }
 
             return $"{description.Width}x{description.Height} " +
-                $"{description.Format} generation={frame.Generation}";
+                $"{description.Format} " +
+                $"resource-generation={frame.ResourceGeneration} " +
+                $"device-generation={frame.DeviceGeneration} " +
+                $"adapter-luid={frame.Adapter}";
         }
         finally
         {
@@ -90,6 +111,10 @@ internal static unsafe class D3D11SharedTextureProbe
                 context->Release();
             if (device is not null)
                 device->Release();
+            if (adapter is not null)
+                adapter->Release();
+            if (factory is not null)
+                factory->Release();
         }
     }
 

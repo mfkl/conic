@@ -33,21 +33,29 @@ public sealed class PlayerSettingsService
 
     public PlayerSettingsService(IPlayerSettingsStorage storage) => _storage = storage;
     public PlayerSettings Current { get; private set; } = PlayerSettings.Default;
+    public string? LoadDiagnostic { get; private set; }
     public event EventHandler<PlayerSettings>? Changed;
 
     public void Load()
     {
-        string? document = _storage.Read();
+        string? document;
+        try { document = _storage.Read(); }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException) { Current = PlayerSettings.Default; LoadDiagnostic = "Settings could not be read; defaults are in use."; return; }
         if (string.IsNullOrWhiteSpace(document)) { Current = PlayerSettings.Default; return; }
         try
         {
-            Current = Normalize(Migrate(JsonSerializer.Deserialize<PlayerSettings>(document, JsonOptions)
-                ?? throw new JsonException("Settings document was empty.")));
+            using JsonDocument json = JsonDocument.Parse(document);
+            int version = json.RootElement.TryGetProperty("Version", out JsonElement versionValue) ? versionValue.GetInt32() : 1;
+            bool migrated = version != PlayerSettings.CurrentVersion;
+            Current = Normalize(Migrate(json.RootElement, version));
+            if (migrated)
+                _storage.WriteAtomically(JsonSerializer.Serialize(Current, JsonOptions));
         }
-        catch (JsonException)
+        catch (Exception exception) when (exception is JsonException or IOException or UnauthorizedAccessException)
         {
-            _storage.PreserveInvalid(document);
+            try { _storage.PreserveInvalid(document); } catch (Exception preserveException) when (preserveException is IOException or UnauthorizedAccessException) { }
             Current = PlayerSettings.Default;
+            LoadDiagnostic = "Settings were invalid or unavailable; defaults are in use.";
         }
     }
 
@@ -72,12 +80,24 @@ public sealed class PlayerSettingsService
         _ => SettingApplyMode.Restart,
     };
 
-    private static PlayerSettings Migrate(PlayerSettings value) => value.Version switch
+    private static PlayerSettings Migrate(JsonElement root, int version) => version switch
     {
-        PlayerSettings.CurrentVersion => value,
-        0 or 1 => value with { Version = PlayerSettings.CurrentVersion, Theme = string.IsNullOrWhiteSpace(value.Theme) ? "System" : value.Theme, Density = string.IsNullOrWhiteSpace(value.Density) ? "Comfortable" : value.Density },
+        PlayerSettings.CurrentVersion => JsonSerializer.Deserialize<PlayerSettings>(root, JsonOptions) ?? throw new JsonException("Settings document was empty."),
+        0 or 1 => PlayerSettings.Default with
+        {
+            ResumePlayback = Read(root, nameof(PlayerSettings.ResumePlayback), PlayerSettings.Default.ResumePlayback),
+            RememberVolume = Read(root, nameof(PlayerSettings.RememberVolume), PlayerSettings.Default.RememberVolume),
+            Theme = Read(root, nameof(PlayerSettings.Theme), PlayerSettings.Default.Theme),
+            Density = Read(root, nameof(PlayerSettings.Density), PlayerSettings.Default.Density),
+            DefaultSpeed = Read(root, nameof(PlayerSettings.DefaultSpeed), PlayerSettings.Default.DefaultSpeed),
+            SkipBackwardSeconds = Read(root, nameof(PlayerSettings.SkipBackwardSeconds), PlayerSettings.Default.SkipBackwardSeconds),
+            SkipForwardSeconds = Read(root, nameof(PlayerSettings.SkipForwardSeconds), PlayerSettings.Default.SkipForwardSeconds),
+        },
         _ => throw new JsonException("Unsupported settings version."),
     };
+
+    private static T Read<T>(JsonElement root, string name, T fallback) => root.TryGetProperty(name, out JsonElement value)
+        ? JsonSerializer.Deserialize<T>(value, JsonOptions) ?? fallback : fallback;
 
     private static PlayerSettings Normalize(PlayerSettings value) => value with
     {

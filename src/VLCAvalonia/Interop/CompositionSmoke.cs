@@ -583,6 +583,29 @@ internal static class CompositionSmoke
         }
     }
 
+    public static int RunPlayerCapabilities()
+    {
+        string mediaPath = RepositoryPaths.TestMediaPath;
+        if (!File.Exists(mediaPath)) { Console.Error.WriteLine($"[player-capabilities-smoke] FAIL fixture missing: {mediaPath}"); return 2; }
+        VLCCorePlayer? player = null;
+        try
+        {
+            player = new VLCCorePlayer(hardwareDecoding: false);
+            OpenAndWait(player, mediaPath, "player-capabilities-open");
+            VLCPlayerSmokeReport report = player.RunPlayerCapabilitiesForSmoke();
+            int passed = 0, skipped = 0, failed = 0;
+            foreach (VLCPlayerSmokeStep step in report.Steps)
+            {
+                if (step.Disposition == VLCPlayerSmokeDisposition.Passed) passed++; else if (step.Disposition == VLCPlayerSmokeDisposition.Skipped) skipped++; else failed++;
+                Console.WriteLine($"[player-capabilities-smoke] {step.Disposition} phase={step.Phase} result={step.Result.Code} detail={step.Detail}");
+            }
+            Console.WriteLine($"[player-capabilities-smoke] completed passed={passed} skipped={skipped} failed={failed}; skipped features are not parity assertions.");
+            return failed == 0 ? 0 : 1;
+        }
+        catch (Exception exception) { Console.Error.WriteLine($"[player-capabilities-smoke] FAIL: {exception}"); return 1; }
+        finally { try { player?.Dispose(); } catch (Exception exception) { Console.Error.WriteLine($"[player-capabilities-smoke] cleanup player: {exception.Message}"); } }
+    }
+
     private sealed class DispatchingMediaCapabilitySmokeAdapter(VLCCorePlayer player) : IVLCMediaCapabilitySmokeAdapter
     {
         public VLCTrackSnapshot? TryGetTracks(out VLCMediaResult result)

@@ -8,7 +8,7 @@
   },
   "vlclr": {
     "branch": "feature/modern-player-ui-transport",
-    "commit": "4ce5edc6c77efa4643894ec5de56a1db8a7422b9",
+    "commit": "e90b786de74c6ed440dea8bf65329907739b0c60",
     "consumption": "sibling-project-reference"
   }
 }

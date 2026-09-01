@@ -47,4 +47,6 @@ public enum PlayerCommandId
     ResetSubtitleDelay,
     AttachExternalAudio,
     AttachExternalSubtitle,
+    MediaInformation,
+    Snapshot,
 }

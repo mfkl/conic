@@ -131,6 +131,8 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
         registry.Register(new(PlayerCommandId.ResetSubtitleDelay, "Reset subtitle delay", "Subtitles"), _ => _mediaControls?.ResetDelay(MediaTrackKind.Subtitle), _ => CanAdjustDelays);
         registry.Register(new(PlayerCommandId.AttachExternalAudio, "Add external audio", "Audio"), _ => _ = AttachExternalTrackAsync(MediaTrackKind.Audio), _ => _mediaControls is not null && _mediaSourcePicker is IExternalTrackPicker);
         registry.Register(new(PlayerCommandId.AttachExternalSubtitle, "Add external subtitle", "Subtitles"), _ => _ = AttachExternalTrackAsync(MediaTrackKind.Subtitle), _ => _mediaControls is not null && _mediaSourcePicker is IExternalTrackPicker);
+        registry.Register(new(PlayerCommandId.MediaInformation, "Media information", "Media", "Ctrl+I"), _ => { DrawerTab = "Audio"; IsQueueOpen = true; MediaControlsNotice = "Codec stream details are unavailable through this engine ABI. Media metadata is refreshed only for the current generation."; OnPropertyChanged(nameof(HasMediaControlsNotice)); }, _ => _mediaControls is not null);
+        registry.Register(new(PlayerCommandId.Snapshot, "Take snapshot", "Video", "Shift+S"), _ => { MediaControlsNotice = "Snapshot unavailable: the internal engine has no safe fixed held-vout binding. No file was created."; OnPropertyChanged(nameof(HasMediaControlsNotice)); }, _ => _mediaControls is not null);
 
         OpenMediaCommand = new RegistryCommand(registry, PlayerCommandId.OpenMedia);
         OpenFolderCommand = new RegistryCommand(registry, PlayerCommandId.OpenFolder);
@@ -174,6 +176,8 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
         ResetSubtitleDelayCommand = new RegistryCommand(registry, PlayerCommandId.ResetSubtitleDelay);
         AttachExternalAudioCommand = new RegistryCommand(registry, PlayerCommandId.AttachExternalAudio);
         AttachExternalSubtitleCommand = new RegistryCommand(registry, PlayerCommandId.AttachExternalSubtitle);
+        MediaInformationCommand = new RegistryCommand(registry, PlayerCommandId.MediaInformation);
+        SnapshotCommand = new RegistryCommand(registry, PlayerCommandId.Snapshot);
     }
 
     public IPlayerCommandRegistry Registry { get; }
@@ -219,6 +223,8 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
     public ICommand ResetSubtitleDelayCommand { get; }
     public ICommand AttachExternalAudioCommand { get; }
     public ICommand AttachExternalSubtitleCommand { get; }
+    public ICommand MediaInformationCommand { get; }
+    public ICommand SnapshotCommand { get; }
     public string SkipBackwardLabel => $"−{_settings?.Current.SkipBackwardSeconds ?? 10}";
     public string SkipForwardLabel => $"+{_settings?.Current.SkipForwardSeconds ?? 10}";
 

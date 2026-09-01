@@ -17,10 +17,13 @@ public sealed record PlayerSettings(
     bool RememberRecentMedia = true,
     bool RememberResumeHistory = true,
     int ResumeMinimumElapsedSeconds = 30,
-    int ResumeMaximumRemainingSeconds = 30)
+    int ResumeMaximumRemainingSeconds = 30,
+    string AudioOutputModule = "Default",
+    double? NormalizationMaximumLevel = null,
+    bool? AudioPassthrough = null)
 {
-    public const int CurrentVersion = 3;
-    public static PlayerSettings Default { get; } = new(CurrentVersion, true, true, "System", "Comfortable", 3, 1, 10, 10, true, true, 30, 30);
+    public const int CurrentVersion = 4;
+    public static PlayerSettings Default { get; } = new(CurrentVersion, true, true, "System", "Comfortable", 3, 1, 10, 10, true, true, 30, 30, "Default");
 }
 
 public interface IPlayerSettingsStorage
@@ -91,7 +94,7 @@ public sealed class PlayerSettingsService
     private static PlayerSettings Migrate(JsonElement root, int version) => version switch
     {
         PlayerSettings.CurrentVersion => JsonSerializer.Deserialize<PlayerSettings>(root, JsonOptions) ?? throw new JsonException("Settings document was empty."),
-        0 or 1 or 2 => PlayerSettings.Default with
+        0 or 1 or 2 or 3 => PlayerSettings.Default with
         {
             ResumePlayback = Read(root, nameof(PlayerSettings.ResumePlayback), PlayerSettings.Default.ResumePlayback),
             RememberVolume = Read(root, nameof(PlayerSettings.RememberVolume), PlayerSettings.Default.RememberVolume),
@@ -104,6 +107,9 @@ public sealed class PlayerSettingsService
             RememberResumeHistory = Read(root, nameof(PlayerSettings.RememberResumeHistory), PlayerSettings.Default.RememberResumeHistory),
             ResumeMinimumElapsedSeconds = Read(root, nameof(PlayerSettings.ResumeMinimumElapsedSeconds), PlayerSettings.Default.ResumeMinimumElapsedSeconds),
             ResumeMaximumRemainingSeconds = Read(root, nameof(PlayerSettings.ResumeMaximumRemainingSeconds), PlayerSettings.Default.ResumeMaximumRemainingSeconds),
+            AudioOutputModule = Read(root, nameof(PlayerSettings.AudioOutputModule), PlayerSettings.Default.AudioOutputModule),
+            NormalizationMaximumLevel = Read<double?>(root, nameof(PlayerSettings.NormalizationMaximumLevel), null),
+            AudioPassthrough = Read<bool?>(root, nameof(PlayerSettings.AudioPassthrough), null),
         },
         _ => throw new JsonException("Unsupported settings version."),
     };
@@ -129,5 +135,7 @@ public sealed class PlayerSettingsService
         SkipForwardSeconds = Math.Clamp(value.SkipForwardSeconds, 1, 120),
         ResumeMinimumElapsedSeconds = Math.Clamp(value.ResumeMinimumElapsedSeconds, 0, 3600),
         ResumeMaximumRemainingSeconds = Math.Clamp(value.ResumeMaximumRemainingSeconds, 0, 3600),
+        AudioOutputModule = value.AudioOutputModule is "Default" or "mmdevice" or "directsound" or "waveout" ? value.AudioOutputModule : "Default",
+        NormalizationMaximumLevel = value.NormalizationMaximumLevel is double level && double.IsFinite(level) ? Math.Clamp(level, .5, 10) : null,
     };
 }

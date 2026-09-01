@@ -30,7 +30,7 @@ public sealed class FilePlayerSettingsStorageTests : IDisposable
         service.Load();
         string backup = Assert.Single(Directory.GetFiles(_directory, "settings.json.invalid-*.json"));
         Assert.Equal(corrupt, File.ReadAllText(backup));
-        Assert.Contains("\"Version\": 3", File.ReadAllText(SettingsPath));
+        Assert.Contains($"\"Version\": {PlayerSettings.CurrentVersion}", File.ReadAllText(SettingsPath));
         PlayerSettingsService reloaded = new(new FilePlayerSettingsStorage(SettingsPath));
         reloaded.Load();
         Assert.Equal(PlayerSettings.Default, reloaded.Current);

@@ -34,10 +34,13 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
     private string _urlText = string.Empty;
     private long _recordedOpenGeneration = -1;
     private long _activeGeneration = -1;
+    private long _lastObservedGeneration;
+    private long _generationFloor;
     private bool _resumeReady;
     private MediaEngineState? _lastState;
     private DateTimeOffset _lastCheckpointUtc;
     private readonly Func<DateTimeOffset> _clock;
+    private readonly Action<string>? _diagnostic;
 
     public PlayerPresentationViewModel(
         IPlayerTransport transport,
@@ -48,7 +51,8 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
         PlayerSettingsService? settings = null,
         MediaSourceValidator? sourceValidator = null,
         MediaHistoryService? history = null,
-        Func<DateTimeOffset>? clock = null)
+        Func<DateTimeOffset>? clock = null,
+        Action<string>? diagnostic = null)
     {
         _transport = transport;
         _mediaSourcePicker = mediaSourcePicker;
@@ -57,6 +61,7 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
         _sourceValidator = sourceValidator ?? new MediaSourceValidator(new SystemMediaFileSystem());
         _history = history;
         _clock = clock ?? (() => DateTimeOffset.UtcNow);
+        _diagnostic = diagnostic;
         if (_settings is not null) _settings.Changed += (_, updated) =>
         {
             if (!updated.RememberRecentMedia) _history?.ClearRecent();
@@ -166,6 +171,7 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
     public string MediaTitle { get => _mediaTitle; private set => Set(ref _mediaTitle, value); }
     public bool IsFullscreen { get => _isFullscreen; set => Set(ref _isFullscreen, value); }
     public string OpenError { get => _openError; private set => Set(ref _openError, value); }
+    public string? HistoryError { get; private set; }
     public string UrlText { get => _urlText; set => Set(ref _urlText, value); }
     public bool HasPendingResume => _pendingResume is not null && _resumeReady;
     public string PendingResumeText => _pendingResume is null ? string.Empty : $"Resume from {FormatTime(_pendingResume.Position)}?";
@@ -183,14 +189,17 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
 
     public void ApplyEngineState(MediaEngineState state)
     {
+        _lastObservedGeneration = Math.Max(_lastObservedGeneration, state.Generation);
         if (_currentSource is not null && state.Source is not null && !string.Equals(state.Source, _currentSource.CanonicalSource, StringComparison.Ordinal))
             return;
-        if (_activeGeneration >= 0 && state.Generation < _activeGeneration) return;
-        if (state.Status == PlaybackStatus.Opening) _activeGeneration = state.Generation;
+        if (_currentSource is not null && state.Generation <= _generationFloor) return;
+        if (_activeGeneration < 0 && _currentSource is not null) _activeGeneration = state.Generation;
+        if (_activeGeneration >= 0 && state.Generation != _activeGeneration) return;
         _isUpdatingFromEngine = true;
         try
         {
             _lastState = state;
+            if (state.Status == PlaybackStatus.Faulted) { OpenError = "Media could not be opened."; _diagnostic?.Invoke(state.Error ?? "Media engine fault."); return; }
             _duration = state.Duration;
             if (!_isSeeking)
                 Position = state.Position;
@@ -239,14 +248,14 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
         if (!result.Succeeded || result.Source is null) { OpenError = result.UserMessage ?? "Media could not be opened."; return; }
         CheckpointCurrent(true);
         _currentSource = result.Source;
-        _activeGeneration = -1; _resumeReady = false;
+        _generationFloor = _lastObservedGeneration; _activeGeneration = -1; _resumeReady = false; _lastState = null; _recordedOpenGeneration = -1;
         _pendingResume = (_settings?.Current.ResumePlayback ?? true) && (_settings?.Current.RememberResumeHistory ?? true) ? _history?.FindResume(_currentSource) : null;
         if (_pendingResume is { } candidate && (candidate.Position < TimeSpan.FromSeconds(_settings?.Current.ResumeMinimumElapsedSeconds ?? 30) || candidate.Duration - candidate.Position <= TimeSpan.FromSeconds(_settings?.Current.ResumeMaximumRemainingSeconds ?? 30)))
         { _history?.RemoveResume(candidate.Source); _pendingResume = null; }
         OnPropertyChanged(nameof(HasPendingResume)); OnPropertyChanged(nameof(PendingResumeText));
         OpenError = string.Empty;
         try { _transport.Open(_currentSource.CanonicalSource); }
-        catch (Exception) { _currentSource = null; _pendingResume = null; OpenError = "Media could not be opened."; }
+        catch (Exception e) { _diagnostic?.Invoke(e.ToString()); _currentSource = null; _pendingResume = null; OpenError = "Media could not be opened."; }
         OnPropertyChanged(nameof(RecentItems));
     }
 

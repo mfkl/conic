@@ -287,7 +287,7 @@ public sealed class PlayerPresentationViewModelTests
     public void RecentRecordingFailureRecoversOnLaterMatchingState(string kind)
     {
         Exception error = kind == "io" ? new IOException("recent detail") : new UnauthorizedAccessException("recent detail"); SwitchStorage storage = new(error); MediaHistoryService history = new(storage); List<string> diagnostic = [];
-        PlayerPresentationViewModel vm = new(new RecordingTransport(), new EmptyPicker(), () => { }, sourceValidator: new MediaSourceValidator(new ExistingFiles()), history: history, diagnostic: diagnostic.Add); vm.OpenSource("a.mp4", MediaSourceKind.File); MediaEngineState state = State(.2, PlaybackStatus.Playing, true) with { Generation = 1, Source = "a.mp4" }; vm.ApplyEngineState(state);
+        PlayerPresentationViewModel vm = new(new RecordingTransport(), new EmptyPicker(), () => { }, sourceValidator: new MediaSourceValidator(new ExistingFiles()), history: history, diagnostic: diagnostic.Add); vm.OpenSource("a.mp4", MediaSourceKind.File); MediaEngineState state = State(.4, PlaybackStatus.Playing, true) with { Generation = 1, Source = "a.mp4" }; vm.ApplyEngineState(state);
         Assert.NotNull(vm.HistoryError); Assert.Contains(diagnostic, x => x.Contains("recent detail")); storage.Error = null; vm.ApplyEngineState(state);
         Assert.Null(vm.HistoryError); Assert.Single(history.Recent);
     }

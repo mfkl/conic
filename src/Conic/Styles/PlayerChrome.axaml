@@ -26,6 +26,14 @@
         <Setter Property="Background" Value="#20FFFFFF" />
         <Setter Property="Foreground" Value="White" />
     </Style>
+    <Style Selector="Button.mute">
+        <Setter Property="Width" Value="24" />
+        <Setter Property="Height" Value="42" />
+        <Setter Property="Padding" Value="3" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Foreground" Value="#FF9A55" />
+    </Style>
     <Style Selector="Button.play">
         <Setter Property="Width" Value="56" />
         <Setter Property="Height" Value="56" />

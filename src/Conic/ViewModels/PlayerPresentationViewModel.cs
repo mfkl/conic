@@ -21,11 +21,16 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
     private string _durationText = "00:00";
     private bool _isPlaying;
     private bool _isAlwaysOnTop;
+    private bool _isMuted;
+    private double _playbackRate = 1;
+    private string _mediaTitle = "Conic";
+    private bool _isFullscreen;
 
     public PlayerPresentationViewModel(
         IPlayerTransport transport,
         IMediaSourcePicker mediaSourcePicker,
-        Action openTestMedia)
+        Action openTestMedia,
+        Action? toggleFullscreen = null)
     {
         _transport = transport;
         _mediaSourcePicker = mediaSourcePicker;
@@ -38,12 +43,22 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
         registry.Register(new(PlayerCommandId.Stop, "Stop", "Playback"), _ => _transport.Stop());
         registry.Register(new(PlayerCommandId.Seek, "Seek", "Playback"), parameter => _transport.Seek(ToDouble(parameter)));
         registry.Register(new(PlayerCommandId.SetVolume, "Set volume", "Audio"), parameter => _transport.SetVolume(ToDouble(parameter) / 100));
+        registry.Register(new(PlayerCommandId.ToggleMute, "Mute", "Audio", "M"), _ => _transport.SetMuted(!IsMuted));
+        registry.Register(new(PlayerCommandId.SkipBackward, "Skip backward", "Playback", "Alt+Left"), _ => _transport.Skip(TimeSpan.FromSeconds(-10)), _ => CanSeek);
+        registry.Register(new(PlayerCommandId.SkipForward, "Skip forward", "Playback", "Alt+Right"), _ => _transport.Skip(TimeSpan.FromSeconds(10)), _ => CanSeek);
+        registry.Register(new(PlayerCommandId.SetPlaybackRate, "Playback speed", "Playback"), parameter => _transport.SetPlaybackRate(Math.Clamp(ToDouble(parameter), 1d / 32, 31.25)));
+        registry.Register(new(PlayerCommandId.ToggleFullscreen, "Fullscreen", "Window", "F11"), _ => toggleFullscreen?.Invoke(), _ => toggleFullscreen is not null);
         registry.Register(new(PlayerCommandId.SetAlwaysOnTop, "Always on top", "Window"), parameter => IsAlwaysOnTop = parameter is true);
 
         OpenMediaCommand = new RegistryCommand(registry, PlayerCommandId.OpenMedia);
         OpenTestMediaCommand = new RegistryCommand(registry, PlayerCommandId.OpenTestMedia);
         TogglePauseCommand = new RegistryCommand(registry, PlayerCommandId.TogglePause);
         StopCommand = new RegistryCommand(registry, PlayerCommandId.Stop);
+        ToggleMuteCommand = new RegistryCommand(registry, PlayerCommandId.ToggleMute);
+        SkipBackwardCommand = new RegistryCommand(registry, PlayerCommandId.SkipBackward);
+        SkipForwardCommand = new RegistryCommand(registry, PlayerCommandId.SkipForward);
+        SetPlaybackRateCommand = new RegistryCommand(registry, PlayerCommandId.SetPlaybackRate);
+        ToggleFullscreenCommand = new RegistryCommand(registry, PlayerCommandId.ToggleFullscreen);
         SetAlwaysOnTopCommand = new RegistryCommand(registry, PlayerCommandId.SetAlwaysOnTop);
     }
 
@@ -52,6 +67,11 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
     public ICommand OpenTestMediaCommand { get; }
     public ICommand TogglePauseCommand { get; }
     public ICommand StopCommand { get; }
+    public ICommand ToggleMuteCommand { get; }
+    public ICommand SkipBackwardCommand { get; }
+    public ICommand SkipForwardCommand { get; }
+    public ICommand SetPlaybackRateCommand { get; }
+    public ICommand ToggleFullscreenCommand { get; }
     public ICommand SetAlwaysOnTopCommand { get; }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -86,6 +106,18 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
     public string DurationText { get => _durationText; private set => Set(ref _durationText, value); }
     public bool IsPlaying { get => _isPlaying; private set => Set(ref _isPlaying, value); }
     public bool IsAlwaysOnTop { get => _isAlwaysOnTop; set => Set(ref _isAlwaysOnTop, value); }
+    public bool IsMuted
+    {
+        get => _isMuted;
+        private set
+        {
+            if (Set(ref _isMuted, value)) OnPropertyChanged(nameof(MuteGlyph));
+        }
+    }
+    public string MuteGlyph => IsMuted ? "🔇" : "🔊";
+    public double PlaybackRate { get => _playbackRate; private set => Set(ref _playbackRate, value); }
+    public string MediaTitle { get => _mediaTitle; private set => Set(ref _mediaTitle, value); }
+    public bool IsFullscreen { get => _isFullscreen; set => Set(ref _isFullscreen, value); }
 
     public void BeginSeek() => _isSeeking = CanSeek;
 
@@ -107,7 +139,12 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
                 Position = state.Position;
             CanSeek = state.CanSeek;
             OnPropertyChanged(nameof(CanSeek));
+            (SkipBackwardCommand as RegistryCommand)?.RaiseCanExecuteChanged();
+            (SkipForwardCommand as RegistryCommand)?.RaiseCanExecuteChanged();
             Volume = state.Volume * 100;
+            IsMuted = state.IsMuted;
+            PlaybackRate = state.PlaybackRate;
+            MediaTitle = string.IsNullOrWhiteSpace(state.Title) ? "Conic" : state.Title;
             if (!_isSeeking)
                 ElapsedText = FormatTime(state.Elapsed);
             DurationText = FormatTime(state.Duration);

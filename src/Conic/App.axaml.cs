@@ -18,6 +18,12 @@ public partial class App : Application
             MainWindow window = new();
             desktop.MainWindow = window;
             if (desktop.Args?.Contains(
+                    "--adapter-mismatch-smoke",
+                    StringComparer.OrdinalIgnoreCase) == true)
+            {
+                window.EnableAdapterMismatchSmoke(desktop);
+            }
+            else if (desktop.Args?.Contains(
                     "--ui-smoke",
                     StringComparer.OrdinalIgnoreCase) == true)
             {

@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
@@ -26,15 +27,22 @@ public sealed class CompositionVideoSurface : Control, IDisposable
     private CompositionDrawingSurface? _drawingSurface;
     private CompositionSurfaceVisual? _surfaceVisual;
     private ulong _importedGeneration;
+    private CompositionPluginBridge.AdapterLuid? _compositorAdapter;
     private int _videoWidth;
     private int _videoHeight;
     private bool _GPUUpdatePending;
     private bool _GPUEnabled;
     private bool _reportedFirstGPUFrame;
+    private bool _reportedFirstCPUFrame;
     private bool _attached;
+
+    internal bool ForceUnavailableAdapterForSmoke { get; set; }
+
+    internal bool ProbeSharedTextureForSmoke { get; set; }
 
     public event Action<string>? StatusChanged;
     public event EventHandler<MediaEngineState>? EngineStateChanged;
+    internal event Action<ulong, ulong, string>? GPUFramePresentedForSmoke;
 
     public string? MediaPath
     {
@@ -67,12 +75,9 @@ public sealed class CompositionVideoSurface : Control, IDisposable
         try
         {
             _bridge = new CompositionPluginBridge();
-            _player = new VLCCorePlayer();
-            _player.StateChanged += OnEngineStateChanged;
+            _bridge.ClearAdapterSelection();
             _ = InitializeGPUCompositionAsync();
             _frameTimer.Start();
-            if (!string.IsNullOrWhiteSpace(MediaPath))
-                _player.Open(MediaPath);
             ReportStatus("Managed vout ready (initializing D3D11 sharing)");
         }
         catch (Exception exception)
@@ -108,6 +113,14 @@ public sealed class CompositionVideoSurface : Control, IDisposable
         _player?.SetVolume(normalizedVolume);
 
     public void Stop() => _player?.Stop();
+
+    internal void ReopenForSmoke()
+    {
+        if (_player is null || string.IsNullOrWhiteSpace(MediaPath))
+            throw new InvalidOperationException(
+                "The smoke player has no media to reopen.");
+        _player.Open(MediaPath);
+    }
 
     private void OnEngineStateChanged(
         object? sender,
@@ -153,6 +166,9 @@ public sealed class CompositionVideoSurface : Control, IDisposable
                 return;
             }
 
+            CompositionPluginBridge.AdapterLuid compositorAdapter =
+                ParseAdapterLuid(interop.DeviceLuid);
+
             CompositionGpuImportedImageSynchronizationCapabilities sync =
                 interop.GetSynchronizationCapabilities(
                     KnownPlatformGraphicsExternalImageHandleTypes
@@ -166,23 +182,72 @@ public sealed class CompositionVideoSurface : Control, IDisposable
             }
 
             _GPUInterop = interop;
+            _compositorAdapter = compositorAdapter;
             _drawingSurface = elementVisual.Compositor.CreateDrawingSurface();
             _surfaceVisual = elementVisual.Compositor.CreateSurfaceVisual();
             _surfaceVisual.Surface = _drawingSurface;
             _surfaceVisual.ClipToBounds = true;
             ElementComposition.SetElementChildVisual(this, _surfaceVisual);
+            CompositionPluginBridge.AdapterLuid requestedAdapter =
+                ForceUnavailableAdapterForSmoke
+                    ? new CompositionPluginBridge.AdapterLuid(
+                        compositorAdapter.LowPart ^ uint.MaxValue,
+                        compositorAdapter.HighPart ^ int.MinValue)
+                    : compositorAdapter;
+            _bridge?.ConfigureAdapter(requestedAdapter);
             _GPUEnabled = true;
             _bridge?.EnableGPUFrames();
-            ReportStatus("D3D11 shared-texture composition active");
+            ReportStatus(
+                "D3D11 shared-texture composition active; " +
+                $"Avalonia adapter={compositorAdapter}");
         }
         catch (Exception exception)
         {
+            _bridge?.ClearAdapterSelection();
             ReportStatus($"GPU composition unavailable: {exception.Message}");
+        }
+        finally
+        {
+            StartPlayerAfterAdapterSelection();
+        }
+    }
+
+    private static CompositionPluginBridge.AdapterLuid ParseAdapterLuid(
+        byte[]? bytes)
+    {
+        if (bytes is null || bytes.Length != 8)
+        {
+            throw new InvalidOperationException(
+                "Avalonia compositor did not expose an 8-byte D3D adapter LUID.");
+        }
+
+        return new CompositionPluginBridge.AdapterLuid(
+            BinaryPrimitives.ReadUInt32LittleEndian(bytes.AsSpan(0, 4)),
+            BinaryPrimitives.ReadInt32LittleEndian(bytes.AsSpan(4, 4)));
+    }
+
+    private void StartPlayerAfterAdapterSelection()
+    {
+        if (!_attached || _player is not null)
+            return;
+
+        try
+        {
+            _player = new VLCCorePlayer();
+            _player.StateChanged += OnEngineStateChanged;
+            if (!string.IsNullOrWhiteSpace(MediaPath))
+                _player.Open(MediaPath);
+        }
+        catch (Exception exception)
+        {
+            ReportStatus($"VLC startup failed: {exception.Message}");
         }
     }
 
     private async Task PresentLatestFrameAsync()
     {
+        ProcessLatestTelemetry();
+
         if (_GPUEnabled && !_GPUUpdatePending &&
             _bridge?.TryTakeLatestGPU(
                 out CompositionPluginBridge.GPUFrame? GPUFrame) == true &&
@@ -212,6 +277,60 @@ public sealed class CompositionVideoSurface : Control, IDisposable
 
         CopyFrameToBitmap(frame, _bitmap);
 
+        if (!_reportedFirstCPUFrame)
+        {
+            _reportedFirstCPUFrame = true;
+            ReportStatus("CPU BGRA fallback frame presented");
+        }
+
+        InvalidateVisual();
+    }
+
+    private void ProcessLatestTelemetry()
+    {
+        if (_bridge?.TryTakeLatestTelemetry(
+                out CompositionPluginBridge.DeviceTelemetry? telemetry) !=
+            true || telemetry is null)
+        {
+            return;
+        }
+
+        bool adapterMatches =
+            _compositorAdapter is { } compositorAdapter &&
+            telemetry.ActualAdapter == compositorAdapter;
+        Console.WriteLine(
+            "[composition-telemetry] " +
+            $"avalonia-adapter-luid={_compositorAdapter?.ToString() ?? "none"} " +
+            $"producer-adapter-luid={telemetry.ActualAdapter?.ToString() ?? "none"} " +
+            $"adapter-match={adapterMatches.ToString().ToLowerInvariant()}");
+
+        if (telemetry.FallbackReason != "none" || !adapterMatches)
+        {
+            DisableGPUForFallback(
+                telemetry.FallbackReason != "none"
+                    ? telemetry.FallbackReason
+                    : "adapter-mismatch");
+        }
+    }
+
+    private void DisableGPUForFallback(string reason)
+    {
+        if (!_GPUEnabled)
+            return;
+        _GPUEnabled = false;
+        _bridge?.DisableGPUFrames();
+        ElementComposition.SetElementChildVisual(this, null);
+        if (_importedImage is not null)
+        {
+            _ = _importedImage.DisposeAsync();
+            _importedImage = null;
+        }
+        _drawingSurface?.Dispose();
+        _drawingSurface = null;
+        _surfaceVisual = null;
+        _GPUInterop = null;
+        _importedGeneration = 0;
+        ReportStatus($"D3D11 producer fallback={reason}; using CPU BGRA fallback");
         InvalidateVisual();
     }
 
@@ -239,11 +358,26 @@ public sealed class CompositionVideoSurface : Control, IDisposable
             return;
         }
 
+        if (_compositorAdapter is null ||
+            frame.Adapter != _compositorAdapter.Value)
+        {
+            DisableGPUForFallback("adapter-mismatch");
+            return;
+        }
+
         _GPUUpdatePending = true;
         try
         {
+            if (ProbeSharedTextureForSmoke && !_reportedFirstGPUFrame)
+            {
+                string probe =
+                    D3D11SharedTextureProbe.OpenAndSynchronize(frame);
+                Console.WriteLine(
+                    $"[composition-ui-smoke] producer-probe={probe}");
+            }
+
             if (_importedImage is null ||
-                _importedGeneration != frame.Generation)
+                _importedGeneration != frame.ResourceGeneration)
             {
                 ICompositionImportedGpuImage? oldImage = _importedImage;
                 _importedImage = _GPUInterop.ImportImage(
@@ -260,7 +394,7 @@ public sealed class CompositionVideoSurface : Control, IDisposable
                         TopLeftOrigin = true,
                     });
                 await _importedImage.ImportCompleted;
-                _importedGeneration = frame.Generation;
+                _importedGeneration = frame.ResourceGeneration;
                 if (oldImage is not null)
                     await oldImage.DisposeAsync();
             }
@@ -272,6 +406,10 @@ public sealed class CompositionVideoSurface : Control, IDisposable
                 _importedImage,
                 1,
                 0);
+            GPUFramePresentedForSmoke?.Invoke(
+                frame.DeviceGeneration,
+                frame.ResourceGeneration,
+                frame.Adapter.ToString());
             if (!_reportedFirstGPUFrame)
             {
                 _reportedFirstGPUFrame = true;
@@ -352,8 +490,11 @@ public sealed class CompositionVideoSurface : Control, IDisposable
         _drawingSurface = null;
         _surfaceVisual = null;
         _GPUInterop = null;
+        _compositorAdapter = null;
+        _importedGeneration = 0;
         _GPUEnabled = false;
         _reportedFirstGPUFrame = false;
+        _reportedFirstCPUFrame = false;
         _bitmap?.Dispose();
         _bitmap = null;
     }

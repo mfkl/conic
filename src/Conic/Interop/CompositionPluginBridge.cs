@@ -6,12 +6,55 @@ namespace Conic.Interop;
 
 internal sealed unsafe class CompositionPluginBridge : IDisposable
 {
+    internal readonly record struct AdapterLuid(uint LowPart, int HighPart)
+    {
+        public override string ToString() =>
+            $"{unchecked((uint)HighPart):X8}:{LowPart:X8}";
+    }
+
     internal sealed record GPUFrame(
         nint SharedHandle,
         int Width,
         int Height,
-        ulong Generation,
+        ulong ResourceGeneration,
+        ulong DeviceGeneration,
+        AdapterLuid Adapter,
         long PresentationTimestamp);
+
+    internal sealed record DeviceTelemetry(
+        AdapterLuid RequestedAdapter,
+        AdapterLuid? ActualAdapter,
+        ulong DeviceGeneration,
+        uint SourceChroma,
+        int SourceDXGIFormat,
+        string FallbackReason,
+        int NativeResult)
+    {
+        public string SourceChromaName => FourCCToString(SourceChroma);
+
+        public string ToMachineReadableString() =>
+            "[composition-telemetry] " +
+            $"adapter-luid={ActualAdapter?.ToString() ?? "none"} " +
+            $"requested-adapter-luid={RequestedAdapter} " +
+            $"device-generation={DeviceGeneration} " +
+            $"source-chroma={SourceChromaName} " +
+            $"source-dxgi-format={SourceDXGIFormat} " +
+            $"fallback-reason={FallbackReason} " +
+            $"native-result=0x{NativeResult:X8}";
+
+        private static string FourCCToString(uint value)
+        {
+            Span<char> characters = stackalloc char[4];
+            for (int index = 0; index < characters.Length; index++)
+            {
+                byte character = (byte)(value >> (index * 8));
+                characters[index] = character is >= 0x20 and <= 0x7e
+                    ? (char)character
+                    : '?';
+            }
+            return new string(characters);
+        }
+    }
 
     internal sealed record Frame(
         int Width,
@@ -26,15 +69,22 @@ internal sealed unsafe class CompositionPluginBridge : IDisposable
     private readonly delegate* unmanaged[Cdecl]<nint, nint, void> _setGPUCallback;
     private readonly delegate* unmanaged[Cdecl]<nint, nint, void>
         _setPlaylistCallback;
+    private readonly delegate* unmanaged[Cdecl]<uint, int, int, void>
+        _setAdapterLuid;
+    private readonly delegate* unmanaged[Cdecl]<nint, nint, void>
+        _setTelemetryCallback;
     private readonly ManualResetEventSlim _playlistReady = new(false);
     private GCHandle _selfHandle;
     private nint _opaque;
     private Frame? _latestFrame;
     private GPUFrame? _latestGPUFrame;
+    private DeviceTelemetry? _latestTelemetry;
     private nint _playlist;
     private bool _frameConnected;
     private bool _GPUConnected;
     private bool _playlistConnected;
+    private bool _telemetryConnected;
+    private bool _ownsAdapterSelection;
     private int _disposed;
 
     public string PluginDirectory { get; }
@@ -59,6 +109,16 @@ internal sealed unsafe class CompositionPluginBridge : IDisposable
             "vlc_avalonia_set_playlist_callback");
         _setPlaylistCallback =
             (delegate* unmanaged[Cdecl]<nint, nint, void>)playlistSetter;
+        nint adapterSetter = NativeLibrary.GetExport(
+            _library,
+            "vlc_avalonia_set_adapter_luid");
+        _setAdapterLuid =
+            (delegate* unmanaged[Cdecl]<uint, int, int, void>)adapterSetter;
+        nint telemetrySetter = NativeLibrary.GetExport(
+            _library,
+            "vlc_avalonia_set_device_telemetry_callback");
+        _setTelemetryCallback =
+            (delegate* unmanaged[Cdecl]<nint, nint, void>)telemetrySetter;
 
         _selfHandle = GCHandle.Alloc(this);
         _opaque = GCHandle.ToIntPtr(_selfHandle);
@@ -70,13 +130,48 @@ internal sealed unsafe class CompositionPluginBridge : IDisposable
                     (nint)(delegate* unmanaged[Cdecl]<nint, uint, uint, int, nint, long, void>)&OnFrame,
                     _opaque);
                 _frameConnected = true;
+
+                _setTelemetryCallback(
+                    (nint)(delegate* unmanaged[Cdecl]<nint, uint, int, uint, int, int, ulong, uint, int, int, int, void>)&OnDeviceTelemetry,
+                    _opaque);
+                _telemetryConnected = true;
             }
         }
         catch
         {
+            if (_telemetryConnected)
+            {
+                _setTelemetryCallback(0, 0);
+                _telemetryConnected = false;
+            }
+            if (_frameConnected)
+            {
+                _setCallback(0, 0);
+                _frameConnected = false;
+            }
             _opaque = 0;
             _selfHandle.Free();
             throw;
+        }
+    }
+
+    public void ConfigureAdapter(AdapterLuid adapter)
+    {
+        lock (_lifecycleGate)
+        {
+            ThrowIfDisposed();
+            _setAdapterLuid(adapter.LowPart, adapter.HighPart, 1);
+            _ownsAdapterSelection = true;
+        }
+    }
+
+    public void ClearAdapterSelection()
+    {
+        lock (_lifecycleGate)
+        {
+            ThrowIfDisposed();
+            _setAdapterLuid(0, 0, 0);
+            _ownsAdapterSelection = true;
         }
     }
 
@@ -156,7 +251,7 @@ internal sealed unsafe class CompositionPluginBridge : IDisposable
             if (_GPUConnected)
                 return;
             _setGPUCallback(
-                (nint)(delegate* unmanaged[Cdecl]<nint, nint, uint, uint, ulong, long, void>)&OnGPUFrame,
+                (nint)(delegate* unmanaged[Cdecl]<nint, nint, uint, uint, ulong, ulong, uint, int, long, void>)&OnGPUFrame,
                 _opaque);
             _GPUConnected = true;
         }
@@ -185,6 +280,12 @@ internal sealed unsafe class CompositionPluginBridge : IDisposable
     {
         frame = Interlocked.Exchange(ref _latestFrame, null);
         return frame is not null;
+    }
+
+    public bool TryTakeLatestTelemetry(out DeviceTelemetry? telemetry)
+    {
+        telemetry = Interlocked.Exchange(ref _latestTelemetry, null);
+        return telemetry is not null;
     }
 
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
@@ -257,7 +358,10 @@ internal sealed unsafe class CompositionPluginBridge : IDisposable
         nint sharedHandle,
         uint width,
         uint height,
-        ulong generation,
+        ulong resourceGeneration,
+        ulong deviceGeneration,
+        uint adapterLowPart,
+        int adapterHighPart,
         long presentationTimestamp)
     {
         try
@@ -274,13 +378,66 @@ internal sealed unsafe class CompositionPluginBridge : IDisposable
                     sharedHandle,
                     (int)width,
                     (int)height,
-                    generation,
+                    resourceGeneration,
+                    deviceGeneration,
+                    new AdapterLuid(adapterLowPart, adapterHighPart),
                     presentationTimestamp));
         }
         catch
         {
         }
     }
+
+    [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
+    private static void OnDeviceTelemetry(
+        nint opaque,
+        uint requestedLowPart,
+        int requestedHighPart,
+        uint actualLowPart,
+        int actualHighPart,
+        int actualAdapterKnown,
+        ulong deviceGeneration,
+        uint sourceChroma,
+        int sourceDXGIFormat,
+        int fallbackReason,
+        int nativeResult)
+    {
+        try
+        {
+            CompositionPluginBridge? bridge = GetBridge(opaque);
+            if (bridge is null || bridge.IsDisposed)
+                return;
+
+            DeviceTelemetry telemetry = new(
+                new AdapterLuid(requestedLowPart, requestedHighPart),
+                actualAdapterKnown != 0
+                    ? new AdapterLuid(actualLowPart, actualHighPart)
+                    : null,
+                deviceGeneration,
+                sourceChroma,
+                sourceDXGIFormat,
+                FallbackReasonName(fallbackReason),
+                nativeResult);
+            Interlocked.Exchange(ref bridge._latestTelemetry, telemetry);
+            Console.WriteLine(telemetry.ToMachineReadableString());
+        }
+        catch
+        {
+        }
+    }
+
+    private static string FallbackReasonName(int fallbackReason) =>
+        fallbackReason switch
+        {
+            0 => "none",
+            1 => "adapter-not-configured",
+            2 => "requested-adapter-unavailable",
+            3 => "producer-device-creation-failed",
+            4 => "adapter-mismatch",
+            5 => "multithread-protection-unavailable",
+            6 => "texture-upload-failed",
+            _ => $"unknown-{fallbackReason}",
+        };
 
     private static CompositionPluginBridge? GetBridge(nint opaque)
     {
@@ -357,6 +514,11 @@ internal sealed unsafe class CompositionPluginBridge : IDisposable
                 _setGPUCallback(0, 0);
                 _GPUConnected = false;
             }
+            if (_telemetryConnected)
+            {
+                _setTelemetryCallback(0, 0);
+                _telemetryConnected = false;
+            }
             if (_frameConnected)
             {
                 _setCallback(0, 0);
@@ -366,6 +528,12 @@ internal sealed unsafe class CompositionPluginBridge : IDisposable
             Volatile.Write(ref _playlist, 0);
             Interlocked.Exchange(ref _latestFrame, null);
             Interlocked.Exchange(ref _latestGPUFrame, null);
+            Interlocked.Exchange(ref _latestTelemetry, null);
+            if (_ownsAdapterSelection)
+            {
+                _setAdapterLuid(0, 0, 0);
+                _ownsAdapterSelection = false;
+            }
             _playlistReady.Dispose();
 
             // The native setters return only after in-flight callbacks have

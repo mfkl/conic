@@ -21,7 +21,7 @@ internal static class CompositionSmoke
         try
         {
             using CompositionPluginBridge bridge = new();
-            bridge.EnableGPUFrames();
+            bridge.ClearAdapterSelection();
             using VLCCorePlayer player = new();
             player.StateChanged += (_, state) =>
                 Console.WriteLine(
@@ -31,14 +31,14 @@ internal static class CompositionSmoke
             Stopwatch timeout = Stopwatch.StartNew();
             while (timeout.Elapsed < TimeSpan.FromSeconds(15))
             {
-                if (bridge.TryTakeLatestGPU(
-                        out CompositionPluginBridge.GPUFrame? frame) &&
+                if (bridge.TryTakeLatest(
+                        out CompositionPluginBridge.Frame? frame) &&
                     frame is not null)
                 {
-                    string texture =
-                        D3D11SharedTextureProbe.OpenAndSynchronize(frame);
                     Console.WriteLine(
-                        $"[composition-smoke] GPU shared texture={texture} " +
+                        "[composition-smoke] path=cpu-bgra " +
+                        $"size={frame.Width}x{frame.Height} " +
+                        $"row-bytes={frame.RowBytes} " +
                         $"pts={frame.PresentationTimestamp}");
                     Thread.Sleep(500);
                     return 0;
@@ -48,7 +48,8 @@ internal static class CompositionSmoke
             }
 
             Console.Error.WriteLine(
-                "[composition-smoke] No frame arrived within 15 seconds.");
+                "[composition-smoke] No CPU fallback frame arrived within " +
+                "15 seconds.");
             return 1;
         }
         catch (Exception exception)

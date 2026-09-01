@@ -144,8 +144,8 @@ public sealed class MediaHistoryService(IMediaHistoryStorage storage, Func<DateT
     private void Save(MediaHistoryDocument document) { storage.WriteAtomically(JsonSerializer.Serialize(document, Options)); _document = document; }
     private static MediaHistoryDocument Normalize(MediaHistoryDocument value)
     {
-        List<RecentMediaEntry> recent = value.Recent.GroupBy(x => KeyFromCanonicalSource(x.Source), StringComparer.Ordinal).Select(x => x.OrderByDescending(y => y.LastOpenedUtc).First()).OrderByDescending(x => x.LastOpenedUtc).Take(50).ToList();
-        List<ResumeEntry> resume = value.Resume.GroupBy(x => KeyFromCanonicalSource(x.Source), StringComparer.Ordinal).Select(x => x.OrderByDescending(y => y.UpdatedUtc).First()).OrderByDescending(x => x.UpdatedUtc).Take(50).ToList();
+        List<RecentMediaEntry> recent = (value.Recent ?? []).GroupBy(x => KeyFromCanonicalSource(x.Source), StringComparer.Ordinal).Select(x => x.OrderByDescending(y => y.LastOpenedUtc).First()).OrderByDescending(x => x.LastOpenedUtc).Take(50).ToList();
+        List<ResumeEntry> resume = (value.Resume ?? []).GroupBy(x => KeyFromCanonicalSource(x.Source), StringComparer.Ordinal).Select(x => x.OrderByDescending(y => y.UpdatedUtc).First()).OrderByDescending(x => x.UpdatedUtc).Take(50).ToList();
         return new(MediaHistoryDocument.CurrentVersion, recent, resume);
     }
 }

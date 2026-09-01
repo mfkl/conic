@@ -135,6 +135,16 @@
         <Setter Property="Height" Value="32" />
         <Setter Property="Padding" Value="10,0" />
     </Style>
+    <Style Selector="Window.compact-density Border#PlayerDock">
+        <Setter Property="Padding" Value="16,10" />
+        <Setter Property="CornerRadius" Value="16" />
+    </Style>
+    <Style Selector="Window.compact-density Border#SettingsPanel">
+        <Setter Property="Padding" Value="16" />
+    </Style>
+    <Style Selector="Button:focus">
+        <Setter Property="Background" Value="#40FF9A55" />
+    </Style>
     <Style Selector="TextBlock.settingBadge">
         <Setter Property="Background" Value="#2AFF9A55" />
         <Setter Property="Foreground" Value="#FFB77D" />

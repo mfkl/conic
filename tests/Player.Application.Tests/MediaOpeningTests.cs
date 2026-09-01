@@ -38,6 +38,25 @@ public sealed class MediaOpeningTests
         Assert.Equal(2, history.Recent.Count);
     }
     [Fact]
+    public void ResumeRemovalAndNearEndClearExistingEntry()
+    {
+        MemoryHistory storage = new(); MediaHistoryService history = new(storage);
+        MediaSource source = new("C:\\One.mp4", MediaSourceKind.File, "One");
+        history.Checkpoint(source, TimeSpan.FromSeconds(40), TimeSpan.FromMinutes(2), true, 30, 20);
+        history.RemoveResume(source.CanonicalSource); Assert.Null(history.FindResume(source));
+        history.Checkpoint(source, TimeSpan.FromSeconds(40), TimeSpan.FromMinutes(2), true, 30, 20);
+        history.Checkpoint(source, TimeSpan.FromSeconds(115), TimeSpan.FromMinutes(2), true, 30, 20);
+        Assert.Null(history.FindResume(source));
+    }
+    [Fact]
+    public void FileIdentityDeduplicatesCase()
+    {
+        MemoryHistory storage = new(); MediaHistoryService history = new(storage);
+        history.RecordOpened(new("C:\\A.mp4", MediaSourceKind.File, "A"), true);
+        history.RecordOpened(new("c:\\a.mp4", MediaSourceKind.File, "a"), true);
+        Assert.Single(history.Recent);
+    }
+    [Fact]
     public void HistoryDeduplicatesAndHonorsPrivacyAndThresholds()
     {
         MemoryHistory storage = new(); MediaHistoryService history = new(storage, () => DateTimeOffset.UnixEpoch);

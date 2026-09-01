@@ -461,7 +461,7 @@ Update this table only after validation and commit:
 | UI-01 | pending | `vlc-avalonia` | pending | pending | pending |
 | UI-02 | pending | `vlc-avalonia` | pending | pending | pending |
 | UI-03 | pending | `vlc-avalonia` | pending | pending | pending |
-| UI-04 | `ui_04` | `vlc-avalonia` / `feature/modern-player-ui` | `012806e..5467ff3` (qualified code tip `5467ff3`) | Debug+Release restore/build; tests 25 app + 72 UI + 7 engine each; Release layout/ui/engine-smoke (`cycles=1`) PASS | complete |
+| UI-04 | `ui_04` | `vlc-avalonia` / `feature/modern-player-ui` | `012806e..9a7a293` (qualified code tip `9a7a293`) | Debug+Release restore/build; tests 25 app + 72 UI + 7 engine each; Release layout/ui/engine-smoke (`cycles=1`) PASS, including transformed chrome, privacy-confirmation, and toast geometry | complete |
 | UI-05 | pending | TBD by UI-00 | pending | pending | pending |
 | UI-06 | pending | TBD by UI-00 | pending | pending | pending |
 | UI-07 | pending | TBD by UI-00 | pending | pending | pending |

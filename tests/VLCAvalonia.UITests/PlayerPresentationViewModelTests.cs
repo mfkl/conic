@@ -110,7 +110,60 @@ public sealed class PlayerPresentationViewModelTests
         Assert.Single(transport.Seeks); Assert.Equal(.2, transport.Seeks[0]); Assert.Null(history.FindResume(source));
     }
 
-    private static PlayerPresentationViewModel CreateOpeningViewModel(RecordingTransport transport) => new(transport, new EmptyPicker(), () => { }, sourceValidator: new MediaSourceValidator(new ExistingFiles()));
+    [Theory]
+    [InlineData(PlaybackStatus.Playing, 1)]
+    [InlineData(PlaybackStatus.Paused, 1)]
+    [InlineData(PlaybackStatus.Opening, 0)]
+    [InlineData(PlaybackStatus.Stopped, 0)]
+    [InlineData(PlaybackStatus.Faulted, 0)]
+    public void RecentIsRecordedOnlyForUsableMatchingStates(PlaybackStatus status, int expected)
+    {
+        RecordingTransport transport = new(); HistoryStorage storage = new(); MediaHistoryService history = new(storage);
+        PlayerPresentationViewModel vm = CreateOpeningViewModel(transport, history); vm.OpenSource("a.mp4", MediaSourceKind.File);
+        vm.ApplyEngineState(State(.2, status, true) with { Generation = 1, Source = "a.mp4" });
+        Assert.Equal(expected, history.Recent.Count);
+    }
+
+    [Fact]
+    public void MismatchedSourceNeverRecordsRecent()
+    {
+        HistoryStorage storage = new(); MediaHistoryService history = new(storage); PlayerPresentationViewModel vm = CreateOpeningViewModel(new RecordingTransport(), history);
+        vm.OpenSource("a.mp4", MediaSourceKind.File); vm.ApplyEngineState(State(.2, PlaybackStatus.Playing, true) with { Generation = 1, Source = "b.mp4" });
+        Assert.Empty(history.Recent);
+    }
+
+    [Fact]
+    public void ResumeIsHiddenUntilMatchingUsableStateAndDeclineDoesNotSeek()
+    {
+        RecordingTransport transport = new(); HistoryStorage storage = new(); MediaHistoryService history = SeedHistory(); PlayerPresentationViewModel vm = CreateOpeningViewModel(transport, history);
+        vm.OpenSource("a.mp4", MediaSourceKind.File); Assert.False(vm.HasPendingResume);
+        vm.ApplyEngineState(State(.2, PlaybackStatus.Playing, true) with { Generation = 1, Source = "a.mp4" }); Assert.True(vm.HasPendingResume);
+        vm.Registry.Execute(PlayerCommandId.DeclineResume); Assert.Empty(transport.Seeks); Assert.Null(history.FindResume(new("a.mp4", MediaSourceKind.File, "a")));
+    }
+
+    [Theory]
+    [InlineData(false, true, 40, 100, false)]
+    [InlineData(true, false, 40, 100, false)]
+    [InlineData(true, true, 29, 100, false)]
+    [InlineData(true, true, 80, 100, false)]
+    [InlineData(true, true, 30, 100, true)]
+    [InlineData(true, true, 79, 100, true)]
+    public void ResumeEligibilityHonorsPreferencesAndThresholdBoundaries(bool resumePlayback, bool rememberHistory, int position, int duration, bool expected)
+    {
+        HistoryStorage storage = new(); MediaHistoryService history = new(storage); MediaSource source = new("a.mp4", MediaSourceKind.File, "a");
+        history.Checkpoint(source, TimeSpan.FromSeconds(position), TimeSpan.FromSeconds(duration), true, 0, 0);
+        PlayerSettingsService settings = new(new SettingsStorage()); settings.Update(s => s with { ResumePlayback = resumePlayback, RememberResumeHistory = rememberHistory, ResumeMinimumElapsedSeconds = 30, ResumeMaximumRemainingSeconds = 20 });
+        PlayerPresentationViewModel vm = new(new RecordingTransport(), new EmptyPicker(), () => { }, settings: settings, sourceValidator: new MediaSourceValidator(new ExistingFiles()), history: history);
+        vm.OpenSource("a.mp4", MediaSourceKind.File); vm.ApplyEngineState(State(.1, PlaybackStatus.Playing, true) with { Generation = 1, Source = "a.mp4" });
+        Assert.Equal(expected, vm.HasPendingResume);
+    }
+
+    private static PlayerPresentationViewModel CreateOpeningViewModel(RecordingTransport transport, MediaHistoryService? history = null) => new(transport, new EmptyPicker(), () => { }, sourceValidator: new MediaSourceValidator(new ExistingFiles()), history: history);
+    private static MediaHistoryService SeedHistory()
+    {
+        MediaHistoryService history = new(new HistoryStorage()); history.Checkpoint(new("a.mp4", MediaSourceKind.File, "a"), TimeSpan.FromSeconds(40), TimeSpan.FromSeconds(100), true, 30, 20); return history;
+    }
+
 
     private static PlayerPresentationViewModel CreateViewModel(
         RecordingTransport transport) => new(transport, new EmptyPicker(), () => { });

@@ -111,10 +111,9 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
         get => _isMuted;
         private set
         {
-            if (Set(ref _isMuted, value)) OnPropertyChanged(nameof(MuteGlyph));
+            Set(ref _isMuted, value);
         }
     }
-    public string MuteGlyph => IsMuted ? "🔇" : "🔊";
     public double PlaybackRate { get => _playbackRate; private set => Set(ref _playbackRate, value); }
     public string MediaTitle { get => _mediaTitle; private set => Set(ref _mediaTitle, value); }
     public bool IsFullscreen { get => _isFullscreen; set => Set(ref _isFullscreen, value); }
@@ -165,6 +164,7 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
         double value => value,
         float value => value,
         int value => value,
+        string value when double.TryParse(value, System.Globalization.CultureInfo.InvariantCulture, out double parsed) => parsed,
         _ => 0,
     };
 

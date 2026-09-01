@@ -112,6 +112,12 @@ public sealed class CompositionVideoSurface : Control, IDisposable
     public void SetVolume(double normalizedVolume) =>
         _player?.SetVolume(normalizedVolume);
 
+    public void SetMuted(bool muted) => _player?.SetMuted(muted);
+
+    public void Skip(TimeSpan offset) => _player?.Skip(offset);
+
+    public void SetPlaybackRate(double playbackRate) => _player?.SetPlaybackRate(playbackRate);
+
     public void Stop() => _player?.Stop();
 
     internal void ReopenForSmoke()

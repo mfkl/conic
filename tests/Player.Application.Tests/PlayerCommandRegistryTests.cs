@@ -43,3 +43,19 @@ public sealed class PlayerCommandRegistryTests
         Assert.Throws<InvalidOperationException>(() => registry.Execute(PlayerCommandId.Stop));
     }
 }
+
+public sealed class ChromeVisibilityControllerTests
+{
+    [Fact]
+    public void FullscreenChromeNeverHidesDuringAnInteraction()
+    {
+        ChromeVisibilityController controller = new();
+        controller.SetFullscreen(true);
+
+        Assert.False(controller.TryHide(seekDragging: true, menuOpen: false, tooltipOpen: false, chromeFocused: false));
+        Assert.True(controller.IsVisible);
+        Assert.True(controller.TryHide(false, false, false, false));
+        controller.Wake();
+        Assert.True(controller.IsVisible);
+    }
+}

@@ -65,6 +65,19 @@ public sealed class MediaEngineStateStoreTests
     }
 
     [Fact]
+    public void PlaybackRateIsBoundedAndTitleIsDerivedFromTheMediaName()
+    {
+        MediaEngineStateStore store = new();
+        long generation = store.BeginOpen("C:/media/example.movie.mp4");
+
+        store.Update(generation, PlaybackStatus.Playing, 0, TimeSpan.Zero,
+            TimeSpan.FromSeconds(10), .5, true, playbackRate: 100);
+
+        Assert.Equal(31.25, store.State.PlaybackRate);
+        Assert.Equal("example.movie", store.State.Title);
+    }
+
+    [Fact]
     public void FaultTransitionsCurrentGenerationAndDisablesSeeking()
     {
         MediaEngineStateStore store = new();

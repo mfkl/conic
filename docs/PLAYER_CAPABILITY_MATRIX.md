@@ -1,7 +1,8 @@
 # Modern player capability matrix
 
-Status: UI-00 inventory, verified against `vlc-avalonia` at `b47340a` and the
-pinned sibling VLCLR revision `dca5e306785e389257843a9121e10bb500054d9b`.
+Status: UI-00 inventory with UI-06 verified product bindings at
+`b3708f9`; pinned sibling VLCLR revision
+`4ce5edc6c77efa4643894ec5de56a1db8a7422b9`.
 This is the product contract for the work packages in
 [UI_IMPLEMENTATION_PLAN.md](UI_IMPLEMENTATION_PLAN.md). A `Missing` row is a
 reason to keep its control absent or disabled with an explanatory capability
@@ -57,10 +58,10 @@ VLCLR coverage where noted.
 | Queue drawer, select, reorder, remove, clear | Missing. Plugin only lends a main-playlist pointer to the host; no queue model is exposed. | Generation-safe `IPlaylist`, immutable queue snapshots, dispatcher marshalling, mutation commands. | **VLCLR prerequisite Q1:** validated playlist item enumeration, add/remove/move/select/clear, navigation, callbacks, and explicit borrowed/held ownership rules. | Live; serialise mutations with playback and invalidate snapshots on generation change. | VLCLR ABI/layout tests, product queue tests, native reorder/remove smoke. | Daily-use |
 | Add-and-play vs enqueue; playlist load/save | Missing. | Source service plus queue commands and playlist document parser/writer. | Q1; verify native playlist import/export feasibility before exposing it. | Load/save is explicit user action; keep I/O outside engine thread. | Parser/security tests and queue smoke. | Advanced |
 | Repeat and shuffle | Missing, although VLCLR defines playlist-order/repeat constants only. | Queue mode commands and effective-mode snapshot. | **VLCLR prerequisite Q2:** reviewed setters/getters and change notification for playlist order/repeat. | Live; survives end-of-media and later reopen according to setting policy. | Native behavior smoke across end/reopen. | Daily-use |
-| Audio tracks / subtitle tracks | Missing. | Track-list snapshots, selected-track state, drawer/context commands, no-track capability presentation. | **VLCLR prerequisite T1:** input ES enumeration/selection/change notifications with safe string/ownership conversion. | Refresh on input/media generation; selection is live. | Multi-track native smoke and stale-update tests. | Daily-use |
-| Chapters | Missing. | Chapter snapshot, selection command, absent-chapter state. | **VLCLR prerequisite T2:** title/chapter enumeration, selection, and notification binding. | Refresh on media generation; selection is live. | Native chapter-selection smoke and stale-state/update tests. | Daily-use |
-| External audio / subtitle file | Missing. | Validated file action, result/error and track refresh. | **VLCLR prerequisite T3:** ABI-reviewed input option/control for external ES/subtitle attachment. | Usually live only after VLC accepts attachment; otherwise label as NextOpen. | Native attach and track-refresh smoke. | Advanced |
-| Audio / subtitle delay and reset | Missing. | Bounded millisecond commands, effective-value snapshot, reset command. | **VLCLR prerequisite T4:** exact typed delay controls and current-value reads. | Live per input; clear units and bounds. | Native delay smoke and bounds tests. | Daily-use |
+| Audio tracks / subtitle tracks | Working selection surface: immutable copied snapshots, coherent playback drawer/context menu, and fresh VLC readback. Empty/loading/error/unavailable states are explicit. | `MediaCapabilitiesState`, generation-safe commands and dispatcher presentation. | T1 (`VLCMediaCapabilities`). | Refresh on input/media generation; selection intent is not treated as effective until readback. | Release media-capabilities smoke and stale-state UI tests. | Daily-use |
+| Chapters | Working selection surface with title/chapter lists and empty state. | Same capability snapshot and selection commands. | T2 (`VLCMediaCapabilities`). | Refresh on media generation; selected chapter/title is read back from VLC. | Release media-capabilities smoke; fixture capabilities are reported as distinct Passed/Skipped phases. | Daily-use |
+| External audio / subtitle file | Working as a validated **pending-next-open** attachment only. The UI never lists it as a live current track without a later fresh T1 snapshot. | Picker/action and explicit pending result language. | T3 (`VLCMediaCapabilities`). | Next open only; no Reopen/Apply-now claim. | Release media-capabilities smoke creates and cleans a unique temporary SRT. | Advanced |
+| Audio / subtitle delay and reset | Working with direct signed millisecond entry, ±100 ms actions, and exact zero reset. | Bounded millisecond commands and effective delay snapshot. | T4 (`VLCMediaCapabilities`). | Live per current input after readback; product bound is ±10,000 ms, deliberately narrower than VLCLR's safety ceiling. | Release media-capabilities smoke and application/UI bounds tests. | Daily-use |
 | Aspect ratio, crop, zoom | Missing. `VLCVoutDisplay` has change-query constants, not product controls. | Video-adjustment contract and effective values. | **VLCLR prerequisite V1:** reviewed input/vout controls with supported-choice discovery and lifecycle rules. | Usually live, but may recreate output; capability depends on active vout. | Native adjustment smoke on CPU and opaque paths. | Advanced |
 | Deinterlace | Missing. | Video setting + media adjustment contract. | **VLCLR prerequisite V2:** reviewed startup/per-input control and available modes. | Mark NextOpen or Live only after native verification; do not infer. | Interlaced-fixture smoke. | Advanced |
 | Snapshot | Missing. | Snapshot command, output-path service, result/error reporting. | **VLCLR prerequisite V3:** reviewed snapshot trigger and completion/failure path. | Live only with active video output. | File-output and failure smoke. | Advanced |
@@ -70,8 +71,9 @@ VLCLR coverage where noted.
 ## Subtitle rendering contract
 
 The control for selecting a subtitle track is distinct from rendering that
-track. T1 can make selection available only when selection is verified. It
-does not establish parity for visual subtitle presentation.
+track. UI-06 makes selection available with an explicit UI caveat, but does
+not establish visual subtitle parity. It never converts image-based or styled
+subtitles to UI text.
 
 | Render path | Honest current status | Product claim allowed |
 |---|---|---|

@@ -258,6 +258,28 @@ internal sealed unsafe class VLCCorePlayer : IMediaEngine, IQueueTransport, IMed
         }
     }
 
+    internal T InvokeMediaCapabilityForSmoke<T>(Func<IVLCMediaCapabilitySmokeAdapter, T> action)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+        using ManualResetEventSlim completed = new(false);
+        T result = default!;
+        Exception? failure = null;
+        if (!QueueMediaRequest(() =>
+        {
+            try { result = action(_mediaControls); }
+            catch (Exception exception) { failure = exception; }
+            finally { completed.Set(); }
+        }))
+            throw new InvalidOperationException("The VLC media-capability dispatcher is unavailable.");
+        if (!completed.Wait(TimeSpan.FromSeconds(5)))
+            throw new TimeoutException("The VLC media-capability dispatcher did not respond.");
+        if (failure is not null) throw new InvalidOperationException("The VLC media-capability dispatcher failed.", failure);
+        return result;
+    }
+
+    internal void PollMediaCapabilitiesForSmoke() =>
+        _ = InvokeMediaCapabilityForSmoke(adapter => adapter.TryGetTracks(out _));
+
     public void Enqueue(IEnumerable<string> sources)
     {
         ThrowIfDisposed();

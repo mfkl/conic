@@ -544,11 +544,11 @@ internal static class CompositionSmoke
             File.WriteAllText(attachment, "1\n00:00:00,000 --> 00:00:01,000\nCapability smoke\n");
             player = new VLCCorePlayer(hardwareDecoding: false);
             OpenAndWait(player, mediaPath, "media-capabilities-open");
-            IVLCMediaCapabilitySmokeAdapter adapter = player;
+            IVLCMediaCapabilitySmokeAdapter adapter = new DispatchingMediaCapabilitySmokeAdapter(player);
             VLCTitleChapterSnapshot? titleSnapshot = adapter.TryGetTitlesAndChapters(out VLCMediaResult titleRead);
             VLCMediaSmokeReport report = VLCMediaCapabilitiesSmoke.RunAsync(
                 adapter,
-                _ => { Thread.Sleep(100); return ValueTask.CompletedTask; },
+                _ => { player.PollMediaCapabilitiesForSmoke(); return ValueTask.CompletedTask; },
                 new VLCMediaSmokeAttachment(attachment, VLCExternalTrackKind.Subtitle)).AsTask().GetAwaiter().GetResult();
             int passed = 0, skipped = 0, failed = 0;
             foreach (VLCMediaSmokeStep step in report.Steps)
@@ -581,6 +581,28 @@ internal static class CompositionSmoke
             try { player?.Dispose(); } catch (Exception exception) { Console.Error.WriteLine($"[media-capabilities-smoke] cleanup player: {exception.Message}"); }
             try { if (File.Exists(attachment)) File.Delete(attachment); } catch (Exception exception) { Console.Error.WriteLine($"[media-capabilities-smoke] cleanup attachment: {exception.Message}"); }
         }
+    }
+
+    private sealed class DispatchingMediaCapabilitySmokeAdapter(VLCCorePlayer player) : IVLCMediaCapabilitySmokeAdapter
+    {
+        public VLCTrackSnapshot? TryGetTracks(out VLCMediaResult result)
+        {
+            (VLCTrackSnapshot? Snapshot, VLCMediaResult Result) value = player.InvokeMediaCapabilityForSmoke(adapter => (adapter.TryGetTracks(out VLCMediaResult read), read)); result = value.Result; return value.Snapshot;
+        }
+        public VLCTitleChapterSnapshot? TryGetTitlesAndChapters(out VLCMediaResult result)
+        {
+            (VLCTitleChapterSnapshot? Snapshot, VLCMediaResult Result) value = player.InvokeMediaCapabilityForSmoke(adapter => (adapter.TryGetTitlesAndChapters(out VLCMediaResult read), read)); result = value.Result; return value.Snapshot;
+        }
+        public VLCMediaDelaySnapshot? TryGetDelays(out VLCMediaResult result)
+        {
+            (VLCMediaDelaySnapshot? Snapshot, VLCMediaResult Result) value = player.InvokeMediaCapabilityForSmoke(adapter => (adapter.TryGetDelays(out VLCMediaResult read), read)); result = value.Result; return value.Snapshot;
+        }
+        public VLCMediaResult SelectTrack(VLCTrackSnapshot snapshot, VLCTrackKind kind, long id) => player.InvokeMediaCapabilityForSmoke(adapter => adapter.SelectTrack(snapshot, kind, id));
+        public VLCMediaResult SelectTitle(VLCTitleChapterSnapshot snapshot, long id) => player.InvokeMediaCapabilityForSmoke(adapter => adapter.SelectTitle(snapshot, id));
+        public VLCMediaResult SelectChapter(VLCTitleChapterSnapshot snapshot, long id) => player.InvokeMediaCapabilityForSmoke(adapter => adapter.SelectChapter(snapshot, id));
+        public VLCMediaResult SetDelay(VLCMediaDelayKind kind, TimeSpan delay) => player.InvokeMediaCapabilityForSmoke(adapter => adapter.SetDelay(kind, delay));
+        public VLCMediaResult ResetDelay(VLCMediaDelayKind kind) => player.InvokeMediaCapabilityForSmoke(adapter => adapter.ResetDelay(kind));
+        public VLCExternalTrackAttachmentResult AttachExternalTrack(string path, VLCExternalTrackKind kind) => player.InvokeMediaCapabilityForSmoke(adapter => adapter.AttachExternalTrack(path, kind));
     }
 
     private static void WaitForOpaquePool(

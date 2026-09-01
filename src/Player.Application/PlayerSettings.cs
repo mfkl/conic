@@ -45,17 +45,19 @@ public sealed class PlayerSettingsService
         try
         {
             using JsonDocument json = JsonDocument.Parse(document);
-            int version = json.RootElement.TryGetProperty("Version", out JsonElement versionValue) ? versionValue.GetInt32() : 1;
+            int version = TryGet(json.RootElement, "Version", out JsonElement versionValue) ? versionValue.GetInt32() : 1;
             bool migrated = version != PlayerSettings.CurrentVersion;
             Current = Normalize(Migrate(json.RootElement, version));
             if (migrated)
                 _storage.WriteAtomically(JsonSerializer.Serialize(Current, JsonOptions));
+            LoadDiagnostic = null;
         }
         catch (Exception exception) when (exception is JsonException or IOException or UnauthorizedAccessException)
         {
             try { _storage.PreserveInvalid(document); } catch (Exception preserveException) when (preserveException is IOException or UnauthorizedAccessException) { }
             Current = PlayerSettings.Default;
             LoadDiagnostic = "Settings were invalid or unavailable; defaults are in use.";
+            try { _storage.WriteAtomically(JsonSerializer.Serialize(Current, JsonOptions)); } catch (Exception writeException) when (writeException is IOException or UnauthorizedAccessException) { }
         }
     }
 
@@ -96,8 +98,15 @@ public sealed class PlayerSettingsService
         _ => throw new JsonException("Unsupported settings version."),
     };
 
-    private static T Read<T>(JsonElement root, string name, T fallback) => root.TryGetProperty(name, out JsonElement value)
+    private static T Read<T>(JsonElement root, string name, T fallback) => TryGet(root, name, out JsonElement value)
         ? JsonSerializer.Deserialize<T>(value, JsonOptions) ?? fallback : fallback;
+
+    private static bool TryGet(JsonElement root, string name, out JsonElement value)
+    {
+        foreach (JsonProperty property in root.EnumerateObject())
+            if (string.Equals(property.Name, name, StringComparison.OrdinalIgnoreCase)) { value = property.Value; return true; }
+        value = default; return false;
+    }
 
     private static PlayerSettings Normalize(PlayerSettings value) => value with
     {

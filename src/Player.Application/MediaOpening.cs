@@ -34,7 +34,9 @@ public sealed class MediaSourceValidator(IMediaFileSystem fileSystem)
         {
             if (!Uri.TryCreate(value, UriKind.Absolute, out uri) || uri.Scheme is not ("http" or "https"))
                 return MediaOpenResult.Fail("Enter an http or https media URL.", "Unsupported URI scheme or malformed URL.");
-            UriBuilder builder = new(uri) { Scheme = uri.Scheme.ToLowerInvariant(), Host = uri.Host.ToLowerInvariant(), UserName = string.Empty, Password = string.Empty };
+            if (!string.IsNullOrEmpty(uri.UserInfo))
+                return MediaOpenResult.Fail("URLs with embedded credentials are not supported.", "The URL contains user-info credentials.");
+            UriBuilder builder = new(uri) { Scheme = uri.Scheme.ToLowerInvariant(), Host = uri.Host.ToLowerInvariant(), Fragment = string.Empty };
             if ((builder.Scheme == "http" && builder.Port == 80) || (builder.Scheme == "https" && builder.Port == 443)) builder.Port = -1;
             Uri canonical = builder.Uri;
             string authority = canonical.Scheme + "://" + canonical.Host + (canonical.IsDefaultPort ? string.Empty : ":" + canonical.Port);
@@ -54,7 +56,22 @@ public sealed class MediaSourceValidator(IMediaFileSystem fileSystem)
     }
 
     public static string Key(MediaSource source) => source.Kind == MediaSourceKind.NetworkUrl
-        ? source.CanonicalSource : source.CanonicalSource.ToUpperInvariant();
+        ? "url:" + source.CanonicalSource : "file:" + source.CanonicalSource.ToUpperInvariant();
+}
+
+public static class MediaEngineSourceNormalizer
+{
+    public static string Normalize(string source)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(source);
+        if (Uri.TryCreate(source, UriKind.Absolute, out Uri? uri) && !uri.IsFile)
+        {
+            if (uri.Scheme is not ("http" or "https") || !string.IsNullOrEmpty(uri.UserInfo) || !string.IsNullOrEmpty(uri.Fragment))
+                throw new ArgumentException("Only credential-free http and https URLs are supported.", nameof(source));
+            return source;
+        }
+        return Path.GetFullPath(source);
+    }
 }
 
 public sealed record RecentMediaEntry(string Source, string DisplayName, DateTimeOffset LastOpenedUtc);
@@ -64,7 +81,7 @@ public sealed record MediaHistoryDocument(int Version, List<RecentMediaEntry> Re
     public const int CurrentVersion = 1;
     public static MediaHistoryDocument Empty { get; } = new(CurrentVersion, [], []);
 }
-public interface IMediaHistoryStorage { string? Read(); void WriteAtomically(string content); }
+public interface IMediaHistoryStorage { string? Read(); void WriteAtomically(string content); void PreserveInvalid(string content) { } }
 
 public sealed class MediaHistoryService(IMediaHistoryStorage storage, Func<DateTimeOffset>? clock = null)
 {
@@ -73,10 +90,15 @@ public sealed class MediaHistoryService(IMediaHistoryStorage storage, Func<DateT
     private MediaHistoryDocument _document = MediaHistoryDocument.Empty;
     public IReadOnlyList<RecentMediaEntry> Recent => _document.Recent;
     public IReadOnlyList<ResumeEntry> Resume => _document.Resume;
+    public string? LoadDiagnostic { get; private set; }
     public void Load()
     {
-        try { _document = JsonSerializer.Deserialize<MediaHistoryDocument>(storage.Read() ?? "", Options) is { Version: MediaHistoryDocument.CurrentVersion } value ? value : MediaHistoryDocument.Empty; }
-        catch (JsonException) { _document = MediaHistoryDocument.Empty; }
+        string? raw;
+        try { raw = storage.Read(); }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { _document = MediaHistoryDocument.Empty; LoadDiagnostic = "Media history could not be read."; return; }
+        if (string.IsNullOrWhiteSpace(raw)) { _document = MediaHistoryDocument.Empty; return; }
+        try { _document = Normalize(JsonSerializer.Deserialize<MediaHistoryDocument>(raw, Options) is { Version: MediaHistoryDocument.CurrentVersion } value ? value : MediaHistoryDocument.Empty); LoadDiagnostic = null; }
+        catch (JsonException) { try { storage.PreserveInvalid(raw); storage.WriteAtomically(JsonSerializer.Serialize(MediaHistoryDocument.Empty, Options)); } catch (Exception e) when (e is IOException or UnauthorizedAccessException) { } _document = MediaHistoryDocument.Empty; LoadDiagnostic = "Media history was invalid and has been reset."; }
     }
     public void RecordOpened(MediaSource source, bool enabled)
     {
@@ -98,6 +120,17 @@ public sealed class MediaHistoryService(IMediaHistoryStorage storage, Func<DateT
     public void RemoveRecent(string source) => Save(_document with { Recent = _document.Recent.Where(x => !Same(x.Source, source)).ToList() });
     public void ClearRecent() => Save(_document with { Recent = [] });
     public void ClearResume() => Save(_document with { Resume = [] });
-    private static bool Same(string source, string key) => string.Equals(source, key, StringComparison.OrdinalIgnoreCase) || string.Equals(source.ToUpperInvariant(), key, StringComparison.Ordinal);
+    private static bool Same(string source, string key)
+    {
+        bool url = Uri.TryCreate(source, UriKind.Absolute, out Uri? uri) && !uri.IsFile;
+        string sourceKey = url ? "url:" + source : "file:" + source.ToUpperInvariant();
+        return string.Equals(sourceKey, key, StringComparison.Ordinal);
+    }
     private void Save(MediaHistoryDocument document) { storage.WriteAtomically(JsonSerializer.Serialize(document, Options)); _document = document; }
+    private static MediaHistoryDocument Normalize(MediaHistoryDocument value)
+    {
+        List<RecentMediaEntry> recent = value.Recent.GroupBy(x => x.Source, StringComparer.OrdinalIgnoreCase).Select(x => x.OrderByDescending(y => y.LastOpenedUtc).First()).OrderByDescending(x => x.LastOpenedUtc).Take(50).ToList();
+        List<ResumeEntry> resume = value.Resume.GroupBy(x => x.Source, StringComparer.OrdinalIgnoreCase).Select(x => x.OrderByDescending(y => y.UpdatedUtc).First()).OrderByDescending(x => x.UpdatedUtc).Take(50).ToList();
+        return new(MediaHistoryDocument.CurrentVersion, recent, resume);
+    }
 }

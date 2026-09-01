@@ -42,7 +42,7 @@ public partial class MainWindow : Window
         ApplyLiveSettings(_settings.Current);
         _autoHideTimer.Tick += (_, _) =>
         {
-            bool menuOpen = VideoArea.ContextMenu?.IsOpen ?? false;
+            bool menuOpen = VideoArea.ContextMenu?.IsOpen ?? false || SettingsPanel.IsVisible;
             bool chromeFocused = PlayerDock.IsKeyboardFocusWithin || TopChrome.IsKeyboardFocusWithin;
             bool popupOpen = menuOpen || VideoArea.IsKeyboardFocusWithin &&
                 (RightTransport.IsKeyboardFocusWithin || TopChrome.IsKeyboardFocusWithin);
@@ -77,7 +77,13 @@ public partial class MainWindow : Window
         _chromeVisibility.Wake();
         SetChromeVisibility(true);
         _autoHideTimer.Stop();
-        if (e.Source is TextBox) return;
+        if (e.Key == Key.Escape && SettingsPanel.IsVisible)
+        {
+            CloseSettings();
+            e.Handled = true;
+            return;
+        }
+        if (SettingsPanel.IsVisible || e.Source is TextBox) return;
         switch (e.Key)
         {
             case Key.OemComma when e.KeyModifiers.HasFlag(KeyModifiers.Control): _presentation.Registry.Execute(Player.Application.PlayerCommandId.OpenSettings); break;
@@ -110,7 +116,14 @@ public partial class MainWindow : Window
         Dispatcher.UIThread.Post(() => SettingsSearch.Focus());
     }
 
-    private void OnSettingsClose(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => SettingsPanel.IsVisible = false;
+    private void CloseSettings()
+    {
+        SettingsPanel.IsVisible = false;
+        TopChrome.Focus();
+        if (_presentation.IsFullscreen) { _autoHideTimer.Stop(); _autoHideTimer.Start(); }
+    }
+
+    private void OnSettingsClose(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => CloseSettings();
     private void OnSettingsSearchChanged(object? sender, TextChangedEventArgs e) => _settingsViewModel.Search = (sender as TextBox)?.Text ?? string.Empty;
 
     private void ApplyLiveSettings(PlayerSettings settings)

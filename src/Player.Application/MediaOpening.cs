@@ -116,21 +116,25 @@ public sealed class MediaHistoryService(IMediaHistoryStorage storage, Func<DateT
         entries.Insert(0, new(source.CanonicalSource, position, duration, _clock())); Save(_document with { Resume = entries.Take(50).ToList() });
     }
     public ResumeEntry? FindResume(MediaSource source) => _document.Resume.FirstOrDefault(x => Same(x.Source, MediaSourceValidator.Key(source)));
-    public void RemoveResume(string source) => Save(_document with { Resume = _document.Resume.Where(x => !Same(x.Source, source)).ToList() });
-    public void RemoveRecent(string source) => Save(_document with { Recent = _document.Recent.Where(x => !Same(x.Source, source)).ToList() });
+    public void RemoveResume(string source) => Save(_document with { Resume = _document.Resume.Where(x => !Same(x.Source, KeyFromCanonicalSource(source))).ToList() });
+    public void RemoveRecent(string source) => Save(_document with { Recent = _document.Recent.Where(x => !Same(x.Source, KeyFromCanonicalSource(source))).ToList() });
     public void ClearRecent() => Save(_document with { Recent = [] });
     public void ClearResume() => Save(_document with { Resume = [] });
     private static bool Same(string source, string key)
     {
-        bool url = Uri.TryCreate(source, UriKind.Absolute, out Uri? uri) && !uri.IsFile;
-        string sourceKey = url ? "url:" + source : "file:" + source.ToUpperInvariant();
+        string sourceKey = KeyFromCanonicalSource(source);
         return string.Equals(sourceKey, key, StringComparison.Ordinal);
+    }
+    private static string KeyFromCanonicalSource(string source)
+    {
+        bool url = Uri.TryCreate(source, UriKind.Absolute, out Uri? uri) && !uri.IsFile;
+        return url ? "url:" + source : "file:" + source.ToUpperInvariant();
     }
     private void Save(MediaHistoryDocument document) { storage.WriteAtomically(JsonSerializer.Serialize(document, Options)); _document = document; }
     private static MediaHistoryDocument Normalize(MediaHistoryDocument value)
     {
-        List<RecentMediaEntry> recent = value.Recent.GroupBy(x => x.Source, StringComparer.OrdinalIgnoreCase).Select(x => x.OrderByDescending(y => y.LastOpenedUtc).First()).OrderByDescending(x => x.LastOpenedUtc).Take(50).ToList();
-        List<ResumeEntry> resume = value.Resume.GroupBy(x => x.Source, StringComparer.OrdinalIgnoreCase).Select(x => x.OrderByDescending(y => y.UpdatedUtc).First()).OrderByDescending(x => x.UpdatedUtc).Take(50).ToList();
+        List<RecentMediaEntry> recent = value.Recent.GroupBy(x => KeyFromCanonicalSource(x.Source), StringComparer.Ordinal).Select(x => x.OrderByDescending(y => y.LastOpenedUtc).First()).OrderByDescending(x => x.LastOpenedUtc).Take(50).ToList();
+        List<ResumeEntry> resume = value.Resume.GroupBy(x => KeyFromCanonicalSource(x.Source), StringComparer.Ordinal).Select(x => x.OrderByDescending(y => y.UpdatedUtc).First()).OrderByDescending(x => x.UpdatedUtc).Take(50).ToList();
         return new(MediaHistoryDocument.CurrentVersion, recent, resume);
     }
 }

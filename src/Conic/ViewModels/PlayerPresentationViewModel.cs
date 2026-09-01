@@ -35,6 +35,9 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
     private long _recordedOpenGeneration = -1;
     private long _activeGeneration = -1;
     private bool _resumeReady;
+    private MediaEngineState? _lastState;
+    private DateTimeOffset _lastCheckpointUtc;
+    private readonly Func<DateTimeOffset> _clock;
 
     public PlayerPresentationViewModel(
         IPlayerTransport transport,
@@ -44,7 +47,8 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
         Action? openSettings = null,
         PlayerSettingsService? settings = null,
         MediaSourceValidator? sourceValidator = null,
-        MediaHistoryService? history = null)
+        MediaHistoryService? history = null,
+        Func<DateTimeOffset>? clock = null)
     {
         _transport = transport;
         _mediaSourcePicker = mediaSourcePicker;
@@ -52,6 +56,7 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
         _settings = settings;
         _sourceValidator = sourceValidator ?? new MediaSourceValidator(new SystemMediaFileSystem());
         _history = history;
+        _clock = clock ?? (() => DateTimeOffset.UtcNow);
         if (_settings is not null) _settings.Changed += (_, updated) =>
         {
             if (!updated.RememberRecentMedia) _history?.ClearRecent();
@@ -68,7 +73,7 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
         registry.Register(new(PlayerCommandId.DeclineResume, "Start from beginning", "Media"), _ => DeclineResume(), _ => _pendingResume is not null && _resumeReady);
         registry.Register(new(PlayerCommandId.OpenTestMedia, "Open test video", "Media"), _ => _openTestMedia());
         registry.Register(new(PlayerCommandId.TogglePause, "Play or pause", "Playback", "Space"), _ => _transport.TogglePause());
-        registry.Register(new(PlayerCommandId.Stop, "Stop", "Playback"), _ => _transport.Stop());
+        registry.Register(new(PlayerCommandId.Stop, "Stop", "Playback"), _ => { CheckpointCurrent(true); _transport.Stop(); });
         registry.Register(new(PlayerCommandId.Seek, "Seek", "Playback"), parameter => _transport.Seek(ToDouble(parameter)));
         registry.Register(new(PlayerCommandId.SetVolume, "Set volume", "Audio"), parameter => _transport.SetVolume(ToDouble(parameter) / 100));
         registry.Register(new(PlayerCommandId.ToggleMute, "Mute", "Audio", "M"), _ => _transport.SetMuted(!IsMuted));
@@ -185,6 +190,7 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
         _isUpdatingFromEngine = true;
         try
         {
+            _lastState = state;
             _duration = state.Duration;
             if (!_isSeeking)
                 Position = state.Position;
@@ -207,8 +213,8 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
                 if (_pendingResume is not null && state.Generation == _activeGeneration && state.CanSeek && state.Duration > TimeSpan.Zero)
                 { _resumeReady = true; OnPropertyChanged(nameof(HasPendingResume)); (AcceptResumeCommand as RegistryCommand)?.RaiseCanExecuteChanged(); (DeclineResumeCommand as RegistryCommand)?.RaiseCanExecuteChanged(); }
             }
-            if (_currentSource is not null && state.Status is PlaybackStatus.Playing or PlaybackStatus.Paused)
-                _history?.Checkpoint(_currentSource, state.Elapsed, state.Duration, _settings?.Current.RememberResumeHistory ?? true, _settings?.Current.ResumeMinimumElapsedSeconds ?? 30, _settings?.Current.ResumeMaximumRemainingSeconds ?? 30, state.CanSeek);
+            if (_currentSource is not null && state.Status is PlaybackStatus.Playing or PlaybackStatus.Paused && _clock() - _lastCheckpointUtc >= TimeSpan.FromSeconds(10))
+                CheckpointCurrent(false);
         }
         finally { _isUpdatingFromEngine = false; }
     }
@@ -231,21 +237,38 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
     {
         MediaOpenResult result = _sourceValidator.Validate(rawSource, kind);
         if (!result.Succeeded || result.Source is null) { OpenError = result.UserMessage ?? "Media could not be opened."; return; }
+        CheckpointCurrent(true);
         _currentSource = result.Source;
         _activeGeneration = -1; _resumeReady = false;
         _pendingResume = (_settings?.Current.ResumePlayback ?? true) && (_settings?.Current.RememberResumeHistory ?? true) ? _history?.FindResume(_currentSource) : null;
+        if (_pendingResume is { } candidate && (candidate.Position < TimeSpan.FromSeconds(_settings?.Current.ResumeMinimumElapsedSeconds ?? 30) || candidate.Duration - candidate.Position <= TimeSpan.FromSeconds(_settings?.Current.ResumeMaximumRemainingSeconds ?? 30)))
+        { _history?.RemoveResume(candidate.Source); _pendingResume = null; }
         OnPropertyChanged(nameof(HasPendingResume)); OnPropertyChanged(nameof(PendingResumeText));
         OpenError = string.Empty;
-        _transport.Open(_currentSource.CanonicalSource);
+        try { _transport.Open(_currentSource.CanonicalSource); }
+        catch (Exception) { _currentSource = null; _pendingResume = null; OpenError = "Media could not be opened."; }
         OnPropertyChanged(nameof(RecentItems));
     }
 
     private void ApplyResume()
     {
         if (_pendingResume is not { } resume) return;
-        _transport.Seek(Math.Clamp(resume.Position.TotalSeconds / Math.Max(resume.Duration.TotalSeconds, 1), 0, 1));
+        double duration = Math.Max(_duration.TotalSeconds, 1);
+        _transport.Seek(Math.Clamp(resume.Position.TotalSeconds / duration, 0, 1));
         _history?.RemoveResume(resume.Source); _pendingResume = null; _resumeReady = false; OnPropertyChanged(nameof(HasPendingResume));
     }
+
+    public void CheckpointCurrent(bool force)
+    {
+        if (_currentSource is null || _lastState is not { } state || (!force && _clock() - _lastCheckpointUtc < TimeSpan.FromSeconds(10))) return;
+        try
+        {
+            _history?.Checkpoint(_currentSource, state.Elapsed, state.Duration, _settings?.Current.RememberResumeHistory ?? true, _settings?.Current.ResumeMinimumElapsedSeconds ?? 30, _settings?.Current.ResumeMaximumRemainingSeconds ?? 30, state.CanSeek);
+            _lastCheckpointUtc = _clock();
+        }
+        catch (Exception) { }
+    }
+    public void OnClosing() => CheckpointCurrent(true);
     private void DeclineResume()
     {
         if (_pendingResume is { } resume) _history?.RemoveResume(resume.Source);

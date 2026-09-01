@@ -93,7 +93,7 @@
                 BorderBrush="#2FFFFFFF"
                 BorderThickness="1"
                 BoxShadow="0 18 48 0 #A8000000">
-            <Grid RowDefinitions="36,Auto" RowSpacing="12">
+            <Grid x:Name="DockGrid" RowDefinitions="36,Auto,Auto" RowSpacing="12">
                 <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto">
                     <TextBlock Grid.Column="0"
                                Text="{Binding ElapsedText}"

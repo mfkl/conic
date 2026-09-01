@@ -313,6 +313,14 @@ public sealed class PlayerPresentationViewModelTests
         PlayerPresentationViewModel vm = CreateOpeningViewModel(new RecordingTransport(), history); vm.Registry.Execute(PlayerCommandId.RemoveRecent, "a.mp4"); Assert.Single(history.Recent); Assert.NotNull(history.FindResume(a)); vm.Registry.Execute(PlayerCommandId.ClearRecent); Assert.Empty(history.Recent); Assert.NotNull(history.FindResume(a)); vm.Registry.Execute(PlayerCommandId.ClearResumeHistory); Assert.Empty(history.Resume);
     }
 
+    [Fact]
+    public void MatchingSuccessRecordsRecentAndNotifies()
+    {
+        HistoryStorage storage = new(); MediaHistoryService history = new(storage); PlayerPresentationViewModel vm = CreateOpeningViewModel(new RecordingTransport(), history); List<string?> changed = []; vm.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+        vm.OpenSource("a.mp4", MediaSourceKind.File); vm.ApplyEngineState(State(.4, PlaybackStatus.Playing, true) with { Generation = 1, Source = "a.mp4" });
+        Assert.True(vm.HasRecentItems); Assert.Contains(nameof(PlayerPresentationViewModel.RecentItems), changed); Assert.Contains(nameof(PlayerPresentationViewModel.HasRecentItems), changed); Assert.True(vm.ClearRecentCommand.CanExecute(null));
+    }
+
     [Theory]
     [InlineData("io")]
     [InlineData("access")]

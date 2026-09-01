@@ -1,8 +1,10 @@
 using System;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Threading;
 using Player.Contracts;
+using Player.Application;
 using VLCAvalonia.Interop;
 using VLCAvalonia.Services;
 using VLCAvalonia.ViewModels;
@@ -12,6 +14,9 @@ namespace VLCAvalonia;
 public partial class MainWindow : Window
 {
     private readonly PlayerPresentationViewModel _presentation;
+    private readonly DispatcherTimer _autoHideTimer = new() { Interval = TimeSpan.FromSeconds(3) };
+    private readonly ChromeVisibilityController _chromeVisibility = new();
+    private bool _isSeeking;
 
     public MainWindow()
     {
@@ -19,9 +24,18 @@ public partial class MainWindow : Window
         _presentation = new PlayerPresentationViewModel(
             new CompositionVideoTransport(VideoSurface),
             new StorageMediaSourcePicker(StorageProvider),
-            OpenTestMedia);
+            OpenTestMedia,
+            ToggleFullscreen);
         DataContext = _presentation;
+        _autoHideTimer.Tick += (_, _) =>
+        {
+            bool menuOpen = VideoArea.ContextMenu?.IsOpen ?? false;
+            bool chromeFocused = PlayerDock.IsKeyboardFocusWithin || TopChrome.IsKeyboardFocusWithin;
+            if (_chromeVisibility.TryHide(_isSeeking, menuOpen, tooltipOpen: false, chromeFocused))
+                SetChromeVisibility(false);
+        };
         VideoSurface.EngineStateChanged += OnEngineStateChanged;
+        Closed += (_, _) => _autoHideTimer.Stop();
         Loaded += (_, _) =>
         {
             if (string.IsNullOrWhiteSpace(VideoSurface.MediaPath) &&
@@ -30,6 +44,49 @@ public partial class MainWindow : Window
                 VideoSurface.MediaPath = testFile;
             }
         };
+    }
+
+    private void OnPlayerInteraction(object? sender, PointerEventArgs e)
+    {
+        _chromeVisibility.Wake();
+        SetChromeVisibility(true);
+        _autoHideTimer.Stop();
+        if (WindowState == WindowState.FullScreen) _autoHideTimer.Start();
+    }
+
+    private void OnPlayerKeyDown(object? sender, KeyEventArgs e)
+    {
+        _chromeVisibility.Wake();
+        SetChromeVisibility(true);
+        _autoHideTimer.Stop();
+        if (e.Source is TextBox) return;
+        switch (e.Key)
+        {
+            case Key.F11: _presentation.Registry.Execute(Player.Application.PlayerCommandId.ToggleFullscreen); break;
+            case Key.M: _presentation.Registry.Execute(Player.Application.PlayerCommandId.ToggleMute); break;
+            case Key.Space: _presentation.Registry.Execute(Player.Application.PlayerCommandId.TogglePause); break;
+            case Key.Left when e.KeyModifiers.HasFlag(KeyModifiers.Alt): _presentation.Registry.Execute(Player.Application.PlayerCommandId.SkipBackward); break;
+            case Key.Right when e.KeyModifiers.HasFlag(KeyModifiers.Alt): _presentation.Registry.Execute(Player.Application.PlayerCommandId.SkipForward); break;
+            default: return;
+        }
+        e.Handled = true;
+    }
+
+    private void ToggleFullscreen()
+    {
+        WindowState = WindowState == WindowState.FullScreen ? WindowState.Normal : WindowState.FullScreen;
+        _presentation.IsFullscreen = WindowState == WindowState.FullScreen;
+        _chromeVisibility.SetFullscreen(_presentation.IsFullscreen);
+        SetChromeVisibility(true);
+        _autoHideTimer.Stop();
+        if (_presentation.IsFullscreen) _autoHideTimer.Start();
+    }
+
+    private void OnSpeedChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if ((sender as ComboBox)?.SelectedItem is ComboBoxItem { Tag: string value } &&
+            double.TryParse(value, System.Globalization.CultureInfo.InvariantCulture, out double rate))
+            _presentation.Registry.Execute(Player.Application.PlayerCommandId.SetPlaybackRate, rate);
     }
 
     internal void EnableGPUCompositionSmoke(
@@ -181,10 +238,31 @@ public partial class MainWindow : Window
     }
 
     private void OnSeekStarted(object? sender, EventArgs e) =>
-        _presentation.BeginSeek();
+        BeginSeek();
 
     private void OnSeekCommitted(object? sender, EventArgs e) =>
-        Dispatcher.UIThread.Post(_presentation.CommitSeek);
+        Dispatcher.UIThread.Post(EndSeek);
+
+    private void BeginSeek()
+    {
+        _isSeeking = true;
+        _chromeVisibility.Wake();
+        SetChromeVisibility(true);
+        _presentation.BeginSeek();
+    }
+
+    private void EndSeek()
+    {
+        _isSeeking = false;
+        _presentation.CommitSeek();
+        if (_presentation.IsFullscreen) { _autoHideTimer.Stop(); _autoHideTimer.Start(); }
+    }
+
+    private void SetChromeVisibility(bool visible)
+    {
+        PlayerDock.IsVisible = visible;
+        TopChrome.IsVisible = visible;
+    }
 
     private void OnEngineStateChanged(object? sender, MediaEngineState state) =>
         _presentation.ApplyEngineState(state);

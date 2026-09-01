@@ -41,6 +41,28 @@ public sealed class PlayerPresentationViewModelTests
         Assert.Equal(expectedIsPlaying, viewModel.IsPlaying);
     }
 
+    [Fact]
+    public void TransportCommandsReflectEngineStateAndDispatchSharedOperations()
+    {
+        RecordingTransport transport = new();
+        PlayerPresentationViewModel viewModel = CreateViewModel(transport);
+        viewModel.ApplyEngineState(State(.5, PlaybackStatus.Playing, canSeek: true) with
+        {
+            IsMuted = true, PlaybackRate = 1.5, Title = "movie"
+        });
+
+        viewModel.Registry.Execute(PlayerCommandId.SkipBackward);
+        viewModel.Registry.Execute(PlayerCommandId.SkipForward);
+        viewModel.Registry.Execute(PlayerCommandId.ToggleMute);
+        viewModel.Registry.Execute(PlayerCommandId.SetPlaybackRate, 100d);
+
+        Assert.Equal(new[] { TimeSpan.FromSeconds(-10), TimeSpan.FromSeconds(10) }, transport.Skips);
+        Assert.False(transport.Muted);
+        Assert.Equal(31.25, transport.Rate);
+        Assert.Equal("movie", viewModel.MediaTitle);
+        Assert.Equal("🔇", viewModel.MuteGlyph);
+    }
+
     private static PlayerPresentationViewModel CreateViewModel(
         RecordingTransport transport) => new(transport, new EmptyPicker(), () => { });
 
@@ -61,11 +83,17 @@ public sealed class PlayerPresentationViewModelTests
     private sealed class RecordingTransport : IPlayerTransport
     {
         public List<double> Seeks { get; } = new();
+        public List<TimeSpan> Skips { get; } = new();
+        public bool Muted { get; private set; }
+        public double Rate { get; private set; }
         public void Open(string source) { }
         public void TogglePause() { }
         public void Stop() { }
         public void Seek(double normalizedPosition) => Seeks.Add(normalizedPosition);
         public void SetVolume(double normalizedVolume) { }
+        public void SetMuted(bool muted) => Muted = muted;
+        public void Skip(TimeSpan offset) => Skips.Add(offset);
+        public void SetPlaybackRate(double playbackRate) => Rate = playbackRate;
     }
 
     private sealed class EmptyPicker : IMediaSourcePicker

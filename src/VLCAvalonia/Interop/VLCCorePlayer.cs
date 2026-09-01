@@ -81,7 +81,7 @@ internal sealed unsafe class VLCCorePlayer : IMediaEngine
         {
             if (_playlist == 0)
                 return;
-            VLC3PlaylistControl.TogglePause(_playlist);
+            new VLCTransportControl(_playlist).TogglePause();
             generation = _generation;
         }
         PublishSnapshot(generation);
@@ -95,23 +95,9 @@ internal sealed unsafe class VLCCorePlayer : IMediaEngine
         {
             if (_playlist == 0)
                 return;
-            nint input = VLCCore.PlaylistCurrentInput(_playlist);
-            if (input == 0)
+            if (!new VLCTransportControl(_playlist).TrySetNormalizedPosition(
+                    Math.Clamp(normalizedPosition, 0, 1)))
                 return;
-            try
-            {
-                int result = VLC3PlaylistControl.SetInputPosition(
-                    input,
-                    Math.Clamp(normalizedPosition, 0, 1));
-                if (result != 0)
-                    throw new InvalidOperationException(
-                        $"input_Control(INPUT_SET_POSITION) failed with " +
-                        $"{result}.");
-            }
-            finally
-            {
-                VLCCore.ObjectRelease(input);
-            }
             generation = _generation;
         }
         PublishSnapshot(generation);
@@ -128,6 +114,40 @@ internal sealed unsafe class VLCCorePlayer : IMediaEngine
             VLCCore.PlaylistVolumeSet(
                 _playlist,
                 (float)Math.Clamp(normalizedVolume, 0, 1.25));
+            generation = _generation;
+        }
+        PublishSnapshot(generation);
+    }
+
+    public void SetMuted(bool muted)
+    {
+        ThrowIfDisposed();
+        long generation;
+        lock (_gate)
+        {
+            if (_playlist == 0) return;
+            VLCCore.PlaylistMuteSet(_playlist, muted);
+            generation = _generation;
+        }
+        PublishSnapshot(generation);
+    }
+
+    public void Skip(TimeSpan offset)
+    {
+        ThrowIfDisposed();
+        MediaEngineState state = State;
+        if (!state.CanSeek || state.Duration <= TimeSpan.Zero) return;
+        Seek(Math.Clamp((state.Elapsed + offset).TotalSeconds / state.Duration.TotalSeconds, 0, 1));
+    }
+
+    public void SetPlaybackRate(double playbackRate)
+    {
+        ThrowIfDisposed();
+        long generation;
+        lock (_gate)
+        {
+            if (_playlist == 0) return;
+            if (!new VLCTransportControl(_playlist).TrySetPlaybackRate(playbackRate)) return;
             generation = _generation;
         }
         PublishSnapshot(generation);
@@ -244,6 +264,8 @@ internal sealed unsafe class VLCCorePlayer : IMediaEngine
         long duration;
         bool canSeek;
         double volume;
+        bool muted = State.IsMuted;
+        double playbackRate = State.PlaybackRate;
         lock (_gate)
         {
             if (_playlist == 0 || _generation != generation)
@@ -278,6 +300,13 @@ internal sealed unsafe class VLCCorePlayer : IMediaEngine
                 }
             }
             volume = VLCCore.PlaylistVolumeGet(_playlist);
+            int muteResult = VLCCore.PlaylistMuteGet(_playlist);
+            if (muteResult is 0 or 1)
+                muted = muteResult != 0;
+            if (new VLCTransportControl(_playlist).TryGetPlaybackRate(out double rate) &&
+                double.IsFinite(rate) && rate >= VLCTransportControl.MinimumPlaybackRate &&
+                rate <= VLCTransportControl.MaximumPlaybackRate)
+                playbackRate = rate;
         }
 
         _states.Update(
@@ -287,7 +316,9 @@ internal sealed unsafe class VLCCorePlayer : IMediaEngine
             TimeSpan.FromMicroseconds(Math.Max(0, elapsed)),
             TimeSpan.FromMicroseconds(Math.Max(0, duration)),
             volume,
-            canSeek);
+            canSeek,
+            isMuted: muted,
+            playbackRate: playbackRate);
     }
 
     public void Stop()
@@ -301,7 +332,7 @@ internal sealed unsafe class VLCCorePlayer : IMediaEngine
             stop = _stop;
             generation = _generation;
             if (_playlist != 0)
-                VLC3PlaylistControl.Stop(_playlist);
+                new VLCTransportControl(_playlist).Stop();
             stop?.Set();
         }
 

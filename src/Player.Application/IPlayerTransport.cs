@@ -12,4 +12,10 @@ public interface IPlayerTransport
     void Seek(double normalizedPosition);
 
     void SetVolume(double normalizedVolume);
+
+    void SetMuted(bool muted);
+
+    void Skip(TimeSpan offset);
+
+    void SetPlaybackRate(double playbackRate);
 }

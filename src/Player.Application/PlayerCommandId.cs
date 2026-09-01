@@ -8,5 +8,10 @@ public enum PlayerCommandId
     Stop,
     Seek,
     SetVolume,
+    ToggleMute,
+    SkipBackward,
+    SkipForward,
+    SetPlaybackRate,
+    ToggleFullscreen,
     SetAlwaysOnTop,
 }

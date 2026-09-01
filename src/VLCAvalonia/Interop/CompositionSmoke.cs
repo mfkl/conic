@@ -239,6 +239,20 @@ internal static class CompositionSmoke
                 state => Math.Abs(state.Volume - volumeTarget) < 0.03,
                 ControlStageTimeout);
 
+            RunAction("mute-on", () => player.SetMuted(true));
+            WaitForState(player, "mute-on", state => state.IsMuted, ControlStageTimeout);
+            RunAction("mute-off", () => player.SetMuted(false));
+            WaitForState(player, "mute-off", state => !state.IsMuted, ControlStageTimeout);
+
+            double beforeSkip = player.State.Position;
+            RunAction("skip-forward", () => player.Skip(TimeSpan.FromSeconds(2)));
+            WaitForState(player, "skip-forward", state => state.Position >= beforeSkip, ControlStageTimeout);
+
+            RunAction("rate-1.5x", () => player.SetPlaybackRate(1.5));
+            WaitForState(player, "rate-1.5x", state => Math.Abs(state.PlaybackRate - 1.5) < .03, ControlStageTimeout);
+            RunAction("rate-nominal", () => player.SetPlaybackRate(1));
+            WaitForState(player, "rate-nominal", state => Math.Abs(state.PlaybackRate - 1) < .03, ControlStageTimeout);
+
             StopAndWait(player, "stop");
             OpenAndWait(player, mediaPath, "reopen-after-stop");
             StopAndWait(player, "stop-after-reopen");

@@ -52,7 +52,8 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
         MediaSourceValidator? sourceValidator = null,
         MediaHistoryService? history = null,
         Func<DateTimeOffset>? clock = null,
-        Action<string>? diagnostic = null)
+        Action<string>? diagnostic = null,
+        Action? showUrlPanel = null)
     {
         _transport = transport;
         _mediaSourcePicker = mediaSourcePicker;
@@ -70,8 +71,12 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
         PlayerCommandRegistry registry = new();
         Registry = registry;
         registry.Register(new(PlayerCommandId.OpenMedia, "Open media", "Media", "Ctrl+O"), _ => _ = OpenMediaAsync());
-        registry.Register(new(PlayerCommandId.OpenFolder, "Open folder", "Media", "Ctrl+Shift+O"), _ => _ = OpenFolderAsync());
-        registry.Register(new(PlayerCommandId.OpenUrl, "Open network URL", "Media", "Ctrl+L"), _ => OpenUrl());
+        registry.Register(new(PlayerCommandId.OpenFolder, "Open folder", "Media", "Ctrl+Shift+O"), _ => _ = OpenFolderAsync(), _ => false);
+        registry.Register(new(PlayerCommandId.OpenUrl, "Open network URL", "Media", "Ctrl+L"), _ => showUrlPanel?.Invoke(), _ => showUrlPanel is not null);
+        registry.Register(new(PlayerCommandId.SubmitUrl, "Submit network URL", "Media"), _ => OpenUrl());
+        registry.Register(new(PlayerCommandId.RemoveRecent, "Remove recent media", "Media"), p => TryHistory(() => _history?.RemoveRecent(p as string ?? string.Empty)));
+        registry.Register(new(PlayerCommandId.ClearRecent, "Clear recent media", "Media"), _ => TryHistory(() => _history?.ClearRecent()));
+        registry.Register(new(PlayerCommandId.ClearResumeHistory, "Clear resume history", "Media"), _ => TryHistory(() => _history?.ClearResume()));
         registry.Register(new(PlayerCommandId.OpenRecent, "Open recent media", "Media"), parameter => OpenSource(parameter as string, MediaSourceKind.Recent));
         registry.Register(new(PlayerCommandId.AcceptResume, "Resume playback", "Media"), _ => ApplyResume(), _ => _pendingResume is not null && _resumeReady);
         registry.Register(new(PlayerCommandId.DeclineResume, "Start from beginning", "Media"), _ => DeclineResume(), _ => _pendingResume is not null && _resumeReady);
@@ -91,6 +96,10 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
         OpenMediaCommand = new RegistryCommand(registry, PlayerCommandId.OpenMedia);
         OpenFolderCommand = new RegistryCommand(registry, PlayerCommandId.OpenFolder);
         OpenUrlCommand = new RegistryCommand(registry, PlayerCommandId.OpenUrl);
+        SubmitUrlCommand = new RegistryCommand(registry, PlayerCommandId.SubmitUrl);
+        RemoveRecentCommand = new RegistryCommand(registry, PlayerCommandId.RemoveRecent);
+        ClearRecentCommand = new RegistryCommand(registry, PlayerCommandId.ClearRecent);
+        ClearResumeHistoryCommand = new RegistryCommand(registry, PlayerCommandId.ClearResumeHistory);
         OpenRecentCommand = new RegistryCommand(registry, PlayerCommandId.OpenRecent);
         AcceptResumeCommand = new RegistryCommand(registry, PlayerCommandId.AcceptResume);
         DeclineResumeCommand = new RegistryCommand(registry, PlayerCommandId.DeclineResume);
@@ -110,6 +119,10 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
     public ICommand OpenMediaCommand { get; }
     public ICommand OpenFolderCommand { get; }
     public ICommand OpenUrlCommand { get; }
+    public ICommand SubmitUrlCommand { get; }
+    public ICommand RemoveRecentCommand { get; }
+    public ICommand ClearRecentCommand { get; }
+    public ICommand ClearResumeHistoryCommand { get; }
     public ICommand OpenRecentCommand { get; }
     public ICommand AcceptResumeCommand { get; }
     public ICommand DeclineResumeCommand { get; }
@@ -175,6 +188,7 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
     public bool HasPendingResume => _pendingResume is not null && _resumeReady;
     public string PendingResumeText => _pendingResume is null ? string.Empty : $"Resume from {FormatTime(_pendingResume.Position)}?";
     public IReadOnlyList<RecentMediaEntry> RecentItems => _history?.Recent ?? [];
+    public bool HasRecentItems => RecentItems.Count > 0;
 
     public void BeginSeek() => _isSeeking = CanSeek;
 
@@ -243,7 +257,7 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
     public void OpenSource(string? rawSource, MediaSourceKind kind)
     {
         MediaOpenResult result = _sourceValidator.Validate(rawSource, kind);
-        if (!result.Succeeded || result.Source is null) { _diagnostic?.Invoke(result.Diagnostic ?? "Media source validation failed."); OpenError = result.UserMessage ?? "Media could not be opened."; return; }
+        if (!result.Succeeded || result.Source is null) { if (kind == MediaSourceKind.Recent && !string.IsNullOrWhiteSpace(rawSource)) TryHistory(() => _history?.RemoveRecent(rawSource)); _diagnostic?.Invoke(result.Diagnostic ?? "Media source validation failed."); OpenError = result.UserMessage ?? "Media could not be opened."; OnPropertyChanged(nameof(RecentItems)); OnPropertyChanged(nameof(HasRecentItems)); return; }
         CheckpointCurrent(true);
         _currentSource = result.Source;
         _generationFloor = _lastObservedGeneration; _activeGeneration = -1; _resumeReady = false; _lastState = null; _recordedOpenGeneration = -1;
@@ -253,6 +267,14 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
         try { _transport.Open(_currentSource.CanonicalSource); }
         catch (Exception e) { _diagnostic?.Invoke(e.ToString()); _currentSource = null; _pendingResume = null; OpenError = "Media could not be opened."; }
         OnPropertyChanged(nameof(RecentItems));
+        OnPropertyChanged(nameof(HasRecentItems));
+    }
+
+    public void OpenDroppedSources(IReadOnlyList<string>? sources)
+    {
+        if (sources is null || sources.Count == 0) { OpenError = "Drop one local media file to open it."; return; }
+        if (sources.Count > 1) { OpenError = "Opening multiple files requires queue support."; return; }
+        OpenSource(sources[0], MediaSourceKind.DragDrop);
     }
 
     private void ApplyResume()

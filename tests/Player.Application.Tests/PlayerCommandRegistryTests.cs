@@ -52,8 +52,9 @@ public sealed class ChromeVisibilityControllerTests
         ChromeVisibilityController controller = new();
         controller.SetFullscreen(true);
 
-        Assert.False(controller.TryHide(seekDragging: true, menuOpen: false, tooltipOpen: false, chromeFocused: false));
+        Assert.False(controller.TryHide(seekDragging: true, menuOpen: false, chromePointerOver: false, chromeFocused: false));
         Assert.True(controller.IsVisible);
+        Assert.False(controller.TryHide(false, false, true, false));
         Assert.True(controller.TryHide(false, false, false, false));
         controller.Wake();
         Assert.True(controller.IsVisible);
@@ -67,6 +68,13 @@ public sealed class PlayerLayoutPolicyTests
     [InlineData(760, false)]
     [InlineData(759, true)]
     [InlineData(480, true)]
-    public void CompactBreakPointKeepsTheTimelineAndVolumeLaneAvailable(double width, bool compact) =>
-        Assert.Equal(compact, PlayerLayoutPolicy.IsCompact(width));
+    public void CompactBreakPointKeepsTheTimelineAndVolumeLaneAvailable(double width, bool compact)
+    {
+        PlayerLayoutResult layout = PlayerLayoutPolicy.ForWidth(width);
+        Assert.Equal(compact, layout.IsCompact);
+        if (compact)
+            Assert.Equal((2, 0, 3, 2d), (layout.RightRow, layout.RightColumn, layout.RightColumnSpan, layout.Spacing));
+        else
+            Assert.Equal((1, 2, 1, 8d), (layout.RightRow, layout.RightColumn, layout.RightColumnSpan, layout.Spacing));
+    }
 }

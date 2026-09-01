@@ -19,4 +19,10 @@ public sealed class PlayerVolumeSlider : Slider
         DragCompleted?.Invoke(this, EventArgs.Empty);
         base.OnPointerReleased(e);
     }
+
+    protected override void OnPointerCaptureLost(Avalonia.Input.PointerCaptureLostEventArgs e)
+    {
+        DragCompleted?.Invoke(this, EventArgs.Empty);
+        base.OnPointerCaptureLost(e);
+    }
 }

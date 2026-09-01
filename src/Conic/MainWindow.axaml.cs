@@ -17,6 +17,7 @@ public partial class MainWindow : Window
     private readonly DispatcherTimer _autoHideTimer = new() { Interval = TimeSpan.FromSeconds(3) };
     private readonly ChromeVisibilityController _chromeVisibility = new();
     private bool _isSeeking;
+    private bool _isVolumeDragging;
 
     public MainWindow()
     {
@@ -31,11 +32,14 @@ public partial class MainWindow : Window
         {
             bool menuOpen = VideoArea.ContextMenu?.IsOpen ?? false;
             bool chromeFocused = PlayerDock.IsKeyboardFocusWithin || TopChrome.IsKeyboardFocusWithin;
-            if (_chromeVisibility.TryHide(_isSeeking, menuOpen, tooltipOpen: false, chromeFocused))
+            bool popupOpen = menuOpen || VideoArea.IsKeyboardFocusWithin &&
+                (RightTransport.IsKeyboardFocusWithin || TopChrome.IsKeyboardFocusWithin);
+            if (_chromeVisibility.TryHide(_isSeeking || _isVolumeDragging, popupOpen, tooltipOpen: false, chromeFocused))
                 SetChromeVisibility(false);
         };
         VideoSurface.EngineStateChanged += OnEngineStateChanged;
         Closed += (_, _) => _autoHideTimer.Stop();
+        SizeChanged += (_, _) => ApplyResponsiveChrome();
         Loaded += (_, _) =>
         {
             if (string.IsNullOrWhiteSpace(VideoSurface.MediaPath) &&
@@ -251,6 +255,19 @@ public partial class MainWindow : Window
         _presentation.BeginSeek();
     }
 
+    private void OnVolumeDragStarted(object? sender, EventArgs e)
+    {
+        _isVolumeDragging = true;
+        _chromeVisibility.Wake();
+        SetChromeVisibility(true);
+    }
+
+    private void OnVolumeDragCompleted(object? sender, EventArgs e)
+    {
+        _isVolumeDragging = false;
+        if (_presentation.IsFullscreen) { _autoHideTimer.Stop(); _autoHideTimer.Start(); }
+    }
+
     private void EndSeek()
     {
         _isSeeking = false;
@@ -262,6 +279,14 @@ public partial class MainWindow : Window
     {
         PlayerDock.IsVisible = visible;
         TopChrome.IsVisible = visible;
+    }
+
+    private void ApplyResponsiveChrome()
+    {
+        bool compact = PlayerLayoutPolicy.IsCompact(Bounds.Width);
+        CenterTransport.Spacing = compact ? 2 : 8;
+        RightTransport.Spacing = compact ? 2 : 8;
+        TopChrome.IsVisible = !compact || !_presentation.IsFullscreen;
     }
 
     private void OnEngineStateChanged(object? sender, MediaEngineState state) =>

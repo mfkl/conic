@@ -104,6 +104,7 @@
                                FontFeatures="tnum"
                                VerticalAlignment="Center" />
                     <controls:PlayerTimeline Grid.Column="1"
+                                              x:Name="PlayerTimeline"
                                               Classes="timeline monochrome"
                                               Minimum="0"
                                               Maximum="1"
@@ -180,6 +181,7 @@
                             </Grid>
                         </Button>
                         <controls:PlayerVolumeSlider
+                                                     x:Name="PlayerVolume"
                                                      Classes="volume monochrome"
                                                      Minimum="0"
                                                      Maximum="100"

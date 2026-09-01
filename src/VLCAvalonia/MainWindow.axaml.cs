@@ -1,6 +1,8 @@
 using System;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia;
+using Avalonia.VisualTree;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Threading;
 using Player.Contracts;
@@ -43,7 +45,8 @@ public partial class MainWindow : Window
         SizeChanged += (_, _) => ApplyResponsiveChrome();
         Loaded += (_, _) =>
         {
-            if (string.IsNullOrWhiteSpace(VideoSurface.MediaPath) &&
+            if (!Environment.GetCommandLineArgs().Contains("--layout-smoke") &&
+                string.IsNullOrWhiteSpace(VideoSurface.MediaPath) &&
                 FindTestFile() is { } testFile)
             {
                 VideoSurface.MediaPath = testFile;
@@ -198,23 +201,37 @@ public partial class MainWindow : Window
         WindowState = WindowState.Normal;
         Width = 1280;
         Height = 720;
-        Dispatcher.UIThread.Post(() => CheckLayout(1280, false));
-
-        void CheckLayout(double width, bool compact)
+        int phase = 0;
+        DispatcherTimer timer = new() { Interval = TimeSpan.FromMilliseconds(250) };
+        timer.Tick += (_, _) =>
         {
-            Width = width;
-            Dispatcher.UIThread.Post(() =>
-            {
-                bool inDock = PlayerDock.Bounds.Contains(CenterTransport.Bounds.Position) &&
-                    PlayerDock.Bounds.Contains(RightTransport.Bounds.Position);
-                bool rows = compact ? Grid.GetRow(RightTransport) == 2 : Grid.GetRow(RightTransport) == 1;
-                Console.WriteLine($"[layout-smoke] width={width} dock={PlayerDock.Bounds} center={CenterTransport.Bounds} right={RightTransport.Bounds} rows={rows}");
-                if (!inDock || !rows) { desktop.Shutdown(1); return; }
-                if (!compact) { CheckLayout(480, true); return; }
-                Console.WriteLine("[layout-smoke] PASS normal-and-compact");
-                desktop.Shutdown(0);
-            });
+            if (phase == 0) { ValidateLayout(1280, false); Width = 480; phase = 1; return; }
+            if (phase == 1) { ValidateLayout(480, true); timer.Stop(); Console.WriteLine("[layout-smoke] PASS normal-and-compact"); desktop.Shutdown(0); }
+        };
+        DispatcherTimer timeout = new() { Interval = TimeSpan.FromSeconds(8) };
+        timeout.Tick += (_, _) => { timeout.Stop(); timer.Stop(); Console.Error.WriteLine("[layout-smoke] FAIL timeout"); desktop.Shutdown(1); };
+        timer.Start(); timeout.Start();
+    }
+
+    private void ValidateLayout(double width, bool compact)
+    {
+        Rect dock = PlayerDock.Bounds;
+        Control[] required = [CenterTransport, RightTransport, PlayerTimeline, PlayerVolume];
+        Rect ToDock(Control control)
+        {
+            Point origin = control.TranslatePoint(default, PlayerDock) ?? default;
+            return new Rect(origin, control.Bounds.Size);
         }
+        bool contained = required.All(control =>
+        {
+            Rect rect = ToDock(control);
+            return rect.Width > 0 && rect.Height > 0 && rect.Left >= 0 && rect.Top >= 0 && rect.Right <= dock.Width && rect.Bottom <= dock.Height;
+        });
+        bool rows = compact ? Grid.GetRow(RightTransport) == 2 : Grid.GetRow(RightTransport) == 1;
+        bool separate = compact ? ToDock(RightTransport).Top >= ToDock(CenterTransport).Bottom : !ToDock(RightTransport).Intersects(ToDock(CenterTransport));
+        Console.WriteLine($"[layout-smoke] width={width} dock={dock} center={ToDock(CenterTransport)} right={ToDock(RightTransport)} timeline={ToDock(PlayerTimeline)} volume={ToDock(PlayerVolume)} rows={rows} contained={contained} separate={separate}");
+        if (!contained || !rows || !separate)
+            throw new InvalidOperationException("[layout-smoke] FAIL bounds or row policy");
     }
 
     internal void EnableAdapterMismatchSmoke(

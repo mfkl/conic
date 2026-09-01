@@ -18,7 +18,7 @@ internal sealed class FilePlayerSettingsStorage : IPlayerSettingsStorage
             if (File.Exists(_path)) File.Replace(temporary, _path, null);
             else File.Move(temporary, _path);
         }
-        finally { if (File.Exists(temporary)) File.Delete(temporary); }
+        finally { try { if (File.Exists(temporary)) File.Delete(temporary); } catch (IOException) { } catch (UnauthorizedAccessException) { } }
     }
     public void PreserveInvalid(string content)
     {

@@ -211,13 +211,13 @@
                 HorizontalAlignment="Center" VerticalAlignment="Center" Padding="24" CornerRadius="18"
                 Background="#F0121418" BorderBrush="#40FFFFFF" BorderThickness="1" BoxShadow="0 24 60 0 #B0000000">
             <Grid ColumnDefinitions="190,*" RowDefinitions="Auto,*" RowSpacing="18" ColumnSpacing="22">
-                <TextBox x:Name="SettingsSearch" Grid.ColumnSpan="2" PlaceholderText="Search settings" TextChanged="OnSettingsSearchChanged" />
+                <TextBox x:Name="SettingsSearch" Grid.ColumnSpan="2" PlaceholderText="Search settings" TextChanged="OnSettingsSearchChanged" AutomationProperties.Name="Search settings" />
                 <ListBox x:Name="SettingsPages" Grid.Row="1" ItemsSource="{Binding FilteredPages}" SelectedItem="{Binding SelectedPage}">
                     <ListBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Name}" Margin="8" /></DataTemplate></ListBox.ItemTemplate>
                 </ListBox>
                 <ScrollViewer Grid.Row="1" Grid.Column="1">
                     <StackPanel Spacing="14">
-                        <DockPanel><TextBlock Text="Settings" FontSize="22" FontWeight="SemiBold" /><Button DockPanel.Dock="Right" Content="Close" Click="OnSettingsClose" /></DockPanel>
+                        <DockPanel><TextBlock Text="Settings" FontSize="22" FontWeight="SemiBold" /><Button DockPanel.Dock="Right" Content="Close" Click="OnSettingsClose" AutomationProperties.Name="Close settings" /></DockPanel>
                         <TextBlock Text="{Binding ErrorMessage}" Foreground="#FF9A55" TextWrapping="Wrap" />
                         <TextBlock Text="General" IsVisible="{Binding IsGeneral}" FontSize="16" FontWeight="SemiBold" />
                         <StackPanel IsVisible="{Binding IsGeneral}" Spacing="10">

@@ -45,6 +45,19 @@ public sealed class SettingsViewModelTests
         Assert.Equal(PlayerSettings.Default, service.Current);
     }
 
+    [Fact]
+    public void FailedConfirmedResetKeepsConfirmationAndCurrentValue()
+    {
+        ThrowingStorage storage = new();
+        PlayerSettingsService service = new(storage);
+        SettingsViewModel viewModel = new(service);
+        viewModel.ResetAllCommand.Execute(null);
+        viewModel.ResetAllCommand.Execute(null);
+        Assert.True(viewModel.ConfirmReset);
+        Assert.Contains("could not be reset", viewModel.ErrorMessage);
+        Assert.Equal(PlayerSettings.Default, service.Current);
+    }
+
     private static SettingsViewModel Create(out PlayerSettingsService service)
     {
         service = new PlayerSettingsService(new MemoryStorage());
@@ -56,6 +69,13 @@ public sealed class SettingsViewModelTests
         public string? Content { get; private set; }
         public string? Read() => Content;
         public void WriteAtomically(string content) => Content = content;
+        public void PreserveInvalid(string content) { }
+    }
+
+    private sealed class ThrowingStorage : IPlayerSettingsStorage
+    {
+        public string? Read() => null;
+        public void WriteAtomically(string content) => throw new IOException();
         public void PreserveInvalid(string content) { }
     }
 }

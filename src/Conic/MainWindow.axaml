@@ -4,6 +4,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:controls="clr-namespace:Conic.Controls"
         xmlns:viewModels="clr-namespace:Conic.ViewModels"
+        xmlns:application="clr-namespace:Player.Application;assembly=Player.Application"
         xmlns:input="clr-namespace:Avalonia.Input;assembly=Avalonia.Base"
         mc:Ignorable="d"
         d:DesignWidth="1280"
@@ -46,24 +47,21 @@
                     BorderBrush="#20FFFFFF"
                     BorderThickness="1"
                     BoxShadow="0 8 24 0 #70000000">
-                <StackPanel Orientation="Horizontal" Spacing="6">
-                    <Button Classes="chrome"
+                <StackPanel Orientation="Horizontal" Spacing="0">
+                    <Button Classes="chrome openPrimary"
                             Command="{Binding OpenMediaCommand}"
-                            ToolTip.Tip="Open media">
+                            ToolTip.Tip="Open a media file (Ctrl+O)"
+                            AutomationProperties.Name="Open media file">
                         <StackPanel Orientation="Horizontal" Spacing="8">
-                            <PathIcon Width="16" Height="16"
+                            <PathIcon Width="17" Height="17" Foreground="#FFFF9A55"
                                       Data="M2,5 L9,5 L11,7 L22,7 L20,19 L2,19 Z" />
                             <TextBlock Text="Open" VerticalAlignment="Center" />
                         </StackPanel>
                     </Button>
-                    <Button Classes="chrome"
-                            Content="URL"
-                            Click="OnUrlOpen"
-                            ToolTip.Tip="Open network URL (Ctrl+L)" />
-                    <Button Classes="chrome"
-                            Content="Folder"
-                            Command="{Binding OpenFolderCommand}"
-                            ToolTip.Tip="Folder queue support is coming with playlists" />
+                    <Button x:Name="OpenOptionsButton" Classes="chrome openOptions"
+                            Content="⌄" Click="OnOpenOptions"
+                            ToolTip.Tip="More ways to open media"
+                            AutomationProperties.Name="Open media options" />
                 </StackPanel>
             </Border>
 
@@ -91,18 +89,52 @@
             </StackPanel>
         </Grid>
 
-        <Border x:Name="UrlPanel" IsVisible="False" Width="460" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,82,0,0"
-                Padding="14" CornerRadius="14" Background="#F0121418" BorderBrush="#40FFFFFF" BorderThickness="1">
+        <Border x:Name="OpenMenu" IsVisible="False" Width="360" MaxWidth="420" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="24,76,24,0"
+                Padding="12" CornerRadius="16" Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}" BorderBrush="#45FF9A55" BorderThickness="1" BoxShadow="0 12 32 0 #80000000">
             <StackPanel Spacing="8">
-                <TextBlock Text="Open network URL" FontWeight="SemiBold" />
-                <TextBox x:Name="UrlTextBox" Text="{Binding UrlText, Mode=TwoWay}" PlaceholderText="https://example.com/media.mp4" AutomationProperties.Name="Media URL" />
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8"><Button Content="Cancel" Click="OnUrlCancel" /><Button Content="Open" Command="{Binding OpenUrlCommand}" /></StackPanel>
+                <TextBlock Text="Open media" FontWeight="SemiBold" FontSize="15" />
+                <Button Classes="menuAction" Content="Open file" Command="{Binding OpenMediaCommand}" Click="OnOpenFile" ToolTip.Tip="Open a local media file (Ctrl+O)" />
+                <Button Classes="menuAction" Content="Open network URL" Command="{Binding OpenUrlCommand}" ToolTip.Tip="Open a network URL (Ctrl+L)" />
+                <StackPanel Spacing="2" Opacity="0.58">
+                    <Button Classes="menuAction" Content="Open folder" Command="{Binding OpenFolderCommand}" ToolTip.Tip="Requires queue support" />
+                    <TextBlock Text="Requires queue support" Classes="settingHint" Margin="12,0" />
+                </StackPanel>
+                <Border Height="1" Background="#2CFFFFFF" Margin="4,4" />
+                <TextBlock Text="Recent" FontWeight="SemiBold" />
+                <ItemsControl ItemsSource="{Binding RecentItems}" IsVisible="{Binding HasRecentItems}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="application:RecentMediaEntry">
+                            <Grid ColumnDefinitions="*,Auto" Margin="0,1">
+                                <Button Classes="recentItem" Content="{Binding DisplayName}" ToolTip.Tip="{Binding Source}" Click="OnOpenRecent"
+                                        Command="{Binding DataContext.OpenRecentCommand, ElementName=VideoArea}" CommandParameter="{Binding Source}" />
+                                <Button Grid.Column="1" Classes="recentRemove" Content="×" ToolTip.Tip="Remove from recent media"
+                                        AutomationProperties.Name="Remove recent media" Command="{Binding DataContext.RemoveRecentCommand, ElementName=VideoArea}" CommandParameter="{Binding Source}" />
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <TextBlock IsVisible="{Binding HasNoRecentItems}" Text="No recent media yet." Classes="settingHint" Margin="12,2" />
+                <StackPanel x:Name="ClearRecentPrompt" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="6" IsVisible="False">
+                    <TextBlock Text="Clear recent media?" VerticalAlignment="Center" Classes="settingHint" />
+                    <Button Content="Cancel" Click="OnCancelClearRecent" />
+                    <Button Content="Clear" Command="{Binding ClearRecentCommand}" Click="OnConfirmClearRecent" />
+                </StackPanel>
+                <Button x:Name="ClearRecentButton" HorizontalAlignment="Right" Content="Clear recent" IsVisible="{Binding HasRecentItems}" Click="OnClearRecent" ToolTip.Tip="Clear recent media" />
+            </StackPanel>
+        </Border>
+        <Border x:Name="UrlPanel" IsVisible="False" MaxWidth="460" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="24,82,24,0"
+                Padding="16" CornerRadius="16" Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}" BorderBrush="#45FF9A55" BorderThickness="1" BoxShadow="0 12 32 0 #80000000">
+            <StackPanel Spacing="10">
+                <TextBlock Text="Open network URL" FontWeight="SemiBold" FontSize="16" />
+                <TextBlock Text="Paste an http or https media address." Classes="settingHint" TextWrapping="Wrap" />
+                <TextBox x:Name="UrlTextBox" Text="{Binding UrlText, Mode=TwoWay}" KeyDown="OnUrlTextKeyDown" PlaceholderText="https://example.com/media.mp4" AutomationProperties.Name="Media URL" ToolTip.Tip="Only http and https URLs are supported" />
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8"><Button Content="Cancel" Click="OnUrlCancel" AutomationProperties.Name="Cancel opening URL" /><Button Content="Open" Click="OnUrlSubmit" AutomationProperties.Name="Open network URL" /></StackPanel>
             </StackPanel>
         </Border>
         <Border IsVisible="{Binding HasPendingResume}" Width="360" HorizontalAlignment="Center" VerticalAlignment="Center" Padding="18" CornerRadius="16" Background="#F0121418" BorderBrush="#FFFF8800" BorderThickness="1">
             <StackPanel Spacing="10"><TextBlock Text="{Binding PendingResumeText}" FontSize="16" /><TextBlock Text="The saved position is available for this media." Foreground="#AEB3BD" TextWrapping="Wrap" /><StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8"><Button Content="Start over" Command="{Binding DeclineResumeCommand}" /><Button Content="Resume" Command="{Binding AcceptResumeCommand}" /></StackPanel></StackPanel>
         </Border>
-        <Border HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,178,0,0" Padding="10" Background="#E02B1717" CornerRadius="10"><TextBlock Text="{Binding OpenError}" Foreground="#FFD6CE" /></Border>
+        <Border IsVisible="{Binding HasOpenError}" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,178,0,0" Padding="10" Background="#E02B1717" CornerRadius="10"><TextBlock Text="{Binding OpenError}" Foreground="#FFD6CE" /></Border>
 
         <!-- Floating playback dock. -->
         <Border x:Name="PlayerDock" VerticalAlignment="Bottom"

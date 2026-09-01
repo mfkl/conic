@@ -65,8 +65,8 @@ public sealed class PlayerLayoutPolicyTests
 {
     [Theory]
     [InlineData(1280, false)]
-    [InlineData(760, false)]
-    [InlineData(759, true)]
+    [InlineData(900, false)]
+    [InlineData(899, true)]
     [InlineData(480, true)]
     public void CompactBreakPointKeepsTheTimelineAndVolumeLaneAvailable(double width, bool compact)
     {

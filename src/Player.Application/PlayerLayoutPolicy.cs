@@ -3,7 +3,7 @@ namespace Player.Application;
 /// <summary>Defines when secondary player chrome moves out of the primary dock.</summary>
 public static class PlayerLayoutPolicy
 {
-    public const double CompactWidth = 760;
+    public const double CompactWidth = 900;
     public static PlayerLayoutResult ForWidth(double availableWidth) =>
         availableWidth < CompactWidth
             ? new(true, 2, 0, 3, 2)

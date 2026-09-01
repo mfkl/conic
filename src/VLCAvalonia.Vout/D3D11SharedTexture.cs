@@ -3,13 +3,46 @@ using static TerraFX.Interop.Windows;
 
 namespace VLCAvalonia.Vout;
 
+internal enum D3D11AdapterFailure
+{
+    None = 0,
+    AdapterNotConfigured = 1,
+    RequestedAdapterUnavailable = 2,
+    ProducerDeviceCreationFailed = 3,
+    AdapterMismatch = 4,
+    MultithreadProtectionUnavailable = 5,
+    TextureUploadFailed = 6,
+}
+
+internal sealed class D3D11AdapterException : InvalidOperationException
+{
+    public D3D11AdapterFailure Failure { get; }
+
+    public int NativeResult { get; }
+
+    public D3D11AdapterException(
+        D3D11AdapterFailure failure,
+        int nativeResult,
+        string operation)
+        : base($"{operation} failed with HRESULT 0x{nativeResult:X8}.")
+    {
+        Failure = failure;
+        NativeResult = nativeResult;
+    }
+}
+
 /// <summary>
-/// Owns the producer side of a BGRA shared texture. VLC writes key 0 and
-/// publishes key 1; Avalonia consumes key 1 and returns key 0.
+/// Owns the producer side of a BGRA shared texture on the exact adapter
+/// selected by Avalonia. VLC writes key 0 and publishes key 1; Avalonia
+/// consumes key 1 and returns key 0.
 /// </summary>
 internal sealed unsafe class D3D11SharedTexture : IDisposable
 {
-    private const int WaitTimeout = unchecked((int)0x887A0027);
+    // AcquireSync returns the Win32 WAIT_TIMEOUT DWORD, not the similarly
+    // named DXGI_ERROR_WAIT_TIMEOUT HRESULT.
+    private const int WaitTimeout = 0x00000102;
+    private static long s_nextDeviceGeneration;
+    private static long s_nextResourceGeneration;
 
     private ID3D11Device* _device;
     private ID3D11DeviceContext* _context;
@@ -18,11 +51,26 @@ internal sealed unsafe class D3D11SharedTexture : IDisposable
     private nint _sharedHandle;
     private uint _width;
     private uint _height;
-    private ulong _generation;
+    private ulong _resourceGeneration;
+
+    public uint AdapterLowPart { get; }
+
+    public int AdapterHighPart { get; }
+
+    public ulong DeviceGeneration { get; }
 
     public nint SharedHandle => _sharedHandle;
 
-    public ulong Generation => _generation;
+    public ulong ResourceGeneration => _resourceGeneration;
+
+    public D3D11SharedTexture(uint adapterLowPart, int adapterHighPart)
+    {
+        CreateDevice(adapterLowPart, adapterHighPart);
+        AdapterLowPart = adapterLowPart;
+        AdapterHighPart = adapterHighPart;
+        DeviceGeneration = checked((ulong)Interlocked.Increment(
+            ref s_nextDeviceGeneration));
+    }
 
     public bool Upload(
         nint pixels,
@@ -40,7 +88,10 @@ internal sealed unsafe class D3D11SharedTexture : IDisposable
         int acquireResult = _keyedMutex->AcquireSync(0, 0);
         if (acquireResult == WaitTimeout)
             return false;
-        CheckHResult(acquireResult, "IDXGIKeyedMutex.AcquireSync(producer)");
+        CheckHResult(
+            acquireResult,
+            D3D11AdapterFailure.TextureUploadFailed,
+            "IDXGIKeyedMutex.AcquireSync(producer)");
 
         try
         {
@@ -56,6 +107,7 @@ internal sealed unsafe class D3D11SharedTexture : IDisposable
         {
             CheckHResult(
                 _keyedMutex->ReleaseSync(1),
+                D3D11AdapterFailure.TextureUploadFailed,
                 "IDXGIKeyedMutex.ReleaseSync(producer)");
         }
 
@@ -68,7 +120,6 @@ internal sealed unsafe class D3D11SharedTexture : IDisposable
             return;
 
         ReleaseTexture();
-        EnsureDevice();
 
         D3D11_TEXTURE2D_DESC description = new()
         {
@@ -90,6 +141,7 @@ internal sealed unsafe class D3D11SharedTexture : IDisposable
         ID3D11Texture2D* texture = null;
         CheckHResult(
             _device->CreateTexture2D(&description, null, &texture),
+            D3D11AdapterFailure.TextureUploadFailed,
             "ID3D11Device.CreateTexture2D(shared BGRA)");
 
         IDXGIKeyedMutex* keyedMutex = null;
@@ -101,6 +153,7 @@ internal sealed unsafe class D3D11SharedTexture : IDisposable
                 texture->QueryInterface(
                     &keyedMutexId,
                     (void**)&keyedMutex),
+                D3D11AdapterFailure.TextureUploadFailed,
                 "QueryInterface(IDXGIKeyedMutex)");
 
             Guid resourceId = IID_IDXGIResource;
@@ -108,22 +161,29 @@ internal sealed unsafe class D3D11SharedTexture : IDisposable
                 texture->QueryInterface(
                     &resourceId,
                     (void**)&resource),
+                D3D11AdapterFailure.TextureUploadFailed,
                 "QueryInterface(IDXGIResource)");
 
             nint sharedHandle = 0;
             CheckHResult(
                 resource->GetSharedHandle(&sharedHandle),
+                D3D11AdapterFailure.TextureUploadFailed,
                 "IDXGIResource.GetSharedHandle");
             if (sharedHandle == 0)
-                throw new InvalidOperationException(
-                    "D3D11 returned an empty shared texture handle.");
+            {
+                throw new D3D11AdapterException(
+                    D3D11AdapterFailure.TextureUploadFailed,
+                    unchecked((int)0x80004005),
+                    "D3D11 shared texture handle creation");
+            }
 
             _texture = texture;
             _keyedMutex = keyedMutex;
             _sharedHandle = sharedHandle;
             _width = width;
             _height = height;
-            _generation++;
+            _resourceGeneration = checked((ulong)Interlocked.Increment(
+                ref s_nextResourceGeneration));
             texture = null;
             keyedMutex = null;
         }
@@ -138,35 +198,113 @@ internal sealed unsafe class D3D11SharedTexture : IDisposable
         }
     }
 
-    private void EnsureDevice()
+    private void CreateDevice(uint adapterLowPart, int adapterHighPart)
     {
-        if (_device is not null)
-            return;
-
-        D3D_FEATURE_LEVEL* levels = stackalloc D3D_FEATURE_LEVEL[]
-        {
-            D3D_FEATURE_LEVEL.D3D_FEATURE_LEVEL_11_1,
-            D3D_FEATURE_LEVEL.D3D_FEATURE_LEVEL_11_0,
-            D3D_FEATURE_LEVEL.D3D_FEATURE_LEVEL_10_1,
-            D3D_FEATURE_LEVEL.D3D_FEATURE_LEVEL_10_0,
-        };
-        D3D_FEATURE_LEVEL selectedLevel;
+        IDXGIFactory4* factory = null;
+        IDXGIAdapter* adapter = null;
         ID3D11Device* device = null;
         ID3D11DeviceContext* context = null;
-        int result = D3D11CreateDevice(
-            null,
-            D3D_DRIVER_TYPE.D3D_DRIVER_TYPE_HARDWARE,
-            0,
-            (uint)D3D11_CREATE_DEVICE_FLAG.D3D11_CREATE_DEVICE_BGRA_SUPPORT,
-            levels,
-            4,
-            D3D11_SDK_VERSION,
-            &device,
-            &selectedLevel,
-            &context);
-        CheckHResult(result, "D3D11CreateDevice(shared texture producer)");
-        _device = device;
-        _context = context;
+        ID3D11Multithread* multithread = null;
+        try
+        {
+            Guid factoryId = IID_IDXGIFactory4;
+            int result = CreateDXGIFactory1(&factoryId, (void**)&factory);
+            CheckHResult(
+                result,
+                D3D11AdapterFailure.RequestedAdapterUnavailable,
+                "CreateDXGIFactory1");
+
+            LUID requested = new()
+            {
+                LowPart = adapterLowPart,
+                HighPart = adapterHighPart,
+            };
+            Guid adapterId = IID_IDXGIAdapter;
+            result = factory->EnumAdapterByLuid(
+                requested,
+                &adapterId,
+                (void**)&adapter);
+            CheckHResult(
+                result,
+                D3D11AdapterFailure.RequestedAdapterUnavailable,
+                "IDXGIFactory4.EnumAdapterByLuid");
+
+            DXGI_ADAPTER_DESC adapterDescription;
+            result = adapter->GetDesc(&adapterDescription);
+            CheckHResult(
+                result,
+                D3D11AdapterFailure.RequestedAdapterUnavailable,
+                "IDXGIAdapter.GetDesc");
+            if (adapterDescription.AdapterLuid.LowPart != adapterLowPart ||
+                adapterDescription.AdapterLuid.HighPart != adapterHighPart)
+            {
+                throw new D3D11AdapterException(
+                    D3D11AdapterFailure.AdapterMismatch,
+                    unchecked((int)0x887A0002),
+                    "DXGI adapter identity validation");
+            }
+
+            D3D_FEATURE_LEVEL* levels = stackalloc D3D_FEATURE_LEVEL[]
+            {
+                D3D_FEATURE_LEVEL.D3D_FEATURE_LEVEL_11_1,
+                D3D_FEATURE_LEVEL.D3D_FEATURE_LEVEL_11_0,
+                D3D_FEATURE_LEVEL.D3D_FEATURE_LEVEL_10_1,
+                D3D_FEATURE_LEVEL.D3D_FEATURE_LEVEL_10_0,
+            };
+            D3D_FEATURE_LEVEL selectedLevel;
+            result = D3D11CreateDevice(
+                adapter,
+                D3D_DRIVER_TYPE.D3D_DRIVER_TYPE_UNKNOWN,
+                0,
+                (uint)(
+                    D3D11_CREATE_DEVICE_FLAG.D3D11_CREATE_DEVICE_BGRA_SUPPORT |
+                    D3D11_CREATE_DEVICE_FLAG.D3D11_CREATE_DEVICE_VIDEO_SUPPORT),
+                levels,
+                4,
+                D3D11_SDK_VERSION,
+                &device,
+                &selectedLevel,
+                &context);
+            CheckHResult(
+                result,
+                D3D11AdapterFailure.ProducerDeviceCreationFailed,
+                "D3D11CreateDevice(selected Avalonia adapter)");
+
+            Guid multithreadId = IID_ID3D11Multithread;
+            result = context->QueryInterface(
+                &multithreadId,
+                (void**)&multithread);
+            CheckHResult(
+                result,
+                D3D11AdapterFailure.MultithreadProtectionUnavailable,
+                "QueryInterface(ID3D11Multithread)");
+            multithread->SetMultithreadProtected(1);
+            if (multithread->GetMultithreadProtected() == 0)
+            {
+                throw new D3D11AdapterException(
+                    D3D11AdapterFailure.MultithreadProtectionUnavailable,
+                    unchecked((int)0x80004005),
+                    "ID3D11Multithread.SetMultithreadProtected");
+            }
+
+            _device = device;
+            _context = context;
+            device = null;
+            context = null;
+        }
+        finally
+        {
+            if (multithread is not null)
+                multithread->Release();
+            if (context is not null)
+                context->Release();
+            if (device is not null)
+                device->Release();
+            if (adapter is not null)
+                adapter->Release();
+            if (factory is not null)
+                factory->Release();
+        }
     }
 
     private void ReleaseTexture()
@@ -201,10 +339,12 @@ internal sealed unsafe class D3D11SharedTexture : IDisposable
         }
     }
 
-    private static void CheckHResult(int result, string operation)
+    private static void CheckHResult(
+        int result,
+        D3D11AdapterFailure failure,
+        string operation)
     {
         if (result < 0)
-            throw new InvalidOperationException(
-                $"{operation} failed with HRESULT 0x{result:X8}.");
+            throw new D3D11AdapterException(failure, result, operation);
     }
 }

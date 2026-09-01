@@ -30,6 +30,11 @@ public static unsafe class CompositionVoutPlugin
     private static nint s_GPUFrameCallbackOpaque;
     private static nint s_playlistCallback;
     private static nint s_playlistCallbackOpaque;
+    private static nint s_telemetryCallback;
+    private static nint s_telemetryCallbackOpaque;
+    private static bool s_adapterConfigured;
+    private static uint s_adapterLowPart;
+    private static int s_adapterHighPart;
 
     private static readonly nint LibVLCCore =
         NativeLibrary.Load("libvlccore.dll");
@@ -43,6 +48,11 @@ public static unsafe class CompositionVoutPlugin
     {
         public nint Pool;
         public D3D11SharedTexture? SharedTexture;
+        public uint RequestedAdapterLowPart;
+        public int RequestedAdapterHighPart;
+        public uint SourceChroma;
+        public D3D11AdapterFailure FallbackReason;
+        public int NativeResult;
     }
 
     [UnmanagedCallersOnly(
@@ -118,6 +128,43 @@ public static unsafe class CompositionVoutPlugin
         }
     }
 
+    /// <summary>
+    /// Selects the exact DXGI adapter that owns Avalonia's compositor device.
+    /// The two integer parts are copied by value and contain no native handle.
+    /// Passing configured=0 clears the selection and forces the CPU fallback.
+    /// </summary>
+    [UnmanagedCallersOnly(
+        EntryPoint = "vlc_avalonia_set_adapter_luid",
+        CallConvs = [typeof(CallConvCdecl)])]
+    public static void SetAdapterLuid(
+        uint lowPart,
+        int highPart,
+        int configured)
+    {
+        lock (CallbackGate)
+        {
+            s_adapterLowPart = lowPart;
+            s_adapterHighPart = highPart;
+            s_adapterConfigured = configured != 0;
+        }
+    }
+
+    /// <summary>
+    /// Registers machine-readable adapter/device telemetry. Values contain no
+    /// raw pointers or handles.
+    /// </summary>
+    [UnmanagedCallersOnly(
+        EntryPoint = "vlc_avalonia_set_device_telemetry_callback",
+        CallConvs = [typeof(CallConvCdecl)])]
+    public static void SetDeviceTelemetryCallback(nint callback, nint opaque)
+    {
+        lock (CallbackGate)
+        {
+            s_telemetryCallback = callback;
+            s_telemetryCallbackOpaque = opaque;
+        }
+    }
+
     [UnmanagedCallersOnly(
         EntryPoint = "vlc_avalonia_set_playlist_callback",
         CallConvs = [typeof(CallConvCdecl)])]
@@ -181,10 +228,47 @@ public static unsafe class CompositionVoutPlugin
         GCHandle stateHandle = default;
         try
         {
+            bool adapterConfigured;
+            uint adapterLowPart;
+            int adapterHighPart;
+            lock (CallbackGate)
+            {
+                adapterConfigured = s_adapterConfigured;
+                adapterLowPart = s_adapterLowPart;
+                adapterHighPart = s_adapterHighPart;
+            }
+
             DisplayState state = new()
             {
-                SharedTexture = new D3D11SharedTexture(),
+                RequestedAdapterLowPart = adapterLowPart,
+                RequestedAdapterHighPart = adapterHighPart,
+                SourceChroma = display->Source.Chroma,
             };
+            if (adapterConfigured)
+            {
+                try
+                {
+                    state.SharedTexture = new D3D11SharedTexture(
+                        adapterLowPart,
+                        adapterHighPart);
+                }
+                catch (D3D11AdapterException exception)
+                {
+                    state.FallbackReason = exception.Failure;
+                    state.NativeResult = exception.NativeResult;
+                }
+                catch
+                {
+                    state.FallbackReason =
+                        D3D11AdapterFailure.ProducerDeviceCreationFailed;
+                    state.NativeResult = unchecked((int)0x80004005);
+                }
+            }
+            else
+            {
+                state.FallbackReason =
+                    D3D11AdapterFailure.AdapterNotConfigured;
+            }
             stateHandle = GCHandle.Alloc(state);
 
             display->Format = display->Source;
@@ -209,6 +293,7 @@ public static unsafe class CompositionVoutPlugin
             display->Control = (nint)(delegate* unmanaged[Cdecl]<nint, int, nint, int>)&Control;
             display->Manage = 0;
             display->Sys = GCHandle.ToIntPtr(stateHandle);
+            PublishTelemetry(state);
             return Success;
         }
         catch
@@ -308,21 +393,41 @@ public static unsafe class CompositionVoutPlugin
                         + checked((nint)picture->Format.XOffset * 4);
                     DisplayState? state = GetState(
                         (VLCVoutDisplay*)displayPtr);
-                    if (HasGPUFrameCallback())
+                    if (HasGPUFrameCallback() && state?.SharedTexture is not null)
                     {
-                        if (state?.SharedTexture?.Upload(
-                                pixels,
-                                plane.Pitch,
-                                width,
-                                height) == true)
+                        try
                         {
-                            D3D11SharedTexture texture =
-                                state.SharedTexture;
-                            PublishGPUFrame(
-                                texture.SharedHandle,
+                            if (state.SharedTexture.Upload(
+                                    pixels,
+                                    plane.Pitch,
+                                    width,
+                                    height))
+                            {
+                                D3D11SharedTexture texture =
+                                    state.SharedTexture;
+                                PublishGPUFrame(
+                                    texture.SharedHandle,
+                                    width,
+                                    height,
+                                    texture.ResourceGeneration,
+                                    texture.DeviceGeneration,
+                                    texture.AdapterLowPart,
+                                    texture.AdapterHighPart,
+                                    picture->Date);
+                            }
+                        }
+                        catch (D3D11AdapterException exception)
+                        {
+                            state.SharedTexture.Dispose();
+                            state.SharedTexture = null;
+                            state.FallbackReason = exception.Failure;
+                            state.NativeResult = exception.NativeResult;
+                            PublishTelemetry(state);
+                            PublishFrame(
                                 width,
                                 height,
-                                texture.Generation,
+                                plane.Pitch,
+                                pixels,
                                 picture->Date);
                         }
                     }
@@ -374,7 +479,10 @@ public static unsafe class CompositionVoutPlugin
         nint sharedHandle,
         uint width,
         uint height,
-        ulong generation,
+        ulong resourceGeneration,
+        ulong deviceGeneration,
+        uint adapterLowPart,
+        int adapterHighPart,
         long presentationTimestamp)
     {
         lock (CallbackGate)
@@ -382,14 +490,42 @@ public static unsafe class CompositionVoutPlugin
             if (s_GPUFrameCallback == 0)
                 return;
             var callback =
-                (delegate* unmanaged[Cdecl]<nint, nint, uint, uint, ulong, long, void>)s_GPUFrameCallback;
+                (delegate* unmanaged[Cdecl]<nint, nint, uint, uint, ulong, ulong, uint, int, long, void>)s_GPUFrameCallback;
             callback(
                 s_GPUFrameCallbackOpaque,
                 sharedHandle,
                 width,
                 height,
-                generation,
+                resourceGeneration,
+                deviceGeneration,
+                adapterLowPart,
+                adapterHighPart,
                 presentationTimestamp);
+        }
+    }
+
+    private static void PublishTelemetry(DisplayState state)
+    {
+        lock (CallbackGate)
+        {
+            if (s_telemetryCallback == 0)
+                return;
+            D3D11SharedTexture? texture = state.SharedTexture;
+            var callback =
+                (delegate* unmanaged[Cdecl]<nint, uint, int, uint, int, int, ulong, uint, int, int, int, void>)s_telemetryCallback;
+            callback(
+                s_telemetryCallbackOpaque,
+                state.RequestedAdapterLowPart,
+                state.RequestedAdapterHighPart,
+                texture?.AdapterLowPart ?? 0,
+                texture?.AdapterHighPart ?? 0,
+                texture is null ? 0 : 1,
+                texture?.DeviceGeneration ?? 0,
+                state.SourceChroma,
+                (int)TerraFX.Interop.DXGI_FORMAT
+                    .DXGI_FORMAT_B8G8R8A8_UNORM,
+                (int)state.FallbackReason,
+                state.NativeResult);
         }
     }
 

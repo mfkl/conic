@@ -206,7 +206,7 @@ public partial class MainWindow : Window
         timer.Tick += (_, _) =>
         {
             if (phase == 0) { ValidateLayout(1280, false); Width = 480; phase = 1; return; }
-            if (phase == 1) { Grid.SetRow(RightTransport, 2); Grid.SetColumn(RightTransport, 0); Grid.SetColumnSpan(RightTransport, 3); RightTransport.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center; ValidateLayout(480, true); timer.Stop(); Console.WriteLine("[layout-smoke] PASS normal-and-compact"); desktop.Shutdown(0); }
+            if (phase == 1) { ValidateLayout(480, true); timer.Stop(); Console.WriteLine("[layout-smoke] PASS normal-and-compact"); desktop.Shutdown(0); }
         };
         DispatcherTimer timeout = new() { Interval = TimeSpan.FromSeconds(8) };
         timeout.Tick += (_, _) => { timeout.Stop(); timer.Stop(); Console.Error.WriteLine("[layout-smoke] FAIL timeout"); desktop.Shutdown(1); };
@@ -325,7 +325,7 @@ public partial class MainWindow : Window
 
     private void ApplyResponsiveChrome()
     {
-        PlayerLayoutResult layout = PlayerLayoutPolicy.ForWidth(DockGrid.Bounds.Width);
+        PlayerLayoutResult layout = PlayerLayoutPolicy.ForWidth(Bounds.Width);
         CenterTransport.Spacing = layout.Spacing;
         RightTransport.Spacing = layout.Spacing;
         Grid.SetRow(RightTransport, layout.RightRow);

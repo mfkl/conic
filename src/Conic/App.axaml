@@ -6,5 +6,6 @@
 
     <Application.Styles>
         <FluentTheme />
+        <StyleInclude Source="avares://Conic/Styles/PlayerChrome.axaml" />
     </Application.Styles>
 </Application>

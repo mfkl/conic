@@ -97,7 +97,12 @@ public sealed class MediaHistoryService(IMediaHistoryStorage storage, Func<DateT
         try { raw = storage.Read(); }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException) { _document = MediaHistoryDocument.Empty; LoadDiagnostic = "Media history could not be read."; return; }
         if (string.IsNullOrWhiteSpace(raw)) { _document = MediaHistoryDocument.Empty; LoadDiagnostic = null; return; }
-        try { _document = Normalize(JsonSerializer.Deserialize<MediaHistoryDocument>(raw, Options) is { Version: MediaHistoryDocument.CurrentVersion } value ? value : MediaHistoryDocument.Empty); LoadDiagnostic = null; }
+        try
+        {
+            MediaHistoryDocument? parsed = JsonSerializer.Deserialize<MediaHistoryDocument>(raw, Options);
+            if (parsed is null || parsed.Version != MediaHistoryDocument.CurrentVersion) throw new JsonException("Unsupported media history version.");
+            _document = Normalize(parsed); LoadDiagnostic = null;
+        }
         catch (JsonException) { try { storage.PreserveInvalid(raw); storage.WriteAtomically(JsonSerializer.Serialize(MediaHistoryDocument.Empty, Options)); } catch (Exception e) when (e is IOException or UnauthorizedAccessException) { } _document = MediaHistoryDocument.Empty; LoadDiagnostic = "Media history was invalid and has been reset."; }
     }
     public void RecordOpened(MediaSource source, bool enabled)

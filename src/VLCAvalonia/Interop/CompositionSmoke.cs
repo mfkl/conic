@@ -9,8 +9,19 @@ internal static class CompositionSmoke
     private static readonly TimeSpan ControlStageTimeout =
         TimeSpan.FromSeconds(5);
 
-    public static int Run()
+    public static int Run(string? expectedPath)
     {
+        if (expectedPath is not (
+            "hardware-opaque-gpu" or
+            "software-bgra-gpu-upload" or
+            "cpu-bitmap"))
+        {
+            Console.Error.WriteLine(
+                "[composition-smoke] --expect-path is required and must be " +
+                "hardware-opaque-gpu, software-bgra-gpu-upload, or cpu-bitmap.");
+            return 2;
+        }
+
         string mediaPath = RepositoryPaths.TestMediaPath;
         if (!File.Exists(mediaPath))
         {
@@ -21,11 +32,26 @@ internal static class CompositionSmoke
         try
         {
             using CompositionPluginBridge bridge = new();
-            bridge.ClearAdapterSelection();
+            bool expectHardware = expectedPath == "hardware-opaque-gpu";
+            bool expectGPU = expectedPath != "cpu-bitmap";
+            if (expectGPU)
+            {
+                CompositionPluginBridge.AdapterLuid adapter =
+                    D3D11SharedTextureProbe.GetDefaultHardwareAdapterForSmoke();
+                bridge.ConfigureAdapter(adapter);
+                bridge.EnableGPUFrames();
+            }
+            else
+            {
+                bridge.ClearAdapterSelection();
+            }
+            bridge.ForceCPUOutput(!expectHardware);
             CompositionPluginBridge.PoolTelemetry before =
                 bridge.ReadPoolTelemetry();
             bool receivedFrame = false;
-            using (VLCCorePlayer player = new())
+            string? actualPath = null;
+            using (VLCCorePlayer player = new(
+                hardwareDecoding: expectHardware))
             {
                 player.StateChanged += (_, state) =>
                     Console.WriteLine(
@@ -35,12 +61,30 @@ internal static class CompositionSmoke
                 Stopwatch timeout = Stopwatch.StartNew();
                 while (timeout.Elapsed < TimeSpan.FromSeconds(15))
                 {
-                    if (bridge.TryTakeLatest(
+                    if (expectGPU && bridge.TryTakeLatestGPU(
+                            out CompositionPluginBridge.GPUFrame? GPUFrame) &&
+                        GPUFrame is not null)
+                    {
+                        string probe =
+                            D3D11SharedTextureProbe.OpenAndSynchronize(GPUFrame);
+                        actualPath = expectHardware
+                            ? "hardware-opaque-gpu"
+                            : "software-bgra-gpu-upload";
+                        Console.WriteLine(
+                            $"[composition-smoke] path={actualPath} " +
+                            $"size={GPUFrame.Width}x{GPUFrame.Height} " +
+                            $"pts={GPUFrame.PresentationTimestamp} " +
+                            $"probe={probe}");
+                        receivedFrame = true;
+                        break;
+                    }
+                    if (!expectGPU && bridge.TryTakeLatest(
                             out CompositionPluginBridge.Frame? frame) &&
                         frame is not null)
                     {
+                        actualPath = "cpu-bitmap";
                         Console.WriteLine(
-                            "[composition-smoke] path=cpu-bgra " +
+                            "[composition-smoke] path=cpu-bitmap " +
                             $"size={frame.Width}x{frame.Height} " +
                             $"row-bytes={frame.RowBytes} " +
                             $"pts={frame.PresentationTimestamp}");
@@ -56,12 +100,29 @@ internal static class CompositionSmoke
             CompositionPluginBridge.PoolTelemetry after =
                 bridge.ReadPoolTelemetry();
             Console.WriteLine(after.ToMachineReadableString());
-            if (!receivedFrame ||
-                after.CpuPicturesReceived <= before.CpuPicturesReceived)
+            if (!receivedFrame || actualPath != expectedPath)
             {
                 Console.Error.WriteLine(
-                    "[composition-smoke] No CPU fallback frame arrived " +
-                    "within 15 seconds.");
+                    $"[composition-smoke] Expected path={expectedPath}, " +
+                    $"actual path={actualPath ?? "none"}.");
+                return 1;
+            }
+            if (expectHardware &&
+                (after.OpaquePicturesReceived <= before.OpaquePicturesReceived ||
+                 after.CpuUploads != before.CpuUploads))
+            {
+                Console.Error.WriteLine(
+                    "[composition-smoke] Hardware path did not receive an " +
+                    "opaque picture with zero CPU uploads.");
+                return 1;
+            }
+            if (expectedPath == "software-bgra-gpu-upload" &&
+                (after.CpuPicturesReceived <= before.CpuPicturesReceived ||
+                 after.CpuUploads <= before.CpuUploads))
+            {
+                Console.Error.WriteLine(
+                    "[composition-smoke] Software upload path counters did " +
+                    "not advance.");
                 return 1;
             }
             return 0;
@@ -89,6 +150,8 @@ internal static class CompositionSmoke
             CompositionPluginBridge.AdapterLuid adapter =
                 D3D11SharedTextureProbe.GetDefaultHardwareAdapterForSmoke();
             monitor.ConfigureAdapter(adapter);
+            monitor.ForceCPUOutput(false);
+            monitor.EnableGPUFrames();
             CompositionPluginBridge.PoolTelemetry before =
                 monitor.ReadPoolTelemetry();
             using (VLCCorePlayer player = new())
@@ -109,7 +172,7 @@ internal static class CompositionSmoke
             }
             Console.WriteLine(
                 $"[opaque-smoke] PASS adapter-luid={adapter} " +
-                "path=hardware-opaque-pool");
+                "path=hardware-opaque-gpu");
             return 0;
         }
         catch (Exception exception)
@@ -136,6 +199,8 @@ internal static class CompositionSmoke
             CompositionPluginBridge.AdapterLuid adapter =
                 D3D11SharedTextureProbe.GetDefaultHardwareAdapterForSmoke();
             monitor.ConfigureAdapter(adapter);
+            monitor.ForceCPUOutput(false);
+            monitor.EnableGPUFrames();
             CompositionPluginBridge.PoolTelemetry initial =
                 monitor.ReadPoolTelemetry();
 
@@ -193,6 +258,7 @@ internal static class CompositionSmoke
 
             for (int cycle = 1; cycle <= cycles; cycle++)
             {
+                monitor.TryTakeLatestGPU(out _);
                 CompositionPluginBridge.PoolTelemetry before =
                     monitor.ReadPoolTelemetry();
                 using VLCCorePlayer cyclePlayer = new();
@@ -260,14 +326,32 @@ internal static class CompositionSmoke
             if (current.OpaquePoolGenerations >
                     before.OpaquePoolGenerations &&
                 current.OpaquePicturesReceived >
-                    before.OpaquePicturesReceived)
+                    before.OpaquePicturesReceived &&
+                monitor.TryTakeLatestGPU(
+                    out CompositionPluginBridge.GPUFrame? frame) &&
+                frame is not null)
             {
-                Console.WriteLine(
-                    $"[engine-smoke] PASS {stage}: " +
-                    $"opaque-pictures=" +
-                    $"{current.OpaquePicturesReceived - before.OpaquePicturesReceived} " +
-                    $"pool-generation={current.PoolGenerations}");
-                return;
+                try
+                {
+                    string probe =
+                        D3D11SharedTextureProbe.OpenAndSynchronize(frame);
+                    Console.WriteLine(
+                        $"[engine-smoke] PASS {stage}: " +
+                        $"opaque-pictures=" +
+                        $"{current.OpaquePicturesReceived - before.OpaquePicturesReceived} " +
+                        $"pool-generation={current.PoolGenerations} " +
+                        $"path=hardware-opaque-gpu probe={probe}");
+                    return;
+                }
+                catch (InvalidOperationException exception)
+                {
+                    // A callback descriptor is non-owning and can be replaced
+                    // while the previous vout tears down. Ignore that stale
+                    // descriptor and require a frame from the live resource.
+                    Console.WriteLine(
+                        $"[engine-smoke] {stage}: discarded stale GPU frame: " +
+                        exception.Message);
+                }
             }
             Thread.Sleep(20);
         }

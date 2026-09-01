@@ -97,6 +97,7 @@ internal sealed unsafe class CompositionPluginBridge : IDisposable
         _setPlaylistCallback;
     private readonly delegate* unmanaged[Cdecl]<uint, int, int, void>
         _setAdapterLuid;
+    private readonly delegate* unmanaged[Cdecl]<int, void> _setForceCPUOutput;
     private readonly delegate* unmanaged[Cdecl]<nint, nint, void>
         _setTelemetryCallback;
     private readonly delegate* unmanaged[Cdecl]<
@@ -114,6 +115,7 @@ internal sealed unsafe class CompositionPluginBridge : IDisposable
     private bool _playlistConnected;
     private bool _telemetryConnected;
     private bool _ownsAdapterSelection;
+    private bool _ownsCPUOutputSelection;
     private int _disposed;
 
     public string PluginDirectory { get; }
@@ -143,6 +145,11 @@ internal sealed unsafe class CompositionPluginBridge : IDisposable
             "vlc_avalonia_set_adapter_luid");
         _setAdapterLuid =
             (delegate* unmanaged[Cdecl]<uint, int, int, void>)adapterSetter;
+        nint forceCPUSetter = NativeLibrary.GetExport(
+            _library,
+            "vlc_avalonia_set_force_cpu_output");
+        _setForceCPUOutput =
+            (delegate* unmanaged[Cdecl]<int, void>)forceCPUSetter;
         nint telemetrySetter = NativeLibrary.GetExport(
             _library,
             "vlc_avalonia_set_device_telemetry_callback");
@@ -207,6 +214,16 @@ internal sealed unsafe class CompositionPluginBridge : IDisposable
             ThrowIfDisposed();
             _setAdapterLuid(0, 0, 0);
             _ownsAdapterSelection = true;
+        }
+    }
+
+    public void ForceCPUOutput(bool enabled)
+    {
+        lock (_lifecycleGate)
+        {
+            ThrowIfDisposed();
+            _setForceCPUOutput(enabled ? 1 : 0);
+            _ownsCPUOutputSelection = true;
         }
     }
 
@@ -503,6 +520,9 @@ internal sealed unsafe class CompositionPluginBridge : IDisposable
             5 => "multithread-protection-unavailable",
             6 => "texture-upload-failed",
             7 => "opaque-pool-creation-failed",
+            8 => "video-processor-creation-failed",
+            9 => "video-processor-conversion-failed",
+            10 => "device-removed",
             _ => $"unknown-{fallbackReason}",
         };
 
@@ -600,6 +620,11 @@ internal sealed unsafe class CompositionPluginBridge : IDisposable
             {
                 _setAdapterLuid(0, 0, 0);
                 _ownsAdapterSelection = false;
+            }
+            if (_ownsCPUOutputSelection)
+            {
+                _setForceCPUOutput(0);
+                _ownsCPUOutputSelection = false;
             }
             _playlistReady.Dispose();
 

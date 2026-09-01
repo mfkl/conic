@@ -20,7 +20,8 @@ public sealed record PlayerSettings(
     int ResumeMaximumRemainingSeconds = 30,
     string AudioOutputModule = "Default",
     double? NormalizationMaximumLevel = null,
-    bool? AudioPassthrough = null)
+    bool? AudioPassthrough = null,
+    IReadOnlyDictionary<string, string>? ShortcutOverrides = null)
 {
     public const int CurrentVersion = 4;
     public static PlayerSettings Default { get; } = new(CurrentVersion, true, true, "System", "Comfortable", 3, 1, 10, 10, true, true, 30, 30, "Default");
@@ -110,6 +111,7 @@ public sealed class PlayerSettingsService
             AudioOutputModule = Read(root, nameof(PlayerSettings.AudioOutputModule), PlayerSettings.Default.AudioOutputModule),
             NormalizationMaximumLevel = Read<double?>(root, nameof(PlayerSettings.NormalizationMaximumLevel), null),
             AudioPassthrough = Read<bool?>(root, nameof(PlayerSettings.AudioPassthrough), null),
+            ShortcutOverrides = Read<IReadOnlyDictionary<string, string>?>(root, nameof(PlayerSettings.ShortcutOverrides), null),
         },
         _ => throw new JsonException("Unsupported settings version."),
     };
@@ -137,5 +139,15 @@ public sealed class PlayerSettingsService
         ResumeMaximumRemainingSeconds = Math.Clamp(value.ResumeMaximumRemainingSeconds, 0, 3600),
         AudioOutputModule = value.AudioOutputModule is "Default" or "mmdevice" or "directsound" or "waveout" ? value.AudioOutputModule : "Default",
         NormalizationMaximumLevel = value.NormalizationMaximumLevel is double level && double.IsFinite(level) ? Math.Clamp(level, .5, 10) : null,
+        ShortcutOverrides = NormalizeShortcuts(value.ShortcutOverrides),
     };
+
+    private static IReadOnlyDictionary<string, string> NormalizeShortcuts(IReadOnlyDictionary<string, string>? shortcuts)
+    {
+        if (shortcuts is null) return new Dictionary<string, string>(StringComparer.Ordinal);
+        var result = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var pair in shortcuts)
+            if (Enum.TryParse<PlayerCommandId>(pair.Key, out _) && PlayerShortcutPolicy.Normalize(pair.Value) is { Length: > 0 } gesture && !result.Values.Contains(gesture, StringComparer.OrdinalIgnoreCase)) result[pair.Key] = gesture;
+        return result;
+    }
 }

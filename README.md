@@ -5,6 +5,12 @@ pure-C# Native AOT VLC `vout display` plugin and a keyed-mutex D3D11 shared
 texture, allowing video and Avalonia controls to live in the same composition
 tree without child-window airspace limitations.
 
+The authoritative architecture boundary is recorded in
+[`docs/rfc/0001-port-boundaries.md`](docs/rfc/0001-port-boundaries.md), and the
+pinned native/framework inputs are recorded in [`eng/versions.json`](eng/versions.json).
+The dispatch-ready Windows work packages, validation gates, and commit
+boundaries are in [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md).
+
 ## Current state
 
 - Pure C#; no native C shim.
@@ -15,6 +21,8 @@ tree without child-window airspace limitations.
 - CPU BGRA fallback when the active Avalonia backend cannot import D3D11
   keyed-mutex images.
 - Cross-device and real-compositor smoke modes.
+- An engine-neutral command/state contract with generation-safe snapshots.
+- Working open, play/pause, seek, volume, stop, dispose, and reopen plumbing.
 
 The current VLC pool is CPU BGRA, so one CPU-to-GPU upload remains inside the
 vout. The handoff from the vout to Avalonia is zero-copy. End-to-end hardware

@@ -19,6 +19,7 @@ internal sealed class SettingsViewModel : INotifyPropertyChanged
     public string Search { get => _search; set { if (Set(ref _search, value)) { Notify(nameof(FilteredPages)); SettingsPage? match = FilteredPages.FirstOrDefault(); if (match is not null) SelectedPage = match; } } }
     public bool ConfirmReset { get => _confirmReset; private set => Set(ref _confirmReset, value); } public string? ErrorMessage { get => _errorMessage; private set => Set(ref _errorMessage, value); }
     public ICommand ResetPageCommand { get; } public ICommand ResetAllCommand { get; } public ICommand CancelResetCommand { get; }
+    public string LabelFor(string key) => PlayerSettingsService.ApplyMode(key) switch { SettingApplyMode.Live => "Live", SettingApplyMode.NextOpen => "Next open", _ => "Restart" };
     public bool ResumePlayback { get => _service.Current.ResumePlayback; set => Update(s => s with { ResumePlayback = value }); } public bool RememberVolume { get => _service.Current.RememberVolume; set => Update(s => s with { RememberVolume = value }); }
     public string Theme { get => _service.Current.Theme; set => Update(s => s with { Theme = value }); } public string Density { get => _service.Current.Density; set => Update(s => s with { Density = value }); }
     public decimal ControlTimeoutSeconds { get => _service.Current.ControlTimeoutSeconds; set => Update(s => s with { ControlTimeoutSeconds = (int)value }); }

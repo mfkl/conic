@@ -12,6 +12,7 @@ internal enum D3D11AdapterFailure
     AdapterMismatch = 4,
     MultithreadProtectionUnavailable = 5,
     TextureUploadFailed = 6,
+    OpaquePoolCreationFailed = 7,
 }
 
 internal sealed class D3D11AdapterException : InvalidOperationException
@@ -62,6 +63,12 @@ internal sealed unsafe class D3D11SharedTexture : IDisposable
     public nint SharedHandle => _sharedHandle;
 
     public ulong ResourceGeneration => _resourceGeneration;
+
+    /// <summary>Borrowed for this producer object's lifetime.</summary>
+    internal ID3D11Device* Device => _device;
+
+    /// <summary>Borrowed for this producer object's lifetime.</summary>
+    internal ID3D11DeviceContext* Context => _context;
 
     public D3D11SharedTexture(uint adapterLowPart, int adapterHighPart)
     {

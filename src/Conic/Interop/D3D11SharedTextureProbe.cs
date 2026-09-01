@@ -5,6 +5,71 @@ namespace Conic.Interop;
 
 internal static unsafe class D3D11SharedTextureProbe
 {
+    public static CompositionPluginBridge.AdapterLuid
+        GetDefaultHardwareAdapterForSmoke()
+    {
+        ID3D11Device* device = null;
+        ID3D11DeviceContext* context = null;
+        IDXGIDevice* dxgiDevice = null;
+        IDXGIAdapter* adapter = null;
+        try
+        {
+            D3D_FEATURE_LEVEL* levels = stackalloc D3D_FEATURE_LEVEL[]
+            {
+                D3D_FEATURE_LEVEL.D3D_FEATURE_LEVEL_11_1,
+                D3D_FEATURE_LEVEL.D3D_FEATURE_LEVEL_11_0,
+                D3D_FEATURE_LEVEL.D3D_FEATURE_LEVEL_10_1,
+                D3D_FEATURE_LEVEL.D3D_FEATURE_LEVEL_10_0,
+            };
+            D3D_FEATURE_LEVEL selectedLevel;
+            CheckHResult(
+                D3D11CreateDevice(
+                    null,
+                    D3D_DRIVER_TYPE.D3D_DRIVER_TYPE_HARDWARE,
+                    0,
+                    (uint)(
+                        D3D11_CREATE_DEVICE_FLAG
+                            .D3D11_CREATE_DEVICE_BGRA_SUPPORT |
+                        D3D11_CREATE_DEVICE_FLAG
+                            .D3D11_CREATE_DEVICE_VIDEO_SUPPORT),
+                    levels,
+                    4,
+                    D3D11_SDK_VERSION,
+                    &device,
+                    &selectedLevel,
+                    &context),
+                "D3D11CreateDevice(hardware smoke selector)");
+
+            Guid dxgiDeviceId = IID_IDXGIDevice;
+            CheckHResult(
+                device->QueryInterface(
+                    &dxgiDeviceId,
+                    (void**)&dxgiDevice),
+                "QueryInterface(IDXGIDevice smoke selector)");
+            CheckHResult(
+                dxgiDevice->GetAdapter(&adapter),
+                "IDXGIDevice.GetAdapter(smoke selector)");
+            DXGI_ADAPTER_DESC description;
+            CheckHResult(
+                adapter->GetDesc(&description),
+                "IDXGIAdapter.GetDesc(smoke selector)");
+            return new CompositionPluginBridge.AdapterLuid(
+                description.AdapterLuid.LowPart,
+                description.AdapterLuid.HighPart);
+        }
+        finally
+        {
+            if (adapter is not null)
+                adapter->Release();
+            if (dxgiDevice is not null)
+                dxgiDevice->Release();
+            if (context is not null)
+                context->Release();
+            if (device is not null)
+                device->Release();
+        }
+    }
+
     public static string OpenAndSynchronize(
         CompositionPluginBridge.GPUFrame frame)
     {

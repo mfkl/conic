@@ -29,6 +29,10 @@ public partial class App : Application
             {
                 window.EnableGPUCompositionSmoke(desktop);
             }
+            else if (desktop.Args?.Contains("--layout-smoke", StringComparer.OrdinalIgnoreCase) == true)
+            {
+                window.EnableLayoutSmoke(desktop);
+            }
         }
 
         base.OnFrameworkInitializationCompleted();

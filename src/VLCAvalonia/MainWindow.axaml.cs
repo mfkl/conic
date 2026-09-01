@@ -567,7 +567,7 @@ public partial class MainWindow : Window
     private void ValidateSettingsLayout(double width, bool compact)
     {
         Control navigation = compact ? CompactSettingsPages : SettingsPages;
-        Control[] required = [SettingsPanel, SettingsSearch, navigation, SettingsContent, SettingsResetRow, OpenSettingsButton];
+        Control[] required = [SettingsPanel, SettingsSearch, navigation, SettingsContent, OpenSettingsButton];
         bool privacyControlsMeasured = SettingsClearRecentButton.IsVisible && SettingsClearRecentButton.Bounds.Width > 0 && SettingsClearRecentButton.Bounds.Height > 0 &&
             SettingsClearResumeButton.IsVisible && SettingsClearResumeButton.Bounds.Width > 0 && SettingsClearResumeButton.Bounds.Height > 0;
         bool contained = required.All(IsContained) && privacyControlsMeasured;

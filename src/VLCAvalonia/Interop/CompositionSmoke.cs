@@ -22,35 +22,49 @@ internal static class CompositionSmoke
         {
             using CompositionPluginBridge bridge = new();
             bridge.ClearAdapterSelection();
-            using VLCCorePlayer player = new();
-            player.StateChanged += (_, state) =>
-                Console.WriteLine(
-                    $"[composition-smoke] {state.Status}: {state.Error}");
-            player.Open(mediaPath);
-
-            Stopwatch timeout = Stopwatch.StartNew();
-            while (timeout.Elapsed < TimeSpan.FromSeconds(15))
+            CompositionPluginBridge.PoolTelemetry before =
+                bridge.ReadPoolTelemetry();
+            bool receivedFrame = false;
+            using (VLCCorePlayer player = new())
             {
-                if (bridge.TryTakeLatest(
-                        out CompositionPluginBridge.Frame? frame) &&
-                    frame is not null)
-                {
+                player.StateChanged += (_, state) =>
                     Console.WriteLine(
-                        "[composition-smoke] path=cpu-bgra " +
-                        $"size={frame.Width}x{frame.Height} " +
-                        $"row-bytes={frame.RowBytes} " +
-                        $"pts={frame.PresentationTimestamp}");
-                    Thread.Sleep(500);
-                    return 0;
-                }
+                        $"[composition-smoke] {state.Status}: {state.Error}");
+                player.Open(mediaPath);
 
-                Thread.Sleep(20);
+                Stopwatch timeout = Stopwatch.StartNew();
+                while (timeout.Elapsed < TimeSpan.FromSeconds(15))
+                {
+                    if (bridge.TryTakeLatest(
+                            out CompositionPluginBridge.Frame? frame) &&
+                        frame is not null)
+                    {
+                        Console.WriteLine(
+                            "[composition-smoke] path=cpu-bgra " +
+                            $"size={frame.Width}x{frame.Height} " +
+                            $"row-bytes={frame.RowBytes} " +
+                            $"pts={frame.PresentationTimestamp}");
+                        receivedFrame = true;
+                        break;
+                    }
+
+                    Thread.Sleep(20);
+                }
+                player.Stop();
             }
 
-            Console.Error.WriteLine(
-                "[composition-smoke] No CPU fallback frame arrived within " +
-                "15 seconds.");
-            return 1;
+            CompositionPluginBridge.PoolTelemetry after =
+                bridge.ReadPoolTelemetry();
+            Console.WriteLine(after.ToMachineReadableString());
+            if (!receivedFrame ||
+                after.CpuPicturesReceived <= before.CpuPicturesReceived)
+            {
+                Console.Error.WriteLine(
+                    "[composition-smoke] No CPU fallback frame arrived " +
+                    "within 15 seconds.");
+                return 1;
+            }
+            return 0;
         }
         catch (Exception exception)
         {
@@ -59,7 +73,53 @@ internal static class CompositionSmoke
         }
     }
 
-    public static int RunEngine()
+    public static int RunOpaque()
+    {
+        string mediaPath = RepositoryPaths.TestMediaPath;
+        if (!File.Exists(mediaPath))
+        {
+            Console.Error.WriteLine(
+                $"[opaque-smoke] Smoke media not found: {mediaPath}");
+            return 2;
+        }
+
+        try
+        {
+            using CompositionPluginBridge monitor = new();
+            CompositionPluginBridge.AdapterLuid adapter =
+                D3D11SharedTextureProbe.GetDefaultHardwareAdapterForSmoke();
+            monitor.ConfigureAdapter(adapter);
+            CompositionPluginBridge.PoolTelemetry before =
+                monitor.ReadPoolTelemetry();
+            using (VLCCorePlayer player = new())
+            {
+                OpenAndWait(player, mediaPath, "opaque-open");
+                WaitForOpaquePool(monitor, before, "opaque-open");
+                StopAndWait(player, "opaque-stop");
+            }
+
+            WaitForReleaseBalance(monitor, before.ReleaseBalance, "opaque");
+            CompositionPluginBridge.PoolTelemetry after =
+                monitor.ReadPoolTelemetry();
+            Console.WriteLine(after.ToMachineReadableString());
+            if (after.CpuUploads != before.CpuUploads)
+            {
+                throw new InvalidOperationException(
+                    "Opaque playback performed a CPU upload.");
+            }
+            Console.WriteLine(
+                $"[opaque-smoke] PASS adapter-luid={adapter} " +
+                "path=hardware-opaque-pool");
+            return 0;
+        }
+        catch (Exception exception)
+        {
+            Console.Error.WriteLine($"[opaque-smoke] FAIL: {exception}");
+            return 1;
+        }
+    }
+
+    public static int RunEngine(int cycles)
     {
         string mediaPath = RepositoryPaths.TestMediaPath;
         if (!File.Exists(mediaPath))
@@ -72,8 +132,16 @@ internal static class CompositionSmoke
         VLCCorePlayer? player = null;
         try
         {
+            using CompositionPluginBridge monitor = new();
+            CompositionPluginBridge.AdapterLuid adapter =
+                D3D11SharedTextureProbe.GetDefaultHardwareAdapterForSmoke();
+            monitor.ConfigureAdapter(adapter);
+            CompositionPluginBridge.PoolTelemetry initial =
+                monitor.ReadPoolTelemetry();
+
             player = new VLCCorePlayer();
             OpenAndWait(player, mediaPath, "open");
+            WaitForOpaquePool(monitor, initial, "open");
 
             RunAction("pause", player.TogglePause);
             WaitForState(
@@ -118,7 +186,43 @@ internal static class CompositionSmoke
             DisposeAndWait(player, "final-dispose");
             player = null;
 
-            Console.WriteLine("[engine-smoke] PASS lifecycle");
+            WaitForReleaseBalance(
+                monitor,
+                initial.ReleaseBalance,
+                "control lifecycle");
+
+            for (int cycle = 1; cycle <= cycles; cycle++)
+            {
+                CompositionPluginBridge.PoolTelemetry before =
+                    monitor.ReadPoolTelemetry();
+                using VLCCorePlayer cyclePlayer = new();
+                OpenAndWait(
+                    cyclePlayer,
+                    mediaPath,
+                    $"stress-{cycle}-open");
+                WaitForOpaquePool(
+                    monitor,
+                    before,
+                    $"stress-{cycle}");
+                StopAndWait(cyclePlayer, $"stress-{cycle}-stop");
+                cyclePlayer.Dispose();
+                WaitForReleaseBalance(
+                    monitor,
+                    before.ReleaseBalance,
+                    $"stress-{cycle}");
+                Console.WriteLine(
+                    $"[engine-smoke] PASS stress-cycle={cycle}/{cycles}");
+            }
+
+            CompositionPluginBridge.PoolTelemetry final =
+                monitor.ReadPoolTelemetry();
+            Console.WriteLine(final.ToMachineReadableString());
+            if (final.CpuUploads != initial.CpuUploads)
+                throw new InvalidOperationException(
+                    "Hardware opaque lifecycle performed a CPU upload.");
+            Console.WriteLine(
+                $"[engine-smoke] PASS lifecycle cycles={cycles} " +
+                $"adapter-luid={adapter}");
             return 0;
         }
         catch (Exception exception)
@@ -141,6 +245,62 @@ internal static class CompositionSmoke
                 }
             }
         }
+    }
+
+    private static void WaitForOpaquePool(
+        CompositionPluginBridge monitor,
+        CompositionPluginBridge.PoolTelemetry before,
+        string stage)
+    {
+        Stopwatch elapsed = Stopwatch.StartNew();
+        while (elapsed.Elapsed < PlaybackStageTimeout)
+        {
+            CompositionPluginBridge.PoolTelemetry current =
+                monitor.ReadPoolTelemetry();
+            if (current.OpaquePoolGenerations >
+                    before.OpaquePoolGenerations &&
+                current.OpaquePicturesReceived >
+                    before.OpaquePicturesReceived)
+            {
+                Console.WriteLine(
+                    $"[engine-smoke] PASS {stage}: " +
+                    $"opaque-pictures=" +
+                    $"{current.OpaquePicturesReceived - before.OpaquePicturesReceived} " +
+                    $"pool-generation={current.PoolGenerations}");
+                return;
+            }
+            Thread.Sleep(20);
+        }
+
+        CompositionPluginBridge.PoolTelemetry last =
+            monitor.ReadPoolTelemetry();
+        Console.Error.WriteLine(last.ToMachineReadableString());
+        throw new TimeoutException(
+            $"Stage '{stage}' did not receive an opaque D3D11 picture " +
+            $"within {PlaybackStageTimeout.TotalSeconds:0.#} seconds.");
+    }
+
+    private static void WaitForReleaseBalance(
+        CompositionPluginBridge monitor,
+        long expectedBalance,
+        string stage)
+    {
+        Stopwatch elapsed = Stopwatch.StartNew();
+        while (elapsed.Elapsed < ControlStageTimeout)
+        {
+            CompositionPluginBridge.PoolTelemetry current =
+                monitor.ReadPoolTelemetry();
+            if (current.ReleaseBalance == expectedBalance)
+                return;
+            Thread.Sleep(20);
+        }
+
+        CompositionPluginBridge.PoolTelemetry last =
+            monitor.ReadPoolTelemetry();
+        Console.Error.WriteLine(last.ToMachineReadableString());
+        throw new InvalidOperationException(
+            $"Stage '{stage}' left opaque picture release balance " +
+            $"{last.ReleaseBalance}; expected {expectedBalance}.");
     }
 
     private static void OpenAndWait(

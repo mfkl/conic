@@ -14,6 +14,8 @@ public static unsafe class CompositionVoutPlugin
 {
     private const int Success = 0;
     private const int GenericError = -1;
+    private const uint I42010LittleEndian = 0x4C413049; // "I0AL"
+    private const uint P010 = 0x30313050; // "P010"
 
     private static readonly nint Copyright =
         Marshal.StringToCoTaskMemUTF8("Copyright (c) VideoLabs");
@@ -51,8 +53,12 @@ public static unsafe class CompositionVoutPlugin
         public uint RequestedAdapterLowPart;
         public int RequestedAdapterHighPart;
         public uint SourceChroma;
+        public int SourceDXGIFormat;
+        public bool IsOpaque;
+        public ulong PoolGeneration;
         public D3D11AdapterFailure FallbackReason;
         public int NativeResult;
+        public object PoolGate { get; } = new();
     }
 
     [UnmanagedCallersOnly(
@@ -177,6 +183,49 @@ public static unsafe class CompositionVoutPlugin
         }
     }
 
+    /// <summary>
+    /// Copies process-wide picture-pool counters into caller-owned storage.
+    /// No raw pointer or handle is retained by the plugin.
+    /// </summary>
+    [UnmanagedCallersOnly(
+        EntryPoint = "vlc_avalonia_get_pool_telemetry",
+        CallConvs = [typeof(CallConvCdecl)])]
+    public static void GetPoolTelemetry(
+        long* opaquePicturesReceived,
+        long* cpuPicturesReceived,
+        long* poolGenerations,
+        long* opaquePoolGenerations,
+        long* cpuPoolGenerations,
+        long* opaquePicturesAllocated,
+        long* opaquePicturesReleased,
+        long* cpuUploads)
+    {
+        try
+        {
+            PicturePoolTelemetrySnapshot snapshot =
+                PicturePoolTelemetry.Snapshot();
+            if (opaquePicturesReceived is not null)
+                *opaquePicturesReceived = snapshot.OpaquePicturesReceived;
+            if (cpuPicturesReceived is not null)
+                *cpuPicturesReceived = snapshot.CpuPicturesReceived;
+            if (poolGenerations is not null)
+                *poolGenerations = snapshot.PoolGenerations;
+            if (opaquePoolGenerations is not null)
+                *opaquePoolGenerations = snapshot.OpaquePoolGenerations;
+            if (cpuPoolGenerations is not null)
+                *cpuPoolGenerations = snapshot.CpuPoolGenerations;
+            if (opaquePicturesAllocated is not null)
+                *opaquePicturesAllocated = snapshot.OpaquePicturesAllocated;
+            if (opaquePicturesReleased is not null)
+                *opaquePicturesReleased = snapshot.OpaquePicturesReleased;
+            if (cpuUploads is not null)
+                *cpuUploads = snapshot.CpuUploads;
+        }
+        catch
+        {
+        }
+    }
+
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
     private static int OpenControlInterface(nint interfacePtr)
     {
@@ -272,15 +321,33 @@ public static unsafe class CompositionVoutPlugin
             stateHandle = GCHandle.Alloc(state);
 
             display->Format = display->Source;
-            display->Format.Chroma = VLCFourCC.BGRA;
-            display->Format.BitsPerPixel = 32;
-            display->Format.RedMask = 0x00ff0000;
-            display->Format.GreenMask = 0x0000ff00;
-            display->Format.BlueMask = 0x000000ff;
+            uint outputChroma = SelectOutputChroma(
+                display->Source.Chroma,
+                state.SharedTexture is not null);
+            state.IsOpaque = VLCFourCC.IsD3D11Opaque(outputChroma);
+            if (state.IsOpaque)
+            {
+                display->Format.Chroma = outputChroma;
+                state.SourceChroma = outputChroma;
+                state.SourceDXGIFormat = outputChroma ==
+                    VLCFourCC.D3D11Opaque10Bit
+                        ? VLCD3D11PictureConstants.DxgiFormatP010
+                        : VLCD3D11PictureConstants.DxgiFormatNV12;
+            }
+            else
+            {
+                display->Format.Chroma = VLCFourCC.BGRA;
+                display->Format.BitsPerPixel = 32;
+                display->Format.RedMask = 0x00ff0000;
+                display->Format.GreenMask = 0x0000ff00;
+                display->Format.BlueMask = 0x000000ff;
+                state.SourceDXGIFormat =
+                    VLCD3D11PictureConstants.DxgiFormatB8G8R8A8UNorm;
+            }
 
             display->Info = new VLCVoutDisplayInfo
             {
-                IsSlow = 1,
+                IsSlow = state.IsOpaque ? (byte)0 : (byte)1,
                 HasDoubleClick = 0,
                 NeedsHideMouse = 0,
                 HasPicturesInvalid = 0,
@@ -322,13 +389,13 @@ public static unsafe class CompositionVoutPlugin
         {
             if (stateHandle.Target is DisplayState state)
             {
-                state.SharedTexture?.Dispose();
-                state.SharedTexture = null;
                 if (state.Pool != 0)
                 {
                     VLCCore.PicturePoolRelease(state.Pool);
                     state.Pool = 0;
                 }
+                state.SharedTexture?.Dispose();
+                state.SharedTexture = null;
             }
         }
         catch
@@ -350,14 +417,49 @@ public static unsafe class CompositionVoutPlugin
             DisplayState? state = GetState(display);
             if (state is null)
                 return 0;
-            if (state.Pool != 0)
-                return state.Pool;
+            lock (state.PoolGate)
+            {
+                if (state.Pool != 0)
+                    return state.Pool;
 
-            uint count = Math.Clamp(requestedPictures, 3u, 8u);
-            state.Pool = VLCCore.PicturePoolNewFromFormat(
-                in display->Format,
-                count);
-            return state.Pool;
+                if (state.IsOpaque)
+                {
+                    D3D11SharedTexture producer = state.SharedTexture ??
+                        throw new InvalidOperationException(
+                            "Opaque pool lost its producer device.");
+                    state.Pool = D3D11OpaquePicturePool.Create(
+                        producer.Device,
+                        producer.Context,
+                        in display->Format,
+                        requestedPictures,
+                        (TerraFX.Interop.DXGI_FORMAT)state.SourceDXGIFormat,
+                        out ulong generation);
+                    state.PoolGeneration = generation;
+                }
+                else
+                {
+                    uint count = Math.Clamp(requestedPictures, 3u, 8u);
+                    state.Pool = VLCCore.PicturePoolNewFromFormat(
+                        in display->Format,
+                        count);
+                    if (state.Pool != 0)
+                        state.PoolGeneration =
+                            PicturePoolTelemetry.CpuPoolCreated();
+                }
+                PublishTelemetry(state);
+                return state.Pool;
+            }
+        }
+        catch (D3D11AdapterException exception)
+        {
+            DisplayState? state = GetState((VLCVoutDisplay*)displayPtr);
+            if (state is not null)
+            {
+                state.FallbackReason = exception.Failure;
+                state.NativeResult = exception.NativeResult;
+                PublishTelemetry(state);
+            }
+            return 0;
         }
         catch
         {
@@ -378,6 +480,15 @@ public static unsafe class CompositionVoutPlugin
             if (picturePtr != 0)
             {
                 VLCPicture* picture = (VLCPicture*)picturePtr;
+                DisplayState? state = GetState(
+                    (VLCVoutDisplay*)displayPtr);
+                if (VLCFourCC.IsD3D11Opaque(picture->Format.Chroma))
+                {
+                    PicturePoolTelemetry.OpaquePictureReceived();
+                    return;
+                }
+
+                PicturePoolTelemetry.CpuPictureReceived();
                 VLCPlane plane = picture->Plane0;
                 uint width = picture->Format.VisibleWidth;
                 uint height = picture->Format.VisibleHeight;
@@ -391,12 +502,11 @@ public static unsafe class CompositionVoutPlugin
                     nint pixels = plane.Pixels
                         + checked((nint)picture->Format.YOffset * plane.Pitch)
                         + checked((nint)picture->Format.XOffset * 4);
-                    DisplayState? state = GetState(
-                        (VLCVoutDisplay*)displayPtr);
                     if (HasGPUFrameCallback() && state?.SharedTexture is not null)
                     {
                         try
                         {
+                            PicturePoolTelemetry.CpuUpload();
                             if (state.SharedTexture.Upload(
                                     pixels,
                                     plane.Pitch,
@@ -469,6 +579,26 @@ public static unsafe class CompositionVoutPlugin
         return handle.Target as DisplayState;
     }
 
+    private static uint SelectOutputChroma(
+        uint sourceChroma,
+        bool producerDeviceAvailable)
+    {
+        if (!producerDeviceAvailable)
+            return VLCFourCC.BGRA;
+        if (sourceChroma is VLCFourCC.D3D11Opaque or
+            VLCFourCC.D3D11Opaque10Bit)
+        {
+            return sourceChroma;
+        }
+
+        return sourceChroma switch
+        {
+            VLCFourCC.I420 or VLCFourCC.YV12 => VLCFourCC.D3D11Opaque,
+            I42010LittleEndian or P010 => VLCFourCC.D3D11Opaque10Bit,
+            _ => VLCFourCC.BGRA,
+        };
+    }
+
     private static bool HasGPUFrameCallback()
     {
         lock (CallbackGate)
@@ -522,8 +652,7 @@ public static unsafe class CompositionVoutPlugin
                 texture is null ? 0 : 1,
                 texture?.DeviceGeneration ?? 0,
                 state.SourceChroma,
-                (int)TerraFX.Interop.DXGI_FORMAT
-                    .DXGI_FORMAT_B8G8R8A8_UNORM,
+                state.SourceDXGIFormat,
                 (int)state.FallbackReason,
                 state.NativeResult);
         }

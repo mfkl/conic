@@ -493,12 +493,22 @@ public partial class MainWindow : Window
                     case 1: ValidateSurface("open-menu", OpenMenu, [OpenMenu, OpenFolderAction, RecentEmptyState]); CloseOpenMenu(); ShowUrlPanel(); phase++; return;
                     case 2: ValidateSurface("url-panel", UrlPanel, [UrlPanel, UrlTextBox, UrlCancelButton, UrlSubmitButton]); CloseUrlPanel(); ResumePanel.IsVisible = true; Dispatcher.UIThread.Post(() => ResumeAction.Focus()); phase++; return;
                     case 3: ValidateSurface("resume-panel", ResumePanel, [ResumePanel, ResumeAction, DeclineResumeAction]); ResumePanel.IsVisible = false; OpenSettings(); _settingsViewModel.SelectedPage = _settingsViewModel.Pages[0]; ApplyResponsiveSettings(); phase++; return;
-                    case 4: ValidateSettingsLayout(width, compact); CloseSettings(); if (!compact) { Width = 480; phase++; return; } timer.Stop(); timeout?.Stop(); Console.WriteLine("[layout-smoke] PASS opening surfaces wide-and-compact"); desktop.Shutdown(0); return;
-                    case 5: ApplyResponsiveChrome(); ApplyResponsiveSettings(); ValidateLayout(width, true); ValidateTopChrome(width); ShowOpenMenuForSmoke(); phase++; return;
-                    case 6: ValidateSurface("open-menu", OpenMenu, [OpenMenu, OpenFolderAction, RecentEmptyState]); CloseOpenMenu(); ShowUrlPanel(); phase++; return;
-                    case 7: ValidateSurface("url-panel", UrlPanel, [UrlPanel, UrlTextBox, UrlCancelButton, UrlSubmitButton]); CloseUrlPanel(); ResumePanel.IsVisible = true; Dispatcher.UIThread.Post(() => ResumeAction.Focus()); phase++; return;
-                    case 8: ValidateSurface("resume-panel", ResumePanel, [ResumePanel, ResumeAction, DeclineResumeAction]); ResumePanel.IsVisible = false; OpenSettings(); _settingsViewModel.SelectedPage = _settingsViewModel.Pages[0]; ApplyResponsiveSettings(); phase++; return;
-                    case 9: ValidateSettingsLayout(width, true); CloseSettings(); timer.Stop(); timeout?.Stop(); Console.WriteLine("[layout-smoke] PASS opening surfaces wide-and-compact"); desktop.Shutdown(0); return;
+                    case 4: ValidateSettingsLayout(width, compact); BringSettingsControlIntoView(SettingsClearRecentButton); phase++; return;
+                    case 5: ValidateSettingsControl("recent-clear", SettingsClearRecentButton); SettingsClearRecentPrompt.IsVisible = true; BringSettingsControlIntoView(SettingsConfirmClearRecentButton); phase++; return;
+                    case 6: ValidateSettingsControl("recent-confirm", SettingsConfirmClearRecentButton); SettingsClearRecentPrompt.IsVisible = false; BringSettingsControlIntoView(SettingsClearResumeButton); phase++; return;
+                    case 7: ValidateSettingsControl("resume-clear", SettingsClearResumeButton); SettingsClearResumePrompt.IsVisible = true; BringSettingsControlIntoView(SettingsConfirmClearResumeButton); phase++; return;
+                    case 8: ValidateSettingsControl("resume-confirm", SettingsConfirmClearResumeButton); SettingsClearResumePrompt.IsVisible = false; CloseSettings(); OpenErrorToast.IsVisible = true; phase++; return;
+                    case 9: ValidateToastForSmoke(); OpenErrorToast.IsVisible = false; Width = 480; phase++; return;
+                    case 10: ApplyResponsiveChrome(); ApplyResponsiveSettings(); ValidateLayout(width, true); ValidateTopChrome(width); ShowOpenMenuForSmoke(); phase++; return;
+                    case 11: ValidateSurface("open-menu", OpenMenu, [OpenMenu, OpenFolderAction, RecentEmptyState]); CloseOpenMenu(); ShowUrlPanel(); phase++; return;
+                    case 12: ValidateSurface("url-panel", UrlPanel, [UrlPanel, UrlTextBox, UrlCancelButton, UrlSubmitButton]); CloseUrlPanel(); ResumePanel.IsVisible = true; Dispatcher.UIThread.Post(() => ResumeAction.Focus()); phase++; return;
+                    case 13: ValidateSurface("resume-panel", ResumePanel, [ResumePanel, ResumeAction, DeclineResumeAction]); ResumePanel.IsVisible = false; OpenSettings(); _settingsViewModel.SelectedPage = _settingsViewModel.Pages[0]; ApplyResponsiveSettings(); phase++; return;
+                    case 14: ValidateSettingsLayout(width, true); BringSettingsControlIntoView(SettingsClearRecentButton); phase++; return;
+                    case 15: ValidateSettingsControl("recent-clear", SettingsClearRecentButton); SettingsClearRecentPrompt.IsVisible = true; BringSettingsControlIntoView(SettingsConfirmClearRecentButton); phase++; return;
+                    case 16: ValidateSettingsControl("recent-confirm", SettingsConfirmClearRecentButton); SettingsClearRecentPrompt.IsVisible = false; BringSettingsControlIntoView(SettingsClearResumeButton); phase++; return;
+                    case 17: ValidateSettingsControl("resume-clear", SettingsClearResumeButton); SettingsClearResumePrompt.IsVisible = true; BringSettingsControlIntoView(SettingsConfirmClearResumeButton); phase++; return;
+                    case 18: ValidateSettingsControl("resume-confirm", SettingsConfirmClearResumeButton); SettingsClearResumePrompt.IsVisible = false; CloseSettings(); OpenErrorToast.IsVisible = true; phase++; return;
+                    case 19: ValidateToastForSmoke(); OpenErrorToast.IsVisible = false; timer.Stop(); timeout?.Stop(); Console.WriteLine("[layout-smoke] PASS opening surfaces wide-and-compact"); desktop.Shutdown(0); return;
                     default: throw new InvalidOperationException("[layout-smoke] unexpected phase");
                 }
             }
@@ -507,7 +517,7 @@ public partial class MainWindow : Window
                 timer.Stop(); timeout?.Stop(); Console.Error.WriteLine($"[layout-smoke] FAIL phase={phase} {exception}"); desktop.Shutdown(1);
             }
         };
-        timeout = new() { Interval = TimeSpan.FromSeconds(8) };
+        timeout = new() { Interval = TimeSpan.FromSeconds(14) };
         timeout.Tick += (_, _) => { timeout.Stop(); timer.Stop(); Console.Error.WriteLine("[layout-smoke] FAIL timeout"); desktop.Shutdown(1); };
         timer.Start(); timeout.Start();
     }
@@ -546,8 +556,10 @@ public partial class MainWindow : Window
     {
         Control[] controls = [OpenOptionsButton, OpenSettingsButton];
         bool contained = controls.All(control => IsContained(control));
-        bool separate = !OpenOptionsButton.Bounds.Intersects(OpenSettingsButton.Bounds);
-        Console.WriteLine($"[layout-smoke] top width={width} open={OpenOptionsButton.Bounds} settings={OpenSettingsButton.Bounds} title-visible={TopChromeTitle.IsVisible} always-visible={AlwaysOnTopChrome.IsVisible} contained={contained} separate={separate}");
+        Rect open = GetClientRect(OpenOptionsButton);
+        Rect settings = GetClientRect(OpenSettingsButton);
+        bool separate = !open.Intersects(settings);
+        Console.WriteLine($"[layout-smoke] top width={width} open={open} settings={settings} title-visible={TopChromeTitle.IsVisible} always-visible={AlwaysOnTopChrome.IsVisible} contained={contained} separate={separate}");
         if (!contained || !separate)
             throw new InvalidOperationException("[layout-smoke] FAIL top chrome bounds");
     }
@@ -560,20 +572,59 @@ public partial class MainWindow : Window
             throw new InvalidOperationException($"[layout-smoke] FAIL {name} bounds or capability gate");
     }
 
-    private bool IsContained(Control control) => control.Bounds.Width > 0 && control.Bounds.Height > 0 &&
-        control.TranslatePoint(default, this) is Point origin && origin.X >= 0 && origin.Y >= 0 &&
-        origin.X + control.Bounds.Width <= ClientSize.Width && origin.Y + control.Bounds.Height <= ClientSize.Height;
+    private Rect GetClientRect(Control control)
+    {
+        Point origin = control.TranslatePoint(default, this) ?? new Point(double.NaN, double.NaN);
+        return new Rect(origin, control.Bounds.Size);
+    }
+
+    private bool IsContained(Control control)
+    {
+        Rect rect = GetClientRect(control);
+        return rect.Width > 0 && rect.Height > 0 && !double.IsNaN(rect.X) && !double.IsNaN(rect.Y) &&
+            rect.Left >= 0 && rect.Top >= 0 && rect.Right <= ClientSize.Width && rect.Bottom <= ClientSize.Height;
+    }
+
+    private bool IsContainedInSettings(Control control)
+    {
+        Rect panel = GetClientRect(SettingsPanel);
+        Rect rect = GetClientRect(control);
+        return IsContained(control) && rect.Left >= panel.Left && rect.Top >= panel.Top && rect.Right <= panel.Right && rect.Bottom <= panel.Bottom;
+    }
 
     private void ValidateSettingsLayout(double width, bool compact)
     {
         Control navigation = compact ? CompactSettingsPages : SettingsPages;
         Control[] required = [SettingsPanel, SettingsSearch, navigation, SettingsContent, OpenSettingsButton];
-        bool privacyControlsMeasured = SettingsClearRecentButton.IsVisible && SettingsClearRecentButton.Bounds.Width > 0 && SettingsClearRecentButton.Bounds.Height > 0 &&
-            SettingsClearResumeButton.IsVisible && SettingsClearResumeButton.Bounds.Width > 0 && SettingsClearResumeButton.Bounds.Height > 0;
-        bool contained = required.All(IsContained) && privacyControlsMeasured;
+        bool contained = required.All(IsContained);
         Console.WriteLine($"[settings-layout-smoke] width={width} compact={compact} panel={SettingsPanel.Bounds} search={SettingsSearch.Bounds} navigation={navigation.Bounds} content={SettingsContent.Bounds} recent-clear={SettingsClearRecentButton.Bounds} resume-clear={SettingsClearResumeButton.Bounds} open={OpenSettingsButton.Bounds} reset={SettingsResetRow.Bounds} contained={contained}");
         if (!contained || !navigation.IsVisible)
             throw new InvalidOperationException("[settings-layout-smoke] FAIL bounds or responsive navigation");
+    }
+
+    private void BringSettingsControlIntoView(Control control)
+    {
+        control.BringIntoView();
+        Dispatcher.UIThread.Post(() => control.Focus());
+    }
+
+    private void ValidateSettingsControl(string name, Control control)
+    {
+        Rect rect = GetClientRect(control);
+        bool contained = control.IsVisible && IsContainedInSettings(control);
+        Console.WriteLine($"[settings-layout-smoke] {name} rect={rect} panel={GetClientRect(SettingsPanel)} contained={contained}");
+        if (!contained)
+            throw new InvalidOperationException($"[settings-layout-smoke] FAIL {name} is not visible in settings viewport");
+    }
+
+    private void ValidateToastForSmoke()
+    {
+        Rect toast = GetClientRect(OpenErrorToast);
+        Rect dock = GetClientRect(PlayerDock);
+        bool valid = IsContained(OpenErrorToast) && !toast.Intersects(dock) && !OpenMenu.IsVisible && !UrlPanel.IsVisible && !ResumePanel.IsVisible && !SettingsPanel.IsVisible;
+        Console.WriteLine($"[layout-smoke] toast={toast} dock={dock} valid={valid}");
+        if (!valid)
+            throw new InvalidOperationException("[layout-smoke] FAIL toast geometry");
     }
 
     internal void EnableAdapterMismatchSmoke(

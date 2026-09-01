@@ -6,10 +6,10 @@ namespace Player.Application.Tests;
 public sealed class MediaOpeningTests
 {
     [Fact]
-    public void CanonicalizesHttpAndRemovesCredentialsFromDisplay()
+    public void CanonicalizesHttpAndRejectsCredentials()
     {
         MediaOpenResult result = new MediaSourceValidator(new FakeFiles()).Validate("HTTPS://user:secret@EXAMPLE.com:443/a?q=1", MediaSourceKind.NetworkUrl);
-        Assert.True(result.Succeeded); Assert.Equal("https://example.com/a?q=1", result.Source!.DisplayName); Assert.DoesNotContain("secret", result.Source.DisplayName);
+        Assert.False(result.Succeeded); Assert.DoesNotContain("secret", result.UserMessage!);
     }
     [Theory]
     [InlineData("ftp://example.com/file")]
@@ -22,6 +22,20 @@ public sealed class MediaOpeningTests
         FakeFiles files = new() { Directory = true };
         MediaOpenResult result = new MediaSourceValidator(files).Validate("c:/media", MediaSourceKind.Folder);
         Assert.False(result.Succeeded); Assert.Contains("playlist", result.UserMessage!, StringComparison.OrdinalIgnoreCase);
+    }
+    [Fact]
+    public void EngineNormalizerPreservesReviewedUrlsAndCanonicalizesFiles()
+    {
+        Assert.Equal("https://example.com/A?q=x", MediaEngineSourceNormalizer.Normalize("https://example.com/A?q=x"));
+        Assert.Throws<ArgumentException>(() => MediaEngineSourceNormalizer.Normalize("https://user:secret@example.com/a"));
+    }
+    [Fact]
+    public void UrlIdentityKeepsPathCaseSignificant()
+    {
+        MemoryHistory storage = new(); MediaHistoryService history = new(storage);
+        history.RecordOpened(new("https://example.com/A", MediaSourceKind.NetworkUrl, "A"), true);
+        history.RecordOpened(new("https://example.com/a", MediaSourceKind.NetworkUrl, "a"), true);
+        Assert.Equal(2, history.Recent.Count);
     }
     [Fact]
     public void HistoryDeduplicatesAndHonorsPrivacyAndThresholds()

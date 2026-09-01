@@ -18,7 +18,7 @@ internal sealed class FileMediaHistoryStorage : IMediaHistoryStorage
             if (File.Exists(_path)) File.Replace(temporary, _path, null);
             else File.Move(temporary, _path);
         }
-        finally { if (File.Exists(temporary)) try { File.Delete(temporary); } catch (IOException) { } }
+        finally { if (File.Exists(temporary)) try { File.Delete(temporary); } catch (Exception e) when (e is IOException or UnauthorizedAccessException) { } }
     }
     public void PreserveInvalid(string content)
     {

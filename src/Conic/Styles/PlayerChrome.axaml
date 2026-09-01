@@ -131,4 +131,18 @@
     <Style Selector="CheckBox.monochrome:checked /template/ Path#CheckGlyph">
         <Setter Property="Fill" Value="#111318" />
     </Style>
+    <Style Selector="Window.compact-density Button.chrome">
+        <Setter Property="Height" Value="32" />
+        <Setter Property="Padding" Value="10,0" />
+    </Style>
+    <Style Selector="TextBlock.settingBadge">
+        <Setter Property="Background" Value="#2AFF9A55" />
+        <Setter Property="Foreground" Value="#FFB77D" />
+        <Setter Property="Padding" Value="7,2" />
+        <Setter Property="FontSize" Value="11" />
+    </Style>
+    <Style Selector="TextBlock.settingHint">
+        <Setter Property="Foreground" Value="#AEB3BD" />
+        <Setter Property="FontSize" Value="11" />
+    </Style>
 </Styles>

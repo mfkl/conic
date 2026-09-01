@@ -65,13 +65,13 @@
                 </StackPanel>
             </Border>
 
-            <TextBlock Grid.Column="1" Text="{Binding MediaTitle}" Foreground="#D7DBE2"
+            <TextBlock x:Name="TopChromeTitle" Grid.Column="1" Text="{Binding MediaTitle}" Foreground="#D7DBE2"
                        FontWeight="SemiBold" VerticalAlignment="Center" HorizontalAlignment="Center"
                        TextTrimming="CharacterEllipsis" Margin="24,0" />
 
             <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
             <Button x:Name="OpenSettingsButton" Classes="chrome" Content="Settings" Command="{Binding OpenSettingsCommand}" ToolTip.Tip="Settings (Ctrl+,)" />
-            <Border
+            <Border x:Name="AlwaysOnTopChrome"
                     Padding="14,8"
                     CornerRadius="14"
                     Background="#9E131519"
@@ -133,11 +133,11 @@
                 <TextBlock Text="Paste an http or https media address." Classes="settingHint" TextWrapping="Wrap" />
                 <TextBox x:Name="UrlTextBox" Text="{Binding UrlText, Mode=TwoWay}" KeyDown="OnUrlTextKeyDown" PlaceholderText="https://example.com/media.mp4" AutomationProperties.Name="Media URL" ToolTip.Tip="Only http and https URLs are supported" />
                 <TextBlock x:Name="UrlOpenError" IsVisible="{Binding HasOpenError}" Text="{Binding OpenError}" Foreground="#FFD6CE" TextWrapping="Wrap" AutomationProperties.Name="URL open error" />
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8"><Button Content="Cancel" Click="OnUrlCancel" AutomationProperties.Name="Cancel opening URL" /><Button Content="Open" Click="OnUrlSubmit" AutomationProperties.Name="Open network URL" /></StackPanel>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8"><Button x:Name="UrlCancelButton" Content="Cancel" Click="OnUrlCancel" AutomationProperties.Name="Cancel opening URL" /><Button x:Name="UrlSubmitButton" Content="Open" Click="OnUrlSubmit" AutomationProperties.Name="Open network URL" /></StackPanel>
             </StackPanel>
         </Border>
         <Border x:Name="ResumePanel" IsVisible="{Binding HasPendingResume}" MaxWidth="420" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="24" Padding="20" CornerRadius="18" Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}" BorderBrush="#FFFF9A55" BorderThickness="1" BoxShadow="0 16 42 0 #90000000">
-            <StackPanel Spacing="10"><TextBlock Text="Resume playback" FontSize="17" FontWeight="SemiBold" /><TextBlock Text="{Binding PendingResumeText}" FontSize="16" /><TextBlock Text="The saved position is available for this media." Classes="settingHint" TextWrapping="Wrap" /><TextBlock IsVisible="{Binding HasHistoryError}" Text="{Binding HistoryError}" Foreground="#FFD6CE" TextWrapping="Wrap" AutomationProperties.Name="Resume history error" /><StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8"><Button Content="Start over" Click="OnDeclineResume" ToolTip.Tip="Start this media from the beginning" AutomationProperties.Name="Start media over" /><Button x:Name="ResumeAction" Content="Resume" Click="OnAcceptResume" ToolTip.Tip="Resume from the saved position" AutomationProperties.Name="Resume media" /></StackPanel></StackPanel>
+            <StackPanel Spacing="10"><TextBlock Text="Resume playback" FontSize="17" FontWeight="SemiBold" /><TextBlock Text="{Binding PendingResumeText}" FontSize="16" /><TextBlock Text="The saved position is available for this media." Classes="settingHint" TextWrapping="Wrap" /><TextBlock IsVisible="{Binding HasHistoryError}" Text="{Binding HistoryError}" Foreground="#FFD6CE" TextWrapping="Wrap" AutomationProperties.Name="Resume history error" /><StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8"><Button x:Name="DeclineResumeAction" Content="Start over" Click="OnDeclineResume" ToolTip.Tip="Start this media from the beginning" AutomationProperties.Name="Start media over" /><Button x:Name="ResumeAction" Content="Resume" Click="OnAcceptResume" ToolTip.Tip="Resume from the saved position" AutomationProperties.Name="Resume media" /></StackPanel></StackPanel>
         </Border>
         <Border x:Name="OpenErrorToast" IsVisible="False" MaxWidth="560" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="24,0,24,124" Padding="10" Background="#E02B1717" CornerRadius="10"><TextBlock Text="{Binding OpenError}" Foreground="#FFD6CE" TextWrapping="Wrap" /></Border>
 

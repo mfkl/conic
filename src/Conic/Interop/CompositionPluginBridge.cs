@@ -63,6 +63,32 @@ internal sealed unsafe class CompositionPluginBridge : IDisposable
         byte[] Pixels,
         long PresentationTimestamp);
 
+    internal readonly record struct PoolTelemetry(
+        long OpaquePicturesReceived,
+        long CpuPicturesReceived,
+        long PoolGenerations,
+        long OpaquePoolGenerations,
+        long CpuPoolGenerations,
+        long OpaquePicturesAllocated,
+        long OpaquePicturesReleased,
+        long CpuUploads)
+    {
+        public long ReleaseBalance =>
+            OpaquePicturesAllocated - OpaquePicturesReleased;
+
+        public string ToMachineReadableString() =>
+            "[composition-pool] " +
+            $"opaque-pictures={OpaquePicturesReceived} " +
+            $"cpu-pictures={CpuPicturesReceived} " +
+            $"pool-generations={PoolGenerations} " +
+            $"opaque-pool-generations={OpaquePoolGenerations} " +
+            $"cpu-pool-generations={CpuPoolGenerations} " +
+            $"opaque-allocations={OpaquePicturesAllocated} " +
+            $"opaque-releases={OpaquePicturesReleased} " +
+            $"release-balance={ReleaseBalance} " +
+            $"cpu-uploads={CpuUploads}";
+    }
+
     private readonly object _lifecycleGate = new();
     private readonly nint _library;
     private readonly delegate* unmanaged[Cdecl]<nint, nint, void> _setCallback;
@@ -73,6 +99,9 @@ internal sealed unsafe class CompositionPluginBridge : IDisposable
         _setAdapterLuid;
     private readonly delegate* unmanaged[Cdecl]<nint, nint, void>
         _setTelemetryCallback;
+    private readonly delegate* unmanaged[Cdecl]<
+        long*, long*, long*, long*, long*, long*, long*, long*, void>
+        _getPoolTelemetry;
     private readonly ManualResetEventSlim _playlistReady = new(false);
     private GCHandle _selfHandle;
     private nint _opaque;
@@ -119,6 +148,12 @@ internal sealed unsafe class CompositionPluginBridge : IDisposable
             "vlc_avalonia_set_device_telemetry_callback");
         _setTelemetryCallback =
             (delegate* unmanaged[Cdecl]<nint, nint, void>)telemetrySetter;
+        nint poolTelemetryGetter = NativeLibrary.GetExport(
+            _library,
+            "vlc_avalonia_get_pool_telemetry");
+        _getPoolTelemetry = (delegate* unmanaged[Cdecl]<
+            long*, long*, long*, long*, long*, long*, long*, long*, void>)
+            poolTelemetryGetter;
 
         _selfHandle = GCHandle.Alloc(this);
         _opaque = GCHandle.ToIntPtr(_selfHandle);
@@ -288,6 +323,37 @@ internal sealed unsafe class CompositionPluginBridge : IDisposable
         return telemetry is not null;
     }
 
+    public PoolTelemetry ReadPoolTelemetry()
+    {
+        ThrowIfDisposed();
+        long opaquePicturesReceived = 0;
+        long cpuPicturesReceived = 0;
+        long poolGenerations = 0;
+        long opaquePoolGenerations = 0;
+        long cpuPoolGenerations = 0;
+        long opaquePicturesAllocated = 0;
+        long opaquePicturesReleased = 0;
+        long cpuUploads = 0;
+        _getPoolTelemetry(
+            &opaquePicturesReceived,
+            &cpuPicturesReceived,
+            &poolGenerations,
+            &opaquePoolGenerations,
+            &cpuPoolGenerations,
+            &opaquePicturesAllocated,
+            &opaquePicturesReleased,
+            &cpuUploads);
+        return new PoolTelemetry(
+            opaquePicturesReceived,
+            cpuPicturesReceived,
+            poolGenerations,
+            opaquePoolGenerations,
+            cpuPoolGenerations,
+            opaquePicturesAllocated,
+            opaquePicturesReleased,
+            cpuUploads);
+    }
+
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
     private static void OnPlaylist(nint opaque, nint playlist)
     {
@@ -436,6 +502,7 @@ internal sealed unsafe class CompositionPluginBridge : IDisposable
             4 => "adapter-mismatch",
             5 => "multithread-protection-unavailable",
             6 => "texture-upload-failed",
+            7 => "opaque-pool-creation-failed",
             _ => $"unknown-{fallbackReason}",
         };
 

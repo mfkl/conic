@@ -306,6 +306,13 @@ public sealed class PlayerPresentationViewModelTests
         vm.OpenDroppedSources(["a.mp4", "b.mp4"]); Assert.Contains("multiple", vm.OpenError); Assert.Empty(transport.Opened); vm.OpenDroppedSources(["a.mp4"]); Assert.Single(transport.Opened);
     }
 
+    [Fact]
+    public void RecentAndResumeClearCommandsRemainIndependent()
+    {
+        HistoryStorage storage = new(); MediaHistoryService history = new(storage); MediaSource a = new("a.mp4", MediaSourceKind.File, "a"); MediaSource b = new("b.mp4", MediaSourceKind.File, "b"); history.RecordOpened(a, true); history.RecordOpened(b, true); history.Checkpoint(a, TimeSpan.FromSeconds(40), TimeSpan.FromSeconds(100), true, 30, 20);
+        PlayerPresentationViewModel vm = CreateOpeningViewModel(new RecordingTransport(), history); vm.Registry.Execute(PlayerCommandId.RemoveRecent, "a.mp4"); Assert.Single(history.Recent); Assert.NotNull(history.FindResume(a)); vm.Registry.Execute(PlayerCommandId.ClearRecent); Assert.Empty(history.Recent); Assert.NotNull(history.FindResume(a)); vm.Registry.Execute(PlayerCommandId.ClearResumeHistory); Assert.Empty(history.Resume);
+    }
+
     [Theory]
     [InlineData("io")]
     [InlineData("access")]

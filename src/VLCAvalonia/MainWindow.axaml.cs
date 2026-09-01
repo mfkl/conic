@@ -4,6 +4,7 @@ using Avalonia.Input;
 using Avalonia;
 using Avalonia.VisualTree;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using Player.Contracts;
 using Player.Application;
@@ -36,7 +37,9 @@ public partial class MainWindow : Window
             OpenTestMedia,
             ToggleFullscreen,
             OpenSettings,
-            _settings);
+            _settings,
+            new MediaSourceValidator(new SystemMediaFileSystem()),
+            CreateHistory());
         DataContext = _presentation;
         _settings.Changed += (_, settings) => ApplyLiveSettings(settings);
         ApplyLiveSettings(_settings.Current);
@@ -87,6 +90,8 @@ public partial class MainWindow : Window
         switch (e.Key)
         {
             case Key.OemComma when e.KeyModifiers.HasFlag(KeyModifiers.Control): _presentation.Registry.Execute(Player.Application.PlayerCommandId.OpenSettings); break;
+            case Key.O when e.KeyModifiers.HasFlag(KeyModifiers.Control): _presentation.Registry.Execute(Player.Application.PlayerCommandId.OpenMedia); break;
+            case Key.L when e.KeyModifiers.HasFlag(KeyModifiers.Control): OnUrlOpen(this, e); break;
             case Key.Escape when SettingsPanel.IsVisible: SettingsPanel.IsVisible = false; TopChrome.Focus(); break;
             case Key.F11: _presentation.Registry.Execute(Player.Application.PlayerCommandId.ToggleFullscreen); break;
             case Key.M: _presentation.Registry.Execute(Player.Application.PlayerCommandId.ToggleMute); break;
@@ -114,6 +119,33 @@ public partial class MainWindow : Window
         _chromeVisibility.Wake();
         SetChromeVisibility(true);
         Dispatcher.UIThread.Post(() => SettingsSearch.Focus());
+    }
+
+    private static MediaHistoryService CreateHistory()
+    {
+        MediaHistoryService history = new(new FileMediaHistoryStorage());
+        history.Load();
+        return history;
+    }
+
+    private void OnUrlOpen(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        UrlPanel.IsVisible = true;
+        SetChromeVisibility(true);
+        Dispatcher.UIThread.Post(() => UrlTextBox.Focus());
+    }
+
+    private void OnUrlCancel(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        UrlPanel.IsVisible = false;
+        TopChrome.Focus();
+    }
+
+    private void OnMediaDrop(object? sender, DragEventArgs e)
+    {
+        IStorageItem[]? items = e.DataTransfer.TryGetFiles();
+        if (items is not { Length: 1 } || items[0] is not IStorageFile file) return;
+        _presentation.OpenSource(file.Path.LocalPath, MediaSourceKind.DragDrop);
     }
 
     private void CloseSettings()
@@ -252,7 +284,7 @@ public partial class MainWindow : Window
             try
             {
                 Console.WriteLine($"[layout-smoke] phase={phase}");
-                if (phase == 0) { OpenSettings(); _settingsViewModel.SelectedPage = _settingsViewModel.Pages[1]; ApplyResponsiveSettings(); phase = 1; return; }
+                if (phase == 0) { OpenSettings(); UrlPanel.IsVisible = true; _settingsViewModel.SelectedPage = _settingsViewModel.Pages[1]; ApplyResponsiveSettings(); phase = 1; return; }
                 if (phase == 1) { ValidateLayout(1280, false); ValidateSettingsLayout(1280, false); Width = 480; phase = 2; return; }
                 if (phase == 2) { ApplyResponsiveSettings(); ValidateLayout(480, true); ValidateSettingsLayout(480, true); timer.Stop(); timeout?.Stop(); Console.WriteLine("[settings-layout-smoke] PASS wide-and-compact"); Console.WriteLine("[layout-smoke] PASS normal-and-compact"); desktop.Shutdown(0); }
             }
@@ -290,11 +322,11 @@ public partial class MainWindow : Window
     private void ValidateSettingsLayout(double width, bool compact)
     {
         Control navigation = compact ? CompactSettingsPages : SettingsPages;
-        Control[] required = [SettingsPanel, SettingsSearch, navigation, SettingsContent, SettingsResetRow, SettingsBadge, OpenSettingsButton];
+        Control[] required = [SettingsPanel, SettingsSearch, navigation, SettingsContent, SettingsResetRow, SettingsBadge, OpenSettingsButton, UrlPanel];
         bool contained = required.All(control => control.Bounds.Width > 0 && control.Bounds.Height > 0 &&
             control.TranslatePoint(default, this) is Point origin && origin.X >= 0 && origin.Y >= 0 &&
             origin.X + control.Bounds.Width <= ClientSize.Width && origin.Y + control.Bounds.Height <= ClientSize.Height);
-        Console.WriteLine($"[settings-layout-smoke] width={width} compact={compact} panel={SettingsPanel.Bounds} search={SettingsSearch.Bounds} navigation={navigation.Bounds} content={SettingsContent.Bounds} theme={SettingsBadge.Bounds} open={OpenSettingsButton.Bounds} reset={SettingsResetRow.Bounds} contained={contained}");
+        Console.WriteLine($"[settings-layout-smoke] width={width} compact={compact} panel={SettingsPanel.Bounds} search={SettingsSearch.Bounds} navigation={navigation.Bounds} content={SettingsContent.Bounds} theme={SettingsBadge.Bounds} open={OpenSettingsButton.Bounds} url={UrlPanel.Bounds} reset={SettingsResetRow.Bounds} contained={contained}");
         if (!contained || !navigation.IsVisible)
             throw new InvalidOperationException("[settings-layout-smoke] FAIL bounds or responsive navigation");
     }

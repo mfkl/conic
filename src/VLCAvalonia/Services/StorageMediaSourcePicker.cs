@@ -23,4 +23,14 @@ internal sealed class StorageMediaSourcePicker(IStorageProvider storageProvider)
         IReadOnlyList<IStorageFile> result = await storageProvider.OpenFilePickerAsync(options);
         return result.Count == 0 ? null : result[0].Path.LocalPath;
     }
+
+    public async Task<string?> PickFolderAsync(CancellationToken cancellationToken = default)
+    {
+        IReadOnlyList<IStorageFolder> result = await storageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+        {
+            Title = "Select media folder",
+            AllowMultiple = false,
+        });
+        return result.Count == 0 ? null : result[0].Path.LocalPath;
+    }
 }

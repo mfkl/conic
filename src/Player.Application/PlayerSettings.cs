@@ -13,10 +13,14 @@ public sealed record PlayerSettings(
     int ControlTimeoutSeconds,
     double DefaultSpeed,
     int SkipBackwardSeconds,
-    int SkipForwardSeconds)
+    int SkipForwardSeconds,
+    bool RememberRecentMedia = true,
+    bool RememberResumeHistory = true,
+    int ResumeMinimumElapsedSeconds = 30,
+    int ResumeMaximumRemainingSeconds = 30)
 {
-    public const int CurrentVersion = 2;
-    public static PlayerSettings Default { get; } = new(CurrentVersion, true, true, "System", "Comfortable", 3, 1, 10, 10);
+    public const int CurrentVersion = 3;
+    public static PlayerSettings Default { get; } = new(CurrentVersion, true, true, "System", "Comfortable", 3, 1, 10, 10, true, true, 30, 30);
 }
 
 public interface IPlayerSettingsStorage
@@ -71,21 +75,23 @@ public sealed class PlayerSettingsService
 
     public void ResetAppearance() => Update(current => current with { Theme = PlayerSettings.Default.Theme, Density = PlayerSettings.Default.Density, ControlTimeoutSeconds = PlayerSettings.Default.ControlTimeoutSeconds });
     public void ResetPlayback() => Update(current => current with { DefaultSpeed = PlayerSettings.Default.DefaultSpeed, SkipBackwardSeconds = PlayerSettings.Default.SkipBackwardSeconds, SkipForwardSeconds = PlayerSettings.Default.SkipForwardSeconds });
-    public void ResetGeneral() => Update(current => current with { ResumePlayback = PlayerSettings.Default.ResumePlayback, RememberVolume = PlayerSettings.Default.RememberVolume });
+    public void ResetGeneral() => Update(current => current with { ResumePlayback = PlayerSettings.Default.ResumePlayback, RememberVolume = PlayerSettings.Default.RememberVolume, RememberRecentMedia = PlayerSettings.Default.RememberRecentMedia, RememberResumeHistory = PlayerSettings.Default.RememberResumeHistory, ResumeMinimumElapsedSeconds = PlayerSettings.Default.ResumeMinimumElapsedSeconds, ResumeMaximumRemainingSeconds = PlayerSettings.Default.ResumeMaximumRemainingSeconds });
     public void ResetAll() => Update(_ => PlayerSettings.Default);
 
     public static SettingApplyMode ApplyMode(string key) => key switch
     {
         nameof(PlayerSettings.Theme) or nameof(PlayerSettings.Density) or nameof(PlayerSettings.ControlTimeoutSeconds)
             or nameof(PlayerSettings.SkipBackwardSeconds) or nameof(PlayerSettings.SkipForwardSeconds) => SettingApplyMode.Live,
-        nameof(PlayerSettings.DefaultSpeed) or nameof(PlayerSettings.ResumePlayback) or nameof(PlayerSettings.RememberVolume) => SettingApplyMode.NextOpen,
+        nameof(PlayerSettings.DefaultSpeed) or nameof(PlayerSettings.ResumePlayback) or nameof(PlayerSettings.RememberVolume)
+            or nameof(PlayerSettings.RememberRecentMedia) or nameof(PlayerSettings.RememberResumeHistory)
+            or nameof(PlayerSettings.ResumeMinimumElapsedSeconds) or nameof(PlayerSettings.ResumeMaximumRemainingSeconds) => SettingApplyMode.NextOpen,
         _ => SettingApplyMode.Restart,
     };
 
     private static PlayerSettings Migrate(JsonElement root, int version) => version switch
     {
         PlayerSettings.CurrentVersion => JsonSerializer.Deserialize<PlayerSettings>(root, JsonOptions) ?? throw new JsonException("Settings document was empty."),
-        0 or 1 => PlayerSettings.Default with
+        0 or 1 or 2 => PlayerSettings.Default with
         {
             ResumePlayback = Read(root, nameof(PlayerSettings.ResumePlayback), PlayerSettings.Default.ResumePlayback),
             RememberVolume = Read(root, nameof(PlayerSettings.RememberVolume), PlayerSettings.Default.RememberVolume),
@@ -94,6 +100,10 @@ public sealed class PlayerSettingsService
             DefaultSpeed = Read(root, nameof(PlayerSettings.DefaultSpeed), PlayerSettings.Default.DefaultSpeed),
             SkipBackwardSeconds = Read(root, nameof(PlayerSettings.SkipBackwardSeconds), PlayerSettings.Default.SkipBackwardSeconds),
             SkipForwardSeconds = Read(root, nameof(PlayerSettings.SkipForwardSeconds), PlayerSettings.Default.SkipForwardSeconds),
+            RememberRecentMedia = Read(root, nameof(PlayerSettings.RememberRecentMedia), PlayerSettings.Default.RememberRecentMedia),
+            RememberResumeHistory = Read(root, nameof(PlayerSettings.RememberResumeHistory), PlayerSettings.Default.RememberResumeHistory),
+            ResumeMinimumElapsedSeconds = Read(root, nameof(PlayerSettings.ResumeMinimumElapsedSeconds), PlayerSettings.Default.ResumeMinimumElapsedSeconds),
+            ResumeMaximumRemainingSeconds = Read(root, nameof(PlayerSettings.ResumeMaximumRemainingSeconds), PlayerSettings.Default.ResumeMaximumRemainingSeconds),
         },
         _ => throw new JsonException("Unsupported settings version."),
     };
@@ -117,5 +127,7 @@ public sealed class PlayerSettingsService
         DefaultSpeed = Math.Clamp(value.DefaultSpeed, .25, 4),
         SkipBackwardSeconds = Math.Clamp(value.SkipBackwardSeconds, 1, 120),
         SkipForwardSeconds = Math.Clamp(value.SkipForwardSeconds, 1, 120),
+        ResumeMinimumElapsedSeconds = Math.Clamp(value.ResumeMinimumElapsedSeconds, 0, 3600),
+        ResumeMaximumRemainingSeconds = Math.Clamp(value.ResumeMaximumRemainingSeconds, 0, 3600),
     };
 }

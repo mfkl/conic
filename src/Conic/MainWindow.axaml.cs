@@ -50,7 +50,7 @@ public partial class MainWindow : Window
         ApplyLiveSettings(_settings.Current);
         _autoHideTimer.Tick += (_, _) =>
         {
-            bool menuOpen = (VideoArea.ContextMenu?.IsOpen ?? false) || SettingsPanel.IsVisible || OpenMenu.IsVisible || UrlPanel.IsVisible;
+            bool menuOpen = (VideoArea.ContextMenu?.IsOpen ?? false) || SettingsPanel.IsVisible || OpenMenu.IsVisible || UrlPanel.IsVisible || ResumePanel.IsVisible;
             bool chromeFocused = PlayerDock.IsKeyboardFocusWithin || TopChrome.IsKeyboardFocusWithin;
             bool popupOpen = menuOpen || VideoArea.IsKeyboardFocusWithin &&
                 (RightTransport.IsKeyboardFocusWithin || TopChrome.IsKeyboardFocusWithin);
@@ -139,7 +139,11 @@ public partial class MainWindow : Window
 
     private void OpenSettings()
     {
+        OpenMenu.IsVisible = false;
+        UrlPanel.IsVisible = false;
+        ClearRecentPrompt.IsVisible = false;
         SettingsPanel.IsVisible = true;
+        UpdateOpenErrorSurface();
         _chromeVisibility.Wake();
         SetChromeVisibility(true);
         Dispatcher.UIThread.Post(() => SettingsSearch.Focus());
@@ -158,6 +162,7 @@ public partial class MainWindow : Window
         UrlPanel.IsVisible = false;
         ClearRecentPrompt.IsVisible = false;
         OpenMenu.IsVisible = open;
+        UpdateOpenErrorSurface();
         SetChromeVisibility(true);
         if (open) Dispatcher.UIThread.Post(() => OpenMenu.Focus());
     }
@@ -185,6 +190,7 @@ public partial class MainWindow : Window
     {
         OpenMenu.IsVisible = false;
         ClearRecentPrompt.IsVisible = false;
+        UpdateOpenErrorSurface();
         OpenOptionsButton.Focus();
     }
 
@@ -262,7 +268,7 @@ public partial class MainWindow : Window
             UpdateHistorySettingsControls();
     }
 
-    private void UpdateOpenErrorSurface() => OpenErrorToast.IsVisible = !UrlPanel.IsVisible && _presentation.HasOpenError;
+    private void UpdateOpenErrorSurface() => OpenErrorToast.IsVisible = !UrlPanel.IsVisible && !OpenMenu.IsVisible && !ResumePanel.IsVisible && !SettingsPanel.IsVisible && _presentation.HasOpenError;
 
     private void UpdateResumePrompt()
     {
@@ -271,6 +277,7 @@ public partial class MainWindow : Window
             OpenMenu.IsVisible = false;
             UrlPanel.IsVisible = false;
             ClearRecentPrompt.IsVisible = false;
+            UpdateOpenErrorSurface();
             SetChromeVisibility(true);
             _autoHideTimer.Stop();
             Dispatcher.UIThread.Post(() => ResumeAction.Focus());
@@ -278,6 +285,8 @@ public partial class MainWindow : Window
         else
         {
             Dispatcher.UIThread.Post(() => TopChrome.Focus());
+            UpdateOpenErrorSurface();
+            if (_presentation.IsFullscreen) { _autoHideTimer.Stop(); _autoHideTimer.Start(); }
         }
     }
 
@@ -340,6 +349,9 @@ public partial class MainWindow : Window
     private void CloseSettings()
     {
         SettingsPanel.IsVisible = false;
+        SettingsClearRecentPrompt.IsVisible = false;
+        SettingsClearResumePrompt.IsVisible = false;
+        UpdateOpenErrorSurface();
         TopChrome.Focus();
         if (_presentation.IsFullscreen) { _autoHideTimer.Stop(); _autoHideTimer.Start(); }
     }
@@ -472,10 +484,23 @@ public partial class MainWindow : Window
         {
             try
             {
-                Console.WriteLine($"[layout-smoke] phase={phase}");
-                if (phase == 0) { OpenSettings(); UrlPanel.IsVisible = true; _settingsViewModel.SelectedPage = _settingsViewModel.Pages[1]; ApplyResponsiveSettings(); phase = 1; return; }
-                if (phase == 1) { ValidateLayout(1280, false); ValidateSettingsLayout(1280, false); Width = 480; phase = 2; return; }
-                if (phase == 2) { ApplyResponsiveSettings(); ValidateLayout(480, true); ValidateSettingsLayout(480, true); timer.Stop(); timeout?.Stop(); Console.WriteLine("[settings-layout-smoke] PASS wide-and-compact"); Console.WriteLine("[layout-smoke] PASS normal-and-compact"); desktop.Shutdown(0); }
+                double width = ClientSize.Width;
+                bool compact = width <= 480;
+                Console.WriteLine($"[layout-smoke] phase={phase} width={width}");
+                switch (phase)
+                {
+                    case 0: ValidateLayout(width, compact); ValidateTopChrome(width); ShowOpenMenuForSmoke(); phase++; return;
+                    case 1: ValidateSurface("open-menu", OpenMenu, [OpenMenu, OpenFolderAction, RecentEmptyState]); CloseOpenMenu(); ShowUrlPanel(); phase++; return;
+                    case 2: ValidateSurface("url-panel", UrlPanel, [UrlPanel, UrlTextBox, UrlCancelButton, UrlSubmitButton]); CloseUrlPanel(); ResumePanel.IsVisible = true; Dispatcher.UIThread.Post(() => ResumeAction.Focus()); phase++; return;
+                    case 3: ValidateSurface("resume-panel", ResumePanel, [ResumePanel, ResumeAction, DeclineResumeAction]); ResumePanel.IsVisible = false; OpenSettings(); _settingsViewModel.SelectedPage = _settingsViewModel.Pages[0]; ApplyResponsiveSettings(); phase++; return;
+                    case 4: ValidateSettingsLayout(width, compact); CloseSettings(); if (!compact) { Width = 480; phase++; return; } timer.Stop(); timeout?.Stop(); Console.WriteLine("[layout-smoke] PASS opening surfaces wide-and-compact"); desktop.Shutdown(0); return;
+                    case 5: ApplyResponsiveChrome(); ApplyResponsiveSettings(); ValidateLayout(width, true); ValidateTopChrome(width); ShowOpenMenuForSmoke(); phase++; return;
+                    case 6: ValidateSurface("open-menu", OpenMenu, [OpenMenu, OpenFolderAction, RecentEmptyState]); CloseOpenMenu(); ShowUrlPanel(); phase++; return;
+                    case 7: ValidateSurface("url-panel", UrlPanel, [UrlPanel, UrlTextBox, UrlCancelButton, UrlSubmitButton]); CloseUrlPanel(); ResumePanel.IsVisible = true; Dispatcher.UIThread.Post(() => ResumeAction.Focus()); phase++; return;
+                    case 8: ValidateSurface("resume-panel", ResumePanel, [ResumePanel, ResumeAction, DeclineResumeAction]); ResumePanel.IsVisible = false; OpenSettings(); _settingsViewModel.SelectedPage = _settingsViewModel.Pages[0]; ApplyResponsiveSettings(); phase++; return;
+                    case 9: ValidateSettingsLayout(width, true); CloseSettings(); timer.Stop(); timeout?.Stop(); Console.WriteLine("[layout-smoke] PASS opening surfaces wide-and-compact"); desktop.Shutdown(0); return;
+                    default: throw new InvalidOperationException("[layout-smoke] unexpected phase");
+                }
             }
             catch (Exception exception)
             {
@@ -504,17 +529,46 @@ public partial class MainWindow : Window
         bool rows = compact ? Grid.GetRow(RightTransport) == 2 : Grid.GetRow(RightTransport) == 1;
         bool separate = compact ? ToDock(RightTransport).Top >= ToDock(CenterTransport).Bottom : !ToDock(RightTransport).Intersects(ToDock(CenterTransport));
         Console.WriteLine($"[layout-smoke] width={width} dock={dock} center={ToDock(CenterTransport)} right={ToDock(RightTransport)} timeline={ToDock(PlayerTimeline)} volume={ToDock(PlayerVolume)} rows={rows} contained={contained} separate={separate}");
-        if (!contained || !rows || !separate)
+        if (!contained || !rows || !separate || Math.Abs(PlayerVolume.Bounds.Width - 112) > 0.1)
             throw new InvalidOperationException("[layout-smoke] FAIL bounds or row policy");
     }
+
+    private void ShowOpenMenuForSmoke()
+    {
+        OpenMenu.IsVisible = true;
+        UrlPanel.IsVisible = false;
+        ClearRecentPrompt.IsVisible = false;
+        UpdateOpenErrorSurface();
+        Dispatcher.UIThread.Post(() => OpenMenu.Focus());
+    }
+
+    private void ValidateTopChrome(double width)
+    {
+        Control[] controls = [OpenOptionsButton, OpenSettingsButton];
+        bool contained = controls.All(control => IsContained(control));
+        bool separate = !OpenOptionsButton.Bounds.Intersects(OpenSettingsButton.Bounds);
+        Console.WriteLine($"[layout-smoke] top width={width} open={OpenOptionsButton.Bounds} settings={OpenSettingsButton.Bounds} title-visible={TopChromeTitle.IsVisible} always-visible={AlwaysOnTopChrome.IsVisible} contained={contained} separate={separate}");
+        if (!contained || !separate)
+            throw new InvalidOperationException("[layout-smoke] FAIL top chrome bounds");
+    }
+
+    private void ValidateSurface(string name, Control surface, Control[] required)
+    {
+        bool contained = required.All(IsContained);
+        Console.WriteLine($"[layout-smoke] {name} bounds={surface.Bounds} contained={contained}");
+        if (!contained || (name == "open-menu" && OpenMenu.Bounds.Height > 340) || (name == "open-menu" && OpenFolderAction.IsEnabled))
+            throw new InvalidOperationException($"[layout-smoke] FAIL {name} bounds or capability gate");
+    }
+
+    private bool IsContained(Control control) => control.Bounds.Width > 0 && control.Bounds.Height > 0 &&
+        control.TranslatePoint(default, this) is Point origin && origin.X >= 0 && origin.Y >= 0 &&
+        origin.X + control.Bounds.Width <= ClientSize.Width && origin.Y + control.Bounds.Height <= ClientSize.Height;
 
     private void ValidateSettingsLayout(double width, bool compact)
     {
         Control navigation = compact ? CompactSettingsPages : SettingsPages;
-        Control[] required = [SettingsPanel, SettingsSearch, navigation, SettingsContent, SettingsResetRow, SettingsBadge, OpenSettingsButton, UrlPanel];
-        bool contained = required.All(control => control.Bounds.Width > 0 && control.Bounds.Height > 0 &&
-            control.TranslatePoint(default, this) is Point origin && origin.X >= 0 && origin.Y >= 0 &&
-            origin.X + control.Bounds.Width <= ClientSize.Width && origin.Y + control.Bounds.Height <= ClientSize.Height);
+        Control[] required = [SettingsPanel, SettingsSearch, navigation, SettingsContent, SettingsResetRow, SettingsBadge, OpenSettingsButton];
+        bool contained = required.All(IsContained) && IsContained(SettingsClearRecentButton) && IsContained(SettingsClearResumeButton);
         Console.WriteLine($"[settings-layout-smoke] width={width} compact={compact} panel={SettingsPanel.Bounds} search={SettingsSearch.Bounds} navigation={navigation.Bounds} content={SettingsContent.Bounds} theme={SettingsBadge.Bounds} open={OpenSettingsButton.Bounds} url={UrlPanel.Bounds} reset={SettingsResetRow.Bounds} contained={contained}");
         if (!contained || !navigation.IsVisible)
             throw new InvalidOperationException("[settings-layout-smoke] FAIL bounds or responsive navigation");
@@ -612,6 +666,10 @@ public partial class MainWindow : Window
     private void ApplyResponsiveChrome()
     {
         PlayerLayoutResult layout = PlayerLayoutPolicy.ForWidth(Bounds.Width);
+        bool compactTopChrome = Bounds.Width < 700;
+        TopChrome.Margin = compactTopChrome ? new Thickness(12, 12, 12, 0) : new Thickness(24, 20, 24, 0);
+        TopChromeTitle.IsVisible = !compactTopChrome;
+        AlwaysOnTopChrome.IsVisible = !compactTopChrome;
         CenterTransport.Spacing = layout.Spacing;
         RightTransport.Spacing = layout.Spacing;
         Grid.SetRow(RightTransport, layout.RightRow);

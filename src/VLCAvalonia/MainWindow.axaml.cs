@@ -45,6 +45,7 @@ public partial class MainWindow : Window
             showUrlPanel: ShowUrlPanel);
         DataContext = _presentation;
         _presentation.PropertyChanged += OnPresentationPropertyChanged;
+        UpdateHistorySettingsControls();
         _settings.Changed += (_, settings) => ApplyLiveSettings(settings);
         ApplyLiveSettings(_settings.Current);
         _autoHideTimer.Tick += (_, _) =>
@@ -87,6 +88,14 @@ public partial class MainWindow : Window
         if (e.Key == Key.Escape && UrlPanel.IsVisible)
         {
             CloseUrlPanel();
+            e.Handled = true;
+            return;
+        }
+        if (_presentation.HasPendingResume)
+        {
+            if (e.Key == Key.Enter) _presentation.Registry.Execute(Player.Application.PlayerCommandId.AcceptResume);
+            else if (e.Key == Key.Escape) _presentation.Registry.Execute(Player.Application.PlayerCommandId.DeclineResume);
+            else return;
             e.Handled = true;
             return;
         }
@@ -235,9 +244,9 @@ public partial class MainWindow : Window
     private void OnMediaDrop(object? sender, DragEventArgs e)
     {
         IStorageItem[]? items = e.DataTransfer.TryGetFiles();
-        string[] localSources = items is null
-            ? []
-            : items.Where(item => item.Path.IsFile).Select(item => item.Path.LocalPath).ToArray();
+        string[] localSources = items is { Length: > 0 } && items.All(item => item.Path.IsFile)
+            ? items.Select(item => item.Path.LocalPath).ToArray()
+            : [];
         _presentation.OpenDroppedSources(localSources);
         UpdateOpenErrorSurface();
         e.Handled = true;
@@ -247,9 +256,86 @@ public partial class MainWindow : Window
     {
         if (e.PropertyName is nameof(PlayerPresentationViewModel.OpenError) or nameof(PlayerPresentationViewModel.HasOpenError))
             UpdateOpenErrorSurface();
+        if (e.PropertyName == nameof(PlayerPresentationViewModel.HasPendingResume))
+            UpdateResumePrompt();
+        if (e.PropertyName is nameof(PlayerPresentationViewModel.HasHistoryError) or nameof(PlayerPresentationViewModel.HistoryError) or nameof(PlayerPresentationViewModel.HasRecentItems) or nameof(PlayerPresentationViewModel.HasResumeItems))
+            UpdateHistorySettingsControls();
     }
 
     private void UpdateOpenErrorSurface() => OpenErrorToast.IsVisible = !UrlPanel.IsVisible && _presentation.HasOpenError;
+
+    private void UpdateResumePrompt()
+    {
+        if (_presentation.HasPendingResume)
+        {
+            OpenMenu.IsVisible = false;
+            UrlPanel.IsVisible = false;
+            ClearRecentPrompt.IsVisible = false;
+            SetChromeVisibility(true);
+            _autoHideTimer.Stop();
+            Dispatcher.UIThread.Post(() => ResumeAction.Focus());
+        }
+        else
+        {
+            Dispatcher.UIThread.Post(() => TopChrome.Focus());
+        }
+    }
+
+    private void UpdateHistorySettingsControls()
+    {
+        SettingsClearRecentButton.IsEnabled = _presentation.HasRecentItems;
+        SettingsClearResumeButton.IsEnabled = _presentation.HasResumeItems;
+        SettingsHistoryError.IsVisible = _presentation.HasHistoryError;
+        SettingsHistoryError.Text = _presentation.HistoryError;
+    }
+
+    private void OnAcceptResume(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => _presentation.Registry.Execute(Player.Application.PlayerCommandId.AcceptResume);
+
+    private void OnDeclineResume(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => _presentation.Registry.Execute(Player.Application.PlayerCommandId.DeclineResume);
+
+    private void OnSettingsClearRecent(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        SettingsClearRecentButton.IsVisible = false;
+        SettingsClearRecentPrompt.IsVisible = true;
+    }
+
+    private void OnSettingsCancelClearRecent(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        SettingsClearRecentPrompt.IsVisible = false;
+        SettingsClearRecentButton.IsVisible = true;
+    }
+
+    private void OnSettingsConfirmClearRecent(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        _presentation.Registry.Execute(Player.Application.PlayerCommandId.ClearRecent);
+        if (!_presentation.HasRecentItems)
+        {
+            SettingsClearRecentPrompt.IsVisible = false;
+            SettingsClearRecentButton.IsVisible = true;
+        }
+    }
+
+    private void OnSettingsClearResume(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        SettingsClearResumeButton.IsVisible = false;
+        SettingsClearResumePrompt.IsVisible = true;
+    }
+
+    private void OnSettingsCancelClearResume(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        SettingsClearResumePrompt.IsVisible = false;
+        SettingsClearResumeButton.IsVisible = true;
+    }
+
+    private void OnSettingsConfirmClearResume(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        _presentation.Registry.Execute(Player.Application.PlayerCommandId.ClearResumeHistory);
+        if (!_presentation.HasResumeItems)
+        {
+            SettingsClearResumePrompt.IsVisible = false;
+            SettingsClearResumeButton.IsVisible = true;
+        }
+    }
 
     private void CloseSettings()
     {

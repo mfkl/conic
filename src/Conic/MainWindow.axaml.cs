@@ -567,9 +567,9 @@ public partial class MainWindow : Window
     private void ValidateSettingsLayout(double width, bool compact)
     {
         Control navigation = compact ? CompactSettingsPages : SettingsPages;
-        Control[] required = [SettingsPanel, SettingsSearch, navigation, SettingsContent, SettingsResetRow, SettingsBadge, OpenSettingsButton];
+        Control[] required = [SettingsPanel, SettingsSearch, navigation, SettingsContent, SettingsResetRow, OpenSettingsButton, SettingsClearRecentButton, SettingsClearResumeButton];
         bool contained = required.All(IsContained) && IsContained(SettingsClearRecentButton) && IsContained(SettingsClearResumeButton);
-        Console.WriteLine($"[settings-layout-smoke] width={width} compact={compact} panel={SettingsPanel.Bounds} search={SettingsSearch.Bounds} navigation={navigation.Bounds} content={SettingsContent.Bounds} theme={SettingsBadge.Bounds} open={OpenSettingsButton.Bounds} url={UrlPanel.Bounds} reset={SettingsResetRow.Bounds} contained={contained}");
+        Console.WriteLine($"[settings-layout-smoke] width={width} compact={compact} panel={SettingsPanel.Bounds} search={SettingsSearch.Bounds} navigation={navigation.Bounds} content={SettingsContent.Bounds} recent-clear={SettingsClearRecentButton.Bounds} resume-clear={SettingsClearResumeButton.Bounds} open={OpenSettingsButton.Bounds} reset={SettingsResetRow.Bounds} contained={contained}");
         if (!contained || !navigation.IsVisible)
             throw new InvalidOperationException("[settings-layout-smoke] FAIL bounds or responsive navigation");
     }

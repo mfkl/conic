@@ -2,7 +2,7 @@
 
 Status: UI-00 inventory with UI-06 verified product bindings at
 `b3708f9`; pinned sibling VLCLR revision
-`4ce5edc6c77efa4643894ec5de56a1db8a7422b9`.
+`e90b786de74c6ed440dea8bf65329907739b0c60`.
 This is the product contract for the work packages in
 [UI_IMPLEMENTATION_PLAN.md](UI_IMPLEMENTATION_PLAN.md). A `Missing` row is a
 reason to keep its control absent or disabled with an explanatory capability

@@ -210,12 +210,15 @@
         <Border x:Name="SettingsPanel" x:DataType="viewModels:SettingsViewModel" IsVisible="False" MaxWidth="760" MaxHeight="580" Margin="24"
                 HorizontalAlignment="Center" VerticalAlignment="Center" Padding="24" CornerRadius="18"
                 Background="#F0121418" BorderBrush="#40FFFFFF" BorderThickness="1" BoxShadow="0 24 60 0 #B0000000">
-            <Grid ColumnDefinitions="190,*" RowDefinitions="Auto,*" RowSpacing="18" ColumnSpacing="22">
+            <Grid x:Name="SettingsGrid" ColumnDefinitions="190,*" RowDefinitions="Auto,*" RowSpacing="18" ColumnSpacing="22">
                 <TextBox x:Name="SettingsSearch" Grid.ColumnSpan="2" PlaceholderText="Search settings" TextChanged="OnSettingsSearchChanged" AutomationProperties.Name="Search settings" />
                 <ListBox x:Name="SettingsPages" Grid.Row="1" ItemsSource="{Binding FilteredPages}" SelectedItem="{Binding SelectedPage}">
                     <ListBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Name}" Margin="8" /></DataTemplate></ListBox.ItemTemplate>
                 </ListBox>
-                <ScrollViewer Grid.Row="1" Grid.Column="1">
+                <ComboBox x:Name="CompactSettingsPages" Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" IsVisible="False" ItemsSource="{Binding FilteredPages}" SelectedItem="{Binding SelectedPage}">
+                    <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Name}" /></DataTemplate></ComboBox.ItemTemplate>
+                </ComboBox>
+                <ScrollViewer x:Name="SettingsContent" Grid.Row="1" Grid.Column="1">
                     <StackPanel Spacing="14">
                         <DockPanel><TextBlock Text="Settings" FontSize="22" FontWeight="SemiBold" /><Button DockPanel.Dock="Right" Content="Close" Click="OnSettingsClose" AutomationProperties.Name="Close settings" /></DockPanel>
                         <TextBlock Text="{Binding ErrorMessage}" Foreground="#FF9A55" TextWrapping="Wrap" />
@@ -235,7 +238,7 @@
                         <StackPanel Orientation="Horizontal" Spacing="8"><TextBlock Text="Skip backward (seconds)" Width="155" VerticalAlignment="Center" /><NumericUpDown Minimum="1" Maximum="120" Value="{Binding SkipBackwardSeconds, Mode=TwoWay}" /><TextBlock Text="Live" Classes="settingBadge" /></StackPanel>
                         <StackPanel Orientation="Horizontal" Spacing="8"><TextBlock Text="Skip forward (seconds)" Width="155" VerticalAlignment="Center" /><NumericUpDown Minimum="1" Maximum="120" Value="{Binding SkipForwardSeconds, Mode=TwoWay}" /><TextBlock Text="Live" Classes="settingBadge" /></StackPanel></StackPanel>
                         <TextBlock Text="Live applies now · Next open applies to media opened next · Restart applies after restarting VLC Avalonia." Classes="settingHint" TextWrapping="Wrap" />
-                        <StackPanel Orientation="Horizontal" Spacing="8"><Button Content="Reset page" Command="{Binding ResetPageCommand}" /><Button Content="Reset all" Command="{Binding ResetAllCommand}" /><Button Content="Cancel" Command="{Binding CancelResetCommand}" IsVisible="{Binding ConfirmReset}" /><TextBlock Text="Click Reset all again to confirm" IsVisible="{Binding ConfirmReset}" Classes="settingHint" /></StackPanel>
+                        <StackPanel x:Name="SettingsResetRow" Orientation="Horizontal" Spacing="8"><Button Content="Reset page" Command="{Binding ResetPageCommand}" /><Button Content="Reset all" Command="{Binding ResetAllCommand}" /><Button Content="Cancel" Command="{Binding CancelResetCommand}" IsVisible="{Binding ConfirmReset}" /><TextBlock Text="Click Reset all again to confirm" IsVisible="{Binding ConfirmReset}" Classes="settingHint" /></StackPanel>
                     </StackPanel>
                 </ScrollViewer>
             </Grid>

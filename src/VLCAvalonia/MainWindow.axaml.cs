@@ -52,7 +52,7 @@ public partial class MainWindow : Window
         };
         VideoSurface.EngineStateChanged += OnEngineStateChanged;
         Closed += (_, _) => _autoHideTimer.Stop();
-        SizeChanged += (_, _) => ApplyResponsiveChrome();
+        SizeChanged += (_, _) => { ApplyResponsiveChrome(); ApplyResponsiveSettings(); };
         Loaded += (_, _) =>
         {
             if (!Environment.GetCommandLineArgs().Contains("--layout-smoke") &&
@@ -248,8 +248,17 @@ public partial class MainWindow : Window
         DispatcherTimer timer = new() { Interval = TimeSpan.FromMilliseconds(250) };
         timer.Tick += (_, _) =>
         {
-            if (phase == 0) { ValidateLayout(1280, false); Width = 480; phase = 1; return; }
-            if (phase == 1) { ValidateLayout(480, true); timer.Stop(); Console.WriteLine("[layout-smoke] PASS normal-and-compact"); desktop.Shutdown(0); }
+            try
+            {
+                Console.WriteLine($"[layout-smoke] phase={phase}");
+                if (phase == 0) { OpenSettings(); ApplyResponsiveSettings(); phase = 1; return; }
+                if (phase == 1) { ValidateLayout(1280, false); ValidateSettingsLayout(1280, false); Width = 480; phase = 2; return; }
+                if (phase == 2) { ApplyResponsiveSettings(); ValidateLayout(480, true); ValidateSettingsLayout(480, true); timer.Stop(); Console.WriteLine("[settings-layout-smoke] PASS wide-and-compact"); Console.WriteLine("[layout-smoke] PASS normal-and-compact"); desktop.Shutdown(0); }
+            }
+            catch (Exception exception)
+            {
+                timer.Stop(); Console.Error.WriteLine($"[layout-smoke] FAIL phase={phase} {exception}"); desktop.Shutdown(1);
+            }
         };
         DispatcherTimer timeout = new() { Interval = TimeSpan.FromSeconds(8) };
         timeout.Tick += (_, _) => { timeout.Stop(); timer.Stop(); Console.Error.WriteLine("[layout-smoke] FAIL timeout"); desktop.Shutdown(1); };
@@ -275,6 +284,18 @@ public partial class MainWindow : Window
         Console.WriteLine($"[layout-smoke] width={width} dock={dock} center={ToDock(CenterTransport)} right={ToDock(RightTransport)} timeline={ToDock(PlayerTimeline)} volume={ToDock(PlayerVolume)} rows={rows} contained={contained} separate={separate}");
         if (!contained || !rows || !separate)
             throw new InvalidOperationException("[layout-smoke] FAIL bounds or row policy");
+    }
+
+    private void ValidateSettingsLayout(double width, bool compact)
+    {
+        Control navigation = compact ? CompactSettingsPages : SettingsPages;
+        Control[] required = [SettingsPanel, SettingsSearch, navigation, SettingsContent, SettingsResetRow];
+        bool contained = required.All(control => control.Bounds.Width > 0 && control.Bounds.Height > 0 &&
+            control.TranslatePoint(default, this) is Point origin && origin.X >= 0 && origin.Y >= 0 &&
+            origin.X + control.Bounds.Width <= ClientSize.Width && origin.Y + control.Bounds.Height <= ClientSize.Height);
+        Console.WriteLine($"[settings-layout-smoke] width={width} compact={compact} panel={SettingsPanel.Bounds} search={SettingsSearch.Bounds} navigation={navigation.Bounds} content={SettingsContent.Bounds} reset={SettingsResetRow.Bounds} contained={contained}");
+        if (!contained || !navigation.IsVisible)
+            throw new InvalidOperationException("[settings-layout-smoke] FAIL bounds or responsive navigation");
     }
 
     internal void EnableAdapterMismatchSmoke(
@@ -379,6 +400,21 @@ public partial class MainWindow : Window
         RightTransport.HorizontalAlignment = layout.IsCompact
             ? Avalonia.Layout.HorizontalAlignment.Center
             : Avalonia.Layout.HorizontalAlignment.Right;
+    }
+
+    private void ApplyResponsiveSettings()
+    {
+        bool compact = Bounds.Width < 900;
+        SettingsPages.IsVisible = !compact;
+        CompactSettingsPages.IsVisible = compact;
+        SettingsGrid.ColumnDefinitions = compact ? new ColumnDefinitions("*") : new ColumnDefinitions("190,*");
+        SettingsGrid.RowDefinitions = compact ? new RowDefinitions("Auto,Auto,*") : new RowDefinitions("Auto,*");
+        Grid.SetRow(SettingsSearch, 0);
+        Grid.SetColumn(SettingsSearch, 0);
+        Grid.SetColumnSpan(SettingsSearch, compact ? 1 : 2);
+        Grid.SetRow(SettingsPages, 1); Grid.SetColumn(SettingsPages, 0);
+        Grid.SetRow(CompactSettingsPages, 1); Grid.SetColumn(CompactSettingsPages, 0); Grid.SetColumnSpan(CompactSettingsPages, compact ? 1 : 2);
+        Grid.SetRow(SettingsContent, compact ? 2 : 1); Grid.SetColumn(SettingsContent, compact ? 0 : 1);
     }
 
     private void OnEngineStateChanged(object? sender, MediaEngineState state) =>

@@ -24,9 +24,11 @@ public sealed class PlayerSettingsServiceTests
     [Fact]
     public void OlderVersionMigratesAndLiveClassificationIsExplicit()
     {
-        MemoryStorage storage = new() { Content = "{\"version\":1,\"resumePlayback\":false,\"rememberVolume\":true,\"theme\":\"\",\"density\":\"\",\"controlTimeoutSeconds\":0,\"defaultSpeed\":1,\"skipBackwardSeconds\":10,\"skipForwardSeconds\":10}" };
+        MemoryStorage storage = new() { Content = "{\"version\":1,\"resumePlayback\":false,\"rememberVolume\":true,\"theme\":\"Dark\",\"density\":\"Compact\",\"defaultSpeed\":1.5,\"skipBackwardSeconds\":8,\"skipForwardSeconds\":12}" };
         PlayerSettingsService service = new(storage); service.Load();
         Assert.Equal(PlayerSettings.CurrentVersion, service.Current.Version);
+        Assert.Equal("Dark", service.Current.Theme); Assert.Equal("Compact", service.Current.Density); Assert.Equal(3, service.Current.ControlTimeoutSeconds); Assert.Equal(12, service.Current.SkipForwardSeconds);
+        Assert.Contains("\"Version\": 2", storage.Content);
         Assert.Equal(SettingApplyMode.Live, PlayerSettingsService.ApplyMode(nameof(PlayerSettings.SkipForwardSeconds)));
         Assert.Equal(SettingApplyMode.NextOpen, PlayerSettingsService.ApplyMode(nameof(PlayerSettings.DefaultSpeed)));
     }

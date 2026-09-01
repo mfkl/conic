@@ -12,6 +12,7 @@ internal sealed class SettingsViewModel : INotifyPropertyChanged
     public SettingsViewModel(PlayerSettingsService service) { _service = service; _selectedPage = Pages[0]; ResetPageCommand = new RelayCommand(_ => ResetPage()); ResetAllCommand = new RelayCommand(_ => ConfirmOrResetAll()); CancelResetCommand = new RelayCommand(_ => ConfirmReset = false); }
     public event PropertyChangedEventHandler? PropertyChanged;
     public IReadOnlyList<SettingsPage> Pages { get; } = [new("General", "resume volume privacy"), new("Appearance", "theme density controls timeout"), new("Playback", "speed skip backward forward")];
+    public IReadOnlyList<string> ThemeOptions { get; } = ["System", "Dark"]; public IReadOnlyList<string> DensityOptions { get; } = ["Comfortable", "Compact"]; public IReadOnlyList<string> SpeedOptions { get; } = ["0.5", "1", "1.5", "2"];
     public IEnumerable<SettingsPage> FilteredPages => Pages.Where(page => string.IsNullOrWhiteSpace(Search) || (page.Name + " " + page.Keywords).Contains(Search, StringComparison.OrdinalIgnoreCase));
     public SettingsPage SelectedPage { get => _selectedPage; set { if (Set(ref _selectedPage, value)) { ConfirmReset = false; Notify(nameof(IsGeneral)); Notify(nameof(IsAppearance)); Notify(nameof(IsPlayback)); } } }
     public bool IsGeneral => SelectedPage.Name == "General"; public bool IsAppearance => SelectedPage.Name == "Appearance"; public bool IsPlayback => SelectedPage.Name == "Playback";

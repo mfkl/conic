@@ -268,14 +268,10 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
     public void CheckpointCurrent(bool force)
     {
         if (_currentSource is null || _lastState is not { } state) return;
-        try
-        {
-            DateTimeOffset now = _clock();
-            if (_activeGeneration < 0 || state.Generation != _activeGeneration || state.Status is not (PlaybackStatus.Playing or PlaybackStatus.Paused) || !state.CanSeek || state.Duration <= TimeSpan.Zero || !(_settings?.Current.RememberResumeHistory ?? true) || (!force && now - _lastCheckpointUtc < TimeSpan.FromSeconds(10))) return;
-            _history?.Checkpoint(_currentSource, state.Elapsed, state.Duration, _settings?.Current.RememberResumeHistory ?? true, _settings?.Current.ResumeMinimumElapsedSeconds ?? 30, _settings?.Current.ResumeMaximumRemainingSeconds ?? 30, state.CanSeek);
-            _lastCheckpointUtc = now;
-        }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { HistoryError = "Media history could not be saved."; OnPropertyChanged(nameof(HistoryError)); _diagnostic?.Invoke(e.ToString()); }
+        DateTimeOffset now = _clock();
+        if (_activeGeneration < 0 || state.Generation != _activeGeneration || state.Status is not (PlaybackStatus.Playing or PlaybackStatus.Paused) || !state.CanSeek || state.Duration <= TimeSpan.Zero || !(_settings?.Current.RememberResumeHistory ?? true) || (!force && now - _lastCheckpointUtc < TimeSpan.FromSeconds(10))) return;
+        TryHistory(() => _history?.Checkpoint(_currentSource, state.Elapsed, state.Duration, true, _settings?.Current.ResumeMinimumElapsedSeconds ?? 30, _settings?.Current.ResumeMaximumRemainingSeconds ?? 30, true));
+        _lastCheckpointUtc = now;
     }
     public void OnClosing() => CheckpointCurrent(true);
     private void DeclineResume()

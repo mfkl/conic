@@ -158,6 +158,40 @@ public sealed class PlayerPresentationViewModelTests
         Assert.Equal(expected, vm.HasPendingResume);
     }
 
+    [Fact]
+    public void CheckpointThrottleAndForcedLifecycleBoundaries()
+    {
+        DateTimeOffset now = DateTimeOffset.UnixEpoch; HistoryStorage storage = new(); MediaHistoryService history = new(storage);
+        RecordingTransport transport = new(); PlayerPresentationViewModel vm = new(transport, new EmptyPicker(), () => { }, sourceValidator: new MediaSourceValidator(new ExistingFiles()), history: history, clock: () => now);
+        vm.OpenSource("a.mp4", MediaSourceKind.File); vm.ApplyEngineState(State(.4, PlaybackStatus.Playing, true) with { Generation = 1, Source = "a.mp4" });
+        string first = storage.Content!; vm.ApplyEngineState(State(.41, PlaybackStatus.Playing, true) with { Generation = 1, Source = "a.mp4" }); Assert.Equal(first, storage.Content);
+        now += TimeSpan.FromSeconds(10); vm.ApplyEngineState(State(.42, PlaybackStatus.Playing, true) with { Generation = 1, Source = "a.mp4" }); Assert.NotEqual(first, storage.Content);
+        vm.Registry.Execute(PlayerCommandId.Stop); Assert.True(transport.Stopped); vm.OnClosing();
+    }
+
+    [Theory]
+    [InlineData(PlaybackStatus.Opening, true)]
+    [InlineData(PlaybackStatus.Stopped, true)]
+    [InlineData(PlaybackStatus.Faulted, true)]
+    [InlineData(PlaybackStatus.Playing, false)]
+    public void ForcedCheckpointRejectsIneligibleStates(PlaybackStatus status, bool seekable)
+    {
+        HistoryStorage storage = new(); MediaHistoryService history = new(storage); PlayerPresentationViewModel vm = CreateOpeningViewModel(new RecordingTransport(), history);
+        vm.OpenSource("a.mp4", MediaSourceKind.File); vm.ApplyEngineState(State(.4, status, seekable) with { Generation = 1, Source = "a.mp4" }); vm.CheckpointCurrent(true);
+        Assert.Empty(history.Resume);
+    }
+
+    [Theory]
+    [InlineData("io")]
+    [InlineData("access")]
+    public void HistoryFailuresAreSafeAndDiagnostic(string failure)
+    {
+        Exception error = failure == "io" ? new IOException("disk detail") : new UnauthorizedAccessException("denied detail"); ThrowingHistoryStorage storage = new(error); MediaHistoryService history = new(storage); List<string> diagnostics = [];
+        PlayerPresentationViewModel vm = new(new RecordingTransport(), new EmptyPicker(), () => { }, sourceValidator: new MediaSourceValidator(new ExistingFiles()), history: history, diagnostic: diagnostics.Add);
+        vm.OpenSource("a.mp4", MediaSourceKind.File); vm.ApplyEngineState(State(.4, PlaybackStatus.Playing, true) with { Generation = 1, Source = "a.mp4" });
+        Assert.Equal("Media history could not be saved.", vm.HistoryError); Assert.Contains(diagnostics, x => x.Contains("detail"));
+    }
+
     private static PlayerPresentationViewModel CreateOpeningViewModel(RecordingTransport transport, MediaHistoryService? history = null) => new(transport, new EmptyPicker(), () => { }, sourceValidator: new MediaSourceValidator(new ExistingFiles()), history: history);
     private static MediaHistoryService SeedHistory()
     {
@@ -190,7 +224,8 @@ public sealed class PlayerPresentationViewModelTests
         public double Rate { get; private set; }
         public void Open(string source) { }
         public void TogglePause() { }
-        public void Stop() { }
+        public bool Stopped { get; private set; }
+        public void Stop() => Stopped = true;
         public void Seek(double normalizedPosition) => Seeks.Add(normalizedPosition);
         public void SetVolume(double normalizedVolume) { }
         public void SetMuted(bool muted) => Muted = muted;
@@ -214,4 +249,5 @@ public sealed class PlayerPresentationViewModelTests
     }
     private sealed class ExistingFiles : IMediaFileSystem { public bool FileExists(string path) => true; public bool DirectoryExists(string path) => false; public string GetFullPath(string path) => path; }
     private sealed class HistoryStorage : IMediaHistoryStorage { public string? Content; public string? Read() => Content; public void WriteAtomically(string content) => Content = content; }
+    private sealed class ThrowingHistoryStorage(Exception error) : IMediaHistoryStorage { public string? Read() => null; public void WriteAtomically(string content) => throw error; }
 }

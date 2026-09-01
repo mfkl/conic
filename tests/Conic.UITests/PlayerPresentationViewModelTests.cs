@@ -262,6 +262,17 @@ public sealed class PlayerPresentationViewModelTests
     [Theory]
     [InlineData("io")]
     [InlineData("access")]
+    public void CheckpointFailureRecoversWithoutThrottleDelay(string kind)
+    {
+        Exception error = kind == "io" ? new IOException("checkpoint detail") : new UnauthorizedAccessException("checkpoint detail"); DateTimeOffset now = DateTimeOffset.UnixEpoch; SwitchStorage storage = new(error); MediaHistoryService history = new(storage); List<string> diagnostics = [];
+        PlayerPresentationViewModel vm = new(new RecordingTransport(), new EmptyPicker(), () => { }, sourceValidator: new MediaSourceValidator(new ExistingFiles()), history: history, clock: () => now, diagnostic: diagnostics.Add);
+        vm.OpenSource("a.mp4", MediaSourceKind.File); vm.ApplyEngineState(State(.4, PlaybackStatus.Playing, true) with { Generation = 1, Source = "a.mp4" }); Assert.NotNull(vm.HistoryError);
+        storage.Error = null; vm.CheckpointCurrent(false); Assert.Null(vm.HistoryError); Assert.NotNull(history.FindResume(new("a.mp4", MediaSourceKind.File, "a"))); Assert.Contains(diagnostics, x => x.Contains("checkpoint detail"));
+    }
+
+    [Theory]
+    [InlineData("io")]
+    [InlineData("access")]
     public void HistoryFailuresAreSafeAndDiagnostic(string failure)
     {
         Exception error = failure == "io" ? new IOException("disk detail") : new UnauthorizedAccessException("denied detail"); ThrowingHistoryStorage storage = new(error); MediaHistoryService history = new(storage); List<string> diagnostics = [];

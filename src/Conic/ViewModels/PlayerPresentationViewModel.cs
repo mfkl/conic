@@ -270,8 +270,7 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
         if (_currentSource is null || _lastState is not { } state) return;
         DateTimeOffset now = _clock();
         if (_activeGeneration < 0 || state.Generation != _activeGeneration || state.Status is not (PlaybackStatus.Playing or PlaybackStatus.Paused) || !state.CanSeek || state.Duration <= TimeSpan.Zero || !(_settings?.Current.RememberResumeHistory ?? true) || (!force && now - _lastCheckpointUtc < TimeSpan.FromSeconds(10))) return;
-        TryHistory(() => _history?.Checkpoint(_currentSource, state.Elapsed, state.Duration, true, _settings?.Current.ResumeMinimumElapsedSeconds ?? 30, _settings?.Current.ResumeMaximumRemainingSeconds ?? 30, true));
-        _lastCheckpointUtc = now;
+        if (TryHistory(() => _history?.Checkpoint(_currentSource, state.Elapsed, state.Duration, true, _settings?.Current.ResumeMinimumElapsedSeconds ?? 30, _settings?.Current.ResumeMaximumRemainingSeconds ?? 30, true))) _lastCheckpointUtc = now;
     }
     public void OnClosing() => CheckpointCurrent(true);
     private void DeclineResume()
@@ -284,10 +283,10 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
     {
         ResumeEntry? result = null; TryHistory(() => result = _history?.FindEligibleResume(source, _settings?.Current.ResumeMinimumElapsedSeconds ?? 30, _settings?.Current.ResumeMaximumRemainingSeconds ?? 30)); return result;
     }
-    private void TryHistory(Action action, Action? failed = null)
+    private bool TryHistory(Action action, Action? failed = null)
     {
-        try { action(); HistoryError = null; OnPropertyChanged(nameof(HistoryError)); }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { HistoryError = "Media history could not be saved."; OnPropertyChanged(nameof(HistoryError)); _diagnostic?.Invoke(e.ToString()); failed?.Invoke(); }
+        try { action(); HistoryError = null; OnPropertyChanged(nameof(HistoryError)); return true; }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { HistoryError = "Media history could not be saved."; OnPropertyChanged(nameof(HistoryError)); _diagnostic?.Invoke(e.ToString()); failed?.Invoke(); return false; }
     }
 
     private static double ToDouble(object? parameter) => parameter switch

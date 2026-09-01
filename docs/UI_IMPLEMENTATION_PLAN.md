@@ -461,7 +461,7 @@ Update this table only after validation and commit:
 | UI-01 | pending | `conic` | pending | pending | pending |
 | UI-02 | pending | `conic` | pending | pending | pending |
 | UI-03 | pending | `conic` | pending | pending | pending |
-| UI-04 | pending | `conic` | pending | pending | pending |
+| UI-04 | `ui_04` | `conic` / `feature/modern-player-ui` | `012806e..5467ff3` (qualified code tip `5467ff3`) | Debug+Release restore/build; tests 25 app + 72 UI + 7 engine each; Release layout/ui/engine-smoke (`cycles=1`) PASS | complete |
 | UI-05 | pending | TBD by UI-00 | pending | pending | pending |
 | UI-06 | pending | TBD by UI-00 | pending | pending | pending |
 | UI-07 | pending | TBD by UI-00 | pending | pending | pending |

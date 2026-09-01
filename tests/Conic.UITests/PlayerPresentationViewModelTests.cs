@@ -115,6 +115,8 @@ public sealed class PlayerPresentationViewModelTests
     {
         public Task<string?> PickMediaAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult<string?>(null);
+        public Task<string?> PickFolderAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult<string?>(null);
     }
 
     private sealed class SettingsStorage : IPlayerSettingsStorage

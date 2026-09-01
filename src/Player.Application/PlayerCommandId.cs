@@ -3,6 +3,11 @@ namespace Player.Application;
 public enum PlayerCommandId
 {
     OpenMedia,
+    OpenFolder,
+    OpenUrl,
+    OpenRecent,
+    AcceptResume,
+    DeclineResume,
     OpenTestMedia,
     TogglePause,
     Stop,

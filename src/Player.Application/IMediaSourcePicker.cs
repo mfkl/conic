@@ -4,4 +4,6 @@ namespace Player.Application;
 public interface IMediaSourcePicker
 {
     Task<string?> PickMediaAsync(CancellationToken cancellationToken = default);
+
+    Task<string?> PickFolderAsync(CancellationToken cancellationToken = default);
 }

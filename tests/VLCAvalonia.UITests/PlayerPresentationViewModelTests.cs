@@ -292,6 +292,20 @@ public sealed class PlayerPresentationViewModelTests
         Assert.Null(vm.HistoryError); Assert.Single(history.Recent);
     }
 
+    [Fact]
+    public void UrlPanelAndSubmitCommandsAreSeparate()
+    {
+        int shown = 0; RecordingTransport transport = new(); PlayerPresentationViewModel vm = new(transport, new EmptyPicker(), () => { }, sourceValidator: new MediaSourceValidator(new ExistingFiles()), showUrlPanel: () => shown++);
+        vm.Registry.Execute(PlayerCommandId.OpenUrl); Assert.Equal(1, shown); Assert.Empty(transport.Opened); vm.UrlText = "https://example.com/a"; vm.Registry.Execute(PlayerCommandId.SubmitUrl); Assert.Equal("https://example.com/a", Assert.Single(transport.Opened));
+    }
+
+    [Fact]
+    public void FolderIsCapabilityGatedAndDropValidatesCardinality()
+    {
+        RecordingTransport transport = new(); PlayerPresentationViewModel vm = CreateOpeningViewModel(transport); Assert.False(vm.OpenFolderCommand.CanExecute(null)); vm.OpenDroppedSources([]); Assert.Contains("one local", vm.OpenError);
+        vm.OpenDroppedSources(["a.mp4", "b.mp4"]); Assert.Contains("multiple", vm.OpenError); Assert.Empty(transport.Opened); vm.OpenDroppedSources(["a.mp4"]); Assert.Single(transport.Opened);
+    }
+
     [Theory]
     [InlineData("io")]
     [InlineData("access")]
@@ -331,9 +345,10 @@ public sealed class PlayerPresentationViewModelTests
     {
         public List<double> Seeks { get; } = new();
         public List<TimeSpan> Skips { get; } = new();
+        public List<string> Opened { get; } = new();
         public bool Muted { get; private set; }
         public double Rate { get; private set; }
-        public void Open(string source) { }
+        public void Open(string source) => Opened.Add(source);
         public void TogglePause() { }
         public bool Stopped { get; private set; }
         public void Stop() => Stopped = true;

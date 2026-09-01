@@ -533,6 +533,56 @@ internal static class CompositionSmoke
         }
     }
 
+    public static int RunMediaCapabilities()
+    {
+        string mediaPath = RepositoryPaths.TestMediaPath;
+        if (!File.Exists(mediaPath)) { Console.Error.WriteLine($"[media-capabilities-smoke] FAIL fixture missing: {mediaPath}"); return 2; }
+        string attachment = Path.Combine(Path.GetTempPath(), $"conic-{Guid.NewGuid():N}.srt");
+        VLCCorePlayer? player = null;
+        try
+        {
+            File.WriteAllText(attachment, "1\n00:00:00,000 --> 00:00:01,000\nCapability smoke\n");
+            player = new VLCCorePlayer(hardwareDecoding: false);
+            OpenAndWait(player, mediaPath, "media-capabilities-open");
+            IVLCMediaCapabilitySmokeAdapter adapter = player;
+            VLCTitleChapterSnapshot? titleSnapshot = adapter.TryGetTitlesAndChapters(out VLCMediaResult titleRead);
+            VLCMediaSmokeReport report = VLCMediaCapabilitiesSmoke.RunAsync(
+                adapter,
+                _ => { Thread.Sleep(100); return ValueTask.CompletedTask; },
+                new VLCMediaSmokeAttachment(attachment, VLCExternalTrackKind.Subtitle)).AsTask().GetAwaiter().GetResult();
+            int passed = 0, skipped = 0, failed = 0;
+            foreach (VLCMediaSmokeStep step in report.Steps)
+            {
+                switch (step.Disposition) { case VLCMediaSmokeDisposition.Passed: passed++; break; case VLCMediaSmokeDisposition.Skipped: skipped++; break; default: failed++; break; }
+                Console.WriteLine($"[media-capabilities-smoke] {step.Disposition} phase={step.Phase} result={step.Result.Code} detail={step.Detail ?? "none"}");
+            }
+            // VLCLR's compact smoke reports title/chapter selection as one operation; make fixture absences explicit in the product ledger.
+            if (titleSnapshot is not null && titleSnapshot.Titles.Count == 0)
+            {
+                skipped++;
+                Console.WriteLine("[media-capabilities-smoke] Skipped phase=Titles result=Success detail=Fixture exposes no titles.");
+            }
+            if (titleSnapshot is not null && titleSnapshot.Chapters.Count == 0)
+            {
+                skipped++;
+                Console.WriteLine("[media-capabilities-smoke] Skipped phase=Chapters result=Success detail=Fixture exposes no chapters.");
+            }
+            if (titleSnapshot is null)
+            {
+                failed++;
+                Console.WriteLine($"[media-capabilities-smoke] Failed phase=Titles result={titleRead.Code} detail=Initial title/chapter readback failed.");
+            }
+            Console.WriteLine($"[media-capabilities-smoke] completed passed={passed} skipped={skipped} failed={failed}; skipped phases are not parity assertions.");
+            return failed == 0 ? 0 : 1;
+        }
+        catch (Exception exception) { Console.Error.WriteLine($"[media-capabilities-smoke] FAIL: {exception}"); return 1; }
+        finally
+        {
+            try { player?.Dispose(); } catch (Exception exception) { Console.Error.WriteLine($"[media-capabilities-smoke] cleanup player: {exception.Message}"); }
+            try { if (File.Exists(attachment)) File.Delete(attachment); } catch (Exception exception) { Console.Error.WriteLine($"[media-capabilities-smoke] cleanup attachment: {exception.Message}"); }
+        }
+    }
+
     private static void WaitForOpaquePool(
         CompositionPluginBridge monitor,
         CompositionPluginBridge.PoolTelemetry before,

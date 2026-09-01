@@ -14,4 +14,5 @@ public enum PlayerCommandId
     SetPlaybackRate,
     ToggleFullscreen,
     SetAlwaysOnTop,
+    OpenSettings,
 }

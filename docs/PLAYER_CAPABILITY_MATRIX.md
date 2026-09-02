@@ -1,6 +1,6 @@
 # Modern player capability matrix
 
-Status: UI-08 final product qualification at `272d605` (feature commit
+Status: UI-08 final product qualification at `6a5fc39` (feature commit
 `1c3bebf`); pinned sibling VLCLR
 revision `e90b786de74c6ed440dea8bf65329907739b0c60`.
 This is the product contract for the work packages in

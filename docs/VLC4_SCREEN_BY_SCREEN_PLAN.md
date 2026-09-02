@@ -183,6 +183,8 @@ This is the first and only active screen until the user accepts it.
 
 ### PLAYBACK-SPEC — Full playback screen specification
 
+Specification: [PLAYBACK_SCREEN_SPEC.md](PLAYBACK_SCREEN_SPEC.md)
+
 Reference scope:
 
 - empty/no-media player;
@@ -440,15 +442,14 @@ Update only after the named user gate:
 
 | Screen | Reference evidence | Spec commit | Spec approval | Implementation tip | Windows validation | User result approval | macOS | Linux |
 |---|---|---|---|---|---|---|---|---|
-| Playback | local hover/paused capture available | pending | pending | pending | pending | pending | unqualified | unqualified |
+| Playback | local hover/paused capture available | ready in `PLAYBACK_SCREEN_SPEC.md` | pending Gate P1 | pending | pending | pending | unqualified | unqualified |
 | Home / Library | local Home capture queued | pending | blocked by Playback | pending | pending | pending | unqualified | unqualified |
 | Settings | deferred | pending | blocked by Home / Library | pending | pending | pending | unqualified | unqualified |
 | Integration | n/a | n/a | blocked by all screens | pending | pending | pending | deferred | deferred |
 
 ## 11. Immediate next step
 
-Use `playback on hover.PNG` as the initial visual reference, audit the current
-Avalonia playback capabilities, and write `PLAYBACK-SPEC`. Resolve unshown states
-through explicit product decisions and request only targeted additional evidence
-when a decision materially depends on VLC 4. Present the complete specification
-to the user and stop at Gate P1. Do not implement the Playback screen yet.
+Stop at Gate P1 and wait for explicit user approval of
+`PLAYBACK_SCREEN_SPEC.md`. Do not dispatch an implementation agent, change
+product code, or start the Home/Library specification until the user approves
+the Playback specification or supplies corrections.

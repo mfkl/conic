@@ -21,9 +21,10 @@ public sealed record PlayerSettings(
     string AudioOutputModule = "Default",
     double? NormalizationMaximumLevel = null,
     bool? AudioPassthrough = null,
-    IReadOnlyDictionary<string, string>? ShortcutOverrides = null)
+    IReadOnlyDictionary<string, string>? ShortcutOverrides = null,
+    bool ReduceMotion = false)
 {
-    public const int CurrentVersion = 4;
+    public const int CurrentVersion = 5;
     public static PlayerSettings Default { get; } = new(CurrentVersion, true, true, "System", "Comfortable", 3, 1, 10, 10, true, true, 30, 30, "Default");
 }
 
@@ -77,14 +78,14 @@ public sealed class PlayerSettingsService
         Changed?.Invoke(this, next);
     }
 
-    public void ResetAppearance() => Update(current => current with { Theme = PlayerSettings.Default.Theme, Density = PlayerSettings.Default.Density, ControlTimeoutSeconds = PlayerSettings.Default.ControlTimeoutSeconds });
+    public void ResetAppearance() => Update(current => current with { Theme = PlayerSettings.Default.Theme, Density = PlayerSettings.Default.Density, ControlTimeoutSeconds = PlayerSettings.Default.ControlTimeoutSeconds, ReduceMotion = PlayerSettings.Default.ReduceMotion });
     public void ResetPlayback() => Update(current => current with { DefaultSpeed = PlayerSettings.Default.DefaultSpeed, SkipBackwardSeconds = PlayerSettings.Default.SkipBackwardSeconds, SkipForwardSeconds = PlayerSettings.Default.SkipForwardSeconds });
     public void ResetGeneral() => Update(current => current with { ResumePlayback = PlayerSettings.Default.ResumePlayback, RememberVolume = PlayerSettings.Default.RememberVolume, RememberRecentMedia = PlayerSettings.Default.RememberRecentMedia, RememberResumeHistory = PlayerSettings.Default.RememberResumeHistory, ResumeMinimumElapsedSeconds = PlayerSettings.Default.ResumeMinimumElapsedSeconds, ResumeMaximumRemainingSeconds = PlayerSettings.Default.ResumeMaximumRemainingSeconds });
     public void ResetAll() => Update(_ => PlayerSettings.Default);
 
     public static SettingApplyMode ApplyMode(string key) => key switch
     {
-        nameof(PlayerSettings.Theme) or nameof(PlayerSettings.Density) or nameof(PlayerSettings.ControlTimeoutSeconds)
+        nameof(PlayerSettings.Theme) or nameof(PlayerSettings.Density) or nameof(PlayerSettings.ControlTimeoutSeconds) or nameof(PlayerSettings.ReduceMotion)
             or nameof(PlayerSettings.SkipBackwardSeconds) or nameof(PlayerSettings.SkipForwardSeconds) => SettingApplyMode.Live,
         nameof(PlayerSettings.RememberRecentMedia) or nameof(PlayerSettings.RememberResumeHistory) => SettingApplyMode.Live,
         nameof(PlayerSettings.DefaultSpeed) or nameof(PlayerSettings.ResumePlayback) or nameof(PlayerSettings.RememberVolume)
@@ -95,7 +96,7 @@ public sealed class PlayerSettingsService
     private static PlayerSettings Migrate(JsonElement root, int version) => version switch
     {
         PlayerSettings.CurrentVersion => JsonSerializer.Deserialize<PlayerSettings>(root, JsonOptions) ?? throw new JsonException("Settings document was empty."),
-        0 or 1 or 2 or 3 => PlayerSettings.Default with
+        0 or 1 or 2 or 3 or 4 => PlayerSettings.Default with
         {
             ResumePlayback = Read(root, nameof(PlayerSettings.ResumePlayback), PlayerSettings.Default.ResumePlayback),
             RememberVolume = Read(root, nameof(PlayerSettings.RememberVolume), PlayerSettings.Default.RememberVolume),
@@ -112,6 +113,7 @@ public sealed class PlayerSettingsService
             NormalizationMaximumLevel = Read<double?>(root, nameof(PlayerSettings.NormalizationMaximumLevel), null),
             AudioPassthrough = Read<bool?>(root, nameof(PlayerSettings.AudioPassthrough), null),
             ShortcutOverrides = Read<IReadOnlyDictionary<string, string>?>(root, nameof(PlayerSettings.ShortcutOverrides), null),
+            ReduceMotion = Read(root, nameof(PlayerSettings.ReduceMotion), PlayerSettings.Default.ReduceMotion),
         },
         _ => throw new JsonException("Unsupported settings version."),
     };

@@ -64,6 +64,20 @@ public sealed class ChromeVisibilityControllerTests
 public sealed class PlayerLayoutPolicyTests
 {
     [Theory]
+    [InlineData(1280d, 1d, false)]
+    [InlineData(1280d, 1.25d, false)]
+    [InlineData(1280d, 1.5d, true)]
+    [InlineData(480d, 1d, true)]
+    [InlineData(480d, 1.5d, true)]
+    public void DeviceIndependentWidthsSelectASafeLayoutAtCommonDisplayScales(double physicalWidth, double scale, bool compact)
+    {
+        PlayerLayoutResult layout = PlayerLayoutPolicy.ForWidth(physicalWidth / scale);
+        Assert.Equal(compact, layout.IsCompact);
+        Assert.True(layout.RightColumnSpan >= 1);
+        Assert.True(layout.Spacing > 0);
+    }
+
+    [Theory]
     [InlineData(1280, false)]
     [InlineData(900, false)]
     [InlineData(899, true)]

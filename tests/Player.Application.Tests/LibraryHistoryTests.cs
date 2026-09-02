@@ -1,0 +1,51 @@
+using Player.Application;
+using Xunit;
+
+namespace Player.Application.Tests;
+
+public sealed class LibraryHistoryTests
+{
+    [Fact]
+    public void FavoritesAreExplicitDeduplicatedAndDoNotScan()
+    {
+        MemoryStorage storage = new();
+        MediaHistoryService history = new(storage, () => DateTimeOffset.UnixEpoch);
+        MediaSource first = new("C:/media/first.mp4", MediaSourceKind.File, "first.mp4");
+        MediaSource duplicate = new("c:/MEDIA/first.mp4", MediaSourceKind.File, "renamed.mp4");
+
+        history.AddFavorite(first);
+        history.AddFavorite(duplicate);
+
+        FavoriteMediaEntry favorite = Assert.Single(history.Favorites);
+        Assert.Equal("renamed.mp4", favorite.DisplayName);
+        Assert.Empty(history.Recent);
+        Assert.Empty(history.Resume);
+        Assert.Contains("Favorites", storage.Content);
+    }
+
+    [Fact]
+    public void VersionOneHistoryMigratesAndClearAllRemovesEveryLibrarySection()
+    {
+        MemoryStorage storage = new()
+        {
+            Content = "{\"Version\":1,\"Recent\":[{\"Source\":\"a.mp4\",\"DisplayName\":\"a\",\"LastOpenedUtc\":\"1970-01-01T00:00:00+00:00\"}],\"Resume\":[{\"Source\":\"a.mp4\",\"Position\":\"00:00:40\",\"Duration\":\"00:01:00\",\"UpdatedUtc\":\"1970-01-01T00:00:00+00:00\"}]}"
+        };
+        MediaHistoryService history = new(storage);
+
+        history.Load();
+        history.AddFavorite(new("b.mp4", MediaSourceKind.File, "b"));
+        history.ClearAll();
+
+        Assert.Empty(history.Recent);
+        Assert.Empty(history.Resume);
+        Assert.Empty(history.Favorites);
+        Assert.Contains("\"Version\": 2", storage.Content);
+    }
+
+    private sealed class MemoryStorage : IMediaHistoryStorage
+    {
+        public string? Content { get; set; }
+        public string? Read() => Content;
+        public void WriteAtomically(string content) => Content = content;
+    }
+}

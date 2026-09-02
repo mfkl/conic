@@ -88,6 +88,7 @@ implementation, qualification commands, measured counters, and remaining work.
   favorites, and saved resume positions from the same local atomic history
   document. It never scans folders or disks. Add a favorite from the Library;
   use **Clear library** to remove favorites, recents, and all resume positions.
+  Each recent, favorite, and saved-position entry also has its own keyboard-accessible remove action.
 - Turning off **Remember recent media** or **Remember resume history** in
   Settings clears that respective history immediately. Favorites are explicit
   library entries and are removed by **Clear library** or individually.

@@ -349,6 +349,15 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
     public bool IsLibraryRecentTab => LibraryTab == "Recent";
     public bool IsLibraryFavoritesTab => LibraryTab == "Favorites";
     public bool IsLibraryResumeTab => LibraryTab == "Resume";
+    public string LibraryTitle => PlayerText.LibraryTitle;
+    public string LibraryDescription => PlayerText.LibraryDescription;
+    public string LibraryRecentTitle => PlayerText.LibraryRecent;
+    public string LibraryFavoritesTitle => PlayerText.LibraryFavorites;
+    public string LibraryResumeTitle => PlayerText.LibraryResume;
+    public string LibraryNoRecent => PlayerText.LibraryNoRecent;
+    public string LibraryNoFavorites => PlayerText.LibraryNoFavorites;
+    public string LibraryNoResume => PlayerText.LibraryNoResume;
+    public string LibraryPrivacy => PlayerText.LibraryPrivacy;
     public bool HasOpenError => !string.IsNullOrWhiteSpace(OpenError);
     public bool HasHistoryError => !string.IsNullOrWhiteSpace(HistoryError);
     public PlaybackQueueState QueueState { get => _queueState; private set => Set(ref _queueState, value); }

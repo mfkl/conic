@@ -19,7 +19,15 @@ public static class MediaDiagnostics
     public static string Build(MediaInformationState state)
     {
         var fields = new[] { "title", "artist", "album", "genre", "date", "description" }
-            .Where(state.Metadata.ContainsKey).Select(key => key + "=" + state.Metadata[key].Replace('\r', ' ').Replace('\n', ' '));
-        return "Conic diagnostics\nname=" + state.Name + "\nstatus=" + state.Status + "\ncodecStreams=unavailable-through-engine-ABI\n" + string.Join('\n', fields);
+            .Where(state.Metadata.ContainsKey).Select(key => key + "=" + Clean(state.Metadata[key]));
+        return "Conic diagnostics\nname=" + Clean(state.Name) + "\nstatus=" + state.Status + "\ncodecStreams=unavailable-through-engine-ABI\n" + string.Join('\n', fields);
+    }
+
+    private static string Clean(string? value)
+    {
+        string clean = string.Concat((value ?? string.Empty)
+        .Replace('\r', ' ').Replace('\n', ' ')
+        .Where(character => !char.IsControl(character)));
+        return System.Text.RegularExpressions.Regex.Replace(clean, @"(?i)\b[a-z][a-z0-9+.-]*://\S+", "[redacted-uri]");
     }
 }

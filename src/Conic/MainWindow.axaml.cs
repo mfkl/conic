@@ -13,6 +13,7 @@ using Player.Application;
 using Conic.Interop;
 using Conic.Services;
 using Conic.ViewModels;
+using VLCLR;
 
 namespace Conic;
 
@@ -47,6 +48,7 @@ public partial class MainWindow : Window
         _presentation.PropertyChanged += OnPresentationPropertyChanged;
         UpdateHistorySettingsControls();
         _settings.Changed += (_, settings) => ApplyLiveSettings(settings);
+        VideoSurface.AudioStartupArguments = ToAudioArguments(_settings.Current);
         ApplyLiveSettings(_settings.Current);
         _autoHideTimer.Tick += (_, _) =>
         {
@@ -71,6 +73,11 @@ public partial class MainWindow : Window
             }
         };
     }
+
+    private static IReadOnlyList<string> ToAudioArguments(PlayerSettings settings) => new VLCAudioStartupOptions(
+        settings.AudioOutputModule == "Default" ? null : settings.AudioOutputModule,
+        settings.NormalizationMaximumLevel is double level ? (float)level : null,
+        settings.AudioPassthrough).ToArguments();
 
     private void OnPlayerInteraction(object? sender, PointerEventArgs e)
     {

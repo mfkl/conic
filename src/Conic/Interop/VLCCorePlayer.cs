@@ -26,6 +26,7 @@ internal sealed unsafe class VLCCorePlayer : IMediaEngine, IQueueTransport, IMed
     private readonly bool _ownsPlaylistBridge;
     private readonly bool _hardwareDecoding;
     private readonly bool _verboseLogging;
+    private readonly IReadOnlyList<string> _audioStartupArguments;
     private Thread? _thread;
     private ManualResetEventSlim? _stop;
     private nint _playlist;
@@ -45,10 +46,11 @@ internal sealed unsafe class VLCCorePlayer : IMediaEngine, IQueueTransport, IMed
     private nint _lastObservedInputIdentity;
     private int _disposed;
 
-    public VLCCorePlayer(bool hardwareDecoding = true, bool verboseLogging = false)
+    public VLCCorePlayer(bool hardwareDecoding = true, bool verboseLogging = false, IReadOnlyList<string>? audioStartupArguments = null)
     {
         _hardwareDecoding = hardwareDecoding;
         _verboseLogging = verboseLogging;
+        _audioStartupArguments = audioStartupArguments?.ToArray() ?? [];
         _playlistBridge = new CompositionPluginBridge(
             registerFrameCallback: false);
         _ownsPlaylistBridge = true;
@@ -578,6 +580,7 @@ internal sealed unsafe class VLCCorePlayer : IMediaEngine, IQueueTransport, IMed
             "--vout=vlc_avalonia",
             .. (_verboseLogging ? new[] { "-vvv" } : []),
             _hardwareDecoding ? "--avcodec-hw=any" : "--avcodec-hw=none",
+            .. _audioStartupArguments,
             .. sources,
         ];
 

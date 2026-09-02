@@ -1,6 +1,8 @@
 # VLC Avalonia UI implementation plan
 
-Status: planned; implementation has not started
+Status: complete through UI-08; final managed, Native AOT, layout, lifecycle,
+composition, queue and capability qualification is recorded below. Physical
+multi-monitor/multi-GPU and OS suspend/resume remain explicitly unqualified.
 Planning baseline: 2026-09-01
 Primary scope: modern Windows desktop UI with daily-use VLC playback parity
 Background track: GPU presentation of VLC-rendered subpictures on the opaque
@@ -457,15 +459,15 @@ Update this table only after validation and commit:
 
 | Package | Terra agent/task | Repository | Commit | Validation | Result |
 |---|---|---|---|---|---|
-| UI-00 | pending | `vlc-avalonia` | pending | pending | pending |
-| UI-01 | pending | `vlc-avalonia` | pending | pending | pending |
-| UI-02 | pending | `vlc-avalonia` | pending | pending | pending |
-| UI-03 | pending | `vlc-avalonia` | pending | pending | pending |
+| UI-00 | `ui_00` | `vlc-avalonia` / `feature/modern-player-ui` | `a6e38c2..33fa5ef` | Historical package acceptance reconstructed from the corrective commit and final branch evidence; package-local suite counts were not preserved. | complete |
+| UI-01 | `ui_01` | `vlc-avalonia` / `feature/modern-player-ui` | `c59bc54..9af346f` | Historical package acceptance reconstructed from the focused commit range and final aggregate qualification; package-local suite counts were not preserved. | complete |
+| UI-02 | `ui_02` | `vlc-avalonia` / `feature/modern-player-ui` | `31b194a..92e1532` | Historical package acceptance reconstructed from the focused commit range and final aggregate qualification; package-local suite counts were not preserved. | complete |
+| UI-03 | `ui_03` | `vlc-avalonia` / `feature/modern-player-ui` | `a88fa5a..c9430b5` | Historical package acceptance reconstructed from the focused commit range and final aggregate qualification; package-local suite counts were not preserved. | complete |
 | UI-04 | `ui_04` | `vlc-avalonia` / `feature/modern-player-ui` | `012806e..9a7a293` (qualified code tip `9a7a293`) | Debug+Release restore/build; tests 25 app + 72 UI + 7 engine each; Release layout/ui/engine-smoke (`cycles=1`) PASS, including transformed chrome, privacy-confirmation, and toast geometry | complete |
 | UI-05 | `ui_05` | `vlc-avalonia` / `feature/modern-player-ui` | `9065842..402f1f4` (qualified code tip `402f1f4`; VLCLR pin `914751006ca3c1f859bbdaa5a0144b227efa3ff4`) | Debug+Release forced restore/rebuild; tests 28 app + 77 UI + 8 engine each; Release engine/UI/layout (1280px and 480px)/queue smoke PASS. Native add/reorder/select/remove/navigation/repeat/order are qualified; product Clear resets the core and publishes a new empty generation because synchronous VLC 3 `playlist_Clear` after current-item deletion stalls `libvlc_InternalDestroy`. Fresh enqueue uses an empty core with `playNow=false`; explicit select/play and mode replay are qualified. | complete |
 | UI-06 | `ui_06` | `vlc-avalonia` / `feature/modern-player-ui` | `b3708f9..f609bda` (VLCLR pin `4ce5edc6c77efa4643894ec5de56a1db8a7422b9`) | Debug+Release build; 29 application + 79 UI + 8 engine tests; Release media-capabilities, queue, engine (`cycles=1`), and layout (1280px/480px) smokes PASS. The dispatched media smoke emitted Passed: Tracks, Chapters, AudioDelay, SubtitleDelay, Attachment (pending-next-open), Complete; Skipped: 0; Failed: 0. Its ledger emits distinct title/chapter skips only when the fixture lacks them and never treats skips as parity. | complete |
 | UI-07 | `ui_07` | `vlc-avalonia` / `feature/modern-player-ui` | `cee77bf..2de038c` (VLCLR pin `e90b786de74c6ed440dea8bf65329907739b0c60`) | Debug+Release affected suites: 41 application + 83 UI + 8 engine; normal Release build. Release player-capabilities smoke: Passed AudioSettings, MediaInformation, Complete; Skipped VideoPresentation, Deinterlace, Snapshot; Failed 0. Release media-capabilities, verbose queue, engine (`cycles=1`), opaque/UI-composition, and 1280px/480px layout smokes PASS. | complete with explicit unavailable video/device/codec limitations; external attachments are pending-next-open and subtitle rendering remains unqualified. |
-| UI-08 | pending | `vlc-avalonia` | pending | pending | pending |
+| UI-08 | `ui_08` | `vlc-avalonia` / `feature/modern-player-ui` | `ac74f1b..272d605` (feature `1c3bebf`; VLCLR pin `e90b786de74c6ed440dea8bf65329907739b0c60`) | Debug+Release `--no-restore` build/tests: 49 application + 85 UI + 8 engine Passed, 0 Failed, 0 Skipped in each configuration; Release Native AOT publish Passed. Release layout (1280px/480px, Library included), UI-composition fullscreen/reopen, engine lifecycle (`cycles=1`), opaque, queue, three path composition (hardware opaque, software BGRA upload, CPU bitmap), and forced adapter-mismatch fallback all PASS. Player-capabilities: 3 Passed / 3 explicitly Skipped / 0 Failed; media-capabilities: 6 Passed / 0 Skipped / 0 Failed. | complete with explicit physical multi-monitor/multi-GPU, OS suspend/resume, arbitrary compositor-scale, video-adjustment/device-enumeration/codec-stream, and subtitle-rendering limitations. |
 
 ## 10. GPT-5.6 Terra subagent prompt template
 

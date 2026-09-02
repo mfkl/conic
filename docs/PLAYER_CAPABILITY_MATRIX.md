@@ -115,7 +115,7 @@ shortcuts, suppress media commands while editing text, and report conflicts.
 | Toggle queue | Missing | `Ctrl+J` | Queue snapshot |
 | Subtitle/audio track menus | Missing | No default in MVP | T1 |
 | Settings | Missing | `Ctrl+,` | Settings service |
-| Media information | Missing | `Ctrl+I` | M1 |
+| Media information | Working generation-safe metadata drawer with redacted clipboard diagnostics; codec-stream details remain unavailable. | `Ctrl+I` | M1 complete for copied media metadata; codec streams unavailable |
 | Snapshot | Missing | `Shift+S` | V3 |
 
 ## Cross-repository prerequisite packages

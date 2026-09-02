@@ -32,8 +32,6 @@ public partial class MainWindow : Window
         InitializeComponent();
         _settings = new PlayerSettingsService(new FilePlayerSettingsStorage());
         _settings.Load();
-        _settingsViewModel = new SettingsViewModel(_settings);
-        SettingsPanel.DataContext = _settingsViewModel;
         _presentation = new PlayerPresentationViewModel(
             new CompositionVideoTransport(VideoSurface),
             new StorageMediaSourcePicker(StorageProvider),
@@ -44,6 +42,8 @@ public partial class MainWindow : Window
             new MediaSourceValidator(new SystemMediaFileSystem()),
             CreateHistory(),
             showUrlPanel: ShowUrlPanel);
+        _settingsViewModel = new SettingsViewModel(_settings, _presentation.Registry);
+        SettingsPanel.DataContext = _settingsViewModel;
         DataContext = _presentation;
         _presentation.PropertyChanged += OnPresentationPropertyChanged;
         UpdateHistorySettingsControls();

@@ -2,6 +2,24 @@ namespace Player.Application;
 
 /// <summary>Persistable, deterministic gestures. This model stays independent of any UI toolkit.</summary>
 public sealed record PlayerShortcut(PlayerCommandId Command, string Gesture);
+public sealed record EditablePlayerShortcut(PlayerCommandId Command, string Name, string Category, string DefaultGesture, string Gesture);
+
+public sealed class PlayerShortcutEditor
+{
+    private readonly PlayerSettingsService _settings; private readonly IPlayerCommandRegistry _registry;
+    public PlayerShortcutEditor(PlayerSettingsService settings, IPlayerCommandRegistry registry) => (_settings, _registry) = (settings, registry);
+    public IReadOnlyList<EditablePlayerShortcut> Items(string? search = null) => _registry.Commands.Where(x => string.IsNullOrWhiteSpace(search) || (x.DisplayName + " " + x.Category).Contains(search, StringComparison.OrdinalIgnoreCase)).Select(x => new EditablePlayerShortcut(x.Id, x.DisplayName, x.Category, PlayerShortcutPolicy.Normalize(x.DefaultShortcut), PlayerShortcutPolicy.Effective(_registry, _settings.Current.ShortcutOverrides).GetValueOrDefault(x.Id, ""))).ToArray();
+    public bool TrySave(IEnumerable<PlayerShortcut> changes, out string? error)
+    {
+        var effective = PlayerShortcutPolicy.Effective(_registry, _settings.Current.ShortcutOverrides).ToDictionary(x => x.Key, x => x.Value);
+        foreach (var change in changes) { if (!_registry.Commands.Any(x => x.Id == change.Command)) { error = "Unknown command."; return false; } effective[change.Command] = PlayerShortcutPolicy.Normalize(change.Gesture); }
+        if (!PlayerShortcutPolicy.TryValidate(effective.Select(x => new PlayerShortcut(x.Key, x.Value)), out error)) return false;
+        var overrides = effective.Where(x => PlayerShortcutPolicy.Normalize(_registry.Commands.First(c => c.Id == x.Key).DefaultShortcut) != x.Value).ToDictionary(x => x.Key.ToString(), x => x.Value);
+        _settings.Update(s => s with { ShortcutOverrides = overrides }); return true;
+    }
+    public void Reset(PlayerCommandId id) => _settings.Update(s => s with { ShortcutOverrides = s.ShortcutOverrides?.Where(x => x.Key != id.ToString()).ToDictionary(x => x.Key, x => x.Value) ?? new Dictionary<string,string>() });
+    public void ResetAll() => _settings.Update(s => s with { ShortcutOverrides = new Dictionary<string,string>() });
+}
 
 public static class PlayerShortcutPolicy
 {

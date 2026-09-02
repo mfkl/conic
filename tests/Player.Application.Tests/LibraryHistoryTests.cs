@@ -60,10 +60,51 @@ public sealed class LibraryHistoryTests
         Assert.DoesNotContain("\"Source\": null", storage.Content);
     }
 
+    [Fact]
+    public void NormalizedCurrentVersionTwoHistoryLoadsWithoutWritingToReadOnlyStorage()
+    {
+        ReadOnlyStorage storage = new("{\"Version\":2,\"Recent\":[{\"Source\":\"a.mp4\",\"DisplayName\":\"a\",\"LastOpenedUtc\":\"1970-01-01T00:00:00+00:00\"}],\"Resume\":[],\"Favorites\":[]}");
+        MediaHistoryService history = new(storage);
+
+        history.Load();
+
+        Assert.Null(history.LoadDiagnostic);
+        Assert.Equal("a.mp4", Assert.Single(history.Recent).Source);
+        Assert.Equal(0, storage.WriteAttempts);
+    }
+
+    [Theory]
+    [InlineData("{\"Version\":1,\"Recent\":[],\"Resume\":[]}")]
+    [InlineData("{\"Version\":2,\"Recent\":[{\"Source\":null,\"DisplayName\":\"bad\",\"LastOpenedUtc\":\"1970-01-01T00:00:00+00:00\"}],\"Resume\":[],\"Favorites\":[]}")]
+    public void NormalizationWritebackFailureKeepsHistoryInMemoryAndReportsDiagnostic(string content)
+    {
+        ReadOnlyStorage storage = new(content);
+        MediaHistoryService history = new(storage);
+
+        history.Load();
+
+        Assert.Contains("could not be normalized", history.LoadDiagnostic);
+        Assert.Equal(1, storage.WriteAttempts);
+        Assert.Empty(history.Recent);
+        Assert.Empty(history.Resume);
+        Assert.Empty(history.Favorites);
+    }
+
     private sealed class MemoryStorage : IMediaHistoryStorage
     {
         public string? Content { get; set; }
         public string? Read() => Content;
         public void WriteAtomically(string content) => Content = content;
+    }
+
+    private sealed class ReadOnlyStorage(string content) : IMediaHistoryStorage
+    {
+        public int WriteAttempts { get; private set; }
+        public string? Read() => content;
+        public void WriteAtomically(string value)
+        {
+            WriteAttempts++;
+            throw new UnauthorizedAccessException("read-only test storage");
+        }
     }
 }

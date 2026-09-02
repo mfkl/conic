@@ -110,9 +110,13 @@ public sealed class MediaHistoryService(IMediaHistoryStorage storage, Func<DateT
             MediaHistoryDocument? parsed = JsonSerializer.Deserialize<MediaHistoryDocument>(raw, Options);
             if (parsed is null || parsed.Version is < 1 or > MediaHistoryDocument.CurrentVersion) throw new JsonException("Unsupported media history version.");
             _document = Normalize(parsed);
-            // Persist the normalized v2 shape as well: malformed entries must not linger in user JSON.
-            Save(_document);
-            LoadDiagnostic = null;
+            if (RequiresWriteBack(parsed, _document))
+            {
+                try { Save(_document); LoadDiagnostic = null; }
+                catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+                { LoadDiagnostic = "Media history was loaded but could not be normalized on disk."; }
+            }
+            else LoadDiagnostic = null;
         }
         catch (JsonException) { try { storage.PreserveInvalid(raw); storage.WriteAtomically(JsonSerializer.Serialize(MediaHistoryDocument.Empty, Options)); } catch (Exception e) when (e is IOException or UnauthorizedAccessException) { } _document = MediaHistoryDocument.Empty; LoadDiagnostic = "Media history was invalid and has been reset."; }
     }
@@ -169,6 +173,12 @@ public sealed class MediaHistoryService(IMediaHistoryStorage storage, Func<DateT
         return url ? "url:" + source : "file:" + source.ToUpperInvariant();
     }
     private void Save(MediaHistoryDocument document) { storage.WriteAtomically(JsonSerializer.Serialize(document, Options)); _document = document; }
+    private static bool RequiresWriteBack(MediaHistoryDocument parsed, MediaHistoryDocument normalized) =>
+        parsed.Version != MediaHistoryDocument.CurrentVersion ||
+        parsed.Favorites is null ||
+        !(parsed.Recent ?? []).SequenceEqual(normalized.Recent) ||
+        !(parsed.Resume ?? []).SequenceEqual(normalized.Resume) ||
+        !parsed.Favorites.SequenceEqual(normalized.Favorites ?? []);
     private static MediaHistoryDocument Normalize(MediaHistoryDocument value)
     {
         List<RecentMediaEntry> recent = (value.Recent ?? [])

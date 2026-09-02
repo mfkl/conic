@@ -517,15 +517,15 @@ required smoke.
 - Subtitle selection may be exposed only with honest capability state. Full
   opaque-D3D11 subtitle presentation remains a background engineering track.
 
-## 12. Phase two — VLC 4 Qt experience on VLC 3/Avalonia
+## 12. Phase two — VLC 4-inspired daily-use experience on VLC 3/Avalonia
 
 ### Outcome and boundary
 
-Reproduce the current VLC 4 desktop UI's visual language, information
-architecture, responsive behavior, and interactions in Avalonia while keeping
-the qualified VLC 3 engine, VLCLR bindings, and custom video-composition path.
-This is a clean Avalonia translation, not a Qt dependency or a line-by-line QML
-port.
+Use the strongest parts of the current VLC 4 desktop UI's visual language,
+information architecture, responsive behavior, and interactions in Avalonia
+while keeping the qualified VLC 3 engine, VLCLR bindings, and custom
+video-composition path. This is a selective clean Avalonia translation, not a Qt
+dependency, a line-by-line QML port, or a promise of 100% VLC 4 UI parity.
 
 VLC 4 UI parity and VLC 4 engine parity are different claims. A VLC 4 control
 may be implemented only when the VLC 3 capability matrix has a working product
@@ -533,14 +533,37 @@ binding. Otherwise the corresponding surface is omitted or shown as unavailable
 with an explanation. The phase must not weaken the working seek, play/pause,
 volume, queue, history, privacy, focus, or fallback behavior qualified by UI-08.
 
-The target should feel recognizably like VLC 4 while retaining the deliberate
-product decisions already approved here:
+The target should feel recognizably informed by VLC 4 while remaining a focused,
+modern player rather than a replica. It retains the deliberate product decisions
+already approved here:
 
 - video remains visually dominant during playback;
 - orange is a restrained active-state accent over the dark/white system;
 - there is no redundant Playing/Paused label or customer GPU-composition badge;
 - unsupported VLC 4 engine features never masquerade as working controls; and
 - subtitle/subpicture composition remains a background renderer track.
+
+### Selected product scope
+
+The VLC 4 reference is authoritative only for the selected daily-use surfaces.
+Settings deliberately use a new design because the VLC 4 preferences UI is not
+the modernization target.
+
+| Treatment | Surfaces |
+|---|---|
+| Match closely | Main window shell, primary navigation, playback view, transport/control bar, fullscreen behavior, queue/playlist presentation, context/overflow menus, empty/loading/error states, and responsive interaction patterns. |
+| Adapt to this product | Home/browse entry points, lightweight no-scan library, recents/favorites/resume, track/chapter/synchronization panels, media information, open file/folder/URL flows, and unavailable VLC 3 capabilities. |
+| Design independently | Settings/preferences, advanced capability explanations, hotkey editor, reset/confirmation flows, and `Live`/`NextOpen`/`Restart` presentation. These must look modern and coherent with the VLC 4-inspired shell, not like the current VLC 4 preferences window. |
+| Exclude | Pixel-perfect parity, every VLC 4 page/dialog/menu, media indexing, streaming/transcoding/capture authoring, service discovery catalogs, renderer administration, skins, plugin management, and controls without a safe VLC 3 binding. |
+
+The initial customer-facing result therefore consists of six areas:
+
+1. VLC 4-inspired application shell and navigation.
+2. VLC 4-inspired video/player screen and playback controls.
+3. Modern queue, playlist, and lightweight library surfaces.
+4. Modern media actions for tracks, chapters, synchronization, and information.
+5. A newly designed settings experience specific to this Avalonia product.
+6. Responsive, keyboard-accessible, reduced-motion, high-contrast states.
 
 ### Available reference baseline
 
@@ -595,7 +618,7 @@ under the test project after review.
 | Navigation | Home, video, music/audio, browse/network, library/history, playlist/queue, and back navigation |
 | Media controls | Audio tracks, subtitle tracks, chapters, synchronization, information, and unavailable/empty variants |
 | Secondary UI | Context menus, overflow menus, open URL/file flows, dialogs, toasts, and confirmations |
-| Preferences | Every top-level settings category, search, reset, disabled controls, and restart/reopen badges |
+| Preferences | Inventory available categories and behavior only. VLC 4 preference visuals are explicitly not a parity target. Capture enough evidence to avoid losing useful settings or semantics. |
 | Accessibility | Keyboard-only traversal, visible focus, Escape behavior, focus restoration, automation names, contrast, and reduced motion |
 
 Capture both the VLC 4 reference and the matching Avalonia state. Dynamic video,
@@ -604,8 +627,10 @@ automated comparison, but geometry, hierarchy, spacing, control state, icon
 silhouette, and deliberate color differences must remain reviewable.
 
 Reference-to-Avalonia acceptance uses measured geometry and annotated contact
-sheets rather than claiming impossible pixel identity across Qt and Avalonia.
-Approved Avalonia states then become deterministic regression baselines.
+sheets for the selected parity surfaces rather than claiming impossible pixel
+identity across Qt and Avalonia. Settings are reviewed against the product's own
+modern design specification. Approved Avalonia states then become deterministic
+regression baselines.
 
 ## 14. Phase-two branch, commit, and dispatch policy
 
@@ -646,8 +671,9 @@ Tasks:
    available source revision without changing the reference checkout.
 2. Add reproducible Windows window-capture and UI-automation tooling with an
    isolated temporary profile and sanitized manifest.
-3. Capture the mandatory state matrix and inspect the matching Qt/QML source for
-   component hierarchy, state transitions, tokens, icons, and shortcuts.
+3. Capture the selected mandatory state matrix and inspect the matching Qt/QML
+   source for component hierarchy, state transitions, tokens, icons, and
+   shortcuts. Treat preferences as a behavior inventory, not a visual target.
 4. Produce a feature/state map from VLC 4 surfaces to the existing VLC 3 product
    contracts, including working, adapted, unavailable, and non-goal states.
 5. Record asset provenance and decide which artifacts may be committed.
@@ -657,8 +683,9 @@ Acceptance:
 - The executable and source baselines are pinned; any mismatch is explicit.
 - Another run can reproduce every capture without using personal application
   state or scanning the machine.
-- Every planned Avalonia surface links to runtime evidence, source evidence, and
-  an engine capability state.
+- Every selected VLC 4-inspired surface links to runtime evidence, source
+  evidence, and an engine capability state; independently designed settings link
+  to an approved Avalonia specification.
 - No implementation styling is accepted from memory or isolated screenshots.
 
 Commit: `docs: pin VLC 4 UI reference baseline`
@@ -780,28 +807,35 @@ Acceptance:
 
 Commit: `feat: match VLC 4 playback menus and media details`
 
-### V4UI-06 — Match preferences and secondary flows
+### V4UI-06 — Design modern settings and secondary flows
 
 Prerequisite: V4UI-05
 
 Tasks:
 
-1. Reproduce VLC 4 preferences navigation, search, section layout, controls,
-   reset/confirmation flows, and explanatory text.
-2. Map existing settings to the new presentation while preserving `Live`,
+1. Create a new Avalonia settings design that is visually coherent with the
+   VLC 4-inspired shell but does not copy VLC 4's preferences UI.
+2. Use searchable categories, responsive navigation, clear section cards,
+   switches/sliders/choices with useful summaries, inline validation, and a
+   progressively disclosed Advanced area instead of a dense preference tree.
+3. Map existing settings to the new presentation while preserving `Live`,
    `NextOpen`, and `Restart` semantics and typed allowlisted startup arguments.
-3. Match open-file/folder/URL, recent/resume, toast, diagnostics, and failure
-   surfaces from the pinned reference.
-4. Keep disabled settings honest and preserve shortcut conflict validation.
+4. Keep unavailable settings visible only when the explanation helps the user;
+   otherwise omit them. Preserve shortcut conflict validation, per-section reset,
+   global reset confirmation, history privacy/clear controls, and diagnostics.
+5. Adapt open-file/folder/URL, recent/resume, toast, diagnostics, and failure
+   surfaces to the same modern component system.
 
 Acceptance:
 
 - Settings and contextual controls expose the same effective values.
 - Invalid settings/history remain recoverable and privacy actions remain
   complete.
-- Reference/Avalonia captures cover every settings category and secondary flow.
+- Product-owned captures cover every settings category and secondary flow at
+  desktop and compact widths. Review explicitly confirms that settings are not a
+  copy of the VLC 4 preferences window.
 
-Commit: `feat: match VLC 4 preferences and dialogs`
+Commit: `feat: add modern Avalonia settings and dialogs`
 
 ### V4UI-07 — Complete responsive and accessible parity
 
@@ -832,7 +866,8 @@ Prerequisite: V4UI-07
 
 Tasks:
 
-1. Produce final reference/Avalonia contact sheets and review every annotated
+1. Produce final reference/Avalonia contact sheets for the selected parity
+   surfaces and product-owned contact sheets for settings; review every annotated
    divergence.
 2. Promote approved Avalonia renders to deterministic golden tests with masks
    only for documented dynamic regions.
@@ -844,8 +879,9 @@ Tasks:
 
 Acceptance:
 
-- Every mandatory VLC 4 reference state is matched, deliberately adapted, or
-  explicitly unavailable with evidence.
+- Every selected VLC 4 reference state is matched, deliberately adapted, or
+  explicitly unavailable with evidence. Excluded surfaces are not counted as
+  parity gaps.
 - No unexplained high-priority visual or interaction divergence remains.
 - Existing VLC 3 native behavior and composition qualification remain green.
 - The tracked product and sibling repositories are clean; no reference checkout
@@ -892,6 +928,8 @@ Update only after package validation and commit:
 
 - VLC 4 remains a development line. A source/executable mismatch can make QML
   inspection misleading; pin and report both before implementation.
+- The target is selective daily-use parity, not completeness. Stop scope growth
+  when it does not improve the six selected customer-facing areas.
 - Qt and Avalonia rasterize text, shadows, animation, and native menus
   differently. Measure layout and state fidelity without claiming raw pixel
   identity across frameworks.

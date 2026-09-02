@@ -16,7 +16,7 @@ public sealed class PlayerShortcutAndDiagnosticsTests
     [Fact]
     public void DiagnosticsNeverIncludesUriOrCodecGuesses()
     {
-        MediaInformationState state = new(4, "Movie", new Dictionary<string, string> { ["title"] = "A title", ["description"] = "line one\nline two" }, "Ready");
+        MediaInformationState state = new(4, 1, MediaInformationLoadState.Ready, "Movie", new Dictionary<string, string> { ["title"] = "A title", ["description"] = "line one\nline two" });
         string output = MediaDiagnostics.Build(state);
         Assert.Contains("codecStreams=unavailable-through-engine-ABI", output);
         Assert.DoesNotContain("file://", output);

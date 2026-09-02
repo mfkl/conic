@@ -1,8 +1,9 @@
 # Conic UI implementation plan
 
-Status: complete through UI-08; final managed, Native AOT, layout, lifecycle,
-composition, queue and capability qualification is recorded below. Physical
-multi-monitor/multi-GPU and OS suspend/resume remain explicitly unqualified.
+Status: UI-00 through UI-08 are complete and qualified. Phase two, reproducing
+the VLC 4 Qt experience on the VLC 3/Avalonia engine, is planned in Sections
+12--18. Physical multi-monitor/multi-GPU and OS suspend/resume remain explicitly
+unqualified.
 Planning baseline: 2026-09-01
 Primary scope: modern Windows desktop UI with daily-use VLC playback parity
 Background track: GPU presentation of VLC-rendered subpictures on the opaque
@@ -515,3 +516,392 @@ required smoke.
 - Do not restore the removed playback-status label or GPU-composition badge.
 - Subtitle selection may be exposed only with honest capability state. Full
   opaque-D3D11 subtitle presentation remains a background engineering track.
+
+## 12. Phase two — VLC 4 Qt experience on VLC 3/Avalonia
+
+### Outcome and boundary
+
+Reproduce the current VLC 4 desktop UI's visual language, information
+architecture, responsive behavior, and interactions in Avalonia while keeping
+the qualified VLC 3 engine, VLCLR bindings, and custom video-composition path.
+This is a clean Avalonia translation, not a Qt dependency or a line-by-line QML
+port.
+
+VLC 4 UI parity and VLC 4 engine parity are different claims. A VLC 4 control
+may be implemented only when the VLC 3 capability matrix has a working product
+binding. Otherwise the corresponding surface is omitted or shown as unavailable
+with an explanation. The phase must not weaken the working seek, play/pause,
+volume, queue, history, privacy, focus, or fallback behavior qualified by UI-08.
+
+The target should feel recognizably like VLC 4 while retaining the deliberate
+product decisions already approved here:
+
+- video remains visually dominant during playback;
+- orange is a restrained active-state accent over the dark/white system;
+- there is no redundant Playing/Paused label or customer GPU-composition badge;
+- unsupported VLC 4 engine features never masquerade as working controls; and
+- subtitle/subpicture composition remains a background renderer track.
+
+### Available reference baseline
+
+| Reference | Local state | Use |
+|---|---|---|
+| VLC 4 source | `C:\Users\Martin\Code\videolabs\vlc`, `master`, commit `5dd4aebdabf4a625822036bda08a24a91295158c`, described as `4.0.0-dev-38799-g5dd4aebdab` | Qt/QML hierarchy, state rules, design tokens, icons, assets, accessibility text, and interaction semantics. Read-only reference. |
+| VLC 4 executable | Not currently present in the inspected repositories | Required for authoritative runtime behavior and screenshot capture. Acquire a build and record its exact revision before V4UI-01. |
+| VLC 3 runtime | `C:\Users\Martin\Code\videolabs\vlclr\vlc-3.0.24-beta1\vlc.exe` | Product engine/runtime qualification only; it is not a VLC 4 visual reference. |
+| Avalonia baseline | `feature/modern-player-ui`, reviewed tip `58550fc810b1dfe61f41caec068084b718804f87` | Starting point for the new UI parity branch. |
+
+The preferred reference set is all three of source, runnable executable, and
+captured screenshots. Source defines intent and reusable asset provenance; the
+executable defines effective behavior; screenshots provide reviewable golden
+states. If the executable and source revisions differ, record the mismatch and
+use the executable as the behavioral truth while source-derived conclusions are
+labelled as inferences.
+
+Before copying any VLC icon, font, or image, record its source path, revision,
+license, and required attribution. Reference screenshots are local engineering
+artifacts by default. Do not commit user history, personal paths, network
+credentials, copyrighted media frames, or bulk VLC captures unless explicitly
+approved.
+
+## 13. Reference capture and comparison method
+
+### Isolated capture environment
+
+Run the VLC 4 reference build with an isolated temporary configuration and no
+automatic media discovery, scanning, updater interaction, or unrelated network
+access. Use deterministic reference media owned or approved for test use. Each
+capture run records:
+
+- executable path, file version, source/build revision when available, and OS;
+- window client size, monitor scale, theme, and full-screen/windowed state;
+- exact navigation path and keyboard/pointer actions used to reach the state;
+- media fixture and capability state, with sensitive paths redacted; and
+- screenshot filename plus a small machine-readable manifest.
+
+Keep raw VLC 4 captures under an ignored
+`artifacts/vlc4-reference/<revision>/` directory. Commit only derived UI
+specifications, measurement tables, asset provenance, automation code, and
+approved non-sensitive baselines. Avalonia-owned golden screenshots belong
+under the test project after review.
+
+### Mandatory reference states
+
+| Area | Required states |
+|---|---|
+| Startup | First run where reproducible, empty player, home/browse navigation, and no-library state |
+| Playback | Opening, playing, paused, seeking, muted, volume, speed, end/error, controls visible, and controls hidden |
+| Window | 1280x720, 1920x1080, 480px narrow, maximized, fullscreen, restored, 100%, 125%, and 150% scale where available |
+| Navigation | Home, video, music/audio, browse/network, library/history, playlist/queue, and back navigation |
+| Media controls | Audio tracks, subtitle tracks, chapters, synchronization, information, and unavailable/empty variants |
+| Secondary UI | Context menus, overflow menus, open URL/file flows, dialogs, toasts, and confirmations |
+| Preferences | Every top-level settings category, search, reset, disabled controls, and restart/reopen badges |
+| Accessibility | Keyboard-only traversal, visible focus, Escape behavior, focus restoration, automation names, contrast, and reduced motion |
+
+Capture both the VLC 4 reference and the matching Avalonia state. Dynamic video,
+timestamps, cursor position, and platform text rasterization may be masked in
+automated comparison, but geometry, hierarchy, spacing, control state, icon
+silhouette, and deliberate color differences must remain reviewable.
+
+Reference-to-Avalonia acceptance uses measured geometry and annotated contact
+sheets rather than claiming impossible pixel identity across Qt and Avalonia.
+Approved Avalonia states then become deterministic regression baselines.
+
+## 14. Phase-two branch, commit, and dispatch policy
+
+After V4UI-00 is approved and before implementation begins, create
+`feature/vlc4-ui-parity` from product commit
+`58550fc810b1dfe61f41caec068084b718804f87`. If the completed modern UI branch is
+merged first, verify that the selected base contains that exact history and
+record the new base instead of rebasing silently.
+
+The VLC 4 source checkout is read-only reference material. Do not switch it,
+patch it, build over user changes, or commit generated capture files there. The
+VLC 3 runtime and sibling VLCLR repository also remain unchanged unless a UI
+package discovers a genuinely required native capability. Any such work gets a
+separate VLCLR branch, Terra prerequisite, commit series, validation, and pinned
+hash before dependent product work resumes.
+
+Each V4UI package is owned by one fresh `gpt-5.6-terra` subagent and is dispatched
+sequentially in the shared checkout. The orchestrator reviews the reference
+evidence, diff, screenshots, tests, and commit before dispatching the next
+package. A package creates its named primary commit after validation; review
+corrections use separate focused commits. Agents do not push, merge, rebase,
+amend, or change branches.
+
+No implementation package starts until V4UI-00 has pinned the executable and
+source baselines. No final merge or push occurs without separate user direction.
+
+## 15. VLC 4 UI parity work packages
+
+### V4UI-00 — Pin and capture the VLC 4 reference
+
+Repository: `conic` documentation, capture tooling, and ignored artifacts
+
+Prerequisites: reviewed UI-08 tip; VLC 4 source; runnable VLC 4 executable
+
+Tasks:
+
+1. Identify the executable's exact version/build and map it to the closest
+   available source revision without changing the reference checkout.
+2. Add reproducible Windows window-capture and UI-automation tooling with an
+   isolated temporary profile and sanitized manifest.
+3. Capture the mandatory state matrix and inspect the matching Qt/QML source for
+   component hierarchy, state transitions, tokens, icons, and shortcuts.
+4. Produce a feature/state map from VLC 4 surfaces to the existing VLC 3 product
+   contracts, including working, adapted, unavailable, and non-goal states.
+5. Record asset provenance and decide which artifacts may be committed.
+
+Acceptance:
+
+- The executable and source baselines are pinned; any mismatch is explicit.
+- Another run can reproduce every capture without using personal application
+  state or scanning the machine.
+- Every planned Avalonia surface links to runtime evidence, source evidence, and
+  an engine capability state.
+- No implementation styling is accepted from memory or isolated screenshots.
+
+Commit: `docs: pin VLC 4 UI reference baseline`
+
+### V4UI-01 — Translate the VLC 4 design system
+
+Prerequisite: V4UI-00
+
+Tasks:
+
+1. Translate measured colors, typography, spacing, radii, elevation, focus,
+   animation, density, and responsive breakpoints into Avalonia resources.
+2. Review and import only approved icons/assets with provenance; prefer existing
+   vector/code-native assets over raster recreation.
+3. Establish reusable navigation, page, toolbar, card, menu, drawer, dialog,
+   empty-state, and notification components.
+4. Extend deterministic headless rendering and screenshot comparison support.
+
+Acceptance:
+
+- Tokens and components reproduce the reference states without one-off page
+  constants.
+- Dark/system variants, contrast, focus, and reduced motion remain testable.
+- Existing timeline and volume alignment/endpoint behavior remain green.
+
+Commit: `refactor: add VLC 4 Avalonia design system`
+
+### V4UI-02 — Rebuild the window shell and navigation
+
+Prerequisite: V4UI-01
+
+Tasks:
+
+1. Reproduce the VLC 4 window chrome, navigation rail/header, back behavior,
+   page transitions, global search placement, and responsive collapse rules.
+2. Map VLC 4 home, video, music/audio, browse, and playlist destinations to the
+   lightweight local product model without enabling background scanning.
+3. Preserve custom composition z-order, drag regions, window actions, keyboard
+   navigation, focus restoration, and narrow-window containment.
+
+Acceptance:
+
+- Primary VLC 4 destinations and navigation behavior match the pinned reference
+  or have an annotated capability-based adaptation.
+- No critical navigation action is pointer-only.
+- Window chrome and overlays remain safe in fullscreen and compact layouts.
+
+Commit: `feat: add VLC 4 style application shell`
+
+### V4UI-03 — Match the VLC 4 playback experience
+
+Prerequisite: V4UI-02
+
+Tasks:
+
+1. Reproduce the pinned VLC 4 playback view, control bar, progress treatment,
+   control grouping, active/disabled states, hover/focus behavior, timing, and
+   fullscreen reveal/dismissal.
+2. Map play/pause, previous/next, stop, seek, volume/mute, speed, fullscreen,
+   queue, and media title to the existing central command registry.
+3. Preserve the approved orange accent, visible seek/volume thumbs, correct
+   play/pause icon state, accurate seeking, and audio-control alignment.
+4. Adapt VLC 4 controls that lack safe VLC 3 bindings as explicit unavailable
+   states rather than placeholders.
+
+Acceptance:
+
+- Reference/Avalonia contact sheets cover empty, playing, paused, hover,
+  keyboard focus, compact, and fullscreen states.
+- Button, menu, context-menu, and shortcut state remain synchronized.
+- All transport, layout, engine, and three-path composition smokes pass.
+
+Commit: `feat: match VLC 4 playback experience`
+
+### V4UI-04 — Match library, browse, and playlist surfaces
+
+Prerequisite: V4UI-03
+
+Tasks:
+
+1. Reproduce VLC 4 list/grid hierarchy, sorting/filter affordances, selection,
+   contextual actions, empty/error/loading states, and playlist presentation.
+2. Adapt the UI to the existing no-scan recent/favorites/resume library and
+   generation-safe VLC 3 queue.
+3. Preserve privacy switches, complete clearing, explicit favorite creation,
+   drag/drop, open/enqueue behavior, and safe queue mutation.
+4. Do not introduce media indexing or filesystem scanning without a separate
+   user-approved product package.
+
+Acceptance:
+
+- Library and playlist states match the reference interaction model while their
+  data limitations are explicit.
+- Queue, history migration, read-only persistence, and privacy tests remain
+  green.
+- Wide/narrow reference captures show no clipping or overlapping surfaces.
+
+Commit: `feat: match VLC 4 library and playlist surfaces`
+
+### V4UI-05 — Match menus and media-detail surfaces
+
+Prerequisite: V4UI-04
+
+Tasks:
+
+1. Reproduce VLC 4 overflow/context menus, track/chapter panels,
+   synchronization, media information, diagnostics, confirmations, and errors.
+2. Preserve fresh native readback and generation safety for queue, tracks,
+   chapters, delays, attachments, and metadata.
+3. Keep aspect/crop/zoom, deinterlace, snapshot, device enumeration, codec
+   streams, and subtitle rendering unavailable where the matrix requires it.
+
+Acceptance:
+
+- Enabled, empty, loading, error, and unavailable states are visually and
+  behaviorally represented.
+- Skipped native capabilities remain explicit non-parity results.
+- Media, player-capability, queue, and lifecycle smokes pass.
+
+Commit: `feat: match VLC 4 playback menus and media details`
+
+### V4UI-06 — Match preferences and secondary flows
+
+Prerequisite: V4UI-05
+
+Tasks:
+
+1. Reproduce VLC 4 preferences navigation, search, section layout, controls,
+   reset/confirmation flows, and explanatory text.
+2. Map existing settings to the new presentation while preserving `Live`,
+   `NextOpen`, and `Restart` semantics and typed allowlisted startup arguments.
+3. Match open-file/folder/URL, recent/resume, toast, diagnostics, and failure
+   surfaces from the pinned reference.
+4. Keep disabled settings honest and preserve shortcut conflict validation.
+
+Acceptance:
+
+- Settings and contextual controls expose the same effective values.
+- Invalid settings/history remain recoverable and privacy actions remain
+  complete.
+- Reference/Avalonia captures cover every settings category and secondary flow.
+
+Commit: `feat: match VLC 4 preferences and dialogs`
+
+### V4UI-07 — Complete responsive and accessible parity
+
+Prerequisite: V4UI-06
+
+Tasks:
+
+1. Complete keyboard order, screen-reader names/help, focus traps/restoration,
+   high-contrast behavior, reduced motion, and localization resource coverage.
+2. Verify VLC 4 responsive adaptations at all captured widths/scales and define
+   deliberate Avalonia adaptations where the reference has no narrow layout.
+3. Qualify maximized/fullscreen transitions, reopen/shutdown, fallback/device
+   loss simulation, and window placement without claiming unavailable physical
+   monitor tests.
+
+Acceptance:
+
+- No critical action is pointer-only and no hidden overlay retains focus.
+- All new customer strings are resource-backed.
+- Every required state is contained and usable at 480px and the captured desktop
+  sizes/scales.
+
+Commit: `feat: complete VLC 4 responsive accessibility parity`
+
+### V4UI-08 — Visual regression and final qualification
+
+Prerequisite: V4UI-07
+
+Tasks:
+
+1. Produce final reference/Avalonia contact sheets and review every annotated
+   divergence.
+2. Promote approved Avalonia renders to deterministic golden tests with masks
+   only for documented dynamic regions.
+3. Run Debug/Release builds and tests, Native AOT publish, all UI/layout,
+   lifecycle, queue, capability, opaque/hardware, upload, CPU, and forced
+   fallback smokes.
+4. Update the README, capability matrix, reference manifest, and completion
+   ledger with exact evidence and honest limitations.
+
+Acceptance:
+
+- Every mandatory VLC 4 reference state is matched, deliberately adapted, or
+  explicitly unavailable with evidence.
+- No unexplained high-priority visual or interaction divergence remains.
+- Existing VLC 3 native behavior and composition qualification remain green.
+- The tracked product and sibling repositories are clean; no reference checkout
+  was modified.
+
+Commit: `feat: qualify VLC 4 UI parity on Avalonia`
+
+## 16. Phase-two dependency order
+
+```text
+Reference gate
+V4UI-00
+   |
+Design and shell
+V4UI-01 -> V4UI-02
+                 |
+Core experience  +-> V4UI-03 -> V4UI-04 -> V4UI-05 -> V4UI-06
+                                                        |
+Final polish                                            v
+                                                    V4UI-07 -> V4UI-08
+
+Background only:
+VLC-rendered subpicture composition, HDR/tone mapping, orientation transforms,
+new media indexing, and physical multi-monitor/multi-GPU qualification
+```
+
+## 17. Phase-two completion record
+
+Update only after package validation and commit:
+
+| Package | Terra agent/task | Reference revision | Product commit | Validation | Result |
+|---|---|---|---|---|---|
+| V4UI-00 | pending | source `5dd4aeb`; executable pending | pending | pending | blocked until a runnable VLC 4 build is pinned |
+| V4UI-01 | pending | pending | pending | pending | pending |
+| V4UI-02 | pending | pending | pending | pending | pending |
+| V4UI-03 | pending | pending | pending | pending | pending |
+| V4UI-04 | pending | pending | pending | pending | pending |
+| V4UI-05 | pending | pending | pending | pending | pending |
+| V4UI-06 | pending | pending | pending | pending | pending |
+| V4UI-07 | pending | pending | pending | pending | pending |
+| V4UI-08 | pending | pending | pending | pending | pending |
+
+## 18. Phase-two risks and stop conditions
+
+- VLC 4 remains a development line. A source/executable mismatch can make QML
+  inspection misleading; pin and report both before implementation.
+- Qt and Avalonia rasterize text, shadows, animation, and native menus
+  differently. Measure layout and state fidelity without claiming raw pixel
+  identity across frameworks.
+- VLC 4 library/indexing behavior is not authorization to scan user disks in
+  this sample. The no-scan privacy boundary remains until separately approved.
+- Visual similarity does not justify speculative VLC 3 ABI calls. Missing engine
+  behavior stops at an unavailable state or a separately approved VLCLR package.
+- Reference automation must not alter the user's VLC profile, recent history,
+  associations, updater state, or network services.
+- Do not copy an icon/font/image until its provenance and repository licensing
+  treatment are recorded.
+- Stop V4UI-00 and ask for a runnable VLC 4 build if exact behavior cannot be
+  observed. Source-only inference is insufficient for the implementation gate.

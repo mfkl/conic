@@ -11,7 +11,7 @@ using VLCLR.Native;
 namespace VLCAvalonia.Interop;
 
 [SupportedOSPlatform("windows")]
-internal sealed unsafe class VLCCorePlayer : IMediaEngine, IQueueTransport, IMediaCapabilitiesTransport, IVLCPlaylistQueueSmokeAdapter, IVLCMediaCapabilitySmokeAdapter
+internal sealed unsafe class VLCCorePlayer : IMediaEngine, IQueueTransport, IMediaCapabilitiesTransport, IMediaInformationTransport, IVLCPlaylistQueueSmokeAdapter, IVLCMediaCapabilitySmokeAdapter
 {
     private const int PlaylistStopped = 0;
     private const int PlaylistRunning = 1;
@@ -35,6 +35,7 @@ internal sealed unsafe class VLCCorePlayer : IMediaEngine, IQueueTransport, IMed
     private MediaCapabilitiesState _mediaCapabilities = MediaCapabilitiesState.Initial;
     private readonly VLCMediaCapabilities _mediaControls;
     private readonly VLCPlayerCapabilities _playerCapabilities;
+    private MediaInformationState _mediaInformation = MediaInformationState.Unavailable;
     private readonly ConcurrentQueue<Action> _mediaRequests = new();
     private QueueRepeatMode _requestedRepeat = QueueRepeatMode.None;
     private QueueOrder _requestedOrder = QueueOrder.Normal;
@@ -76,6 +77,25 @@ internal sealed unsafe class VLCCorePlayer : IMediaEngine, IQueueTransport, IMed
 
     public MediaCapabilitiesState MediaCapabilities { get { lock (_gate) return _mediaCapabilities; } }
     public event EventHandler<MediaCapabilitiesState>? MediaCapabilitiesChanged;
+    public MediaInformationState MediaInformation { get { lock (_gate) return _mediaInformation; } }
+    public event EventHandler<MediaInformationState>? MediaInformationChanged;
+
+    public void RefreshMediaInformation() => QueueMediaRequest(PublishMediaInformation);
+
+    private void PublishMediaInformation()
+    {
+        var snapshot = _playerCapabilities.TryGetMediaInformation(out VLCPlayerCapabilityResult result);
+        long queue = State.Generation;
+        MediaInformationState next = snapshot is null
+            ? new(queue, MediaInformation.MediaGeneration, result.Code == VLCPlayerCapabilityResultCode.StaleSnapshot ? MediaInformationLoadState.Stale : MediaInformationLoadState.Unavailable, "", new Dictionary<string, string>(), result.Code.ToString())
+            : new(queue, snapshot.Generation.MediaGeneration, snapshot.Metadata.Count == 0 ? MediaInformationLoadState.Empty : MediaInformationLoadState.Ready, snapshot.Name, new System.Collections.ObjectModel.ReadOnlyDictionary<string, string>(new Dictionary<string, string>(snapshot.Metadata)), null);
+        lock (_gate)
+        {
+            if (next.QueueGeneration < _mediaInformation.QueueGeneration || (next.QueueGeneration == _mediaInformation.QueueGeneration && next.MediaGeneration < _mediaInformation.MediaGeneration)) return;
+            _mediaInformation = next;
+        }
+        MediaInformationChanged?.Invoke(this, next);
+    }
 
     public void Open(string source) => OpenQueue([source]);
 

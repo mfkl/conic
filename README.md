@@ -25,7 +25,8 @@ boundaries are in [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md).
   keyed-mutex images.
 - Cross-device and real-compositor smoke modes.
 - An engine-neutral command/state contract with generation-safe snapshots.
-- Working open, play/pause, seek, volume, stop, dispose, and reopen plumbing.
+- Working local/file-folder/URL opening, queue controls, tracks and timing,
+  persistent settings, recent/resume history, and an optional no-scan library.
 
 Windows qualification covers H.264/NV12 and HEVC Main 10/P010 hardware decode
 on Intel Iris Xe, plus software-BGRA GPU upload and CPU-bitmap fallback. See
@@ -78,3 +79,33 @@ Override local paths with `VLCLR_ROOT`, `VLC_DIRECTORY`, and
 
 See [docs/D3D11_COMPOSITION.md](docs/D3D11_COMPOSITION.md) for the validated
 implementation, qualification commands, measured counters, and remaining work.
+
+## Using the player
+
+- Open a file with `Ctrl+O`, a URL with `Ctrl+L`, the queue with `Ctrl+J`, the
+  Library with `Ctrl+Shift+L`, and Settings with `Ctrl+,`.
+- The Library is deliberately lightweight: it presents recent media, explicit
+  favorites, and saved resume positions from the same local atomic history
+  document. It never scans folders or disks. Add a favorite from the Library;
+  use **Clear library** to remove favorites, recents, and all resume positions.
+- Turning off **Remember recent media** or **Remember resume history** in
+  Settings clears that respective history immediately. Favorites are explicit
+  library entries and are removed by **Clear library** or individually.
+- Keyboard focus returns to the invoking control after drawers and overlays
+  close. The Appearance page includes **Reduce motion**, which keeps playback
+  chrome visible and removes the nonessential play-button motion.
+
+The accessible controls expose names and hints for playback, timeline and
+volume adjustment, fullscreen, settings, queue, and Library actions. The dark
+surface uses neutral white controls with a restrained orange playback accent.
+
+## Qualification limits
+
+UI layout is exercised at 1280 and 480 logical pixels, plus deterministic
+100%, 125%, and 150% DIP-scale policy tests. The real Windows composition
+smokes verify fullscreen, reopen, clean shutdown, and safe forced
+adapter-mismatch CPU fallback. Physical multi-monitor/multi-GPU switching,
+OS suspend/resume, and arbitrary display scaling cannot be simulated here and
+remain unqualified. Subtitle/subpicture rendering is also unqualified: track
+selection and delay do not claim visual subtitle presentation on this custom
+video path.

@@ -8,8 +8,8 @@ namespace Conic.ViewModels;
 internal sealed record SettingsPage(string Name, string Keywords);
 internal sealed class SettingsViewModel : INotifyPropertyChanged
 {
-    private readonly PlayerSettingsService _service; private string _search = string.Empty; private SettingsPage _selectedPage; private bool _confirmReset; private string? _errorMessage;
-    public SettingsViewModel(PlayerSettingsService service) { _service = service; _selectedPage = Pages[0]; ResetPageCommand = new RelayCommand(_ => ResetPage()); ResetAllCommand = new RelayCommand(_ => ConfirmOrResetAll()); CancelResetCommand = new RelayCommand(_ => ConfirmReset = false); }
+    private readonly PlayerSettingsService _service; private readonly IPlayerCommandRegistry? _registry; private string _search = string.Empty; private SettingsPage _selectedPage; private bool _confirmReset; private string? _errorMessage; private string _shortcutSearch = string.Empty;
+    public SettingsViewModel(PlayerSettingsService service, IPlayerCommandRegistry? registry = null) { _service = service; _registry = registry; _selectedPage = Pages[0]; ResetPageCommand = new RelayCommand(_ => ResetPage()); ResetAllCommand = new RelayCommand(_ => ConfirmOrResetAll()); CancelResetCommand = new RelayCommand(_ => ConfirmReset = false); }
     public event PropertyChangedEventHandler? PropertyChanged;
     public IReadOnlyList<SettingsPage> Pages { get; } = [new("General", "resume volume privacy"), new("Appearance", "theme density controls timeout"), new("Playback", "speed skip backward forward"), new("Audio", "output normalization passthrough device"), new("Video", "aspect crop zoom deinterlace snapshot"), new("Subtitles", "render tracks delay"), new("Hotkeys", "shortcut keyboard commands"), new("Advanced", "engine diagnostics")];
     public IReadOnlyList<string> ThemeOptions { get; } = ["System", "Dark"]; public IReadOnlyList<string> DensityOptions { get; } = ["Comfortable", "Compact"]; public IReadOnlyList<string> SpeedOptions { get; } = ["0.5", "1", "1.5", "2"];
@@ -19,6 +19,11 @@ internal sealed class SettingsViewModel : INotifyPropertyChanged
     public string Search { get => _search; set { if (Set(ref _search, value)) { Notify(nameof(FilteredPages)); SettingsPage? match = FilteredPages.FirstOrDefault(); if (match is not null) SelectedPage = match; } } }
     public bool ConfirmReset { get => _confirmReset; private set => Set(ref _confirmReset, value); } public string? ErrorMessage { get => _errorMessage; private set => Set(ref _errorMessage, value); }
     public ICommand ResetPageCommand { get; } public ICommand ResetAllCommand { get; } public ICommand CancelResetCommand { get; }
+    public string ShortcutSearch { get => _shortcutSearch; set { if (Set(ref _shortcutSearch, value)) Notify(nameof(ShortcutRows)); } }
+    public IReadOnlyList<EditablePlayerShortcut> ShortcutRows => _registry is null ? [] : new PlayerShortcutEditor(_service, _registry).Items(ShortcutSearch);
+    public bool TrySaveShortcuts(IEnumerable<PlayerShortcut> changes) { if (_registry is null) { ErrorMessage = "Shortcuts are unavailable."; return false; } bool saved = new PlayerShortcutEditor(_service, _registry).TrySave(changes, out string? error); ErrorMessage = saved ? null : error; Notify(nameof(ShortcutRows)); return saved; }
+    public void ResetShortcut(PlayerCommandId id) { if (_registry is null) return; new PlayerShortcutEditor(_service, _registry).Reset(id); Notify(nameof(ShortcutRows)); }
+    public void ResetAllShortcuts() { if (_registry is null) return; new PlayerShortcutEditor(_service, _registry).ResetAll(); Notify(nameof(ShortcutRows)); }
     public string LabelFor(string key) => PlayerSettingsService.ApplyMode(key) switch { SettingApplyMode.Live => "Live", SettingApplyMode.NextOpen => "Next open", _ => "Restart" };
     public bool ResumePlayback { get => _service.Current.ResumePlayback; set => Update(s => s with { ResumePlayback = value }); } public bool RememberVolume { get => _service.Current.RememberVolume; set => Update(s => s with { RememberVolume = value }); }
     public bool RememberRecentMedia { get => _service.Current.RememberRecentMedia; set => Update(s => s with { RememberRecentMedia = value }); }

@@ -8,7 +8,10 @@ Product baseline: `feature/modern-player-ui` at
 Reference source: VLC `4.0.0-dev` at
 `5dd4aebdabf4a625822036bda08a24a91295158c`
 
-Reference executable: pending
+Reference executable: local read-only VLC `4.0.0-dev-38799-g5dd4aebdab`
+bundle is temporarily available. Runtime capture is supporting evidence, not a
+prerequisite when user-supplied screenshots already cover the state being
+specified.
 
 This plan controls phase-two dispatch and supersedes the batch-oriented package
 order in Sections 15--17 of `UI_IMPLEMENTATION_PLAN.md`. That document remains
@@ -91,13 +94,33 @@ visual/behavior summary and waits for explicit user approval.
 
 ## 3. Incremental reference capture
 
-Do not capture the entire VLC 4 application up front. Acquire and pin a runnable
-VLC 4 build, then capture only the screen currently being specified. This keeps
-the feedback loop short and prevents unused parity work.
+Do not capture the entire VLC 4 application up front. Start with user-supplied
+screenshots, then use the executable or matching Qt/QML source only to answer a
+specific unresolved behavior or state question for the screen currently being
+specified. This keeps the feedback loop short and prevents unused parity work.
+
+### Current local reference packet
+
+The user supplied these captures at the repository root on 2026-09-02:
+
+| Local-only file | Size | What it establishes | Active use |
+|---|---:|---|---|
+| `home.PNG` | 1920x1140 | VLC 4 dark Home shell, left navigation, empty/open state, header actions, and orange selection language | Queued for Screen 2; do not expand the Home spec during Playback |
+| `playback on hover.PNG` | 1920x1140 | Wide playback canvas with controls revealed, top overlay, title placement, full-width timeline, bottom command groups, and orange progress/volume accents | Primary visual baseline for Screen 1 |
+
+The captures remain untracked local evidence. In particular, the playback image
+contains a third-party media frame and must not be committed. Commit derived
+measurements, diagrams, requirements, and product-owned comparison captures
+instead.
+
+For the states shown, these user-supplied images are the visual truth. The
+executable is used selectively for behavior and missing states. Source inspection
+is an inference unless it is confirmed by a capture or an interaction test.
 
 For every capture session:
 
-- use an isolated temporary VLC profile with no media discovery or scanning;
+- use an isolated temporary VLC profile with no media discovery or scanning when
+  the executable is needed;
 - record executable version/build, closest source revision, OS, scale, window
   client size, theme, state, actions, and sanitized fixture identity;
 - store raw captures and manifests under ignored
@@ -106,8 +129,13 @@ For every capture session:
 - commit derived measurements, state maps, and approved asset provenance only;
 - never commit personal paths, history, credentials, or copyrighted media
   frames; and
-- treat the executable as behavior truth and source-only conclusions as
-  inferences when revisions differ.
+- treat a stable executable interaction as behavior truth and source-only
+  conclusions as inferences when revisions differ.
+
+Do not block a screen spec on exhaustive VLC capture. If a missing reference
+state would materially change the Avalonia result, request one targeted capture
+or present the assumption at the screen's spec gate. Otherwise specify the state
+from the product contract and validate the Avalonia implementation directly.
 
 The VLC 4 settings window is captured only to inventory useful behavior and
 categories. It is not a visual target.
@@ -166,6 +194,46 @@ Reference scope:
 - volume, mute, speed, previous/next, play/pause, stop, queue entry, title,
   elapsed/duration, open action, and primary overflow/context menu; and
 - 1920x1080, 1280x720, and 480px compact layouts at available scales.
+
+Screenshot-derived baseline from `playback on hover.PNG`:
+
+- the player is a near-black, edge-to-edge shell with the video centered at its
+  native aspect ratio and honest pillarbox/letterbox space;
+- the visible-controls state uses a transient top overlay for back navigation,
+  brand, media title, overflow, and queue/playlist entry points;
+- the bottom overlay uses a dark gradient over the media rather than a permanent
+  opaque control panel;
+- the seek track spans the window above the command row, with elapsed and
+  duration labels anchored near its two ends;
+- primary transport stays optically centered: seek-back, previous when
+  available, prominent play/pause, next when available, and seek-forward;
+- secondary actions are split into left and right edge groups so they do not
+  displace the primary transport. The spec must map each observed icon to a real
+  VLC 3 capability before including it;
+- orange is restrained to progress, volume fill, selection, or the primary
+  control outline; inactive icons and tracks remain neutral;
+- volume is a single aligned icon/track group at the right, followed by casting,
+  display-mode, or fullscreen actions only when supported; and
+- pointer hover, keyboard focus, transport input, or seek/volume interaction
+  reveals the overlay; inactivity hides it without hiding focus or interrupting
+  an active drag.
+
+The captured primary transport glyph is `Play`, so this image is recorded as
+**controls visible with an effectively paused transport state**. It is not used
+to infer the playing glyph. The approved product contract still requires `Pause`
+whenever playback is effectively playing.
+
+Reference gaps to resolve inside `PLAYBACK-SPEC`, without starting another
+screen:
+
+1. Define opening, buffering, failure, active-playing, auto-hidden, and fullscreen
+   states from the product contract and current Avalonia capabilities.
+2. Mark any visual behavior not proven by the screenshot or runtime as an
+   explicit assumption.
+3. Ask the user for another VLC 4 screenshot only if that assumption would cause
+   a materially different layout or interaction.
+4. Produce product-owned Avalonia reference frames for every state before Gate
+   P2; VLC 4 media-frame screenshots are not required in the repository.
 
 The spec decides which VLC 4 shell/navigation elements are necessary around the
 player, but it must not design the Home/Library or Settings content yet.
@@ -370,15 +438,17 @@ branch. No push or merge happens without separate user direction.
 
 Update only after the named user gate:
 
-| Screen | Spec commit | Spec approval | Implementation tip | Windows validation | User result approval | macOS | Linux |
-|---|---|---|---|---|---|---|---|
-| Playback | pending | pending | pending | pending | pending | unqualified | unqualified |
-| Home / Library | pending | blocked by Playback | pending | pending | pending | unqualified | unqualified |
-| Settings | pending | blocked by Home / Library | pending | pending | pending | unqualified | unqualified |
-| Integration | n/a | blocked by all screens | pending | pending | pending | deferred | deferred |
+| Screen | Reference evidence | Spec commit | Spec approval | Implementation tip | Windows validation | User result approval | macOS | Linux |
+|---|---|---|---|---|---|---|---|---|
+| Playback | local hover/paused capture available | pending | pending | pending | pending | pending | unqualified | unqualified |
+| Home / Library | local Home capture queued | pending | blocked by Playback | pending | pending | pending | unqualified | unqualified |
+| Settings | deferred | pending | blocked by Home / Library | pending | pending | pending | unqualified | unqualified |
+| Integration | n/a | n/a | blocked by all screens | pending | pending | pending | deferred | deferred |
 
 ## 11. Immediate next step
 
-Acquire or identify a runnable VLC 4 executable. Then execute only the playback
-reference capture and write `PLAYBACK-SPEC`. Present that specification to the
-user and stop at Gate P1. Do not implement the Playback screen yet.
+Use `playback on hover.PNG` as the initial visual reference, audit the current
+Avalonia playback capabilities, and write `PLAYBACK-SPEC`. Resolve unshown states
+through explicit product decisions and request only targeted additional evidence
+when a decision materially depends on VLC 4. Present the complete specification
+to the user and stop at Gate P1. Do not implement the Playback screen yet.

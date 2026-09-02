@@ -361,6 +361,7 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
     public bool IsLibraryFavoritesTab => LibraryTab == "Favorites";
     public bool IsLibraryResumeTab => LibraryTab == "Resume";
     public string LibraryTitle => PlayerText.LibraryTitle;
+    public string LibraryPanelAutomationName => PlayerText.LibraryPanelAutomationName;
     public string LibraryDescription => PlayerText.LibraryDescription;
     public string LibraryRecentTitle => PlayerText.LibraryRecent;
     public string LibraryFavoritesTitle => PlayerText.LibraryFavorites;

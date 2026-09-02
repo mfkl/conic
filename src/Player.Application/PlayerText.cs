@@ -11,6 +11,7 @@ public static class PlayerText
     public const string LibraryButtonToolTip = "Media library (Ctrl+Shift+L)";
     public const string LibraryButtonAutomationName = "Open media library";
     public const string LibraryTitle = "Library";
+    public const string LibraryPanelAutomationName = "Media library";
     public const string LibraryDescription = "Your recent items, explicit favorites, and saved positions. No folders are scanned.";
     public const string LibraryRecent = "Recent media";
     public const string LibraryFavorites = "Favorites";

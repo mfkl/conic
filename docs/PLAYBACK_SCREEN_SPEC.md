@@ -119,7 +119,7 @@ affected projects passed when rerun sequentially; it was not a product failure.
 | Engine state | `MediaEngineState` exposes generation, status, position, elapsed, duration, volume, seekability, error, mute, rate, title, and source. |
 | Play/pause | Effective `PlaybackStatus` already drives `IsPlaying`; XAML already has separate play and pause paths. |
 | Seek | `PlayerTimeline` brackets a protected drag; the view model previews elapsed time and commits one normalized seek. |
-| Audio | Volume, mute, effective readback, and playback rate are live. Engine volume supports 0--125%. |
+| Audio | Volume, mute, effective readback, and playback rate are live. The current product clamp is 0--125%; the existing `PlaylistVolumeSet/Get` binding accepts a raw float and does not impose that ceiling. |
 | Queue | Immutable queue state supports previous/next, select, reorder, remove, clear, repeat, and shuffle with capability gating. |
 | Media controls | Audio/subtitle tracks, titles, chapters, delays, external next-open tracks, and media information have copied generation-safe state. |
 | Window | Fullscreen, always-on-top for the current window, focus-aware chrome policy, and responsive layout policy exist. |
@@ -133,7 +133,7 @@ affected projects passed when rerun sequentially; it was not a product failure.
 | A 1080-DIP floating dock card is visually separate from the media. | Replace it with an edge overlay and gradient that follows the reference hierarchy. |
 | Windowed playback chrome stays visible; auto-hide is fullscreen-only. | Auto-hide while actively playing in windowed and fullscreen modes, subject to the interaction rules below. |
 | Timeline and volume inherit most Fluent slider geometry. | Give each a dedicated template with explicit track/thumb geometry, hit target, clipping, and endpoint mapping. |
-| The UI volume range ends at 100 although the engine state supports 125%. | Set the playback volume control and value presentation to 0--125%. |
+| The UI volume range ends at 100 and the current product/engine-state clamp ends at 125%. | Extend the product and engine-state clamps to 200%, then prove native set/readback at 150% and 200%. Mark 100% as normal and values above it as amplification. |
 | Stop and speed occupy the primary transport row. | Move Stop and speed into overflow/context surfaces; keep the reference's centered five-part group. |
 | Top chrome is text-heavy: Open, Queue, Library, Settings, Always on top. | Replace it with sparse icon actions and an overflow menu; defer Library content. |
 | Play/pause, Stop, Seek, Volume, Mute, and Rate are not all command-state gated consistently. | Derive command availability from engine and queue state and apply it to button, menu, context, and shortcut paths. |
@@ -158,7 +158,7 @@ to preserve. Native composition telemetry remains diagnostic-only.
 | Seek | Working when `CanSeek` | Full-width interactive timeline; disabled honestly for unseekable media. |
 | Short skip | Working/configurable | Primary seek-back and seek-forward controls use configured seconds. |
 | Previous/next | Working when queue neighbor exists | Keep in primary transport, disabled when no valid neighbor. |
-| Volume/mute | Working | Aligned right-side group with 0--125% track and effective mute glyph. |
+| Volume/mute | Working to the current 125% product clamp; existing native binding has no wrapper-side ceiling | Aligned right-side group with a 0--200% track, a normal-volume marker at 100%, a visually distinct amplified segment above 100%, and effective mute glyph. |
 | Playback speed | Working | Overflow/context menu plus compact popover; do not occupy primary row. |
 | Fullscreen | Working | Right-side primary action and `F11`. |
 | Queue | Working | Top-right action opens the playback drawer. |
@@ -174,9 +174,12 @@ to preserve. Native composition telemetry remains diagnostic-only.
 | Subtitle track selection | Working | Include in drawer, while explicitly stating rendering is unqualified. |
 | Subtitle/subpicture composition | Background prerequisite | No claim and no Playback implementation work. |
 
-No `vlclr` change is required for the approved control set. If review adds a
-native-dependent feature, it must be planned independently in the sibling
-repository before this screen can claim it.
+No `vlclr` API change is required for the approved control set: the reviewed
+volume binding already accepts and returns a float. Playback implementation must
+still verify VLC 3 accepts and reads back `2.0` on the qualified runtime. If it
+does not, the implementation stops and reports the native limit rather than
+claiming 200% or silently displaying a value VLC rejected. Any new native API
+would then be planned independently in the sibling repository.
 
 ## 6. Layout and z-order
 
@@ -264,7 +267,7 @@ left and right groups. Edge groups may never push it off center.
 - hide the brand mark before hiding the media title;
 - move Previous/Next into the queue surface when width cannot contain them;
 - collapse the volume track into a keyboard-accessible popover opened from Mute/
-  Volume; the popover still uses the aligned 0--125% slider;
+  Volume; the popover still uses the aligned 0--200% slider;
 - move Tracks, Favorite, Sync, speed, Stop, and always-on-top to More controls;
 - use a bottom sheet, maximum 72% client height, for Queue/Tracks/Information;
 - preserve 40-DIP targets and visible focus; and
@@ -353,14 +356,18 @@ according to layout stability. No empty icon invokes an unavailable feature.
 - mute icon, slider track, and thumb share one optical vertical center;
 - the mute button is 40x40 and the track is hosted in its own fixed-height lane,
   not aligned by the Fluent Slider's outer bounds;
-- orange fills the effective volume amount; the remainder is neutral;
-- the 16-DIP thumb is always fully visible, including 0 and 125;
+- orange fills the effective volume amount through 100%; a subtle tick marks
+  normal volume and the 101--200% amplified segment uses a lighter warm-orange
+  fill so amplification is visible without adding a warning badge;
+- the 16-DIP thumb is always fully visible, including 0 and 200;
 - pointer drag updates volume live; arrow keys change 2 percentage points;
-  PageUp/PageDown change 10; Home sets 0; End sets 125;
+  PageUp/PageDown change 10; Home sets 0; End sets 200; crossing 100 has a small
+  pointer detent but remains continuous and fully keyboard accessible;
 - M toggles mute without destroying the remembered effective volume;
 - muting changes the glyph and automation name but leaves the track's stored
   position visible;
-- a value tooltip shows `Volume N%` during focus, hover, or drag; and
+- a value tooltip shows `Volume N%` through 100 and
+  `Volume N% · Amplified` above 100 during focus, hover, or drag; and
 - fullscreen follows the same optical row, shows enter/exit glyphs from effective
   window state, and uses `F11`.
 
@@ -519,7 +526,8 @@ action.
 - Play/Pause, Mute/Unmute, Favorite/Unfavorite, Fullscreen/Exit fullscreen, Queue
   open state, repeat, and shuffle expose dynamic names from effective state;
 - timeline exposes minimum, maximum, current elapsed, duration, and seekability;
-- volume exposes 0--125%, effective mute state, and keyboard help;
+- volume exposes 0--200%, the 100% normal-volume point, amplified state above
+  100%, effective mute state, and keyboard help;
 - loading, open failure, and platform-unavailable messages use a polite live
   region; time ticks and ordinary state refreshes are not announced repeatedly;
 - title and menu text meet WCAG AA contrast; disabled controls remain legible;
@@ -597,8 +605,9 @@ launches the Release application, and presents Playback for Gate P2.
    previews target time, and commits exactly once on release or capture loss.
 3. Timeline endpoints commit exactly 0 and 1 while the full thumb remains inside
    the window at 480, 720, 1000, 1280, and 1920 logical widths.
-4. Volume accepts 0, 100, and 125; its thumb remains visible and its icon/track
-   optical centers differ by no more than 1 DIP.
+4. Volume accepts 0, 100, 150, and 200, clamps values outside 0--200, distinguishes
+   the amplified segment above 100, keeps its thumb visible, and keeps icon/track
+   optical centers within 1 DIP.
 5. Muting changes glyph/name without overwriting the stored volume.
 6. Previous/Next enablement follows current queue neighbors and repeat mode.
 7. Unsupported Cast, Snapshot, Open Disc, crop/zoom, and GPU status controls are
@@ -633,8 +642,10 @@ launches the Release application, and presents Playback for Gate P2.
 4. Click, drag, and keyboard-seek to start, middle, and end. Confirm one commit,
    accurate position, no clipped thumb, and no controls hidden under chrome.
 5. Exercise configured backward/forward skip and valid/invalid queue neighbors.
-6. Set volume to 0, 50, 100, and 125; mute/unmute; confirm aligned geometry,
-   visible thumb, effective readback, and audio behavior.
+6. Set volume to 0, 50, 100, 150, and 200; mute/unmute; confirm aligned geometry,
+   visible thumb, effective native readback, amplified styling, and audio
+   behavior. Specifically verify `PlaylistVolumeSet(2.0)` succeeds and a fresh
+   `PlaylistVolumeGet` reports 2.0 within the existing smoke tolerance.
 7. Open/close Queue, Tracks, Chapters, and Information; verify mutual exclusion,
    focus restore, loading/empty/error states, and subtitle-rendering caveat.
 8. Test windowed and fullscreen auto-hide/wake, pointer cursor behavior,
@@ -670,7 +681,8 @@ Approval of this specification accepts these deliberate design decisions:
 
 1. use the VLC 4 edge-overlay hierarchy, but keep caption buttons platform-owned;
 2. auto-hide controls while Playing in both windowed and fullscreen modes;
-3. use a 0--125% aligned volume control, matching the existing engine contract;
+3. extend volume to an aligned 0--200% control, with 100% marked as normal and
+   the range above 100% presented as amplification;
 4. map the bookmark-shaped action to the existing explicit Favorite capability;
 5. keep Stop and speed in overflow rather than the centered transport row;
 6. show Back only when a later navigation host has a real previous route;

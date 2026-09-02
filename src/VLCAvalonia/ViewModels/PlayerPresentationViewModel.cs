@@ -102,11 +102,12 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
         registry.Register(new(PlayerCommandId.RemoveRecent, "Remove recent media", "Media"), p => { TryHistory(() => _history?.RemoveRecent(p as string ?? string.Empty)); NotifyLibrary(); }, p => !string.IsNullOrWhiteSpace(p as string));
         registry.Register(new(PlayerCommandId.ClearRecent, "Clear recent media", "Media"), _ => { TryHistory(() => _history?.ClearRecent()); NotifyLibrary(); }, _ => HasRecentItems);
         registry.Register(new(PlayerCommandId.ClearResumeHistory, "Clear resume history", "Media"), _ => { if (TryHistory(() => _history?.ClearResume())) { _pendingResume = null; _resumeReady = false; NotifyPendingResume(); NotifyLibrary(); } }, _ => HasResumeItems);
-        registry.Register(new(PlayerCommandId.AddFavorite, "Add to favorites", "Library"), p => AddFavorite(p as string), p => _history is not null && (p is string || _currentSource is not null));
-        registry.Register(new(PlayerCommandId.RemoveFavorite, "Remove from favorites", "Library"), p => { TryHistory(() => _history?.RemoveFavorite(p as string ?? string.Empty)); NotifyLibrary(); }, p => !string.IsNullOrWhiteSpace(p as string));
-        registry.Register(new(PlayerCommandId.ClearFavorites, "Clear favorite media", "Library"), _ => { TryHistory(() => _history?.ClearFavorites()); NotifyLibrary(); }, _ => HasFavoriteItems);
-        registry.Register(new(PlayerCommandId.ClearLibrary, "Clear media library", "Library"), _ => { if (TryHistory(() => _history?.ClearAll())) { _pendingResume = null; _resumeReady = false; NotifyPendingResume(); NotifyLibrary(); } }, _ => HasLibraryItems);
-        registry.Register(new(PlayerCommandId.OpenLibrary, "Media library", "Library", "Ctrl+Shift+L"), _ => IsLibraryOpen = !IsLibraryOpen, _ => _history is not null);
+        registry.Register(new(PlayerCommandId.RemoveResume, PlayerText.CommandRemoveResume, "Library"), p => { TryHistory(() => _history?.RemoveResume(p as string ?? string.Empty)); NotifyLibrary(); }, p => !string.IsNullOrWhiteSpace(p as string));
+        registry.Register(new(PlayerCommandId.AddFavorite, PlayerText.CommandAddFavorite, "Library"), p => AddFavorite(p as string), p => _history is not null && (p is string || _currentSource is not null));
+        registry.Register(new(PlayerCommandId.RemoveFavorite, PlayerText.CommandRemoveFavorite, "Library"), p => { TryHistory(() => _history?.RemoveFavorite(p as string ?? string.Empty)); NotifyLibrary(); }, p => !string.IsNullOrWhiteSpace(p as string));
+        registry.Register(new(PlayerCommandId.ClearFavorites, PlayerText.CommandClearFavorites, "Library"), _ => { TryHistory(() => _history?.ClearFavorites()); NotifyLibrary(); }, _ => HasFavoriteItems);
+        registry.Register(new(PlayerCommandId.ClearLibrary, PlayerText.CommandClearLibrary, "Library"), _ => { if (TryHistory(() => _history?.ClearAll())) { _pendingResume = null; _resumeReady = false; NotifyPendingResume(); NotifyLibrary(); } }, _ => HasLibraryItems);
+        registry.Register(new(PlayerCommandId.OpenLibrary, PlayerText.LibraryMenu, "Library", "Ctrl+Shift+L"), _ => IsLibraryOpen = !IsLibraryOpen, _ => _history is not null);
         registry.Register(new(PlayerCommandId.OpenRecent, "Open recent media", "Media"), parameter => OpenSource(parameter as string, MediaSourceKind.Recent));
         registry.Register(new(PlayerCommandId.AcceptResume, "Resume playback", "Media"), _ => ApplyResume(), _ => _pendingResume is not null && _resumeReady);
         registry.Register(new(PlayerCommandId.DeclineResume, "Start from beginning", "Media"), _ => DeclineResume(), _ => _pendingResume is not null && _resumeReady);
@@ -154,6 +155,7 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
         RemoveRecentCommand = new RegistryCommand(registry, PlayerCommandId.RemoveRecent);
         ClearRecentCommand = new RegistryCommand(registry, PlayerCommandId.ClearRecent);
         ClearResumeHistoryCommand = new RegistryCommand(registry, PlayerCommandId.ClearResumeHistory);
+        RemoveResumeCommand = new RegistryCommand(registry, PlayerCommandId.RemoveResume);
         AddFavoriteCommand = new RegistryCommand(registry, PlayerCommandId.AddFavorite);
         RemoveFavoriteCommand = new RegistryCommand(registry, PlayerCommandId.RemoveFavorite);
         ClearFavoritesCommand = new RegistryCommand(registry, PlayerCommandId.ClearFavorites);
@@ -214,6 +216,7 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
     public ICommand RemoveRecentCommand { get; }
     public ICommand ClearRecentCommand { get; }
     public ICommand ClearResumeHistoryCommand { get; }
+    public ICommand RemoveResumeCommand { get; }
     public ICommand AddFavoriteCommand { get; }
     public ICommand RemoveFavoriteCommand { get; }
     public ICommand ClearFavoritesCommand { get; }
@@ -334,7 +337,15 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
     public bool HasFavoriteItems => FavoriteItems.Count > 0;
     public bool HasLibraryItems => HasRecentItems || HasResumeItems || HasFavoriteItems;
     public bool IsCurrentFavorite => _currentSource is not null && (_history?.IsFavorite(_currentSource.CanonicalSource) ?? false);
-    public bool IsLibraryOpen { get => _isLibraryOpen; set => Set(ref _isLibraryOpen, value); }
+    public bool IsLibraryOpen
+    {
+        get => _isLibraryOpen;
+        set
+        {
+            if (Set(ref _isLibraryOpen, value) && value)
+                IsQueueOpen = false;
+        }
+    }
     public string LibraryTab
     {
         get => _libraryTab;
@@ -358,11 +369,49 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
     public string LibraryNoFavorites => PlayerText.LibraryNoFavorites;
     public string LibraryNoResume => PlayerText.LibraryNoResume;
     public string LibraryPrivacy => PlayerText.LibraryPrivacy;
+    public string LibraryMenu => PlayerText.LibraryMenu;
+    public string LibraryButtonText => PlayerText.LibraryButton;
+    public string LibraryButtonToolTip => PlayerText.LibraryButtonToolTip;
+    public string LibraryButtonAutomationName => PlayerText.LibraryButtonAutomationName;
+    public string LibraryCloseToolTip => PlayerText.LibraryCloseToolTip;
+    public string LibraryCloseAutomationName => PlayerText.LibraryCloseAutomationName;
+    public string LibraryRecentTabText => PlayerText.LibraryRecentTab;
+    public string LibraryFavoritesTabText => PlayerText.LibraryFavoritesTab;
+    public string LibraryResumeTabText => PlayerText.LibraryResumeTab;
+    public string LibraryRecentTabAutomationName => PlayerText.LibraryRecentTabAutomationName;
+    public string LibraryFavoritesTabAutomationName => PlayerText.LibraryFavoritesTabAutomationName;
+    public string LibraryResumeTabAutomationName => PlayerText.LibraryResumeTabAutomationName;
+    public string LibraryFavoriteCurrent => PlayerText.LibraryFavoriteCurrent;
+    public string LibraryFavoriteCurrentToolTip => PlayerText.LibraryFavoriteCurrentToolTip;
+    public string LibraryFavoriteCurrentAutomationName => PlayerText.LibraryFavoriteCurrentAutomationName;
+    public string LibraryOpenRecentToolTip => PlayerText.LibraryOpenRecentToolTip;
+    public string LibraryOpenRecentAutomationName => PlayerText.LibraryOpenRecentAutomationName;
+    public string LibraryRemoveRecentAutomationName => PlayerText.LibraryRemoveRecentAutomationName;
+    public string LibraryOpenFavoriteToolTip => PlayerText.LibraryOpenFavoriteToolTip;
+    public string LibraryOpenFavoriteAutomationName => PlayerText.LibraryOpenFavoriteAutomationName;
+    public string LibraryRemoveFavoriteAutomationName => PlayerText.LibraryRemoveFavoriteAutomationName;
+    public string LibraryOpenResumeToolTip => PlayerText.LibraryOpenResumeToolTip;
+    public string LibraryOpenResumeAutomationName => PlayerText.LibraryOpenResumeAutomationName;
+    public string LibraryRemoveResumeAutomationName => PlayerText.LibraryRemoveResumeAutomationName;
+    public string LibraryClearPrompt => PlayerText.LibraryClearPrompt;
+    public string LibraryCancel => PlayerText.LibraryCancel;
+    public string LibraryClearAll => PlayerText.LibraryClearAll;
+    public string LibraryClearAllAutomationName => PlayerText.LibraryClearAllAutomationName;
+    public string LibraryClear => PlayerText.LibraryClear;
+    public string LibraryClearAutomationName => PlayerText.LibraryClearAutomationName;
     public bool HasOpenError => !string.IsNullOrWhiteSpace(OpenError);
     public bool HasHistoryError => !string.IsNullOrWhiteSpace(HistoryError);
     public PlaybackQueueState QueueState { get => _queueState; private set => Set(ref _queueState, value); }
     public IReadOnlyList<QueueItem> QueueItems => QueueState.Items;
-    public bool IsQueueOpen { get => _isQueueOpen; set => Set(ref _isQueueOpen, value); }
+    public bool IsQueueOpen
+    {
+        get => _isQueueOpen;
+        set
+        {
+            if (Set(ref _isQueueOpen, value) && value)
+                IsLibraryOpen = false;
+        }
+    }
     public bool HasQueueError => !string.IsNullOrWhiteSpace(QueueState.Error);
     public string QueueError => QueueState.Error ?? string.Empty;
     public bool IsQueueLoading => QueueState.Status == QueueLoadState.Loading;

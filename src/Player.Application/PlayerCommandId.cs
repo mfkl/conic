@@ -9,6 +9,7 @@ public enum PlayerCommandId
     RemoveRecent,
     ClearRecent,
     ClearResumeHistory,
+    RemoveResume,
     AddFavorite,
     RemoveFavorite,
     ClearFavorites,

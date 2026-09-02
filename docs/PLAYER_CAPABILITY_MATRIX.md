@@ -89,7 +89,7 @@ subtitles to UI text.
 | Autoplay, default speed, skip intervals, resume, volume, repeat | Missing persistence. | Settings service; skip intervals Live, default speed/volume/repeat apply on next relevant media open unless live engine state is changed too. | Daily-use |
 | Hardware decode, video fit/default aspect, subtitle defaults, caching | Current engine supplies `--avcodec-hw=any` or `none`; no settings UI. | Reviewed, allowlisted VLC startup-option builder; classify each as NextOpen or Restart after smoke. | Advanced |
 | Preferred language, encoding, font, outline, background | Missing. | Settings persistence plus track/rendering prerequisite; labels cannot imply rendered subtitle parity. | Advanced |
-| Editable hotkeys | Missing; source has no keyboard shortcut handling. | Central command registry, conflict detector, persisted binding model, focus-aware dispatcher. | Advanced |
+| Editable hotkeys | Searchable, persisted command registry bindings with per-row save/reset and full-map conflict validation. | Live after save; numeric/unknown IDs and conflicts are rejected before storage; dispatch is suppressed for editors, sliders, combo boxes, menus, and other space/arrow-owning controls. | Advanced |
 | Transcoding, broadcasting, capture authoring, plugin administration, expert variable tree | Not planned. | Explicitly excluded from this roadmap. | Non-goal |
 
 ## Command inventory and proposed defaults

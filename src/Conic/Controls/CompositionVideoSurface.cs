@@ -38,7 +38,12 @@ public sealed class CompositionVideoSurface : Control, IDisposable
     private bool _reportedFirstCPUFrame;
     private bool _attached;
     private IReadOnlyList<string>? _pendingQueueSources;
-    internal IReadOnlyList<string> AudioStartupArguments { get; set; } = [];
+    private IReadOnlyList<string> _audioStartupArguments = [];
+    internal IReadOnlyList<string> AudioStartupArguments
+    {
+        get => _audioStartupArguments;
+        set => _audioStartupArguments = Array.AsReadOnly((value ?? []).ToArray());
+    }
 
     internal bool ForceUnavailableAdapterForSmoke { get; set; }
 
@@ -283,7 +288,7 @@ public sealed class CompositionVideoSurface : Control, IDisposable
 
         try
         {
-            _player = new VLCCorePlayer(audioStartupArguments: AudioStartupArguments);
+            _player = new VLCCorePlayer(audioStartupArguments: _audioStartupArguments);
             _player.StateChanged += OnEngineStateChanged;
             if (_player is IQueueTransport queue)
                 queue.QueueStateChanged += OnQueueStateChanged;

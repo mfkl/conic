@@ -12,7 +12,11 @@ public sealed class PlayerShortcutEditor
     public bool TrySave(IEnumerable<PlayerShortcut> changes, out string? error)
     {
         var effective = PlayerShortcutPolicy.Effective(_registry, _settings.Current.ShortcutOverrides).ToDictionary(x => x.Key, x => x.Value);
-        foreach (var change in changes) { if (!_registry.Commands.Any(x => x.Id == change.Command)) { error = "Unknown command."; return false; } effective[change.Command] = PlayerShortcutPolicy.Normalize(change.Gesture); }
+        foreach (var change in changes)
+        {
+            if (!PlayerShortcutPolicy.IsDefinedRegisteredCommand(_registry, change.Command)) { error = "Unknown command."; return false; }
+            effective[change.Command] = PlayerShortcutPolicy.Normalize(change.Gesture);
+        }
         if (!PlayerShortcutPolicy.TryValidate(effective.Select(x => new PlayerShortcut(x.Key, x.Value)), out error)) return false;
         var overrides = effective.Where(x => PlayerShortcutPolicy.Normalize(_registry.Commands.First(c => c.Id == x.Key).DefaultShortcut) != x.Value).ToDictionary(x => x.Key.ToString(), x => x.Value);
         _settings.Update(s => s with { ShortcutOverrides = overrides }); return true;
@@ -28,8 +32,8 @@ public static class PlayerShortcutPolicy
         var result = Defaults(registry).ToDictionary(x => x.Command, x => x.Gesture);
         if (overrides is null) return result;
         foreach (var pair in overrides)
-            if (Enum.TryParse(pair.Key, out PlayerCommandId id) && result.ContainsKey(id) && Normalize(pair.Value) is { Length: > 0 } gesture) result[id] = gesture;
-        return result;
+            if (Enum.TryParse(pair.Key, out PlayerCommandId id) && IsDefinedRegisteredCommand(registry, id) && Normalize(pair.Value) is { Length: > 0 } gesture) result[id] = gesture;
+        return new System.Collections.ObjectModel.ReadOnlyDictionary<PlayerCommandId, string>(result);
     }
 
     public static bool TryDispatch(IPlayerCommandRegistry registry, IReadOnlyDictionary<PlayerCommandId, string> active, string gesture)
@@ -63,6 +67,7 @@ public static class PlayerShortcutPolicy
         var used = new Dictionary<string, PlayerCommandId>(StringComparer.OrdinalIgnoreCase);
         foreach (PlayerShortcut shortcut in shortcuts)
         {
+            if (!Enum.IsDefined(shortcut.Command)) { error = "Unknown command."; return false; }
             string normalized = Normalize(shortcut.Gesture);
             if (normalized.Length == 0) { error = $"'{shortcut.Gesture}' is not a valid shortcut."; return false; }
             if (used.TryGetValue(normalized, out PlayerCommandId other) && other != shortcut.Command) { error = $"{normalized} is already assigned to {other}."; return false; }
@@ -74,4 +79,7 @@ public static class PlayerShortcutPolicy
     public static IReadOnlyList<PlayerShortcut> Defaults(IPlayerCommandRegistry registry) => registry.Commands
         .Where(x => !string.IsNullOrWhiteSpace(x.DefaultShortcut))
         .Select(x => new PlayerShortcut(x.Id, Normalize(x.DefaultShortcut))).ToArray();
+
+    internal static bool IsDefinedRegisteredCommand(IPlayerCommandRegistry registry, PlayerCommandId id) =>
+        Enum.IsDefined(id) && registry.Commands.Any(x => x.Id == id);
 }

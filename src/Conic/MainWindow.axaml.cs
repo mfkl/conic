@@ -125,7 +125,7 @@ public partial class MainWindow : Window
             e.Handled = true;
             return;
         }
-        if (SettingsPanel.IsVisible || e.Source is TextBox or Slider or NumericUpDown or MenuItem) return;
+        if (SettingsPanel.IsVisible || ShortcutFocusPolicy.Suppresses(e.Source)) return;
         string key = e.Key == Key.OemComma ? "," : e.Key.ToString();
         string modifiers = (e.KeyModifiers.HasFlag(KeyModifiers.Control) ? "Ctrl+" : "") + (e.KeyModifiers.HasFlag(KeyModifiers.Alt) ? "Alt+" : "") + (e.KeyModifiers.HasFlag(KeyModifiers.Shift) ? "Shift+" : "");
         string gesture = PlayerShortcutPolicy.Normalize(modifiers + key);

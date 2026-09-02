@@ -22,6 +22,7 @@ public sealed class CompositionVideoSurface : Control, IDisposable
     private readonly DispatcherTimer _frameTimer;
     private CompositionPluginBridge? _bridge;
     private IMediaEngine? _player;
+    internal IMediaEngine? Player => _player;
     private WriteableBitmap? _bitmap;
     private ICompositionGpuInterop? _GPUInterop;
     private ICompositionImportedGpuImage? _importedImage;
@@ -47,6 +48,9 @@ public sealed class CompositionVideoSurface : Control, IDisposable
     public event EventHandler<MediaEngineState>? EngineStateChanged;
     public event EventHandler<PlaybackQueueState>? QueueStateChanged;
     public event EventHandler<MediaCapabilitiesState>? MediaCapabilitiesChanged;
+    public event EventHandler<MediaInformationState>? MediaInformationChanged;
+    public MediaInformationState MediaInformation => (_player as IMediaInformationTransport)?.MediaInformation ?? MediaInformationState.Unavailable;
+    public void RefreshMediaInformation() => (_player as IMediaInformationTransport)?.RefreshMediaInformation();
     internal event Action<ulong, ulong, string>? GPUFramePresentedForSmoke;
 
     public string? MediaPath
@@ -285,6 +289,8 @@ public sealed class CompositionVideoSurface : Control, IDisposable
                 queue.QueueStateChanged += OnQueueStateChanged;
             if (_player is IMediaCapabilitiesTransport capabilities)
                 capabilities.MediaCapabilitiesChanged += OnMediaCapabilitiesChanged;
+            if (_player is IMediaInformationTransport information)
+                information.MediaInformationChanged += OnMediaInformationChanged;
             if (_pendingQueueSources is { } pending && _player is IQueueTransport pendingQueue)
             {
                 _pendingQueueSources = null;
@@ -303,6 +309,8 @@ public sealed class CompositionVideoSurface : Control, IDisposable
 
     private void OnMediaCapabilitiesChanged(object? sender, MediaCapabilitiesState state) =>
         Dispatcher.UIThread.Post(() => MediaCapabilitiesChanged?.Invoke(this, state));
+    private void OnMediaInformationChanged(object? sender, MediaInformationState state) =>
+        Dispatcher.UIThread.Post(() => MediaInformationChanged?.Invoke(this, state));
 
     private async Task PresentLatestFrameAsync()
     {

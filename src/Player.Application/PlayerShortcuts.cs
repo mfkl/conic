@@ -17,9 +17,10 @@ public static class PlayerShortcutPolicy
     public static bool TryDispatch(IPlayerCommandRegistry registry, IReadOnlyDictionary<PlayerCommandId, string> active, string gesture)
     {
         string normalized = Normalize(gesture);
-        PlayerCommandId? id = active.FirstOrDefault(x => string.Equals(x.Value, normalized, StringComparison.OrdinalIgnoreCase)).Key;
-        if (id is null || !registry.CanExecute(id.Value)) return false;
-        registry.Execute(id.Value); return true;
+        foreach (var pair in active)
+            if (string.Equals(pair.Value, normalized, StringComparison.OrdinalIgnoreCase) && registry.CanExecute(pair.Key))
+            { registry.Execute(pair.Key); return true; }
+        return false;
     }
     public static string Normalize(string? gesture)
     {

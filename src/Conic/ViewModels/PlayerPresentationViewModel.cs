@@ -43,6 +43,8 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
     private readonly Action<string>? _diagnostic;
     private readonly IQueueTransport? _queue;
     private readonly IMediaCapabilitiesTransport? _mediaControls;
+    private readonly IMediaInformationTransport? _mediaInformationTransport;
+    private readonly IClipboardService? _clipboard;
     private readonly MediaSourceExpander _sourceExpander;
     private PlaybackQueueState _queueState = PlaybackQueueState.Initial;
     private bool _isQueueOpen;
@@ -50,6 +52,8 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
     private bool _isUpdatingCapabilities;
     private string _drawerTab = "Queue";
     private string _mediaControlsNotice = string.Empty;
+    private MediaInformationState _mediaInformation = MediaInformationState.Unavailable;
+    private string _copyStatus = string.Empty;
 
     public PlayerPresentationViewModel(
         IPlayerTransport transport,
@@ -62,7 +66,7 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
         MediaHistoryService? history = null,
         Func<DateTimeOffset>? clock = null,
         Action<string>? diagnostic = null,
-        Action? showUrlPanel = null)
+        Action? showUrlPanel = null, IClipboardService? clipboard = null)
     {
         _transport = transport;
         _mediaSourcePicker = mediaSourcePicker;
@@ -72,11 +76,14 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
         _history = history;
         _clock = clock ?? (() => DateTimeOffset.UtcNow);
         _diagnostic = diagnostic;
+        _clipboard = clipboard;
         _queue = transport as IQueueTransport;
         _mediaControls = transport as IMediaCapabilitiesTransport;
+        _mediaInformationTransport = transport as IMediaInformationTransport;
         _sourceExpander = new MediaSourceExpander(_sourceValidator);
         if (_queue is not null) { _queueState = _queue.QueueState; _queue.QueueStateChanged += (_, state) => ApplyQueueState(state); }
         if (_mediaControls is not null) { _mediaCapabilities = _mediaControls.MediaCapabilities; _mediaControls.MediaCapabilitiesChanged += (_, state) => ApplyMediaCapabilities(state); }
+        if (_mediaInformationTransport is not null) { _mediaInformation = _mediaInformationTransport.MediaInformation; _mediaInformationTransport.MediaInformationChanged += (_, state) => { if (state.QueueGeneration > _mediaInformation.QueueGeneration || (state.QueueGeneration == _mediaInformation.QueueGeneration && state.MediaGeneration >= _mediaInformation.MediaGeneration)) { MediaInformation = state; OnPropertyChanged(nameof(MediaInformation)); } }; }
         if (_settings is not null) _settings.Changed += (_, updated) =>
         {
             TryHistory(() => { if (!updated.RememberRecentMedia) _history?.ClearRecent(); if (!updated.RememberResumeHistory) _history?.ClearResume(); });
@@ -131,7 +138,7 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
         registry.Register(new(PlayerCommandId.ResetSubtitleDelay, "Reset subtitle delay", "Subtitles"), _ => _mediaControls?.ResetDelay(MediaTrackKind.Subtitle), _ => CanAdjustDelays);
         registry.Register(new(PlayerCommandId.AttachExternalAudio, "Add external audio", "Audio"), _ => _ = AttachExternalTrackAsync(MediaTrackKind.Audio), _ => _mediaControls is not null && _mediaSourcePicker is IExternalTrackPicker);
         registry.Register(new(PlayerCommandId.AttachExternalSubtitle, "Add external subtitle", "Subtitles"), _ => _ = AttachExternalTrackAsync(MediaTrackKind.Subtitle), _ => _mediaControls is not null && _mediaSourcePicker is IExternalTrackPicker);
-        registry.Register(new(PlayerCommandId.MediaInformation, "Media information", "Media", "Ctrl+I"), _ => { DrawerTab = "Audio"; IsQueueOpen = true; MediaControlsNotice = "Codec stream details are unavailable through this engine ABI. Media metadata is refreshed only for the current generation."; OnPropertyChanged(nameof(HasMediaControlsNotice)); }, _ => _mediaControls is not null);
+        registry.Register(new(PlayerCommandId.MediaInformation, "Media information", "Media", "Ctrl+I"), _ => { DrawerTab = "Information"; IsQueueOpen = true; _mediaInformationTransport?.RefreshMediaInformation(); }, _ => _mediaInformationTransport is not null);
         registry.Register(new(PlayerCommandId.Snapshot, "Take snapshot", "Video", "Shift+S"), _ => { MediaControlsNotice = "Snapshot unavailable: the internal engine has no safe fixed held-vout binding. No file was created."; OnPropertyChanged(nameof(HasMediaControlsNotice)); }, _ => _mediaControls is not null);
 
         OpenMediaCommand = new RegistryCommand(registry, PlayerCommandId.OpenMedia);
@@ -177,6 +184,7 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
         AttachExternalAudioCommand = new RegistryCommand(registry, PlayerCommandId.AttachExternalAudio);
         AttachExternalSubtitleCommand = new RegistryCommand(registry, PlayerCommandId.AttachExternalSubtitle);
         MediaInformationCommand = new RegistryCommand(registry, PlayerCommandId.MediaInformation);
+        CopyDiagnosticsCommand = new RelayCommand(_ => { string text = MediaDiagnostics.Build(MediaInformation); string? error = "clipboard unavailable"; bool copied = _clipboard is not null && _clipboard.TrySetText(text, out error); CopyStatus = copied ? "Diagnostics copied." : "Could not copy diagnostics: " + error; OnPropertyChanged(nameof(HasCopyStatus)); });
         SnapshotCommand = new RegistryCommand(registry, PlayerCommandId.Snapshot);
     }
 
@@ -224,6 +232,7 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
     public ICommand AttachExternalAudioCommand { get; }
     public ICommand AttachExternalSubtitleCommand { get; }
     public ICommand MediaInformationCommand { get; }
+    public ICommand CopyDiagnosticsCommand { get; }
     public ICommand SnapshotCommand { get; }
     public string SkipBackwardLabel => $"−{_settings?.Current.SkipBackwardSeconds ?? 10}";
     public string SkipForwardLabel => $"+{_settings?.Current.SkipForwardSeconds ?? 10}";
@@ -335,6 +344,10 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
     public bool IsAudioTab => DrawerTab == "Audio";
     public bool IsSubtitleTab => DrawerTab == "Subtitles";
     public bool IsChapterTab => DrawerTab == "Chapters";
+    public bool IsInformationTab => DrawerTab == "Information";
+    public MediaInformationState MediaInformation { get => _mediaInformation; private set => Set(ref _mediaInformation, value); }
+    public string CopyStatus { get => _copyStatus; private set => Set(ref _copyStatus, value); }
+    public bool HasCopyStatus => !string.IsNullOrWhiteSpace(CopyStatus);
     public bool CanAdjustDelays => _mediaControls is not null && MediaCapabilities.Status is MediaCapabilityLoadState.Ready or MediaCapabilityLoadState.Empty;
     public int AudioDelayMilliseconds
     {

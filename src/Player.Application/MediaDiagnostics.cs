@@ -1,11 +1,18 @@
 namespace Player.Application;
 
-public sealed record MediaInformationState(long Generation, string Name, IReadOnlyDictionary<string, string> Metadata, string Status, string? Error = null)
+public enum MediaInformationLoadState { Unavailable, Loading, Ready, Empty, Stale, Failed }
+public sealed record MediaInformationState(long QueueGeneration, long MediaGeneration, MediaInformationLoadState Status, string Name, IReadOnlyDictionary<string, string> Metadata, string? Error = null)
 {
-    public static MediaInformationState Unavailable { get; } = new(0, "", new Dictionary<string, string>(), "Unavailable");
+    public static MediaInformationState Unavailable { get; } = new(0, 0, MediaInformationLoadState.Unavailable, "", new Dictionary<string, string>());
 }
 
 public interface IClipboardService { bool TrySetText(string text, out string? error); }
+public interface IMediaInformationTransport
+{
+    MediaInformationState MediaInformation { get; }
+    event EventHandler<MediaInformationState>? MediaInformationChanged;
+    void RefreshMediaInformation();
+}
 
 public static class MediaDiagnostics
 {

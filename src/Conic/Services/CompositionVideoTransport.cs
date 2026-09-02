@@ -3,7 +3,7 @@ using Conic.Controls;
 
 namespace Conic.Services;
 
-internal sealed class CompositionVideoTransport : IPlayerTransport, IQueueTransport, IMediaCapabilitiesTransport
+internal sealed class CompositionVideoTransport : IPlayerTransport, IQueueTransport, IMediaCapabilitiesTransport, IMediaInformationTransport
 {
     private readonly CompositionVideoSurface _surface;
     public CompositionVideoTransport(CompositionVideoSurface surface)
@@ -11,11 +11,15 @@ internal sealed class CompositionVideoTransport : IPlayerTransport, IQueueTransp
         _surface = surface;
         _surface.QueueStateChanged += (_, state) => QueueStateChanged?.Invoke(this, state);
         _surface.MediaCapabilitiesChanged += (_, state) => MediaCapabilitiesChanged?.Invoke(this, state);
+        _surface.MediaInformationChanged += (_, state) => MediaInformationChanged?.Invoke(this, state);
     }
     public PlaybackQueueState QueueState => _surface.QueueState;
     public event EventHandler<PlaybackQueueState>? QueueStateChanged;
     public MediaCapabilitiesState MediaCapabilities => _surface.MediaCapabilities;
     public event EventHandler<MediaCapabilitiesState>? MediaCapabilitiesChanged;
+    public MediaInformationState MediaInformation => _surface.MediaInformation;
+    public event EventHandler<MediaInformationState>? MediaInformationChanged;
+    public void RefreshMediaInformation() => _surface.RefreshMediaInformation();
     public void Open(string source) => _surface.MediaPath = source;
 
     public void TogglePause() => _surface.TogglePause();

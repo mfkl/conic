@@ -152,6 +152,7 @@ public partial class MainWindow : Window
 
     private void OpenSettings()
     {
+        CloseRightDrawers();
         OpenMenu.IsVisible = false;
         UrlPanel.IsVisible = false;
         ClearRecentPrompt.IsVisible = false;
@@ -172,6 +173,7 @@ public partial class MainWindow : Window
     private void OnOpenOptions(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
         bool open = !OpenMenu.IsVisible;
+        if (open) CloseRightDrawers();
         UrlPanel.IsVisible = false;
         ClearRecentPrompt.IsVisible = false;
         OpenMenu.IsVisible = open;
@@ -182,6 +184,7 @@ public partial class MainWindow : Window
 
     private void ShowUrlPanel()
     {
+        CloseRightDrawers();
         OpenMenu.IsVisible = false;
         ClearRecentPrompt.IsVisible = false;
         UrlPanel.IsVisible = true;
@@ -281,7 +284,7 @@ public partial class MainWindow : Window
     {
         ClearLibraryButton.IsVisible = false;
         ClearLibraryPrompt.IsVisible = true;
-        Dispatcher.UIThread.Post(() => ClearLibraryPrompt.Focus());
+        Dispatcher.UIThread.Post(() => CancelClearLibraryButton.Focus());
     }
     private void OnCancelClearLibrary(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
@@ -339,6 +342,14 @@ public partial class MainWindow : Window
         }
         if (e.PropertyName == nameof(PlayerPresentationViewModel.IsLibraryOpen))
         {
+            if (_presentation.IsLibraryOpen)
+            {
+                OpenMenu.IsVisible = false;
+                UrlPanel.IsVisible = false;
+                ClearRecentPrompt.IsVisible = false;
+                SettingsPanel.IsVisible = false;
+                UpdateOpenErrorSurface();
+            }
             SetChromeVisibility(true);
             _autoHideTimer.Stop();
             Dispatcher.UIThread.Post(() => { if (_presentation.IsLibraryOpen) LibraryRecentTab.Focus(); else LibraryButton.Focus(); });
@@ -355,6 +366,7 @@ public partial class MainWindow : Window
     {
         if (_presentation.HasPendingResume)
         {
+            CloseRightDrawers();
             OpenMenu.IsVisible = false;
             UrlPanel.IsVisible = false;
             ClearRecentPrompt.IsVisible = false;
@@ -369,6 +381,12 @@ public partial class MainWindow : Window
             UpdateOpenErrorSurface();
             if (_presentation.IsFullscreen) { _autoHideTimer.Stop(); _autoHideTimer.Start(); }
         }
+    }
+
+    private void CloseRightDrawers()
+    {
+        _presentation.IsQueueOpen = false;
+        _presentation.IsLibraryOpen = false;
     }
 
     private void UpdateHistorySettingsControls()
@@ -572,8 +590,10 @@ public partial class MainWindow : Window
                 Console.WriteLine($"[layout-smoke] phase={phase} width={width}");
                 switch (phase)
                 {
-                    case 0: ValidateLayout(width, compact); ValidateTopChrome(width); _presentation.IsLibraryOpen = true; phase = 30; return;
-                    case 30: ValidateLibraryDrawer(width); _presentation.IsLibraryOpen = false; ShowOpenMenuForSmoke(); _presentation.IsQueueOpen = true; phase = 1; return;
+                    case 0: ValidateLayout(width, compact); ValidateTopChrome(width); OpenMenu.IsVisible = true; UrlPanel.IsVisible = true; SettingsPanel.IsVisible = true; _presentation.IsQueueOpen = true; _presentation.IsLibraryOpen = true; phase = 30; return;
+                    case 30: ValidateLibraryDrawer(width); ClearLibraryButton.IsEnabled = true; OnClearLibrary(null, new Avalonia.Interactivity.RoutedEventArgs()); phase = 32; return;
+                    case 32: ValidateSurface("library-clear-prompt", ClearLibraryPrompt, [ClearLibraryPrompt, CancelClearLibraryButton]); OnCancelClearLibrary(null, new Avalonia.Interactivity.RoutedEventArgs()); phase = 33; return;
+                    case 33: if (!ClearLibraryButton.IsVisible) throw new InvalidOperationException("[layout-smoke] FAIL library clear focus restoration"); _presentation.IsLibraryOpen = false; ShowOpenMenuForSmoke(); _presentation.IsQueueOpen = true; phase = 1; return;
                     case 1: ValidateQueueDrawer(width); _presentation.DrawerTab = "Audio"; phase = 20; return;
                     case 20: ValidateMediaDrawer(width); _presentation.IsQueueOpen = false; ValidateSurface("open-menu", OpenMenu, [OpenMenu, OpenFolderAction, RecentEmptyState]); CloseOpenMenu(); ShowUrlPanel(); phase = 2; return;
                     case 2: ValidateSurface("url-panel", UrlPanel, [UrlPanel, UrlTextBox, UrlCancelButton, UrlSubmitButton]); CloseUrlPanel(); ResumePanel.IsVisible = true; Dispatcher.UIThread.Post(() => ResumeAction.Focus()); phase++; return;
@@ -584,7 +604,7 @@ public partial class MainWindow : Window
                     case 7: ValidateSettingsControl("resume-clear", SettingsClearResumeButton); SettingsClearResumePrompt.IsVisible = true; BringSettingsControlIntoView(SettingsConfirmClearResumeButton); phase++; return;
                     case 8: ValidateSettingsControl("resume-confirm", SettingsConfirmClearResumeButton); SettingsClearResumePrompt.IsVisible = false; CloseSettings(); OpenErrorToast.IsVisible = true; phase++; return;
                     case 9: ValidateToastForSmoke(); OpenErrorToast.IsVisible = false; Width = 480; phase++; return;
-                    case 10: ApplyResponsiveChrome(); ApplyResponsiveSettings(); ValidateLayout(width, true); ValidateTopChrome(width); _presentation.IsLibraryOpen = true; phase = 31; return;
+                    case 10: ApplyResponsiveChrome(); ApplyResponsiveSettings(); ValidateLayout(width, true); ValidateTopChrome(width); OpenMenu.IsVisible = true; UrlPanel.IsVisible = true; SettingsPanel.IsVisible = true; _presentation.IsQueueOpen = true; _presentation.IsLibraryOpen = true; phase = 31; return;
                     case 31: ValidateLibraryDrawer(width); _presentation.IsLibraryOpen = false; ShowOpenMenuForSmoke(); _presentation.IsQueueOpen = true; phase = 11; return;
                     case 11: ValidateQueueDrawer(width); _presentation.DrawerTab = "Audio"; phase = 21; return;
                     case 21: ValidateMediaDrawer(width); _presentation.IsQueueOpen = false; ValidateSurface("open-menu", OpenMenu, [OpenMenu, OpenFolderAction, RecentEmptyState]); CloseOpenMenu(); ShowUrlPanel(); phase = 12; return;
@@ -661,8 +681,9 @@ public partial class MainWindow : Window
     private void ValidateLibraryDrawer(double width)
     {
         bool contained = IsContained(LibraryPanel) && LibraryPanel.IsVisible && LibraryPanel.Bounds.Width > 0 && LibraryPanel.Bounds.Width <= Math.Max(430, width - 32);
-        Console.WriteLine($"[layout-smoke] library-drawer width={width} bounds={LibraryPanel.Bounds} contained={contained}");
-        if (!contained) throw new InvalidOperationException("[layout-smoke] FAIL library drawer bounds");
+        bool exclusive = !QueueDrawer.IsVisible && !OpenMenu.IsVisible && !UrlPanel.IsVisible && !SettingsPanel.IsVisible && !ResumePanel.IsVisible;
+        Console.WriteLine($"[layout-smoke] library-drawer width={width} bounds={LibraryPanel.Bounds} contained={contained} exclusive={exclusive}");
+        if (!contained || !exclusive) throw new InvalidOperationException("[layout-smoke] FAIL library drawer bounds or overlay exclusivity");
     }
 
     private void ValidateMediaDrawer(double width)

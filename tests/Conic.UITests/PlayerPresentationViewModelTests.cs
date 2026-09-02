@@ -574,6 +574,10 @@ public sealed class PlayerPresentationViewModelTests
         Assert.True(vm.HasLibraryItems);
         Assert.True(vm.IsCurrentFavorite);
         Assert.True(vm.ClearLibraryCommand.CanExecute(null));
+        Assert.True(vm.RemoveResumeCommand.CanExecute("b.mp4"));
+        Assert.False(vm.RemoveResumeCommand.CanExecute(null));
+        vm.Registry.Execute(PlayerCommandId.RemoveResume, "b.mp4");
+        Assert.False(vm.HasResumeItems);
         vm.Registry.Execute(PlayerCommandId.ClearLibrary);
 
         Assert.False(vm.HasLibraryItems);
@@ -584,7 +588,7 @@ public sealed class PlayerPresentationViewModelTests
     }
 
     [Fact]
-    public void SuspendResumeBoundaryPersistsPositionAndAReopenedGenerationDoesNotReuseItAsLiveState()
+    public void ClosingAndReopenBoundaryPersistsPositionAndDoesNotReuseItAsLiveState()
     {
         HistoryStorage storage = new();
         MediaHistoryService history = new(storage);
@@ -592,7 +596,7 @@ public sealed class PlayerPresentationViewModelTests
         vm.OpenSource("a.mp4", MediaSourceKind.File);
         vm.ApplyEngineState(State(.4, PlaybackStatus.Playing, true) with { Generation = 1, Source = "a.mp4" });
 
-        vm.OnClosing(); // The deterministic desktop suspend/shutdown boundary.
+        vm.OnClosing(); // The deterministic close/reopen boundary; this is not an OS suspend simulation.
         vm.OpenSource("a.mp4", MediaSourceKind.File);
         vm.ApplyEngineState(State(.1, PlaybackStatus.Opening, true) with { Generation = 2, Source = "a.mp4" });
 
@@ -600,6 +604,21 @@ public sealed class PlayerPresentationViewModelTests
         Assert.False(vm.HasPendingResume);
         vm.ApplyEngineState(State(.1, PlaybackStatus.Playing, true) with { Generation = 2, Source = "a.mp4" });
         Assert.True(vm.HasPendingResume);
+    }
+
+    [Fact]
+    public void LibraryAndPlaybackDrawersAreMutuallyExclusive()
+    {
+        PlayerPresentationViewModel vm = CreateViewModel(new RecordingTransport());
+
+        vm.IsQueueOpen = true;
+        vm.IsLibraryOpen = true;
+        Assert.True(vm.IsLibraryOpen);
+        Assert.False(vm.IsQueueOpen);
+
+        vm.IsQueueOpen = true;
+        Assert.True(vm.IsQueueOpen);
+        Assert.False(vm.IsLibraryOpen);
     }
 
     private static PlayerPresentationViewModel CreateOpeningViewModel(IPlayerTransport transport, MediaHistoryService? history = null) => new(transport, new EmptyPicker(), () => { }, sourceValidator: new MediaSourceValidator(new ExistingFiles()), history: history);

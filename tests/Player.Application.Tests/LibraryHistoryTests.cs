@@ -42,6 +42,24 @@ public sealed class LibraryHistoryTests
         Assert.Contains("\"Version\": 2", storage.Content);
     }
 
+    [Fact]
+    public void MalformedVersionTwoEntriesAreDiscardedAndPersistedAsNormalizedHistory()
+    {
+        MemoryStorage storage = new()
+        {
+            Content = "{\"Version\":2,\"Recent\":[{\"Source\":null,\"DisplayName\":\"bad\",\"LastOpenedUtc\":\"1970-01-01T00:00:00+00:00\"},{\"Source\":\"good.mp4\",\"DisplayName\":\"good\",\"LastOpenedUtc\":\"1970-01-01T00:00:00+00:00\"}],\"Resume\":[{\"Source\":\"\",\"Position\":\"00:00:40\",\"Duration\":\"00:01:00\",\"UpdatedUtc\":\"1970-01-01T00:00:00+00:00\"},{\"Source\":\"good.mp4\",\"Position\":\"00:00:40\",\"Duration\":\"00:01:00\",\"UpdatedUtc\":\"1970-01-01T00:00:00+00:00\"}],\"Favorites\":[{\"Source\":null,\"DisplayName\":null,\"AddedUtc\":\"1970-01-01T00:00:00+00:00\"},{\"Source\":\"favorite.mp4\",\"DisplayName\":\"favorite\",\"AddedUtc\":\"1970-01-01T00:00:00+00:00\"}]}"
+        };
+        MediaHistoryService history = new(storage);
+
+        history.Load();
+
+        Assert.Null(history.LoadDiagnostic);
+        Assert.Equal("good.mp4", Assert.Single(history.Recent).Source);
+        Assert.Equal("good.mp4", Assert.Single(history.Resume).Source);
+        Assert.Equal("favorite.mp4", Assert.Single(history.Favorites).Source);
+        Assert.DoesNotContain("\"Source\": null", storage.Content);
+    }
+
     private sealed class MemoryStorage : IMediaHistoryStorage
     {
         public string? Content { get; set; }

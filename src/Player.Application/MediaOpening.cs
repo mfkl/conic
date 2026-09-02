@@ -110,7 +110,8 @@ public sealed class MediaHistoryService(IMediaHistoryStorage storage, Func<DateT
             MediaHistoryDocument? parsed = JsonSerializer.Deserialize<MediaHistoryDocument>(raw, Options);
             if (parsed is null || parsed.Version is < 1 or > MediaHistoryDocument.CurrentVersion) throw new JsonException("Unsupported media history version.");
             _document = Normalize(parsed);
-            if (parsed.Version != MediaHistoryDocument.CurrentVersion) Save(_document);
+            // Persist the normalized v2 shape as well: malformed entries must not linger in user JSON.
+            Save(_document);
             LoadDiagnostic = null;
         }
         catch (JsonException) { try { storage.PreserveInvalid(raw); storage.WriteAtomically(JsonSerializer.Serialize(MediaHistoryDocument.Empty, Options)); } catch (Exception e) when (e is IOException or UnauthorizedAccessException) { } _document = MediaHistoryDocument.Empty; LoadDiagnostic = "Media history was invalid and has been reset."; }
@@ -170,9 +171,18 @@ public sealed class MediaHistoryService(IMediaHistoryStorage storage, Func<DateT
     private void Save(MediaHistoryDocument document) { storage.WriteAtomically(JsonSerializer.Serialize(document, Options)); _document = document; }
     private static MediaHistoryDocument Normalize(MediaHistoryDocument value)
     {
-        List<RecentMediaEntry> recent = (value.Recent ?? []).GroupBy(x => KeyFromCanonicalSource(x.Source), StringComparer.Ordinal).Select(x => x.OrderByDescending(y => y.LastOpenedUtc).First()).OrderByDescending(x => x.LastOpenedUtc).Take(50).ToList();
-        List<ResumeEntry> resume = (value.Resume ?? []).GroupBy(x => KeyFromCanonicalSource(x.Source), StringComparer.Ordinal).Select(x => x.OrderByDescending(y => y.UpdatedUtc).First()).OrderByDescending(x => x.UpdatedUtc).Take(50).ToList();
-        List<FavoriteMediaEntry> favorites = (value.Favorites ?? []).GroupBy(x => KeyFromCanonicalSource(x.Source), StringComparer.Ordinal).Select(x => x.OrderByDescending(y => y.AddedUtc).First()).OrderByDescending(x => x.AddedUtc).Take(50).ToList();
+        List<RecentMediaEntry> recent = (value.Recent ?? [])
+            .Where(x => x is not null && !string.IsNullOrWhiteSpace(x.Source) && !string.IsNullOrWhiteSpace(x.DisplayName))
+            .Select(x => x with { Source = x.Source.Trim(), DisplayName = x.DisplayName.Trim() })
+            .GroupBy(x => KeyFromCanonicalSource(x.Source), StringComparer.Ordinal).Select(x => x.OrderByDescending(y => y.LastOpenedUtc).First()).OrderByDescending(x => x.LastOpenedUtc).Take(50).ToList();
+        List<ResumeEntry> resume = (value.Resume ?? [])
+            .Where(x => x is not null && !string.IsNullOrWhiteSpace(x.Source) && x.Position >= TimeSpan.Zero && x.Duration > TimeSpan.Zero && x.Position < x.Duration)
+            .Select(x => x with { Source = x.Source.Trim() })
+            .GroupBy(x => KeyFromCanonicalSource(x.Source), StringComparer.Ordinal).Select(x => x.OrderByDescending(y => y.UpdatedUtc).First()).OrderByDescending(x => x.UpdatedUtc).Take(50).ToList();
+        List<FavoriteMediaEntry> favorites = (value.Favorites ?? [])
+            .Where(x => x is not null && !string.IsNullOrWhiteSpace(x.Source) && !string.IsNullOrWhiteSpace(x.DisplayName))
+            .Select(x => x with { Source = x.Source.Trim(), DisplayName = x.DisplayName.Trim() })
+            .GroupBy(x => KeyFromCanonicalSource(x.Source), StringComparer.Ordinal).Select(x => x.OrderByDescending(y => y.AddedUtc).First()).OrderByDescending(x => x.AddedUtc).Take(50).ToList();
         return new(MediaHistoryDocument.CurrentVersion, recent, resume, favorites);
     }
 }

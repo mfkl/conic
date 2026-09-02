@@ -74,7 +74,7 @@ public partial class MainWindow : Window
         };
     }
 
-    private static IReadOnlyList<string> ToAudioArguments(PlayerSettings settings) => new VLCAudioStartupOptions(
+    internal static IReadOnlyList<string> ToAudioArguments(PlayerSettings settings) => new VLCAudioStartupOptions(
         settings.AudioOutputModule == "Default" ? null : settings.AudioOutputModule,
         settings.NormalizationMaximumLevel is double level ? (float)level : null,
         settings.AudioPassthrough).ToArguments();

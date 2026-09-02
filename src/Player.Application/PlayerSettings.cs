@@ -147,7 +147,7 @@ public sealed class PlayerSettingsService
         if (shortcuts is null) return null;
         var result = new Dictionary<string, string>(StringComparer.Ordinal);
         foreach (var pair in shortcuts)
-            if (Enum.TryParse<PlayerCommandId>(pair.Key, out PlayerCommandId command) && Enum.IsDefined(command) && PlayerShortcutPolicy.Normalize(pair.Value) is { Length: > 0 } gesture && !result.Values.Contains(gesture, StringComparer.OrdinalIgnoreCase)) result[command.ToString()] = gesture;
-        return result;
+            if (PlayerShortcutPolicy.TryParseNamedCommand(pair.Key, out PlayerCommandId command) && PlayerShortcutPolicy.Normalize(pair.Value) is { Length: > 0 } gesture && !result.Values.Contains(gesture, StringComparer.OrdinalIgnoreCase)) result[command.ToString()] = gesture;
+        return new System.Collections.ObjectModel.ReadOnlyDictionary<string, string>(result);
     }
 }

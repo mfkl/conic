@@ -1,5 +1,7 @@
 using Player.Application;
 using VLCAvalonia.ViewModels;
+using VLCAvalonia;
+using Avalonia.Controls;
 using Xunit;
 
 namespace VLCAvalonia.UITests;
@@ -56,6 +58,34 @@ public sealed class SettingsViewModelTests
         Assert.True(viewModel.ConfirmReset);
         Assert.Contains("could not be reset", viewModel.ErrorMessage);
         Assert.Equal(PlayerSettings.Default, service.Current);
+    }
+
+    [Fact]
+    public void HotkeyRowsKeepPendingEditsDuringSearchAndRefreshAfterSaveOrReset()
+    {
+        PlayerSettingsService service = new(new MemoryStorage());
+        PlayerCommandRegistry registry = new();
+        registry.Register(new(PlayerCommandId.OpenMedia, "Open media", "Media", "Ctrl+O"), _ => { });
+        registry.Register(new(PlayerCommandId.OpenSettings, "Settings", "General", "Ctrl+,"), _ => { });
+        SettingsViewModel viewModel = new(service, registry);
+        ShortcutRow row = Assert.Single(viewModel.EditableShortcutRows, x => x.Command == PlayerCommandId.OpenMedia);
+        row.PendingGesture = "Ctrl+M";
+        viewModel.ShortcutSearch = "open";
+        Assert.Same(row, Assert.Single(viewModel.EditableShortcutRows));
+        Assert.Equal("Ctrl+M", row.PendingGesture);
+        Assert.True(viewModel.SaveShortcut(row));
+        Assert.Equal("Ctrl+M", Assert.Single(viewModel.EditableShortcutRows).PendingGesture);
+        viewModel.ResetShortcut(PlayerCommandId.OpenMedia);
+        Assert.Equal("Ctrl+O", Assert.Single(viewModel.EditableShortcutRows).PendingGesture);
+    }
+
+    [Fact]
+    public void ShortcutFocusPolicyProtectsInteractiveEditors()
+    {
+        Assert.True(ShortcutFocusPolicy.Suppresses(new TextBox()));
+        Assert.True(ShortcutFocusPolicy.Suppresses(new Slider()));
+        Assert.True(ShortcutFocusPolicy.Suppresses(new ComboBox()));
+        Assert.False(ShortcutFocusPolicy.Suppresses(null));
     }
 
     private static SettingsViewModel Create(out PlayerSettingsService service)

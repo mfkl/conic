@@ -142,12 +142,12 @@ public sealed class PlayerSettingsService
         ShortcutOverrides = NormalizeShortcuts(value.ShortcutOverrides),
     };
 
-    private static IReadOnlyDictionary<string, string> NormalizeShortcuts(IReadOnlyDictionary<string, string>? shortcuts)
+    private static IReadOnlyDictionary<string, string>? NormalizeShortcuts(IReadOnlyDictionary<string, string>? shortcuts)
     {
-        if (shortcuts is null) return new Dictionary<string, string>(StringComparer.Ordinal);
+        if (shortcuts is null) return null;
         var result = new Dictionary<string, string>(StringComparer.Ordinal);
         foreach (var pair in shortcuts)
-            if (Enum.TryParse<PlayerCommandId>(pair.Key, out _) && PlayerShortcutPolicy.Normalize(pair.Value) is { Length: > 0 } gesture && !result.Values.Contains(gesture, StringComparer.OrdinalIgnoreCase)) result[pair.Key] = gesture;
+            if (Enum.TryParse<PlayerCommandId>(pair.Key, out PlayerCommandId command) && Enum.IsDefined(command) && PlayerShortcutPolicy.Normalize(pair.Value) is { Length: > 0 } gesture && !result.Values.Contains(gesture, StringComparer.OrdinalIgnoreCase)) result[command.ToString()] = gesture;
         return result;
     }
 }

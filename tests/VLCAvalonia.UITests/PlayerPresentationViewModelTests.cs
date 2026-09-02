@@ -559,6 +559,49 @@ public sealed class PlayerPresentationViewModelTests
         return await File.ReadAllTextAsync(path);
     }
 
+    [Fact]
+    public void LibraryCommandsExposeExplicitFavoritesAndClearEveryStoredSection()
+    {
+        HistoryStorage storage = new();
+        MediaHistoryService history = new(storage);
+        PlayerPresentationViewModel vm = CreateOpeningViewModel(new RecordingTransport(), history);
+        vm.OpenSource("a.mp4", MediaSourceKind.File);
+        vm.Registry.Execute(PlayerCommandId.AddFavorite);
+        history.RecordOpened(new("b.mp4", MediaSourceKind.File, "b"), true);
+        history.Checkpoint(new("b.mp4", MediaSourceKind.File, "b"), TimeSpan.FromSeconds(40), TimeSpan.FromSeconds(100), true, 30, 20);
+
+        Assert.True(vm.HasFavoriteItems);
+        Assert.True(vm.HasLibraryItems);
+        Assert.True(vm.IsCurrentFavorite);
+        Assert.True(vm.ClearLibraryCommand.CanExecute(null));
+        vm.Registry.Execute(PlayerCommandId.ClearLibrary);
+
+        Assert.False(vm.HasLibraryItems);
+        Assert.False(vm.IsCurrentFavorite);
+        Assert.Empty(history.Recent);
+        Assert.Empty(history.Resume);
+        Assert.Empty(history.Favorites);
+    }
+
+    [Fact]
+    public void SuspendResumeBoundaryPersistsPositionAndAReopenedGenerationDoesNotReuseItAsLiveState()
+    {
+        HistoryStorage storage = new();
+        MediaHistoryService history = new(storage);
+        PlayerPresentationViewModel vm = CreateOpeningViewModel(new RecordingTransport(), history);
+        vm.OpenSource("a.mp4", MediaSourceKind.File);
+        vm.ApplyEngineState(State(.4, PlaybackStatus.Playing, true) with { Generation = 1, Source = "a.mp4" });
+
+        vm.OnClosing(); // The deterministic desktop suspend/shutdown boundary.
+        vm.OpenSource("a.mp4", MediaSourceKind.File);
+        vm.ApplyEngineState(State(.1, PlaybackStatus.Opening, true) with { Generation = 2, Source = "a.mp4" });
+
+        Assert.NotNull(history.FindResume(new("a.mp4", MediaSourceKind.File, "a")));
+        Assert.False(vm.HasPendingResume);
+        vm.ApplyEngineState(State(.1, PlaybackStatus.Playing, true) with { Generation = 2, Source = "a.mp4" });
+        Assert.True(vm.HasPendingResume);
+    }
+
     private static PlayerPresentationViewModel CreateOpeningViewModel(IPlayerTransport transport, MediaHistoryService? history = null) => new(transport, new EmptyPicker(), () => { }, sourceValidator: new MediaSourceValidator(new ExistingFiles()), history: history);
     private static MediaHistoryService SeedHistory()
     {

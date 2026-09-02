@@ -81,10 +81,12 @@ public static class MediaEngineSourceNormalizer
 
 public sealed record RecentMediaEntry(string Source, string DisplayName, DateTimeOffset LastOpenedUtc);
 public sealed record ResumeEntry(string Source, TimeSpan Position, TimeSpan Duration, DateTimeOffset UpdatedUtc);
-public sealed record MediaHistoryDocument(int Version, List<RecentMediaEntry> Recent, List<ResumeEntry> Resume)
+/// <summary>An explicit user-curated library entry. The player never scans folders to create these.</summary>
+public sealed record FavoriteMediaEntry(string Source, string DisplayName, DateTimeOffset AddedUtc);
+public sealed record MediaHistoryDocument(int Version, List<RecentMediaEntry> Recent, List<ResumeEntry> Resume, List<FavoriteMediaEntry>? Favorites = null)
 {
-    public const int CurrentVersion = 1;
-    public static MediaHistoryDocument Empty { get; } = new(CurrentVersion, [], []);
+    public const int CurrentVersion = 2;
+    public static MediaHistoryDocument Empty { get; } = new(CurrentVersion, [], [], []);
 }
 public interface IMediaHistoryStorage { string? Read(); void WriteAtomically(string content); void PreserveInvalid(string content) { } }
 
@@ -95,6 +97,7 @@ public sealed class MediaHistoryService(IMediaHistoryStorage storage, Func<DateT
     private MediaHistoryDocument _document = MediaHistoryDocument.Empty;
     public IReadOnlyList<RecentMediaEntry> Recent => _document.Recent;
     public IReadOnlyList<ResumeEntry> Resume => _document.Resume;
+    public IReadOnlyList<FavoriteMediaEntry> Favorites => _document.Favorites ?? [];
     public string? LoadDiagnostic { get; private set; }
     public void Load()
     {
@@ -105,8 +108,10 @@ public sealed class MediaHistoryService(IMediaHistoryStorage storage, Func<DateT
         try
         {
             MediaHistoryDocument? parsed = JsonSerializer.Deserialize<MediaHistoryDocument>(raw, Options);
-            if (parsed is null || parsed.Version != MediaHistoryDocument.CurrentVersion) throw new JsonException("Unsupported media history version.");
-            _document = Normalize(parsed); LoadDiagnostic = null;
+            if (parsed is null || parsed.Version is < 1 or > MediaHistoryDocument.CurrentVersion) throw new JsonException("Unsupported media history version.");
+            _document = Normalize(parsed);
+            if (parsed.Version != MediaHistoryDocument.CurrentVersion) Save(_document);
+            LoadDiagnostic = null;
         }
         catch (JsonException) { try { storage.PreserveInvalid(raw); storage.WriteAtomically(JsonSerializer.Serialize(MediaHistoryDocument.Empty, Options)); } catch (Exception e) when (e is IOException or UnauthorizedAccessException) { } _document = MediaHistoryDocument.Empty; LoadDiagnostic = "Media history was invalid and has been reset."; }
     }
@@ -136,6 +141,17 @@ public sealed class MediaHistoryService(IMediaHistoryStorage storage, Func<DateT
     public void RemoveRecent(string source) => Save(_document with { Recent = _document.Recent.Where(x => !Same(x.Source, KeyFromCanonicalSource(source))).ToList() });
     public void ClearRecent() => Save(_document with { Recent = [] });
     public void ClearResume() => Save(_document with { Resume = [] });
+    public bool IsFavorite(string source) => Favorites.Any(x => Same(x.Source, KeyFromCanonicalSource(source)));
+    public void AddFavorite(MediaSource source)
+    {
+        string key = MediaSourceValidator.Key(source);
+        List<FavoriteMediaEntry> favorites = Favorites.Where(x => !Same(x.Source, key)).ToList();
+        favorites.Insert(0, new FavoriteMediaEntry(source.CanonicalSource, source.DisplayName, _clock()));
+        Save(_document with { Favorites = favorites.Take(50).ToList() });
+    }
+    public void RemoveFavorite(string source) => Save(_document with { Favorites = Favorites.Where(x => !Same(x.Source, KeyFromCanonicalSource(source))).ToList() });
+    public void ClearFavorites() => Save(_document with { Favorites = [] });
+    public void ClearAll() => Save(MediaHistoryDocument.Empty);
     private void RemoveResumeIfPresent(MediaSource source)
     {
         string key = MediaSourceValidator.Key(source);
@@ -156,6 +172,7 @@ public sealed class MediaHistoryService(IMediaHistoryStorage storage, Func<DateT
     {
         List<RecentMediaEntry> recent = (value.Recent ?? []).GroupBy(x => KeyFromCanonicalSource(x.Source), StringComparer.Ordinal).Select(x => x.OrderByDescending(y => y.LastOpenedUtc).First()).OrderByDescending(x => x.LastOpenedUtc).Take(50).ToList();
         List<ResumeEntry> resume = (value.Resume ?? []).GroupBy(x => KeyFromCanonicalSource(x.Source), StringComparer.Ordinal).Select(x => x.OrderByDescending(y => y.UpdatedUtc).First()).OrderByDescending(x => x.UpdatedUtc).Take(50).ToList();
-        return new(MediaHistoryDocument.CurrentVersion, recent, resume);
+        List<FavoriteMediaEntry> favorites = (value.Favorites ?? []).GroupBy(x => KeyFromCanonicalSource(x.Source), StringComparer.Ordinal).Select(x => x.OrderByDescending(y => y.AddedUtc).First()).OrderByDescending(x => x.AddedUtc).Take(50).ToList();
+        return new(MediaHistoryDocument.CurrentVersion, recent, resume, favorites);
     }
 }

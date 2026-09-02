@@ -6,6 +6,19 @@ namespace Player.Application.Tests;
 public sealed class PlayerSettingsServiceTests
 {
     [Fact]
+    public void ReduceMotionMigratesAsALivePreference()
+    {
+        MemoryStorage storage = new() { Content = "{\"Version\":4,\"Theme\":\"Dark\",\"ReduceMotion\":true}" };
+        PlayerSettingsService service = new(storage);
+
+        service.Load();
+
+        Assert.True(service.Current.ReduceMotion);
+        Assert.Equal(SettingApplyMode.Live, PlayerSettingsService.ApplyMode(nameof(PlayerSettings.ReduceMotion)));
+        Assert.Contains($"\"Version\": {PlayerSettings.CurrentVersion}", storage.Content);
+    }
+
+    [Fact]
     public void PersistsAndReloadsNormalizedSettings()
     {
         MemoryStorage storage = new();

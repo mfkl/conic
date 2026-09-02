@@ -32,6 +32,7 @@
                     <MenuItem Header="2×" Command="{Binding SetPlaybackRateCommand}" CommandParameter="2" />
                 </MenuItem>
                 <MenuItem Header="Fullscreen" Command="{Binding ToggleFullscreenCommand}" />
+                <MenuItem Header="Media library" Command="{Binding OpenLibraryCommand}" />
                 <Separator />
                 <MenuItem Header="Playback queue" Command="{Binding ToggleQueueCommand}" />
                 <MenuItem Header="{Binding RepeatLabel}" Command="{Binding CycleRepeatCommand}" />
@@ -81,7 +82,8 @@
 
             <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
             <Button x:Name="QueueButton" Classes="chrome" Content="Queue" Command="{Binding ToggleQueueCommand}" CommandParameter="Queue" ToolTip.Tip="Playback queue (Ctrl+J)" AutomationProperties.Name="Open playback queue" />
-            <Button x:Name="OpenSettingsButton" Classes="chrome" Content="Settings" Command="{Binding OpenSettingsCommand}" ToolTip.Tip="Settings (Ctrl+,)" />
+            <Button x:Name="LibraryButton" Classes="chrome" Content="Library" Command="{Binding OpenLibraryCommand}" ToolTip.Tip="Media library (Ctrl+Shift+L)" AutomationProperties.Name="Open media library" />
+            <Button x:Name="OpenSettingsButton" Classes="chrome" Content="Settings" Command="{Binding OpenSettingsCommand}" ToolTip.Tip="Settings (Ctrl+,)" AutomationProperties.Name="Open settings" />
             <Border x:Name="AlwaysOnTopChrome"
                     Padding="14,8"
                     CornerRadius="14"
@@ -138,6 +140,18 @@
                 <Button x:Name="ClearRecentButton" HorizontalAlignment="Right" Content="Clear recent" IsVisible="{Binding HasRecentItems}" Click="OnClearRecent" ToolTip.Tip="Clear recent media" />
             </StackPanel>
         </Border>
+        <Border x:Name="LibraryPanel" IsVisible="{Binding IsLibraryOpen}" Focusable="True" Width="430" MaxWidth="430" HorizontalAlignment="Right" VerticalAlignment="Stretch" Margin="0,76,16,18" Padding="16" CornerRadius="18" Background="#EF131519" BorderBrush="#45FF9A55" BorderThickness="1" BoxShadow="0 12 32 0 #80000000" AutomationProperties.Name="Media library">
+            <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="10">
+                <Grid ColumnDefinitions="*,Auto"><StackPanel><TextBlock Text="Library" FontSize="17" FontWeight="SemiBold" /><TextBlock Text="Your recent items, explicit favorites, and saved positions. No folders are scanned." Classes="settingHint" TextWrapping="Wrap" /></StackPanel><Button x:Name="CloseLibraryButton" Grid.Column="1" Content="×" Click="OnCloseLibrary" ToolTip.Tip="Close media library" AutomationProperties.Name="Close media library" /></Grid>
+                <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="5"><Button x:Name="LibraryRecentTab" Content="Recent" Click="OnLibraryTab" Tag="Recent" AutomationProperties.Name="Show recent library items" /><Button Content="Favorites" Click="OnLibraryTab" Tag="Favorites" AutomationProperties.Name="Show favorite library items" /><Button Content="Resume" Click="OnLibraryTab" Tag="Resume" AutomationProperties.Name="Show resume library items" /><Button Content="Favorite current" Command="{Binding AddFavoriteCommand}" IsVisible="{Binding !IsCurrentFavorite}" ToolTip.Tip="Add the current media to favorites" AutomationProperties.Name="Add current media to favorites" /></StackPanel>
+                <Grid Grid.Row="2">
+                    <StackPanel IsVisible="{Binding IsLibraryRecentTab}" Spacing="6"><TextBlock Text="Recent media" FontWeight="SemiBold" /><ScrollViewer HorizontalScrollBarVisibility="Disabled"><ItemsControl ItemsSource="{Binding RecentItems}"><ItemsControl.ItemTemplate><DataTemplate x:DataType="application:RecentMediaEntry"><Grid ColumnDefinitions="*,Auto" Margin="0,2"><Button Classes="recentItem" Click="OnOpenLibraryEntry" ToolTip.Tip="Open recent media" AutomationProperties.Name="Open recent library item"><TextBlock Text="{Binding DisplayName}" TextTrimming="CharacterEllipsis" /></Button><Button Grid.Column="1" Classes="recentRemove" Content="×" Command="{Binding DataContext.RemoveRecentCommand, ElementName=VideoArea}" CommandParameter="{Binding Source}" AutomationProperties.Name="Remove recent library item" /></Grid></DataTemplate></ItemsControl.ItemTemplate></ItemsControl></ScrollViewer><TextBlock Text="No recent media is stored." IsVisible="{Binding HasNoRecentItems}" Classes="settingHint" /></StackPanel>
+                    <StackPanel IsVisible="{Binding IsLibraryFavoritesTab}" Spacing="6"><TextBlock Text="Favorites" FontWeight="SemiBold" /><ScrollViewer HorizontalScrollBarVisibility="Disabled"><ItemsControl ItemsSource="{Binding FavoriteItems}"><ItemsControl.ItemTemplate><DataTemplate x:DataType="application:FavoriteMediaEntry"><Grid ColumnDefinitions="*,Auto" Margin="0,2"><Button Classes="recentItem" Click="OnOpenLibraryEntry" ToolTip.Tip="Open favorite media" AutomationProperties.Name="Open favorite library item"><TextBlock Text="{Binding DisplayName}" TextTrimming="CharacterEllipsis" /></Button><Button Grid.Column="1" Classes="recentRemove" Content="×" Command="{Binding DataContext.RemoveFavoriteCommand, ElementName=VideoArea}" CommandParameter="{Binding Source}" AutomationProperties.Name="Remove favorite library item" /></Grid></DataTemplate></ItemsControl.ItemTemplate></ItemsControl></ScrollViewer><TextBlock Text="Favorites are only added when you choose Favorite current." IsVisible="{Binding !HasFavoriteItems}" Classes="settingHint" /></StackPanel>
+                    <StackPanel IsVisible="{Binding IsLibraryResumeTab}" Spacing="6"><TextBlock Text="Resume history" FontWeight="SemiBold" /><ScrollViewer HorizontalScrollBarVisibility="Disabled"><ItemsControl ItemsSource="{Binding ResumeItems}"><ItemsControl.ItemTemplate><DataTemplate x:DataType="application:ResumeEntry"><Button Classes="recentItem" Click="OnOpenLibraryEntry" ToolTip.Tip="Open media with saved position" AutomationProperties.Name="Open resume library item"><StackPanel><TextBlock Text="{Binding Source}" TextTrimming="CharacterEllipsis" /><TextBlock Text="{Binding Position}" Classes="settingHint" /></StackPanel></Button></DataTemplate></ItemsControl.ItemTemplate></ItemsControl></ScrollViewer><TextBlock Text="No resume positions are stored." IsVisible="{Binding !HasResumeItems}" Classes="settingHint" /></StackPanel>
+                </Grid>
+                <StackPanel Grid.Row="3" Spacing="6"><TextBlock Text="Recent and resume history obey their privacy switches in Settings. Clear library removes recent items, favorites, and all resume positions." Classes="settingHint" TextWrapping="Wrap" /><StackPanel x:Name="ClearLibraryPrompt" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" IsVisible="False"><TextBlock Text="Clear all library data?" VerticalAlignment="Center" Classes="settingHint" /><Button Content="Cancel" Click="OnCancelClearLibrary" /><Button Content="Clear all" Command="{Binding ClearLibraryCommand}" Click="OnConfirmClearLibrary" AutomationProperties.Name="Confirm clear media library" /></StackPanel><Button x:Name="ClearLibraryButton" Content="Clear library…" HorizontalAlignment="Right" Click="OnClearLibrary" IsEnabled="{Binding HasLibraryItems}" AutomationProperties.Name="Clear media library" /></StackPanel>
+            </Grid>
+        </Border>
         <Border x:Name="UrlPanel" IsVisible="False" MaxWidth="460" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="24,82,24,0"
                 Padding="16" CornerRadius="16" Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}" BorderBrush="#45FF9A55" BorderThickness="1" BoxShadow="0 12 32 0 #80000000">
             <StackPanel Spacing="10">
@@ -153,9 +167,9 @@
         </Border>
         <Border x:Name="OpenErrorToast" IsVisible="False" MaxWidth="560" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="24,90,24,0" Padding="10" Background="#E02B1717" CornerRadius="10"><TextBlock Text="{Binding OpenError}" Foreground="#FFD6CE" TextWrapping="Wrap" /></Border>
 
-        <Border x:Name="QueueDrawer" IsVisible="{Binding IsQueueOpen}" Width="390" MaxWidth="390" HorizontalAlignment="Right" VerticalAlignment="Stretch" Margin="0,76,16,18" Padding="16" CornerRadius="18" Background="#EF131519" BorderBrush="#45FF9A55" BorderThickness="1" BoxShadow="0 12 32 0 #80000000" AutomationProperties.Name="Playback queue and media controls">
+        <Border x:Name="QueueDrawer" IsVisible="{Binding IsQueueOpen}" Focusable="True" Width="390" MaxWidth="390" HorizontalAlignment="Right" VerticalAlignment="Stretch" Margin="0,76,16,18" Padding="16" CornerRadius="18" Background="#EF131519" BorderBrush="#45FF9A55" BorderThickness="1" BoxShadow="0 12 32 0 #80000000" AutomationProperties.Name="Playback queue and media controls">
             <Grid RowDefinitions="Auto,Auto,*" RowSpacing="10">
-                <Grid ColumnDefinitions="*,Auto"><TextBlock Text="Playback" FontSize="17" FontWeight="SemiBold" /><Button Grid.Column="1" Content="×" Command="{Binding ToggleQueueCommand}" ToolTip.Tip="Close playback drawer" AutomationProperties.Name="Close playback drawer" /></Grid>
+                <Grid ColumnDefinitions="*,Auto"><TextBlock Text="Playback" FontSize="17" FontWeight="SemiBold" /><Button x:Name="CloseQueueButton" Grid.Column="1" Content="×" Command="{Binding ToggleQueueCommand}" ToolTip.Tip="Close playback drawer" AutomationProperties.Name="Close playback drawer" /></Grid>
                 <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="4"><Button Content="Queue" Command="{Binding ToggleMediaControlsCommand}" CommandParameter="Queue" /><Button Content="Audio" Command="{Binding ToggleMediaControlsCommand}" CommandParameter="Audio" /><Button Content="Subtitles" Command="{Binding ToggleMediaControlsCommand}" CommandParameter="Subtitles" /><Button Content="Chapters" Command="{Binding ToggleMediaControlsCommand}" CommandParameter="Chapters" /><Button Content="Info" Command="{Binding MediaInformationCommand}" /></StackPanel>
                 <Grid Grid.Row="2">
                     <Grid IsVisible="{Binding IsQueueTab}" RowDefinitions="Auto,*,Auto" RowSpacing="10">
@@ -199,8 +213,10 @@
                                               Classes="timeline monochrome"
                                               Minimum="0"
                                               Maximum="1"
-                                              Value="{Binding Position, Mode=TwoWay}"
-                                              IsEnabled="{Binding CanSeek}"
+                                               Value="{Binding Position, Mode=TwoWay}"
+                                               IsEnabled="{Binding CanSeek}"
+                                               AutomationProperties.Name="Playback position"
+                                               AutomationProperties.HelpText="Use left and right arrow keys to seek."
                                               SeekStarted="OnSeekStarted"
                                               SeekCommitted="OnSeekCommitted" />
                     <TextBlock Grid.Column="2"
@@ -217,18 +233,21 @@
                                 Spacing="8"
                                 HorizontalAlignment="Center"
                                 VerticalAlignment="Center">
-                        <Button Classes="transport"
-                                Command="{Binding SkipBackwardCommand}"
+                         <Button Classes="transport"
+                                 Command="{Binding SkipBackwardCommand}"
+                                 AutomationProperties.Name="Skip backward"
                                 ToolTip.Tip="{Binding SkipBackwardLabel, StringFormat='Back {0} seconds (Alt+Left)'}"
                                 Content="{Binding SkipBackwardLabel}" />
-                        <Button Classes="transport"
-                                 Command="{Binding PreviousCommand}"
+                         <Button Classes="transport"
+                                  Command="{Binding PreviousCommand}"
+                                  AutomationProperties.Name="Previous queue item"
                                  ToolTip.Tip="Previous queue item">
                             <PathIcon Width="19" Height="19"
                                       Data="M5,5 L8,5 L8,19 L5,19 Z M19,5 L19,19 L9,12 Z" />
                         </Button>
-                        <Button Classes="play"
-                                Command="{Binding TogglePauseCommand}"
+                         <Button Classes="play"
+                                 Command="{Binding TogglePauseCommand}"
+                                 AutomationProperties.Name="Play or pause"
                                 ToolTip.Tip="Play or pause">
                             <Grid>
                                 <PathIcon Width="22" Height="22"
@@ -239,18 +258,21 @@
                                           Data="M7,5 L11,5 L11,19 L7,19 Z M14,5 L18,5 L18,19 L14,19 Z" />
                             </Grid>
                         </Button>
-                        <Button Classes="transport"
-                                Command="{Binding StopCommand}"
+                         <Button Classes="transport"
+                                 Command="{Binding StopCommand}"
+                                 AutomationProperties.Name="Stop playback"
                                 ToolTip.Tip="Stop">
                             <PathIcon Width="17" Height="17"
                                       Data="M6,6 L18,6 L18,18 L6,18 Z" />
                         </Button>
-                        <Button Classes="transport"
-                                Command="{Binding SkipForwardCommand}"
+                         <Button Classes="transport"
+                                 Command="{Binding SkipForwardCommand}"
+                                 AutomationProperties.Name="Skip forward"
                                 ToolTip.Tip="{Binding SkipForwardLabel, StringFormat='Forward {0} seconds (Alt+Right)'}"
                                 Content="{Binding SkipForwardLabel}" />
-                        <Button Classes="transport"
-                                 Command="{Binding NextCommand}"
+                         <Button Classes="transport"
+                                  Command="{Binding NextCommand}"
+                                  AutomationProperties.Name="Next queue item"
                                  ToolTip.Tip="Next queue item">
                             <PathIcon Width="19" Height="19"
                                       Data="M5,5 L5,19 L15,12 Z M16,5 L19,5 L19,19 L16,19 Z" />
@@ -263,7 +285,8 @@
                           HorizontalAlignment="Right"
                           VerticalAlignment="Center"
                           >
-                        <Button x:Name="MuteButton" Classes="mute" Command="{Binding ToggleMuteCommand}"
+                         <Button x:Name="MuteButton" Classes="mute" Command="{Binding ToggleMuteCommand}"
+                                 AutomationProperties.Name="Mute or unmute"
                                 ToolTip.Tip="Mute (M)">
                             <Grid>
                                 <PathIcon Width="18" Height="18" Data="M3,9 L7,9 L12,5 L12,19 L7,15 L3,15 Z M15,9 L18,12 L15,15 Z" IsVisible="{Binding !IsMuted}" />
@@ -276,16 +299,18 @@
                                                      Classes="volume monochrome"
                                                      Minimum="0"
                                                      Maximum="100"
-                                                     Value="{Binding Volume, Mode=TwoWay}"
+                                                      Value="{Binding Volume, Mode=TwoWay}"
+                                                      AutomationProperties.Name="Volume"
+                                                      AutomationProperties.HelpText="Use arrow keys to adjust volume."
                                                      DragStarted="OnVolumeDragStarted"
                                                      DragCompleted="OnVolumeDragCompleted" />
-                        <ComboBox x:Name="SpeedSelector" Width="72" SelectionChanged="OnSpeedChanged">
+                         <ComboBox x:Name="SpeedSelector" Width="72" SelectionChanged="OnSpeedChanged" AutomationProperties.Name="Playback speed">
                             <ComboBoxItem Content="0.5×" Tag="0.5" />
                             <ComboBoxItem Content="1×" Tag="1" />
                             <ComboBoxItem Content="1.5×" Tag="1.5" />
                             <ComboBoxItem Content="2×" Tag="2" />
                         </ComboBox>
-                        <Button x:Name="FullscreenButton" Classes="transport" ToolTip.Tip="Fullscreen (F11)" Command="{Binding ToggleFullscreenCommand}">
+                         <Button x:Name="FullscreenButton" Classes="transport" ToolTip.Tip="Fullscreen (F11)" Command="{Binding ToggleFullscreenCommand}" AutomationProperties.Name="Toggle fullscreen">
                             <Grid>
                                 <PathIcon Width="18" Height="18" IsVisible="{Binding !IsFullscreen}" Data="M5,9 L5,5 L9,5 M15,5 L19,5 L19,9 M19,15 L19,19 L15,19 M9,19 L5,19 L5,15" />
                                 <PathIcon Width="18" Height="18" IsVisible="{Binding IsFullscreen}" Data="M9,5 L9,9 L5,9 M15,5 L15,9 L19,9 M19,15 L15,15 L15,19 M5,15 L9,15 L9,19" />
@@ -329,7 +354,9 @@
                         <StackPanel IsVisible="{Binding IsAppearance}" Spacing="10"><TextBlock Text="Appearance" FontSize="16" FontWeight="SemiBold" />
                         <StackPanel Orientation="Horizontal" Spacing="8"><TextBlock Text="Theme" Width="155" VerticalAlignment="Center" /><ComboBox ItemsSource="{Binding ThemeOptions}" SelectedItem="{Binding Theme, Mode=TwoWay}" AutomationProperties.Name="Theme" /><TextBlock x:Name="SettingsBadge" Text="Live" Classes="settingBadge" /></StackPanel>
                         <StackPanel Orientation="Horizontal" Spacing="8"><TextBlock Text="Density" Width="155" VerticalAlignment="Center" /><ComboBox ItemsSource="{Binding DensityOptions}" SelectedItem="{Binding Density, Mode=TwoWay}" /><TextBlock Text="Live" Classes="settingBadge" /></StackPanel>
-                        <StackPanel Orientation="Horizontal" Spacing="8"><TextBlock Text="Controls hide after" Width="155" VerticalAlignment="Center" /><NumericUpDown Minimum="1" Maximum="15" Value="{Binding ControlTimeoutSeconds, Mode=TwoWay}" /><TextBlock Text="Live" Classes="settingBadge" /></StackPanel></StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="8"><TextBlock Text="Controls hide after" Width="155" VerticalAlignment="Center" /><NumericUpDown Minimum="1" Maximum="15" Value="{Binding ControlTimeoutSeconds, Mode=TwoWay}" /><TextBlock Text="Live" Classes="settingBadge" /></StackPanel>
+                        <CheckBox Content="Reduce motion" IsChecked="{Binding ReduceMotion, Mode=TwoWay}" AutomationProperties.Name="Reduce motion" ToolTip.Tip="Keeps playback controls visible and disables nonessential motion" />
+                        </StackPanel>
                         <StackPanel IsVisible="{Binding IsPlayback}" Spacing="10"><TextBlock Text="Playback" FontSize="16" FontWeight="SemiBold" />
                         <StackPanel Orientation="Horizontal" Spacing="8"><TextBlock Text="Default speed" Width="155" VerticalAlignment="Center" /><ComboBox ItemsSource="{Binding SpeedOptions}" SelectedItem="{Binding DefaultSpeed, Mode=TwoWay}" /><TextBlock Text="Next open" Classes="settingBadge" /></StackPanel>
                         <StackPanel Orientation="Horizontal" Spacing="8"><TextBlock Text="Skip backward (seconds)" Width="155" VerticalAlignment="Center" /><NumericUpDown Minimum="1" Maximum="120" Value="{Binding SkipBackwardSeconds, Mode=TwoWay}" /><TextBlock Text="Live" Classes="settingBadge" /></StackPanel>

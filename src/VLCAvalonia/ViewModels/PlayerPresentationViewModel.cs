@@ -48,6 +48,8 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
     private readonly MediaSourceExpander _sourceExpander;
     private PlaybackQueueState _queueState = PlaybackQueueState.Initial;
     private bool _isQueueOpen;
+    private bool _isLibraryOpen;
+    private string _libraryTab = "Recent";
     private MediaCapabilitiesState _mediaCapabilities = MediaCapabilitiesState.Initial;
     private bool _isUpdatingCapabilities;
     private string _drawerTab = "Queue";
@@ -87,8 +89,7 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
         if (_settings is not null) _settings.Changed += (_, updated) =>
         {
             TryHistory(() => { if (!updated.RememberRecentMedia) _history?.ClearRecent(); if (!updated.RememberResumeHistory) _history?.ClearResume(); });
-            NotifyRecent();
-            NotifyResume();
+            NotifyLibrary();
             if (!updated.RememberResumeHistory) { _pendingResume = null; _resumeReady = false; NotifyPendingResume(); }
             OnPropertyChanged(nameof(SkipBackwardLabel)); OnPropertyChanged(nameof(SkipForwardLabel)); OnPropertyChanged(nameof(RecentItems));
         };
@@ -98,9 +99,14 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
         registry.Register(new(PlayerCommandId.OpenFolder, "Open folder", "Media", "Ctrl+Shift+O"), _ => _ = OpenFolderAsync(), _ => _queue is not null);
         registry.Register(new(PlayerCommandId.OpenUrl, "Open network URL", "Media", "Ctrl+L"), _ => showUrlPanel?.Invoke(), _ => showUrlPanel is not null);
         registry.Register(new(PlayerCommandId.SubmitUrl, "Submit network URL", "Media"), _ => OpenUrl());
-        registry.Register(new(PlayerCommandId.RemoveRecent, "Remove recent media", "Media"), p => { TryHistory(() => _history?.RemoveRecent(p as string ?? string.Empty)); NotifyRecent(); }, p => !string.IsNullOrWhiteSpace(p as string));
-        registry.Register(new(PlayerCommandId.ClearRecent, "Clear recent media", "Media"), _ => { TryHistory(() => _history?.ClearRecent()); NotifyRecent(); }, _ => HasRecentItems);
-        registry.Register(new(PlayerCommandId.ClearResumeHistory, "Clear resume history", "Media"), _ => { if (TryHistory(() => _history?.ClearResume())) { _pendingResume = null; _resumeReady = false; NotifyPendingResume(); NotifyResume(); } }, _ => HasResumeItems);
+        registry.Register(new(PlayerCommandId.RemoveRecent, "Remove recent media", "Media"), p => { TryHistory(() => _history?.RemoveRecent(p as string ?? string.Empty)); NotifyLibrary(); }, p => !string.IsNullOrWhiteSpace(p as string));
+        registry.Register(new(PlayerCommandId.ClearRecent, "Clear recent media", "Media"), _ => { TryHistory(() => _history?.ClearRecent()); NotifyLibrary(); }, _ => HasRecentItems);
+        registry.Register(new(PlayerCommandId.ClearResumeHistory, "Clear resume history", "Media"), _ => { if (TryHistory(() => _history?.ClearResume())) { _pendingResume = null; _resumeReady = false; NotifyPendingResume(); NotifyLibrary(); } }, _ => HasResumeItems);
+        registry.Register(new(PlayerCommandId.AddFavorite, "Add to favorites", "Library"), p => AddFavorite(p as string), p => _history is not null && (p is string || _currentSource is not null));
+        registry.Register(new(PlayerCommandId.RemoveFavorite, "Remove from favorites", "Library"), p => { TryHistory(() => _history?.RemoveFavorite(p as string ?? string.Empty)); NotifyLibrary(); }, p => !string.IsNullOrWhiteSpace(p as string));
+        registry.Register(new(PlayerCommandId.ClearFavorites, "Clear favorite media", "Library"), _ => { TryHistory(() => _history?.ClearFavorites()); NotifyLibrary(); }, _ => HasFavoriteItems);
+        registry.Register(new(PlayerCommandId.ClearLibrary, "Clear media library", "Library"), _ => { if (TryHistory(() => _history?.ClearAll())) { _pendingResume = null; _resumeReady = false; NotifyPendingResume(); NotifyLibrary(); } }, _ => HasLibraryItems);
+        registry.Register(new(PlayerCommandId.OpenLibrary, "Media library", "Library", "Ctrl+Shift+L"), _ => IsLibraryOpen = !IsLibraryOpen, _ => _history is not null);
         registry.Register(new(PlayerCommandId.OpenRecent, "Open recent media", "Media"), parameter => OpenSource(parameter as string, MediaSourceKind.Recent));
         registry.Register(new(PlayerCommandId.AcceptResume, "Resume playback", "Media"), _ => ApplyResume(), _ => _pendingResume is not null && _resumeReady);
         registry.Register(new(PlayerCommandId.DeclineResume, "Start from beginning", "Media"), _ => DeclineResume(), _ => _pendingResume is not null && _resumeReady);
@@ -148,6 +154,11 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
         RemoveRecentCommand = new RegistryCommand(registry, PlayerCommandId.RemoveRecent);
         ClearRecentCommand = new RegistryCommand(registry, PlayerCommandId.ClearRecent);
         ClearResumeHistoryCommand = new RegistryCommand(registry, PlayerCommandId.ClearResumeHistory);
+        AddFavoriteCommand = new RegistryCommand(registry, PlayerCommandId.AddFavorite);
+        RemoveFavoriteCommand = new RegistryCommand(registry, PlayerCommandId.RemoveFavorite);
+        ClearFavoritesCommand = new RegistryCommand(registry, PlayerCommandId.ClearFavorites);
+        ClearLibraryCommand = new RegistryCommand(registry, PlayerCommandId.ClearLibrary);
+        OpenLibraryCommand = new RegistryCommand(registry, PlayerCommandId.OpenLibrary);
         OpenRecentCommand = new RegistryCommand(registry, PlayerCommandId.OpenRecent);
         AcceptResumeCommand = new RegistryCommand(registry, PlayerCommandId.AcceptResume);
         DeclineResumeCommand = new RegistryCommand(registry, PlayerCommandId.DeclineResume);
@@ -203,6 +214,11 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
     public ICommand RemoveRecentCommand { get; }
     public ICommand ClearRecentCommand { get; }
     public ICommand ClearResumeHistoryCommand { get; }
+    public ICommand AddFavoriteCommand { get; }
+    public ICommand RemoveFavoriteCommand { get; }
+    public ICommand ClearFavoritesCommand { get; }
+    public ICommand ClearLibraryCommand { get; }
+    public ICommand OpenLibraryCommand { get; }
     public ICommand OpenRecentCommand { get; }
     public ICommand AcceptResumeCommand { get; }
     public ICommand DeclineResumeCommand { get; }
@@ -312,7 +328,27 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
     public IReadOnlyList<RecentMediaEntry> RecentItems => _history?.Recent ?? [];
     public bool HasRecentItems => RecentItems.Count > 0;
     public bool HasNoRecentItems => !HasRecentItems;
-    public bool HasResumeItems => (_history?.Resume.Count ?? 0) > 0;
+    public IReadOnlyList<ResumeEntry> ResumeItems => _history?.Resume ?? [];
+    public bool HasResumeItems => ResumeItems.Count > 0;
+    public IReadOnlyList<FavoriteMediaEntry> FavoriteItems => _history?.Favorites ?? [];
+    public bool HasFavoriteItems => FavoriteItems.Count > 0;
+    public bool HasLibraryItems => HasRecentItems || HasResumeItems || HasFavoriteItems;
+    public bool IsCurrentFavorite => _currentSource is not null && (_history?.IsFavorite(_currentSource.CanonicalSource) ?? false);
+    public bool IsLibraryOpen { get => _isLibraryOpen; set => Set(ref _isLibraryOpen, value); }
+    public string LibraryTab
+    {
+        get => _libraryTab;
+        set
+        {
+            if (Set(ref _libraryTab, value))
+            {
+                OnPropertyChanged(nameof(IsLibraryRecentTab)); OnPropertyChanged(nameof(IsLibraryFavoritesTab)); OnPropertyChanged(nameof(IsLibraryResumeTab));
+            }
+        }
+    }
+    public bool IsLibraryRecentTab => LibraryTab == "Recent";
+    public bool IsLibraryFavoritesTab => LibraryTab == "Favorites";
+    public bool IsLibraryResumeTab => LibraryTab == "Resume";
     public bool HasOpenError => !string.IsNullOrWhiteSpace(OpenError);
     public bool HasHistoryError => !string.IsNullOrWhiteSpace(HistoryError);
     public PlaybackQueueState QueueState { get => _queueState; private set => Set(ref _queueState, value); }
@@ -419,7 +455,7 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
             IsPlaying = state.Status == PlaybackStatus.Playing;
             if (_currentSource is not null && state.Generation > 0 && state.Generation != _recordedOpenGeneration && state.Status is PlaybackStatus.Playing or PlaybackStatus.Paused)
             {
-                if (TryHistory(() => _history?.RecordOpened(_currentSource, _settings?.Current.RememberRecentMedia ?? true))) { _recordedOpenGeneration = state.Generation; NotifyRecent(); }
+                if (TryHistory(() => _history?.RecordOpened(_currentSource, _settings?.Current.RememberRecentMedia ?? true))) { _recordedOpenGeneration = state.Generation; NotifyLibrary(); }
                 if (_pendingResume is not null && state.Generation == _activeGeneration && state.CanSeek && state.Duration > TimeSpan.Zero)
                 { _resumeReady = true; NotifyPendingResume(); }
             }
@@ -446,7 +482,7 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
     public void OpenSource(string? rawSource, MediaSourceKind kind)
     {
         MediaOpenResult result = _sourceValidator.Validate(rawSource, kind);
-        if (!result.Succeeded || result.Source is null) { if (kind == MediaSourceKind.Recent && !string.IsNullOrWhiteSpace(rawSource)) TryHistory(() => _history?.RemoveRecent(rawSource)); _diagnostic?.Invoke(result.Diagnostic ?? "Media source validation failed."); OpenError = result.UserMessage ?? "Media could not be opened."; NotifyRecent(); return; }
+        if (!result.Succeeded || result.Source is null) { if (kind == MediaSourceKind.Recent && !string.IsNullOrWhiteSpace(rawSource)) TryHistory(() => _history?.RemoveRecent(rawSource)); _diagnostic?.Invoke(result.Diagnostic ?? "Media source validation failed."); OpenError = result.UserMessage ?? "Media could not be opened."; NotifyLibrary(); return; }
         CheckpointCurrent(true);
         _currentSource = result.Source;
         _generationFloor = _lastObservedGeneration; _activeGeneration = -1; _resumeReady = false; _lastState = null; _recordedOpenGeneration = -1;
@@ -455,7 +491,7 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
         OpenError = string.Empty;
         try { if (_queue is not null) _queue.OpenQueue([_currentSource.CanonicalSource]); else _transport.Open(_currentSource.CanonicalSource); }
         catch (Exception e) { _diagnostic?.Invoke(e.ToString()); _currentSource = null; _pendingResume = null; OpenError = "Media could not be opened."; }
-        OnPropertyChanged(nameof(RecentItems));
+        NotifyLibrary();
         OnPropertyChanged(nameof(HasRecentItems));
     }
 
@@ -569,8 +605,22 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
     }
     private void NotifyResume()
     {
-        OnPropertyChanged(nameof(HasResumeItems));
+        OnPropertyChanged(nameof(ResumeItems)); OnPropertyChanged(nameof(HasResumeItems));
         (ClearResumeHistoryCommand as RegistryCommand)?.RaiseCanExecuteChanged();
+    }
+    private void NotifyLibrary()
+    {
+        NotifyRecent(); NotifyResume();
+        OnPropertyChanged(nameof(FavoriteItems)); OnPropertyChanged(nameof(HasFavoriteItems)); OnPropertyChanged(nameof(HasLibraryItems)); OnPropertyChanged(nameof(IsCurrentFavorite));
+        (ClearFavoritesCommand as RegistryCommand)?.RaiseCanExecuteChanged(); (ClearLibraryCommand as RegistryCommand)?.RaiseCanExecuteChanged(); (AddFavoriteCommand as RegistryCommand)?.RaiseCanExecuteChanged();
+    }
+
+    private void AddFavorite(string? source)
+    {
+        MediaSource? favorite = _currentSource;
+        if (!string.IsNullOrWhiteSpace(source)) favorite = _sourceValidator.Validate(source, MediaSourceKind.Recent).Source;
+        if (favorite is null) return;
+        TryHistory(() => _history?.AddFavorite(favorite)); NotifyLibrary();
     }
     private void NotifyPendingResume()
     {
@@ -586,7 +636,7 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
         double duration = Math.Max(_duration.TotalSeconds, 1);
         bool ok = true; TryHistory(() => _history?.RemoveResume(resume.Source), () => ok = false); if (!ok) return;
         _transport.Seek(Math.Clamp(resume.Position.TotalSeconds / duration, 0, 1));
-        _pendingResume = null; _resumeReady = false; NotifyPendingResume(); NotifyResume();
+        _pendingResume = null; _resumeReady = false; NotifyPendingResume(); NotifyLibrary();
     }
 
     public void CheckpointCurrent(bool force)
@@ -594,13 +644,13 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
         if (_currentSource is null || _lastState is not { } state) return;
         DateTimeOffset now = _clock();
         if (_activeGeneration < 0 || state.Generation != _activeGeneration || state.Status is not (PlaybackStatus.Playing or PlaybackStatus.Paused) || !state.CanSeek || state.Duration <= TimeSpan.Zero || !(_settings?.Current.RememberResumeHistory ?? true) || (!force && now - _lastCheckpointUtc < TimeSpan.FromSeconds(10))) return;
-        if (TryHistory(() => _history?.Checkpoint(_currentSource, state.Elapsed, state.Duration, true, _settings?.Current.ResumeMinimumElapsedSeconds ?? 30, _settings?.Current.ResumeMaximumRemainingSeconds ?? 30, true))) { _lastCheckpointUtc = now; NotifyResume(); }
+        if (TryHistory(() => _history?.Checkpoint(_currentSource, state.Elapsed, state.Duration, true, _settings?.Current.ResumeMinimumElapsedSeconds ?? 30, _settings?.Current.ResumeMaximumRemainingSeconds ?? 30, true))) { _lastCheckpointUtc = now; NotifyLibrary(); }
     }
     public void OnClosing() => CheckpointCurrent(true);
     private void DeclineResume()
     {
         bool ok = true; if (_pendingResume is { } resume) TryHistory(() => _history?.RemoveResume(resume.Source), () => ok = false); if (!ok) return;
-        _pendingResume = null; _resumeReady = false; NotifyPendingResume(); NotifyResume();
+        _pendingResume = null; _resumeReady = false; NotifyPendingResume(); NotifyLibrary();
     }
 
     private ResumeEntry? TryFindResume(MediaSource source)

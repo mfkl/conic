@@ -96,6 +96,9 @@
         <Setter Property="Background" Value="White" />
         <Setter Property="RenderTransform" Value="scale(1.05)" />
     </Style>
+    <Style Selector="Window.reduced-motion Button.play:pointerover">
+        <Setter Property="RenderTransform" Value="none" />
+    </Style>
     <Style Selector="Slider.timeline">
         <Setter Property="Height" Value="36" />
         <Setter Property="Foreground" Value="#F5F6F8" />

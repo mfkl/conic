@@ -74,7 +74,7 @@ public sealed class MediaOpeningTests
     public void UnsupportedVersionIsPreservedAndResetWithDiagnostic()
     {
         MemoryHistory storage = new() { Content = "{\"Version\":999,\"Recent\":[],\"Resume\":[]}" }; MediaHistoryService service = new(storage); service.Load();
-        Assert.Equal(storage.Preserved, "{\"Version\":999,\"Recent\":[],\"Resume\":[]}"); Assert.NotNull(service.LoadDiagnostic); Assert.Contains("\"Version\": 1", storage.Content);
+        Assert.Equal("{\"Version\":999,\"Recent\":[],\"Resume\":[]}", storage.Preserved); Assert.NotNull(service.LoadDiagnostic); Assert.Contains($"\"Version\": {MediaHistoryDocument.CurrentVersion}", storage.Content);
         MediaHistoryService reload = new(storage); reload.Load(); Assert.Null(reload.LoadDiagnostic);
     }
     [Fact]

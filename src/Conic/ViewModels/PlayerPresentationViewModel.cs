@@ -184,11 +184,18 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
         AttachExternalAudioCommand = new RegistryCommand(registry, PlayerCommandId.AttachExternalAudio);
         AttachExternalSubtitleCommand = new RegistryCommand(registry, PlayerCommandId.AttachExternalSubtitle);
         MediaInformationCommand = new RegistryCommand(registry, PlayerCommandId.MediaInformation);
-        CopyDiagnosticsCommand = new RelayCommand(_ => { string text = MediaDiagnostics.Build(MediaInformation); string? error = "clipboard unavailable"; bool copied = _clipboard is not null && _clipboard.TrySetText(text, out error); CopyStatus = copied ? "Diagnostics copied." : "Could not copy diagnostics: " + error; OnPropertyChanged(nameof(HasCopyStatus)); });
+        CopyDiagnosticsCommand = new RelayCommand(_ => _ = CopyDiagnosticsAsync());
         SnapshotCommand = new RegistryCommand(registry, PlayerCommandId.Snapshot);
     }
 
     public IPlayerCommandRegistry Registry { get; }
+
+    private async Task CopyDiagnosticsAsync()
+    {
+        string? error = _clipboard is null ? "clipboard unavailable" : await _clipboard.SetTextAsync(MediaDiagnostics.Build(MediaInformation));
+        CopyStatus = error is null ? "Diagnostics copied." : "Could not copy diagnostics: " + error;
+        OnPropertyChanged(nameof(HasCopyStatus));
+    }
     public ICommand OpenMediaCommand { get; }
     public ICommand OpenFolderCommand { get; }
     public ICommand OpenUrlCommand { get; }

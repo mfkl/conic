@@ -1,9 +1,10 @@
 # Conic UI implementation plan
 
-Status: UI-00 through UI-08 are complete and qualified. Phase two, reproducing
-the VLC 4 Qt experience on the VLC 3/Avalonia engine, is planned in Sections
-12--18. Physical multi-monitor/multi-GPU and OS suspend/resume remain explicitly
-unqualified.
+Status: UI-00 through UI-08 are complete and qualified. Phase two uses the
+screen-by-screen specification and user-approval gates in
+[VLC4_SCREEN_BY_SCREEN_PLAN.md](VLC4_SCREEN_BY_SCREEN_PLAN.md). Sections 12--18
+remain its product boundary and technical inventory. Physical
+multi-monitor/multi-GPU and OS suspend/resume remain explicitly unqualified.
 Planning baseline: 2026-09-01
 Primary scope: modern Windows desktop UI with daily-use VLC playback parity
 Background track: GPU presentation of VLC-rendered subpictures on the opaque
@@ -658,6 +659,11 @@ No implementation package starts until V4UI-00 has pinned the executable and
 source baselines. No final merge or push occurs without separate user direction.
 
 ## 15. VLC 4 UI parity work packages
+
+Execution note: the package list in Sections 15--17 is retained as technical
+inventory but is superseded by the screen order and mandatory user gates in
+[VLC4_SCREEN_BY_SCREEN_PLAN.md](VLC4_SCREEN_BY_SCREEN_PLAN.md). Do not dispatch
+these batch packages directly.
 
 ### V4UI-00 — Pin and capture the VLC 4 reference
 

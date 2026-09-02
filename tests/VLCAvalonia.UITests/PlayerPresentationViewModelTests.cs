@@ -8,6 +8,21 @@ namespace VLCAvalonia.UITests;
 public sealed class PlayerPresentationViewModelTests
 {
     [Fact]
+    public async Task CopyDiagnosticsWaitsForClipboardCompletionAndSurfacesResult()
+    {
+        Clipboard clipboard = new();
+        PlayerPresentationViewModel vm = new(new RecordingTransport(), new EmptyPicker(), () => { }, clipboard: clipboard);
+        vm.CopyDiagnosticsCommand.Execute(null);
+        Assert.Equal(string.Empty, vm.CopyStatus);
+        clipboard.Completion.SetResult(null);
+        await clipboard.Called.Task;
+        await Task.Delay(10);
+        Assert.Equal("Diagnostics copied.", vm.CopyStatus);
+        clipboard = new(); vm = new PlayerPresentationViewModel(new RecordingTransport(), new EmptyPicker(), () => { }, clipboard: clipboard);
+        vm.CopyDiagnosticsCommand.Execute(null); clipboard.Completion.SetResult("denied"); await clipboard.Called.Task; await Task.Delay(10);
+        Assert.Contains("denied", vm.CopyStatus);
+    }
+    [Fact]
     public void EnginePollingDoesNotOverwriteAnActiveSeekDrag()
     {
         RecordingTransport transport = new();
@@ -584,6 +599,13 @@ public sealed class PlayerPresentationViewModelTests
         public void SetMuted(bool muted) => Muted = muted;
         public void Skip(TimeSpan offset) => Skips.Add(offset);
         public void SetPlaybackRate(double playbackRate) => Rate = playbackRate;
+    }
+
+    private sealed class Clipboard : IClipboardService
+    {
+        public TaskCompletionSource<string?> Completion { get; } = new();
+        public TaskCompletionSource Called { get; } = new();
+        public Task<string?> SetTextAsync(string text) { Called.SetResult(); return Completion.Task; }
     }
 
     private sealed class QueueTransport : IPlayerTransport, IQueueTransport

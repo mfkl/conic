@@ -50,11 +50,31 @@ public sealed class PlayerShortcutAndDiagnosticsTests
     [Fact]
     public void NumericAndUnknownShortcutCommandIdsAreIgnored()
     {
-        MemoryStorage storage = new() { Content = "{\"Version\":4,\"ShortcutOverrides\":{\"999\":\"Ctrl+Q\",\"OpenMedia\":\"Ctrl+M\"}}" };
+        MemoryStorage storage = new() { Content = "{\"Version\":4,\"ShortcutOverrides\":{\"0\":\"Ctrl+Q\",\"999\":\"Ctrl+Q\",\"OpenMedia\":\"Ctrl+M\"}}" };
         PlayerSettingsService settings = new(storage); settings.Load();
         IReadOnlyDictionary<PlayerCommandId, string> active = PlayerShortcutPolicy.Effective(Registry(), settings.Current.ShortcutOverrides);
         Assert.Equal("Ctrl+M", active[PlayerCommandId.OpenMedia]);
         Assert.DoesNotContain((PlayerCommandId)999, active.Keys);
+    }
+
+    [Theory]
+    [InlineData("Ctrl+Foobar")]
+    [InlineData("Ctrl+F25")]
+    public void UnknownShortcutKeysAreRejected(string gesture) => Assert.False(PlayerShortcutPolicy.TryValidate([new(PlayerCommandId.OpenMedia, gesture)], out _));
+
+    [Theory]
+    [InlineData("Ctrl+F24")]
+    [InlineData("Ctrl+Space")]
+    [InlineData("Ctrl+,")]
+    public void SupportedShortcutKeyBoundariesAreAccepted(string gesture) => Assert.True(PlayerShortcutPolicy.TryValidate([new(PlayerCommandId.OpenMedia, gesture)], out _));
+
+    [Fact]
+    public void SettingsAndUnavailableMetadataAreImmutable()
+    {
+        MemoryStorage storage = new() { Content = "{\"Version\":4,\"ShortcutOverrides\":{\"OpenMedia\":\"Ctrl+M\"}}" };
+        PlayerSettingsService settings = new(storage); settings.Load();
+        Assert.Throws<NotSupportedException>(() => ((IDictionary<string, string>)settings.Current.ShortcutOverrides!).Add("OpenSettings", "Ctrl+,") );
+        Assert.Throws<NotSupportedException>(() => ((IDictionary<string, string>)MediaInformationState.Unavailable.Metadata).Add("title", "bad"));
     }
 
     [Fact]

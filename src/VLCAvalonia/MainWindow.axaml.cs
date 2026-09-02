@@ -41,7 +41,8 @@ public partial class MainWindow : Window
             _settings,
             new MediaSourceValidator(new SystemMediaFileSystem()),
             CreateHistory(),
-            showUrlPanel: ShowUrlPanel);
+            showUrlPanel: ShowUrlPanel,
+            clipboard: new AvaloniaClipboardService(() => Clipboard));
         _settingsViewModel = new SettingsViewModel(_settings, _presentation.Registry);
         SettingsPanel.DataContext = _settingsViewModel;
         DataContext = _presentation;

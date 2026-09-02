@@ -3,10 +3,10 @@ namespace Player.Application;
 public enum MediaInformationLoadState { Unavailable, Loading, Ready, Empty, Stale, Failed }
 public sealed record MediaInformationState(long QueueGeneration, long MediaGeneration, MediaInformationLoadState Status, string Name, IReadOnlyDictionary<string, string> Metadata, string? Error = null)
 {
-    public static MediaInformationState Unavailable { get; } = new(0, 0, MediaInformationLoadState.Unavailable, "", new Dictionary<string, string>());
+    public static MediaInformationState Unavailable { get; } = new(0, 0, MediaInformationLoadState.Unavailable, "", new System.Collections.ObjectModel.ReadOnlyDictionary<string, string>(new Dictionary<string, string>()));
 }
 
-public interface IClipboardService { bool TrySetText(string text, out string? error); }
+public interface IClipboardService { Task<string?> SetTextAsync(string text); }
 public interface IMediaInformationTransport
 {
     MediaInformationState MediaInformation { get; }

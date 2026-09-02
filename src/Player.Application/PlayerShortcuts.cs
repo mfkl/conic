@@ -30,9 +30,9 @@ public static class PlayerShortcutPolicy
     public static IReadOnlyDictionary<PlayerCommandId, string> Effective(IPlayerCommandRegistry registry, IReadOnlyDictionary<string, string>? overrides)
     {
         var result = Defaults(registry).ToDictionary(x => x.Command, x => x.Gesture);
-        if (overrides is null) return result;
+        if (overrides is null) return new System.Collections.ObjectModel.ReadOnlyDictionary<PlayerCommandId, string>(result);
         foreach (var pair in overrides)
-            if (Enum.TryParse(pair.Key, out PlayerCommandId id) && IsDefinedRegisteredCommand(registry, id) && Normalize(pair.Value) is { Length: > 0 } gesture) result[id] = gesture;
+            if (TryParseNamedCommand(pair.Key, out PlayerCommandId id) && IsDefinedRegisteredCommand(registry, id) && Normalize(pair.Value) is { Length: > 0 } gesture) result[id] = gesture;
         return new System.Collections.ObjectModel.ReadOnlyDictionary<PlayerCommandId, string>(result);
     }
 
@@ -56,7 +56,7 @@ public static class PlayerShortcutPolicy
             if (part.Equals("Control", StringComparison.OrdinalIgnoreCase) || part.Equals("Ctrl", StringComparison.OrdinalIgnoreCase)) modifiers.Add("Ctrl");
             else if (part.Equals("Shift", StringComparison.OrdinalIgnoreCase)) modifiers.Add("Shift");
             else if (part.Equals("Alt", StringComparison.OrdinalIgnoreCase)) modifiers.Add("Alt");
-            else if (key is null) key = part.Length == 1 ? part.ToUpperInvariant() : char.ToUpperInvariant(part[0]) + part[1..];
+            else if (key is null) key = CanonicalKey(part);
             else return string.Empty;
         }
         return key is null ? string.Empty : string.Join('+', new[] { "Ctrl", "Alt", "Shift" }.Where(modifiers.Contains).Append(key));
@@ -82,4 +82,18 @@ public static class PlayerShortcutPolicy
 
     internal static bool IsDefinedRegisteredCommand(IPlayerCommandRegistry registry, PlayerCommandId id) =>
         Enum.IsDefined(id) && registry.Commands.Any(x => x.Id == id);
+
+    internal static bool TryParseNamedCommand(string? value, out PlayerCommandId command)
+    {
+        command = default;
+        string? name = Enum.GetNames<PlayerCommandId>().FirstOrDefault(name => string.Equals(name, value, StringComparison.OrdinalIgnoreCase));
+        return name is not null && Enum.TryParse(name, out command);
+    }
+
+    private static string? CanonicalKey(string value)
+    {
+        if (value.Length == 1 && (char.IsLetterOrDigit(value[0]) || value is "," or "[" or "]" or "=")) return value.ToUpperInvariant();
+        if (value.StartsWith("F", StringComparison.OrdinalIgnoreCase) && int.TryParse(value[1..], out int function) && function is >= 1 and <= 24) return "F" + function;
+        return new[] { "Space", "Left", "Right", "Up", "Down", "Enter", "Escape", "Tab", "Back", "Delete", "Home", "End", "PageUp", "PageDown", "MediaPlayPause", "MediaNextTrack", "MediaPreviousTrack", "MediaStop" }.FirstOrDefault(key => string.Equals(key, value, StringComparison.OrdinalIgnoreCase));
+    }
 }

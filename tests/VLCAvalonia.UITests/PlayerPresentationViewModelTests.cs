@@ -54,6 +54,35 @@ public sealed class PlayerPresentationViewModelTests
         viewModel.ApplyEngineState(State(0, status, canSeek: false));
 
         Assert.Equal(expectedIsPlaying, viewModel.IsPlaying);
+        Assert.Equal(expectedIsPlaying ? "Pause" : "Play", viewModel.PlayPauseName);
+    }
+
+    [Theory]
+    [InlineData(PlaybackStatus.Closed, false)]
+    [InlineData(PlaybackStatus.Opening, false)]
+    [InlineData(PlaybackStatus.Faulted, false)]
+    [InlineData(PlaybackStatus.Playing, true)]
+    [InlineData(PlaybackStatus.Paused, true)]
+    [InlineData(PlaybackStatus.Stopped, true)]
+    public void PlayPauseAvailabilityFollowsEffectivePlaybackState(PlaybackStatus status, bool expected)
+    {
+        PlayerPresentationViewModel viewModel = CreateViewModel(new RecordingTransport());
+        viewModel.ApplyEngineState(State(0, status, false));
+        Assert.Equal(expected, viewModel.TogglePauseCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void VolumeClampsToTwoHundredPercentAndMarksAmplification()
+    {
+        RecordingTransport transport = new();
+        PlayerPresentationViewModel viewModel = CreateViewModel(transport);
+        viewModel.ApplyEngineState(State(0, PlaybackStatus.Playing, false));
+        viewModel.Volume = 150;
+        Assert.True(viewModel.IsVolumeAmplified);
+        Assert.Contains("Amplified", viewModel.VolumeText);
+        viewModel.Volume = 250;
+        viewModel.Volume = -10;
+        Assert.Equal(new[] { 1.5, 2, 0 }, transport.Volumes);
     }
 
     [Fact]
@@ -652,12 +681,13 @@ public sealed class PlayerPresentationViewModelTests
         public List<string> Opened { get; } = new();
         public bool Muted { get; private set; }
         public double Rate { get; private set; }
+        public List<double> Volumes { get; } = new();
         public void Open(string source) => Opened.Add(source);
         public void TogglePause() { }
         public bool Stopped { get; private set; }
         public void Stop() => Stopped = true;
         public void Seek(double normalizedPosition) => Seeks.Add(normalizedPosition);
-        public void SetVolume(double normalizedVolume) { }
+        public void SetVolume(double normalizedVolume) => Volumes.Add(normalizedVolume);
         public void SetMuted(bool muted) => Muted = muted;
         public void Skip(TimeSpan offset) => Skips.Add(offset);
         public void SetPlaybackRate(double playbackRate) => Rate = playbackRate;

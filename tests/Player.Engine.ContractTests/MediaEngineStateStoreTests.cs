@@ -61,7 +61,7 @@ public sealed class MediaEngineStateStoreTests
         Assert.Equal(1, store.State.Position);
         Assert.Equal(TimeSpan.Zero, store.State.Elapsed);
         Assert.Equal(TimeSpan.Zero, store.State.Duration);
-        Assert.Equal(1.25, store.State.Volume);
+        Assert.Equal(2, store.State.Volume);
     }
 
     [Fact]

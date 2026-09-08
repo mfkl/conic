@@ -26,10 +26,18 @@ public partial class MainWindow : Window
     private readonly ChromeVisibilityController _chromeVisibility = new();
     private bool _isSeeking;
     private bool _isVolumeDragging;
+    private bool _keyboardNavigation;
 
     public MainWindow()
     {
         InitializeComponent();
+        AddHandler(PointerPressedEvent, OnPlayerPointerPressed, Avalonia.Interactivity.RoutingStrategies.Tunnel, true);
+        AddHandler(KeyDownEvent, (_, e) =>
+        {
+            if (e.Key is Key.Tab or Key.Left or Key.Right or Key.Up or Key.Down or Key.Home or Key.End)
+                _keyboardNavigation = true;
+            WakeChrome();
+        }, Avalonia.Interactivity.RoutingStrategies.Tunnel, true);
         _settings = new PlayerSettingsService(new FilePlayerSettingsStorage());
         _settings.Load();
         _presentation = new PlayerPresentationViewModel(
@@ -54,25 +62,18 @@ public partial class MainWindow : Window
         _autoHideTimer.Tick += (_, _) =>
         {
             bool menuOpen = (VideoArea.ContextMenu?.IsOpen ?? false) || SettingsPanel.IsVisible || OpenMenu.IsVisible || UrlPanel.IsVisible || ResumePanel.IsVisible || QueueDrawer.IsVisible || LibraryPanel.IsVisible;
-            bool chromeFocused = PlayerDock.IsKeyboardFocusWithin || TopChrome.IsKeyboardFocusWithin;
-            bool popupOpen = menuOpen || VideoArea.IsKeyboardFocusWithin &&
-                (RightTransport.IsKeyboardFocusWithin || TopChrome.IsKeyboardFocusWithin);
+            bool chromeFocused = _keyboardNavigation && (PlayerDock.IsKeyboardFocusWithin || TopChrome.IsKeyboardFocusWithin);
             bool chromePointerOver = TopChrome.IsPointerOver || PlayerDock.IsPointerOver;
-            if (!_settings.Current.ReduceMotion && _chromeVisibility.TryHide(_isSeeking || _isVolumeDragging, popupOpen, chromePointerOver, chromeFocused))
+            if (_chromeVisibility.TryHide(_isSeeking || _isVolumeDragging, menuOpen, chromePointerOver, chromeFocused))
+            {
                 SetChromeVisibility(false);
+                _autoHideTimer.Stop();
+            }
         };
         VideoSurface.EngineStateChanged += OnEngineStateChanged;
         Closed += (_, _) => { _presentation.OnClosing(); _autoHideTimer.Stop(); };
         SizeChanged += (_, _) => { ApplyResponsiveChrome(); ApplyResponsiveSettings(); };
-        Loaded += (_, _) =>
-        {
-            if (!Environment.GetCommandLineArgs().Contains("--layout-smoke") &&
-                string.IsNullOrWhiteSpace(VideoSurface.MediaPath) &&
-                FindTestFile() is { } testFile)
-            {
-                VideoSurface.MediaPath = testFile;
-            }
-        };
+        Activated += (_, _) => WakeChrome();
     }
 
     internal static IReadOnlyList<string> ToAudioArguments(PlayerSettings settings) => new VLCAudioStartupOptions(
@@ -82,17 +83,40 @@ public partial class MainWindow : Window
 
     private void OnPlayerInteraction(object? sender, PointerEventArgs e)
     {
-        _chromeVisibility.Wake();
-        SetChromeVisibility(true);
-        _autoHideTimer.Stop();
-        if (WindowState == WindowState.FullScreen) _autoHideTimer.Start();
+        _keyboardNavigation = false;
+        WakeChrome();
     }
 
-    private void OnPlayerKeyDown(object? sender, KeyEventArgs e)
+    private void OnPlayerPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        _keyboardNavigation = false;
+        WakeChrome();
+        Point point = e.GetPosition(this);
+        if (OpenMenu.IsVisible && !GetClientRect(OpenMenu).Contains(point) && !GetClientRect(OpenOptionsButton).Contains(point))
+            CloseOpenMenu(restoreFocus: false);
+    }
+
+    private void OnVideoPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        WakeChrome();
+        if (e.ClickCount == 2 && (ReferenceEquals(e.Source, VideoSurface) || ReferenceEquals(e.Source, VideoArea)))
+        {
+            ToggleFullscreen();
+            e.Handled = true;
+        }
+    }
+
+    private void WakeChrome()
     {
         _chromeVisibility.Wake();
         SetChromeVisibility(true);
         _autoHideTimer.Stop();
+        if (_presentation.IsPlaying && !_settings.Current.ReduceMotion) _autoHideTimer.Start();
+    }
+
+    private void OnPlayerKeyDown(object? sender, KeyEventArgs e)
+    {
+        WakeChrome();
         if (e.Key == Key.Escape && UrlPanel.IsVisible)
         {
             CloseUrlPanel();
@@ -147,7 +171,7 @@ public partial class MainWindow : Window
         _chromeVisibility.SetFullscreen(_presentation.IsFullscreen);
         SetChromeVisibility(true);
         _autoHideTimer.Stop();
-        if (_presentation.IsFullscreen) _autoHideTimer.Start();
+        if (_presentation.IsPlaying) _autoHideTimer.Start();
     }
 
     private void OpenSettings()
@@ -202,12 +226,13 @@ public partial class MainWindow : Window
         OpenOptionsButton.Focus();
     }
 
-    private void CloseOpenMenu()
+    private void CloseOpenMenu(bool restoreFocus = true)
     {
         OpenMenu.IsVisible = false;
         ClearRecentPrompt.IsVisible = false;
         UpdateOpenErrorSurface();
-        OpenOptionsButton.Focus();
+        if (restoreFocus) OpenOptionsButton.Focus();
+        WakeChrome();
     }
 
     private void OnUrlSubmit(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
@@ -278,7 +303,7 @@ public partial class MainWindow : Window
         _presentation.IsLibraryOpen = false;
         ClearLibraryPrompt.IsVisible = false;
         LibraryButton.Focus();
-        if (_presentation.IsFullscreen) { _autoHideTimer.Stop(); _autoHideTimer.Start(); }
+        if (_presentation.IsPlaying) { _autoHideTimer.Stop(); _autoHideTimer.Start(); }
     }
     private void OnClearLibrary(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
@@ -332,12 +357,18 @@ public partial class MainWindow : Window
 
     private void OnPresentationPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
+        if (e.PropertyName is nameof(PlayerPresentationViewModel.IsPlaying) or nameof(PlayerPresentationViewModel.PlaybackStatus))
+        {
+            _chromeVisibility.SetPlaybackState(_presentation.IsPlaying, _settings.Current.ReduceMotion);
+            SetChromeVisibility(true);
+            _autoHideTimer.Stop();
+            if (_presentation.IsPlaying && !_settings.Current.ReduceMotion) _autoHideTimer.Start();
+        }
         if (e.PropertyName is nameof(PlayerPresentationViewModel.OpenError) or nameof(PlayerPresentationViewModel.HasOpenError))
             UpdateOpenErrorSurface();
         if (e.PropertyName == nameof(PlayerPresentationViewModel.IsQueueOpen))
         {
-            SetChromeVisibility(true);
-            _autoHideTimer.Stop();
+            WakeChrome();
             Dispatcher.UIThread.Post(() => { if (_presentation.IsQueueOpen) CloseQueueButton.Focus(); else QueueButton.Focus(); });
         }
         if (e.PropertyName == nameof(PlayerPresentationViewModel.IsLibraryOpen))
@@ -350,8 +381,7 @@ public partial class MainWindow : Window
                 SettingsPanel.IsVisible = false;
                 UpdateOpenErrorSurface();
             }
-            SetChromeVisibility(true);
-            _autoHideTimer.Stop();
+            WakeChrome();
             Dispatcher.UIThread.Post(() => { if (_presentation.IsLibraryOpen) LibraryRecentTab.Focus(); else LibraryButton.Focus(); });
         }
         if (e.PropertyName == nameof(PlayerPresentationViewModel.HasPendingResume))
@@ -379,7 +409,7 @@ public partial class MainWindow : Window
         {
             Dispatcher.UIThread.Post(() => OpenOptionsButton.Focus());
             UpdateOpenErrorSurface();
-            if (_presentation.IsFullscreen) { _autoHideTimer.Stop(); _autoHideTimer.Start(); }
+            if (_presentation.IsPlaying) { _autoHideTimer.Stop(); _autoHideTimer.Start(); }
         }
     }
 
@@ -452,7 +482,7 @@ public partial class MainWindow : Window
         SettingsClearResumePrompt.IsVisible = false;
         UpdateOpenErrorSurface();
         OpenSettingsButton.Focus();
-        if (_presentation.IsFullscreen) { _autoHideTimer.Stop(); _autoHideTimer.Start(); }
+        if (_presentation.IsPlaying) { _autoHideTimer.Stop(); _autoHideTimer.Start(); }
     }
 
     private void OnSettingsClose(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => CloseSettings();
@@ -460,7 +490,9 @@ public partial class MainWindow : Window
 
     private void ApplyLiveSettings(PlayerSettings settings)
     {
-        RequestedThemeVariant = settings.Theme == "Dark" ? Avalonia.Styling.ThemeVariant.Dark : Avalonia.Styling.ThemeVariant.Default;
+        _chromeVisibility.SetPlaybackState(_presentation.IsPlaying, settings.ReduceMotion);
+        // Playback is deliberately dark, including the platform-owned caption.
+        RequestedThemeVariant = Avalonia.Styling.ThemeVariant.Dark;
         _autoHideTimer.Interval = TimeSpan.FromSeconds(settings.ControlTimeoutSeconds);
         Classes.Set("reduced-motion", settings.ReduceMotion);
         if (settings.ReduceMotion) SetChromeVisibility(true);
@@ -595,7 +627,7 @@ public partial class MainWindow : Window
                     case 32: ValidateSurface("library-clear-prompt", ClearLibraryPrompt, [ClearLibraryPrompt, CancelClearLibraryButton]); OnCancelClearLibrary(null, new Avalonia.Interactivity.RoutedEventArgs()); phase = 33; return;
                     case 33: if (!ClearLibraryButton.IsVisible) throw new InvalidOperationException("[layout-smoke] FAIL library clear focus restoration"); _presentation.IsLibraryOpen = false; ShowOpenMenuForSmoke(); _presentation.IsQueueOpen = true; phase = 1; return;
                     case 1: ValidateQueueDrawer(width); _presentation.DrawerTab = "Audio"; phase = 20; return;
-                    case 20: ValidateMediaDrawer(width); _presentation.IsQueueOpen = false; ValidateSurface("open-menu", OpenMenu, [OpenMenu, OpenFolderAction, RecentEmptyState]); CloseOpenMenu(); ShowUrlPanel(); phase = 2; return;
+                    case 20: ValidateMediaDrawer(width); _presentation.IsQueueOpen = false; ValidateSurface("open-menu", OpenMenu, [OpenMenu, OpenFolderAction]); CloseOpenMenu(); ShowUrlPanel(); phase = 2; return;
                     case 2: ValidateSurface("url-panel", UrlPanel, [UrlPanel, UrlTextBox, UrlCancelButton, UrlSubmitButton]); CloseUrlPanel(); ResumePanel.IsVisible = true; Dispatcher.UIThread.Post(() => ResumeAction.Focus()); phase++; return;
                     case 3: ValidateSurface("resume-panel", ResumePanel, [ResumePanel, ResumeAction, DeclineResumeAction]); ResumePanel.IsVisible = false; OpenSettings(); _settingsViewModel.SelectedPage = _settingsViewModel.Pages[0]; ApplyResponsiveSettings(); phase++; return;
                     case 4: ValidateSettingsLayout(width, compact); BringSettingsControlIntoView(SettingsClearRecentButton); phase++; return;
@@ -607,7 +639,7 @@ public partial class MainWindow : Window
                     case 10: ApplyResponsiveChrome(); ApplyResponsiveSettings(); ValidateLayout(width, true); ValidateTopChrome(width); OpenMenu.IsVisible = true; UrlPanel.IsVisible = true; SettingsPanel.IsVisible = true; _presentation.IsQueueOpen = true; _presentation.IsLibraryOpen = true; phase = 31; return;
                     case 31: ValidateLibraryDrawer(width); _presentation.IsLibraryOpen = false; ShowOpenMenuForSmoke(); _presentation.IsQueueOpen = true; phase = 11; return;
                     case 11: ValidateQueueDrawer(width); _presentation.DrawerTab = "Audio"; phase = 21; return;
-                    case 21: ValidateMediaDrawer(width); _presentation.IsQueueOpen = false; ValidateSurface("open-menu", OpenMenu, [OpenMenu, OpenFolderAction, RecentEmptyState]); CloseOpenMenu(); ShowUrlPanel(); phase = 12; return;
+                    case 21: ValidateMediaDrawer(width); _presentation.IsQueueOpen = false; ValidateSurface("open-menu", OpenMenu, [OpenMenu, OpenFolderAction]); CloseOpenMenu(); ShowUrlPanel(); phase = 12; return;
                     case 12: ValidateSurface("url-panel", UrlPanel, [UrlPanel, UrlTextBox, UrlCancelButton, UrlSubmitButton]); CloseUrlPanel(); ResumePanel.IsVisible = true; Dispatcher.UIThread.Post(() => ResumeAction.Focus()); phase++; return;
                     case 13: ValidateSurface("resume-panel", ResumePanel, [ResumePanel, ResumeAction, DeclineResumeAction]); ResumePanel.IsVisible = false; OpenSettings(); _settingsViewModel.SelectedPage = _settingsViewModel.Pages[0]; ApplyResponsiveSettings(); phase++; return;
                     case 14: ValidateSettingsLayout(width, true); BringSettingsControlIntoView(SettingsClearRecentButton); phase++; return;
@@ -632,7 +664,7 @@ public partial class MainWindow : Window
     private void ValidateLayout(double width, bool compact)
     {
         Rect dock = PlayerDock.Bounds;
-        Control[] required = [CenterTransport, RightTransport, PlayerTimeline, PlayerVolume];
+        Control[] required = compact ? [CenterTransport, RightTransport, PlayerTimeline] : [CenterTransport, RightTransport, PlayerTimeline, PlayerVolume];
         Rect ToDock(Control control)
         {
             Point origin = control.TranslatePoint(default, PlayerDock) ?? default;
@@ -646,7 +678,7 @@ public partial class MainWindow : Window
         bool rows = compact ? Grid.GetRow(RightTransport) == 2 : Grid.GetRow(RightTransport) == 1;
         bool separate = compact ? ToDock(RightTransport).Top >= ToDock(CenterTransport).Bottom : !ToDock(RightTransport).Intersects(ToDock(CenterTransport));
         Console.WriteLine($"[layout-smoke] width={width} dock={dock} center={ToDock(CenterTransport)} right={ToDock(RightTransport)} timeline={ToDock(PlayerTimeline)} volume={ToDock(PlayerVolume)} rows={rows} contained={contained} separate={separate}");
-        if (!contained || !rows || !separate || Math.Abs(PlayerVolume.Bounds.Width - 112) > 0.1)
+        if (!contained || !rows || !separate || (!compact && Math.Abs(PlayerVolume.Bounds.Width - 120) > 0.1))
             throw new InvalidOperationException("[layout-smoke] FAIL bounds or row policy");
     }
 
@@ -661,19 +693,19 @@ public partial class MainWindow : Window
 
     private void ValidateTopChrome(double width)
     {
-        Control[] controls = [OpenOptionsButton, OpenSettingsButton];
+        Control[] controls = [QueueButton, OpenOptionsButton];
         bool contained = controls.All(control => IsContained(control));
-        Rect open = GetClientRect(OpenOptionsButton);
-        Rect settings = GetClientRect(OpenSettingsButton);
+        Rect open = GetClientRect(QueueButton);
+        Rect settings = GetClientRect(OpenOptionsButton);
         bool separate = !open.Intersects(settings);
-        Console.WriteLine($"[layout-smoke] top width={width} open={open} settings={settings} title-visible={TopChromeTitle.IsVisible} always-visible={AlwaysOnTopChrome.IsVisible} contained={contained} separate={separate}");
+        Console.WriteLine($"[layout-smoke] top width={width} queue={open} more={settings} title-visible={TopChromeTitle.IsVisible} contained={contained} separate={separate}");
         if (!contained || !separate)
             throw new InvalidOperationException("[layout-smoke] FAIL top chrome bounds");
     }
 
     private void ValidateQueueDrawer(double width)
     {
-        bool contained = IsContained(QueueDrawer) && QueueDrawer.IsVisible && QueueDrawer.Bounds.Width > 0 && QueueDrawer.Bounds.Width <= Math.Max(390, width - 32);
+        bool contained = IsContained(QueueDrawer) && QueueDrawer.IsVisible && QueueDrawer.Bounds.Width > 0 && QueueDrawer.Bounds.Width <= Math.Max(400, width - 24);
         Console.WriteLine($"[layout-smoke] queue-drawer width={width} bounds={QueueDrawer.Bounds} contained={contained}");
         if (!contained) throw new InvalidOperationException("[layout-smoke] FAIL queue drawer bounds");
     }
@@ -725,7 +757,7 @@ public partial class MainWindow : Window
     private void ValidateSettingsLayout(double width, bool compact)
     {
         Control navigation = compact ? CompactSettingsPages : SettingsPages;
-        Control[] required = [SettingsPanel, SettingsSearch, navigation, SettingsContent, OpenSettingsButton];
+        Control[] required = [SettingsPanel, SettingsSearch, navigation, SettingsContent];
         bool contained = required.All(IsContained);
         Console.WriteLine($"[settings-layout-smoke] width={width} compact={compact} panel={SettingsPanel.Bounds} search={SettingsSearch.Bounds} navigation={navigation.Bounds} content={SettingsContent.Bounds} recent-clear={SettingsClearRecentButton.Bounds} resume-clear={SettingsClearResumeButton.Bounds} open={OpenSettingsButton.Bounds} reset={SettingsResetRow.Bounds} contained={contained}");
         if (!contained || !navigation.IsVisible)
@@ -830,14 +862,14 @@ public partial class MainWindow : Window
     private void OnVolumeDragCompleted(object? sender, EventArgs e)
     {
         _isVolumeDragging = false;
-        if (_presentation.IsFullscreen) { _autoHideTimer.Stop(); _autoHideTimer.Start(); }
+        if (_presentation.IsPlaying) { _autoHideTimer.Stop(); _autoHideTimer.Start(); }
     }
 
     private void EndSeek()
     {
         _isSeeking = false;
         _presentation.CommitSeek();
-        if (_presentation.IsFullscreen) { _autoHideTimer.Stop(); _autoHideTimer.Start(); }
+        if (_presentation.IsPlaying) { _autoHideTimer.Stop(); _autoHideTimer.Start(); }
     }
 
     private void SetChromeVisibility(bool visible)
@@ -849,17 +881,39 @@ public partial class MainWindow : Window
     private void ApplyResponsiveChrome()
     {
         PlayerLayoutResult layout = PlayerLayoutPolicy.ForWidth(Bounds.Width);
-        bool compactTopChrome = Bounds.Width < 700;
-        TopChrome.Margin = compactTopChrome ? new Thickness(12, 12, 12, 0) : new Thickness(24, 20, 24, 0);
-        TopChromeTitle.IsVisible = !compactTopChrome;
-        AlwaysOnTopChrome.IsVisible = !compactTopChrome;
+        bool compactTopChrome = Bounds.Width < PlayerLayoutPolicy.CompactWidth;
+        TopChrome.Margin = new Thickness(0);
+        TopChromeTitle.IsVisible = true;
+        ProductMark.IsVisible = !compactTopChrome;
+        LeftTransport.IsVisible = !compactTopChrome;
+        PreviousButton.IsVisible = !compactTopChrome;
+        NextButton.IsVisible = !compactTopChrome;
+        PlayerVolume.IsVisible = true;
+        if (compactTopChrome)
+        {
+            QueueDrawer.Width = double.NaN;
+            QueueDrawer.MaxWidth = double.PositiveInfinity;
+            QueueDrawer.Height = Math.Min(Math.Max(260, Bounds.Height * .72), 520);
+            QueueDrawer.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch;
+            QueueDrawer.VerticalAlignment = Avalonia.Layout.VerticalAlignment.Bottom;
+            QueueDrawer.Margin = new Thickness(12);
+        }
+        else
+        {
+            QueueDrawer.Width = 400;
+            QueueDrawer.MaxWidth = Math.Max(320, Bounds.Width * .42);
+            QueueDrawer.Height = double.NaN;
+            QueueDrawer.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right;
+            QueueDrawer.VerticalAlignment = Avalonia.Layout.VerticalAlignment.Stretch;
+            QueueDrawer.Margin = new Thickness(0, 76, 16, 18);
+        }
         CenterTransport.Spacing = layout.Spacing;
         RightTransport.Spacing = layout.Spacing;
         Grid.SetRow(RightTransport, layout.RightRow);
         Grid.SetColumn(RightTransport, layout.RightColumn);
         Grid.SetColumnSpan(RightTransport, layout.RightColumnSpan);
-        Grid.SetColumn(CenterTransport, 0);
-        Grid.SetColumnSpan(CenterTransport, 3);
+        Grid.SetColumn(CenterTransport, compactTopChrome ? 0 : 1);
+        Grid.SetColumnSpan(CenterTransport, compactTopChrome ? 3 : 1);
         RightTransport.HorizontalAlignment = layout.IsCompact
             ? Avalonia.Layout.HorizontalAlignment.Center
             : Avalonia.Layout.HorizontalAlignment.Right;

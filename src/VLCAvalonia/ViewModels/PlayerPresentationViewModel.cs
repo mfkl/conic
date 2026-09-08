@@ -23,6 +23,7 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
     private string _elapsedText = "00:00";
     private string _durationText = "00:00";
     private bool _isPlaying;
+    private PlaybackStatus _playbackStatus = PlaybackStatus.Closed;
     private bool _isAlwaysOnTop;
     private bool _isMuted;
     private double _playbackRate = 1;
@@ -112,11 +113,11 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
         registry.Register(new(PlayerCommandId.AcceptResume, "Resume playback", "Media"), _ => ApplyResume(), _ => _pendingResume is not null && _resumeReady);
         registry.Register(new(PlayerCommandId.DeclineResume, "Start from beginning", "Media"), _ => DeclineResume(), _ => _pendingResume is not null && _resumeReady);
         registry.Register(new(PlayerCommandId.OpenTestMedia, "Open test video", "Media"), _ => _openTestMedia());
-        registry.Register(new(PlayerCommandId.TogglePause, "Play or pause", "Playback", "Space"), _ => _transport.TogglePause());
-        registry.Register(new(PlayerCommandId.Stop, "Stop", "Playback"), _ => { CheckpointCurrent(true); _transport.Stop(); });
+        registry.Register(new(PlayerCommandId.TogglePause, "Play or pause", "Playback", "Space"), _ => _transport.TogglePause(), _ => CanTogglePlayback);
+        registry.Register(new(PlayerCommandId.Stop, "Stop", "Playback"), _ => { CheckpointCurrent(true); _transport.Stop(); }, _ => CanStop);
         registry.Register(new(PlayerCommandId.Seek, "Seek", "Playback"), parameter => _transport.Seek(ToDouble(parameter)));
-        registry.Register(new(PlayerCommandId.SetVolume, "Set volume", "Audio"), parameter => _transport.SetVolume(ToDouble(parameter) / 100));
-        registry.Register(new(PlayerCommandId.ToggleMute, "Mute", "Audio", "M"), _ => _transport.SetMuted(!IsMuted));
+        registry.Register(new(PlayerCommandId.SetVolume, "Set volume", "Audio"), parameter => _transport.SetVolume(Math.Clamp(ToDouble(parameter), 0, 200) / 100), _ => HasPlayableMedia);
+        registry.Register(new(PlayerCommandId.ToggleMute, "Mute", "Audio", "M"), _ => _transport.SetMuted(!IsMuted), _ => HasPlayableMedia);
         registry.Register(new(PlayerCommandId.SkipBackward, "Skip backward", "Playback", "Alt+Left"), _ => _transport.Skip(TimeSpan.FromSeconds(-(_settings?.Current.SkipBackwardSeconds ?? 10))), _ => CanSeek);
         registry.Register(new(PlayerCommandId.SkipForward, "Skip forward", "Playback", "Alt+Right"), _ => _transport.Skip(TimeSpan.FromSeconds(_settings?.Current.SkipForwardSeconds ?? 10)), _ => CanSeek);
         registry.Register(new(PlayerCommandId.SetPlaybackRate, "Playback speed", "Playback"), parameter => _transport.SetPlaybackRate(Math.Clamp(ToDouble(parameter), 1d / 32, 31.25)));
@@ -273,7 +274,10 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
             if (!Set(ref _position, value) || _isUpdatingFromEngine)
                 return;
             if (_isSeeking)
+            {
                 ElapsedText = FormatTime(_duration * value);
+                OnPropertyChanged(nameof(SeekPreviewText));
+            }
             else
                 Registry.Execute(PlayerCommandId.Seek, value);
         }
@@ -284,28 +288,66 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
         get => _volume;
         set
         {
-            if (!Set(ref _volume, value) || _isUpdatingFromEngine)
+            value = Math.Clamp(value, 0, 200);
+            if (!Set(ref _volume, value))
                 return;
-            Registry.Execute(PlayerCommandId.SetVolume, value);
+            OnPropertyChanged(nameof(IsVolumeAmplified));
+            OnPropertyChanged(nameof(VolumeText));
+            if (!_isUpdatingFromEngine) Registry.Execute(PlayerCommandId.SetVolume, value);
         }
     }
 
     public bool CanSeek { get; private set; }
+    public bool IsSeeking => _isSeeking;
+    public double SeekStep => _duration.TotalSeconds > 0 ? Math.Min(1, 5 / _duration.TotalSeconds) : .01;
+    public string SeekPreviewText => FormatTime(_duration * Position);
     public string ElapsedText { get => _elapsedText; private set => Set(ref _elapsedText, value); }
     public string DurationText { get => _durationText; private set => Set(ref _durationText, value); }
     public bool IsPlaying { get => _isPlaying; private set => Set(ref _isPlaying, value); }
+    public PlaybackStatus PlaybackStatus
+    {
+        get => _playbackStatus;
+        private set
+        {
+            if (!Set(ref _playbackStatus, value)) return;
+            OnPropertyChanged(nameof(IsOpening));
+            OnPropertyChanged(nameof(IsFaulted));
+            OnPropertyChanged(nameof(IsNoMedia));
+            OnPropertyChanged(nameof(HasPlayableMedia));
+            OnPropertyChanged(nameof(CanTogglePlayback));
+            OnPropertyChanged(nameof(CanStop));
+            OnPropertyChanged(nameof(PlayPauseName));
+            OnPropertyChanged(nameof(PlayPauseToolTip));
+            (TogglePauseCommand as RegistryCommand)?.RaiseCanExecuteChanged();
+            (StopCommand as RegistryCommand)?.RaiseCanExecuteChanged();
+            (ToggleMuteCommand as RegistryCommand)?.RaiseCanExecuteChanged();
+        }
+    }
+    public bool IsOpening => PlaybackStatus == PlaybackStatus.Opening;
+    public bool IsFaulted => PlaybackStatus == PlaybackStatus.Faulted;
+    public bool IsNoMedia => PlaybackStatus == PlaybackStatus.Closed && _currentSource is null;
+    public bool HasPlayableMedia => _currentSource is not null || PlaybackStatus is PlaybackStatus.Playing or PlaybackStatus.Paused or PlaybackStatus.Stopped;
+    public bool CanTogglePlayback => !IsOpening && !IsFaulted && HasPlayableMedia;
+    public bool CanStop => PlaybackStatus is PlaybackStatus.Opening or PlaybackStatus.Playing or PlaybackStatus.Paused;
+    public string PlayPauseName => IsPlaying ? "Pause" : "Play";
+    public string PlayPauseToolTip => IsPlaying ? "Pause (Space)" : "Play (Space)";
+    public string MuteName => IsMuted ? "Unmute" : "Mute";
+    public string FullscreenName => IsFullscreen ? "Exit fullscreen" : "Enter fullscreen";
+    public string FavoriteName => IsCurrentFavorite ? "Remove from favorites" : "Add to favorites";
+    public bool IsVolumeAmplified => Volume > 100;
+    public string VolumeText => IsVolumeAmplified ? $"Volume {Volume:0}% · Amplified" : $"Volume {Volume:0}%";
     public bool IsAlwaysOnTop { get => _isAlwaysOnTop; set => Set(ref _isAlwaysOnTop, value); }
     public bool IsMuted
     {
         get => _isMuted;
         private set
         {
-            Set(ref _isMuted, value);
+            if (Set(ref _isMuted, value)) OnPropertyChanged(nameof(MuteName));
         }
     }
     public double PlaybackRate { get => _playbackRate; private set => Set(ref _playbackRate, value); }
     public string MediaTitle { get => _mediaTitle; private set => Set(ref _mediaTitle, value); }
-    public bool IsFullscreen { get => _isFullscreen; set => Set(ref _isFullscreen, value); }
+    public bool IsFullscreen { get => _isFullscreen; set { if (Set(ref _isFullscreen, value)) OnPropertyChanged(nameof(FullscreenName)); } }
     public string OpenError
     {
         get => _openError;
@@ -474,13 +516,19 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
     public string MediaControlsNotice { get => _mediaControlsNotice; private set => Set(ref _mediaControlsNotice, value); }
     public bool HasMediaControlsNotice => !string.IsNullOrWhiteSpace(MediaControlsNotice);
 
-    public void BeginSeek() => _isSeeking = CanSeek;
+    public void BeginSeek()
+    {
+        _isSeeking = CanSeek;
+        OnPropertyChanged(nameof(IsSeeking));
+        OnPropertyChanged(nameof(SeekPreviewText));
+    }
 
     public void CommitSeek()
     {
         if (!_isSeeking)
             return;
         _isSeeking = false;
+        OnPropertyChanged(nameof(IsSeeking));
         Registry.Execute(PlayerCommandId.Seek, Position);
     }
 
@@ -496,8 +544,13 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
         try
         {
             _lastState = state;
+            IsPlaying = state.Status == PlaybackStatus.Playing;
+            PlaybackStatus = state.Status;
+            OnPropertyChanged(nameof(PlayPauseName));
+            OnPropertyChanged(nameof(PlayPauseToolTip));
             if (state.Status == PlaybackStatus.Faulted) { OpenError = "Media could not be opened."; _diagnostic?.Invoke(state.Error ?? "Media engine fault."); return; }
             _duration = state.Duration;
+            OnPropertyChanged(nameof(SeekStep));
             if (!_isSeeking)
                 Position = state.Position;
             CanSeek = state.CanSeek;
@@ -511,7 +564,6 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
             if (!_isSeeking)
                 ElapsedText = FormatTime(state.Elapsed);
             DurationText = FormatTime(state.Duration);
-            IsPlaying = state.Status == PlaybackStatus.Playing;
             if (_currentSource is not null && state.Generation > 0 && state.Generation != _recordedOpenGeneration && state.Status is PlaybackStatus.Playing or PlaybackStatus.Paused)
             {
                 if (TryHistory(() => _history?.RecordOpened(_currentSource, _settings?.Current.RememberRecentMedia ?? true))) { _recordedOpenGeneration = state.Generation; NotifyLibrary(); }
@@ -544,12 +596,13 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
         if (!result.Succeeded || result.Source is null) { if (kind == MediaSourceKind.Recent && !string.IsNullOrWhiteSpace(rawSource)) TryHistory(() => _history?.RemoveRecent(rawSource)); _diagnostic?.Invoke(result.Diagnostic ?? "Media source validation failed."); OpenError = result.UserMessage ?? "Media could not be opened."; NotifyLibrary(); return; }
         CheckpointCurrent(true);
         _currentSource = result.Source;
+        PlaybackStatus = PlaybackStatus.Opening;
         _generationFloor = _lastObservedGeneration; _activeGeneration = -1; _resumeReady = false; _lastState = null; _recordedOpenGeneration = -1;
         _pendingResume = (_settings?.Current.ResumePlayback ?? true) && (_settings?.Current.RememberResumeHistory ?? true) ? TryFindResume(_currentSource) : null;
         NotifyPendingResume();
         OpenError = string.Empty;
         try { if (_queue is not null) _queue.OpenQueue([_currentSource.CanonicalSource]); else _transport.Open(_currentSource.CanonicalSource); }
-        catch (Exception e) { _diagnostic?.Invoke(e.ToString()); _currentSource = null; _pendingResume = null; OpenError = "Media could not be opened."; }
+        catch (Exception e) { _diagnostic?.Invoke(e.ToString()); _currentSource = null; _pendingResume = null; PlaybackStatus = PlaybackStatus.Faulted; OpenError = "Media could not be opened."; }
         NotifyLibrary();
         OnPropertyChanged(nameof(HasRecentItems));
     }
@@ -670,7 +723,7 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
     private void NotifyLibrary()
     {
         NotifyRecent(); NotifyResume();
-        OnPropertyChanged(nameof(FavoriteItems)); OnPropertyChanged(nameof(HasFavoriteItems)); OnPropertyChanged(nameof(HasLibraryItems)); OnPropertyChanged(nameof(IsCurrentFavorite));
+        OnPropertyChanged(nameof(FavoriteItems)); OnPropertyChanged(nameof(HasFavoriteItems)); OnPropertyChanged(nameof(HasLibraryItems)); OnPropertyChanged(nameof(IsCurrentFavorite)); OnPropertyChanged(nameof(FavoriteName));
         (ClearFavoritesCommand as RegistryCommand)?.RaiseCanExecuteChanged(); (ClearLibraryCommand as RegistryCommand)?.RaiseCanExecuteChanged(); (AddFavoriteCommand as RegistryCommand)?.RaiseCanExecuteChanged();
     }
 
@@ -679,6 +732,12 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
         MediaSource? favorite = _currentSource;
         if (!string.IsNullOrWhiteSpace(source)) favorite = _sourceValidator.Validate(source, MediaSourceKind.Recent).Source;
         if (favorite is null) return;
+        if (string.IsNullOrWhiteSpace(source) && IsCurrentFavorite)
+        {
+            TryHistory(() => _history?.RemoveFavorite(favorite.CanonicalSource));
+            NotifyLibrary();
+            return;
+        }
         TryHistory(() => _history?.AddFavorite(favorite)); NotifyLibrary();
     }
     private void NotifyPendingResume()

@@ -90,7 +90,7 @@ public sealed class MediaEngineStateStore
                 Position = Math.Clamp(position, 0, 1),
                 Elapsed = elapsed < TimeSpan.Zero ? TimeSpan.Zero : elapsed,
                 Duration = duration < TimeSpan.Zero ? TimeSpan.Zero : duration,
-                Volume = Math.Clamp(volume, 0, 1.25),
+                Volume = Math.Clamp(volume, 0, 2),
                 CanSeek = canSeek,
                 Error = error,
                 IsMuted = isMuted,

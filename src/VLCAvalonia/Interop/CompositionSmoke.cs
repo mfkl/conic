@@ -437,13 +437,16 @@ internal static class CompositionSmoke
                 state => state.Status == Player.Contracts.PlaybackStatus.Playing,
                 ControlStageTimeout);
 
-            const double volumeTarget = 0.42;
-            RunAction("volume", () => player.SetVolume(volumeTarget));
-            WaitForState(
-                player,
-                "volume",
-                state => Math.Abs(state.Volume - volumeTarget) < 0.03,
-                ControlStageTimeout);
+            foreach (double volumeTarget in new[] { 0.42, 1.5, 2.0 })
+            {
+                string stage = $"volume-{volumeTarget:0.##}";
+                RunAction(stage, () => player.SetVolume(volumeTarget));
+                WaitForState(
+                    player,
+                    stage,
+                    state => Math.Abs(state.Volume - volumeTarget) < 0.03,
+                    ControlStageTimeout);
+            }
 
             RunAction("mute-on", () => player.SetMuted(true));
             WaitForState(player, "mute-on", state => state.IsMuted, ControlStageTimeout);

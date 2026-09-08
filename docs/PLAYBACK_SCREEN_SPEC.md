@@ -1,6 +1,23 @@
 # Playback screen specification
 
-Status: **awaiting Gate P1 user approval; no implementation authorized**
+Status: **implemented; awaiting Gate P2 visual approval and completion of blocked native runtime qualification**
+
+Playback review corrections requested on 2026-09-08 supersede the corresponding
+layout/component details below:
+
+- Align the media title vertically with the cone in the same top row.
+- Anchor More below its top-right button and dismiss it on an outside click.
+- Mouse focus left by clicking a control must not prevent inactivity hiding;
+  preserve controls during keyboard navigation, dragging, and open menus.
+- Show painted seek/volume tracks and thumbs, and display the volume percentage.
+  Keep the volume slider visible in compact mode; use the compact layout below
+  900 DIPs to avoid overlapping the centered transport.
+- Label the left action “Audio / subtitles,” use recognizable speaker/fullscreen
+  glyphs, and remove the bookmark/favorite action from the playback bar.
+
+The targeted `--playback-controls-smoke` exercises styled controls, routed seek
+and volume input, menu dismissal, inactivity, keyboard focus, and compact layout.
+It uses a simulated engine snapshot and does not qualify native playback.
 
 Specification baseline: `feature/modern-player-ui` at
 `12d89183c98f57796c4cc2540cbe2f4f50bab5b7`

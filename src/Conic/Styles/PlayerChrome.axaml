@@ -1,4 +1,24 @@
-<Styles xmlns="https://github.com/avaloniaui">
+<Styles xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Styles.Resources>
+        <ControlTheme x:Key="PlayerSliderTrack" TargetType="RepeatButton">
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Border Background="Transparent">
+                        <Border Height="4" VerticalAlignment="Center" CornerRadius="2" Background="{TemplateBinding Background}" />
+                    </Border>
+                </ControlTemplate>
+            </Setter>
+        </ControlTheme>
+        <ControlTheme x:Key="PlayerSliderThumb" TargetType="Thumb">
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="{TemplateBinding CornerRadius}" />
+                </ControlTemplate>
+            </Setter>
+        </ControlTheme>
+    </Styles.Resources>
     <Style Selector="Button.chrome">
         <Setter Property="Height" Value="38" />
         <Setter Property="Padding" Value="15,0" />
@@ -63,8 +83,8 @@
         <Setter Property="FontSize" Value="18" />
     </Style>
     <Style Selector="Button.transport">
-        <Setter Property="Width" Value="42" />
-        <Setter Property="Height" Value="42" />
+        <Setter Property="Width" Value="44" />
+        <Setter Property="Height" Value="44" />
         <Setter Property="Padding" Value="10" />
         <Setter Property="CornerRadius" Value="21" />
         <Setter Property="Background" Value="Transparent" />
@@ -75,21 +95,27 @@
         <Setter Property="Background" Value="#20FFFFFF" />
         <Setter Property="Foreground" Value="White" />
     </Style>
+    <Style Selector="Button.transport:disabled">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Opacity" Value="0.48" />
+    </Style>
     <Style Selector="Button.mute">
-        <Setter Property="Width" Value="24" />
-        <Setter Property="Height" Value="42" />
-        <Setter Property="Padding" Value="3" />
+        <Setter Property="Width" Value="40" />
+        <Setter Property="Height" Value="40" />
+        <Setter Property="Padding" Value="10" />
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="BorderThickness" Value="0" />
         <Setter Property="Foreground" Value="#FF9A55" />
     </Style>
     <Style Selector="Button.play">
-        <Setter Property="Width" Value="56" />
-        <Setter Property="Height" Value="56" />
-        <Setter Property="Padding" Value="16" />
-        <Setter Property="CornerRadius" Value="28" />
+        <Setter Property="Width" Value="64" />
+        <Setter Property="Height" Value="64" />
+        <Setter Property="Padding" Value="18" />
+        <Setter Property="CornerRadius" Value="32" />
         <Setter Property="Background" Value="#F5F6F8" />
-        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="BorderBrush" Value="#FF8A3D" />
+        <Setter Property="BorderThickness" Value="2" />
         <Setter Property="Foreground" Value="#111318" />
     </Style>
     <Style Selector="Button.play:pointerover">
@@ -100,16 +126,62 @@
         <Setter Property="RenderTransform" Value="none" />
     </Style>
     <Style Selector="Slider.timeline">
-        <Setter Property="Height" Value="36" />
+        <Setter Property="Height" Value="28" />
+        <Setter Property="Padding" Value="8,0" />
         <Setter Property="Foreground" Value="#F5F6F8" />
         <Setter Property="Background" Value="#3DFFFFFF" />
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Grid Margin="{TemplateBinding Padding}">
+                    <Track Name="PART_Track" Orientation="Horizontal"
+                           Minimum="{TemplateBinding Minimum}" Maximum="{TemplateBinding Maximum}"
+                           Value="{TemplateBinding Value}">
+                        <Track.DecreaseButton>
+                            <RepeatButton Name="PART_DecreaseButton" Theme="{StaticResource PlayerSliderTrack}" Height="28" VerticalAlignment="Center"
+                                          Background="#FF8A3D" BorderThickness="0" />
+                        </Track.DecreaseButton>
+                        <Track.Thumb>
+                            <Thumb Theme="{StaticResource PlayerSliderThumb}" Width="14" Height="14" Background="#F5F6F8" BorderBrush="#FF8A3D"
+                                   BorderThickness="2" CornerRadius="7" />
+                        </Track.Thumb>
+                        <Track.IncreaseButton>
+                            <RepeatButton Name="PART_IncreaseButton" Theme="{StaticResource PlayerSliderTrack}" Height="28" VerticalAlignment="Center"
+                                          Background="#4DFFFFFF" BorderThickness="0" />
+                        </Track.IncreaseButton>
+                    </Track>
+                </Grid>
+            </ControlTemplate>
+        </Setter>
     </Style>
     <Style Selector="Slider.volume">
-        <Setter Property="Width" Value="112" />
-        <Setter Property="Height" Value="52" />
+        <Setter Property="Width" Value="120" />
+        <Setter Property="Height" Value="40" />
+        <Setter Property="Padding" Value="8,0" />
         <Setter Property="VerticalAlignment" Value="Center" />
         <Setter Property="Foreground" Value="#F4F5F7" />
         <Setter Property="Background" Value="#35FFFFFF" />
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Grid Margin="{TemplateBinding Padding}">
+                    <Track Name="PART_Track" Orientation="Horizontal"
+                           Minimum="{TemplateBinding Minimum}" Maximum="{TemplateBinding Maximum}"
+                           Value="{TemplateBinding Value}">
+                        <Track.DecreaseButton>
+                            <RepeatButton Name="PART_DecreaseButton" Theme="{StaticResource PlayerSliderTrack}" Height="28" VerticalAlignment="Center"
+                                          Background="#FF8A3D" BorderThickness="0" />
+                        </Track.DecreaseButton>
+                        <Track.Thumb>
+                            <Thumb Theme="{StaticResource PlayerSliderThumb}" Width="16" Height="16" Background="#F5F6F8" BorderBrush="#111318"
+                                   BorderThickness="2" CornerRadius="8" />
+                        </Track.Thumb>
+                        <Track.IncreaseButton>
+                            <RepeatButton Name="PART_IncreaseButton" Theme="{StaticResource PlayerSliderTrack}" Height="28" VerticalAlignment="Center"
+                                          Background="#35FFFFFF" BorderThickness="0" />
+                        </Track.IncreaseButton>
+                    </Track>
+                </Grid>
+            </ControlTemplate>
+        </Setter>
     </Style>
 
     <!-- Keep Fluent's system accent from turning the sliders blue. -->
@@ -144,6 +216,7 @@
          neutral so the accent remains crisp rather than overpowering. -->
     <Style Selector="Slider.timeline /template/ RepeatButton#PART_DecreaseButton">
         <Setter Property="Background" Value="#FF8A3D" />
+        <Setter Property="MinHeight" Value="4" />
     </Style>
     <Style Selector="Slider.timeline:pointerover /template/ RepeatButton#PART_DecreaseButton">
         <Setter Property="Background" Value="#FFA465" />
@@ -154,11 +227,17 @@
     <!-- A dark center and light rim keep the volume thumb distinct from
          both the filled and unfilled portions of the track. -->
     <Style Selector="Slider.volume /template/ Thumb">
-        <Setter Property="Width" Value="18" />
-        <Setter Property="Height" Value="18" />
+        <Setter Property="Width" Value="16" />
+        <Setter Property="Height" Value="16" />
         <Setter Property="Background" Value="#111318" />
         <Setter Property="BorderBrush" Value="#F5F6F8" />
         <Setter Property="BorderThickness" Value="2" />
+    </Style>
+    <Style Selector="Slider.volume /template/ RepeatButton#PART_DecreaseButton">
+        <Setter Property="Background" Value="#FF8A3D" />
+    </Style>
+    <Style Selector="Slider.volume:amplified /template/ RepeatButton#PART_DecreaseButton">
+        <Setter Property="Background" Value="#FFA465" />
     </Style>
     <Style Selector="Slider.volume:pointerover /template/ Thumb">
         <Setter Property="Background" Value="#1B1D22" />
@@ -196,6 +275,20 @@
     </Style>
     <Style Selector="Button:focus">
         <Setter Property="Background" Value="#40FF9A55" />
+        <Setter Property="BorderBrush" Value="#FF8A3D" />
+        <Setter Property="BorderThickness" Value="2" />
+    </Style>
+    <Style Selector="Button.iconChrome">
+        <Setter Property="Width" Value="40" /><Setter Property="Height" Value="40" />
+        <Setter Property="Padding" Value="10" /><Setter Property="CornerRadius" Value="20" />
+        <Setter Property="Background" Value="#14000000" /><Setter Property="Foreground" Value="#F5F6F8" />
+        <Setter Property="BorderThickness" Value="0" />
+    </Style>
+    <Style Selector="Button.iconChrome:pointerover"><Setter Property="Background" Value="#28FFFFFF" /></Style>
+    <Style Selector="Button.openMedia">
+        <Setter Property="MinWidth" Value="148" /><Setter Property="Height" Value="48" />
+        <Setter Property="CornerRadius" Value="12" /><Setter Property="Background" Value="#FF8A3D" />
+        <Setter Property="Foreground" Value="#120B07" /><Setter Property="FontWeight" Value="SemiBold" />
     </Style>
     <Style Selector="TextBlock.settingBadge">
         <Setter Property="Background" Value="#2AFF9A55" />

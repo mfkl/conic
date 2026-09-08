@@ -1,9 +1,11 @@
 namespace Player.Application;
 
-/// <summary>Pure fullscreen chrome visibility policy, driven by UI interaction state.</summary>
+/// <summary>Pure playback chrome visibility policy, driven by UI interaction state.</summary>
 public sealed class ChromeVisibilityController
 {
     public bool IsFullscreen { get; private set; }
+    public bool IsPlaying { get; private set; }
+    public bool ReduceMotion { get; private set; }
     public bool IsVisible { get; private set; } = true;
 
     public void SetFullscreen(bool fullscreen)
@@ -14,8 +16,15 @@ public sealed class ChromeVisibilityController
 
     public void Wake() => IsVisible = true;
 
+    public void SetPlaybackState(bool isPlaying, bool reduceMotion)
+    {
+        IsPlaying = isPlaying;
+        ReduceMotion = reduceMotion;
+        if (!isPlaying || reduceMotion) IsVisible = true;
+    }
+
     public bool CanHide(bool seekDragging, bool menuOpen, bool chromePointerOver, bool chromeFocused) =>
-        IsFullscreen && !seekDragging && !menuOpen && !chromePointerOver && !chromeFocused;
+        IsPlaying && !ReduceMotion && !seekDragging && !menuOpen && !chromePointerOver && !chromeFocused;
 
     public bool TryHide(bool seekDragging, bool menuOpen, bool chromePointerOver, bool chromeFocused)
     {

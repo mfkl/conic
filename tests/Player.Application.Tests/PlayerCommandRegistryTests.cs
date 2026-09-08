@@ -51,6 +51,7 @@ public sealed class ChromeVisibilityControllerTests
     {
         ChromeVisibilityController controller = new();
         controller.SetFullscreen(true);
+        controller.SetPlaybackState(isPlaying: true, reduceMotion: false);
 
         Assert.False(controller.TryHide(seekDragging: true, menuOpen: false, chromePointerOver: false, chromeFocused: false));
         Assert.True(controller.IsVisible);
@@ -58,6 +59,19 @@ public sealed class ChromeVisibilityControllerTests
         Assert.True(controller.TryHide(false, false, false, false));
         controller.Wake();
         Assert.True(controller.IsVisible);
+    }
+
+    [Fact]
+    public void WindowedChromeOnlyHidesDuringActivePlayback()
+    {
+        ChromeVisibilityController controller = new();
+        controller.SetPlaybackState(isPlaying: false, reduceMotion: false);
+        Assert.False(controller.TryHide(false, false, false, false));
+        controller.SetPlaybackState(isPlaying: true, reduceMotion: false);
+        Assert.True(controller.TryHide(false, false, false, false));
+        controller.Wake();
+        controller.SetPlaybackState(isPlaying: true, reduceMotion: true);
+        Assert.False(controller.TryHide(false, false, false, false));
     }
 }
 
@@ -81,6 +95,7 @@ public sealed class PlayerLayoutPolicyTests
     [InlineData(1280, false)]
     [InlineData(900, false)]
     [InlineData(899, true)]
+    [InlineData(720, true)]
     [InlineData(480, true)]
     public void CompactBreakPointKeepsTheTimelineAndVolumeLaneAvailable(double width, bool compact)
     {

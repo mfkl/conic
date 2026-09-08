@@ -186,7 +186,7 @@ internal sealed unsafe class VLCCorePlayer : IMediaEngine, IQueueTransport, IMed
                 return;
             VLCCore.PlaylistVolumeSet(
                 _playlist,
-                (float)Math.Clamp(normalizedVolume, 0, 1.25));
+                (float)Math.Clamp(normalizedVolume, 0, 2));
             generation = _generation;
         }
         PublishSnapshot(generation);

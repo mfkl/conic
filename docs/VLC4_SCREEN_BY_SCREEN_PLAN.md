@@ -670,6 +670,8 @@ Home thumbnail report is fixed with background local-file thumbnails and caching
 see `HOME_THUMBNAILS_REVIEW_2026-09-10.md`. The subsequent Stop/end-of-playback
 feedback is addressed: visible Stop controls and an active-only Home mini-player;
 see `STOP_PLAYBACK_REVIEW_2026-09-10.md`.
+The subsequent Play-after-Stop defect is also fixed and tested through the
+shared Play command, including replay after natural EOF.
 
 Next: complete the I-phase polish of queue/track drawers, keyboard focus,
 long titles and display scaling, incorporating visual feedback on the screens.

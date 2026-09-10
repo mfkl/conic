@@ -96,7 +96,8 @@ history, settings, and native composition contracts.
 - Home/Media Library content or navigation design;
 - the Settings redesign;
 - optical-disc opening;
-- casting/renderers, picture-in-picture, or a mini-player;
+- casting/renderers (Home mini-player and desktop PiP are now separate authorized
+  follow-up packages in `VLC4_SCREEN_BY_SCREEN_PLAN.md`);
 - snapshot capture;
 - aspect ratio, crop, zoom, or deinterlace controls;
 - thumbnail seek previews or cover-art retrieval;

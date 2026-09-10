@@ -192,6 +192,32 @@ forced-adapter fallback. Do not rerun native suites for this documentation edit.
 
 ## 1. Working agreement
 
+2026-09-10 execution update: the user requested “add it and keep going on the
+plan” and clarified “commit as you go”. This authorizes writing the remaining
+specifications, implementing and validating each step, and committing it without
+another permission stop between steps. The original review gates below remain
+review milestones, not mandatory pauses under this newer instruction. Do not
+record unobserved visual acceptance. No push or merge is authorized.
+
+Add **PiP after Home and before Settings**. Reference
+`player/qml/PIPPlayer.qml` at VLC master `1a853315` for compact controls and return
+behavior. The first desktop PiP implementation temporarily turns the existing
+player window into a resizable, always-on-top video window (480x270 initially,
+320x180 minimum), with play/pause, return and close actions. Save and restore
+normal bounds, route, window state and topmost preference. Escape returns to the
+main layout. The main shell is temporarily replaced, rather than keeping two
+windows open; this avoids detaching the native surface or creating a second
+player. Multiple simultaneous video windows remain a separate follow-up.
+
+PiP acceptance: actual video remains visible; pause/seek/position and engine
+generation survive enter/exit; resizing, fullscreen-to-PiP, Escape/return,
+topmost restoration and normal app shutdown work. Media opening, Home and
+Settings commands restore the full layout first. Use Avalonia window APIs and
+keep Windows qualification distinct from macOS/Linux. Record captures, run
+affected tests and native composition checks, then commit the step.
+
+The next Home specification is [HOME_SCREEN_SPEC.md](HOME_SCREEN_SPEC.md).
+
 Work one screen at a time in this order:
 
 1. Playback screen.

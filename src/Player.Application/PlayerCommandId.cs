@@ -60,4 +60,5 @@ public enum PlayerCommandId
     SelectHomeSection,
     RemoveHomeItem,
     ToggleHomeLayout,
+    TogglePictureInPicture,
 }

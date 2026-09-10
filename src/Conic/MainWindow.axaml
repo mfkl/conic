@@ -36,6 +36,7 @@
                     <MenuItem Header="2×" Command="{Binding SetPlaybackRateCommand}" CommandParameter="2" />
                 </MenuItem>
                 <MenuItem Header="Fullscreen" Command="{Binding ToggleFullscreenCommand}" />
+                <MenuItem Header="{Binding PictureInPictureLabel}" Command="{Binding TogglePictureInPictureCommand}" />
                 <MenuItem Header="Playback queue" Command="{Binding ToggleQueueCommand}" />
                 <MenuItem Header="{Binding RepeatLabel}" Command="{Binding CycleRepeatCommand}" />
                 <MenuItem Header="{Binding ShuffleLabel}" Command="{Binding ToggleShuffleCommand}" />
@@ -48,6 +49,32 @@
         </Grid.ContextMenu>
         <controls:CompositionVideoSurface x:Name="VideoSurface" />
         <views:HomeView x:Name="HomeScreen" ZIndex="1" IsVisible="{Binding IsHomeOpen}" />
+        <Grid x:Name="PictureInPictureChrome" ZIndex="2" IsVisible="False" Focusable="True" AutomationProperties.Name="Picture in picture controls">
+            <Border x:Name="PictureInPictureHeader" VerticalAlignment="Top" Background="#B0000000" PointerPressed="OnPictureInPictureDrag" Padding="8,4">
+                <Grid ColumnDefinitions="40,*,40">
+                    <Button x:Name="PictureInPictureReturn" Classes="iconChrome" Command="{Binding TogglePictureInPictureCommand}" ToolTip.Tip="Return to main window (Escape)" AutomationProperties.Name="Return from picture in picture">
+                        <PathIcon Width="20" Height="20" Data="M3,3 H12 V5 H6 L13,12 L11,14 L4,7 V13 H2 V3 Z M15,4 H22 V22 H4 V16 H6 V20 H20 V6 H15 Z"/>
+                    </Button>
+                    <TextBlock Grid.Column="1" Text="{Binding MediaTitle}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" Margin="8,0" Foreground="White"/>
+                    <Button Grid.Column="2" Classes="iconChrome" Click="OnPictureInPictureClose" ToolTip.Tip="Close VLC" AutomationProperties.Name="Close VLC">
+                        <PathIcon Width="18" Height="18" Data="M5,3 L12,10 L19,3 L21,5 L14,12 L21,19 L19,21 L12,14 L5,21 L3,19 L10,12 L3,5 Z"/>
+                    </Button>
+                </Grid>
+            </Border>
+            <Button x:Name="PictureInPicturePlay" Classes="iconChrome" Width="52" Height="52" CornerRadius="26" HorizontalAlignment="Center" VerticalAlignment="Center" Background="#B0000000" Command="{Binding TogglePauseCommand}" ToolTip.Tip="{Binding PlayPauseToolTip}" AutomationProperties.Name="{Binding PlayPauseName}">
+                <Grid>
+                    <PathIcon Width="24" Height="24" IsVisible="{Binding !IsPlaying}" Data="M8,5 L19,12 L8,19 Z"/>
+                    <PathIcon Width="24" Height="24" IsVisible="{Binding IsPlaying}" Data="M7,5 H11 V19 H7 Z M14,5 H18 V19 H14 Z"/>
+                </Grid>
+            </Button>
+            <Border VerticalAlignment="Bottom" Background="#B0000000" Padding="12,4,12,6">
+                <Grid RowDefinitions="Auto,24" ColumnDefinitions="*,Auto">
+                    <TextBlock Text="{Binding ElapsedText}" FontSize="11" FontFeatures="tnum" Foreground="White"/>
+                    <TextBlock Grid.Column="1" Text="{Binding DurationText}" FontSize="11" FontFeatures="tnum" Foreground="#CCCCCC"/>
+                    <controls:PlayerTimeline x:Name="PictureInPictureTimeline" Grid.Row="1" Grid.ColumnSpan="2" Classes="timeline monochrome" Minimum="0" Maximum="1" SmallChange="{Binding SeekStep}" Value="{Binding Position, Mode=TwoWay}" IsEnabled="{Binding CanSeek}" AutomationProperties.Name="Picture in picture position" AutomationProperties.HelpText="Use left and right arrow keys to seek." SeekStarted="OnSeekStarted" SeekCommitted="OnSeekCommitted"/>
+                </Grid>
+            </Border>
+        </Grid>
 
         <StackPanel x:Name="NoMediaSurface" IsVisible="{Binding IsNoMedia}"
                     HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="14">
@@ -119,6 +146,7 @@
                 <Button Classes="menuAction" Content="Stop" Command="{Binding StopCommand}" IsVisible="{Binding CanStop}" />
                 <Button Classes="menuAction" Content="Tracks and synchronization" Command="{Binding ToggleMediaControlsCommand}" CommandParameter="Audio" />
                 <Button Classes="menuAction" Content="Media information" Command="{Binding MediaInformationCommand}" />
+                <Button Classes="menuAction" Content="Picture in picture" Command="{Binding TogglePictureInPictureCommand}" ToolTip.Tip="Keep video above other windows (Ctrl+Shift+P)" />
                 <StackPanel Orientation="Horizontal" Spacing="8" Margin="12,2">
                     <TextBlock Text="Speed" VerticalAlignment="Center" />
                     <ComboBox x:Name="SpeedSelector" Width="88" PlaceholderText="{Binding PlaybackRate, StringFormat='{}{0:0.##}×'}" SelectionChanged="OnSpeedChanged" AutomationProperties.Name="Playback speed">

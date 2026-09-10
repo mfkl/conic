@@ -201,6 +201,7 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
         CopyDiagnosticsCommand = new RelayCommand(_ => _ = CopyDiagnosticsAsync());
         SnapshotCommand = new RegistryCommand(registry, PlayerCommandId.Snapshot);
         InitializeHomeCommands(registry);
+        InitializePictureInPictureCommands(registry);
     }
 
     public IPlayerCommandRegistry Registry { get; }
@@ -317,6 +318,7 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
             OnPropertyChanged(nameof(HasPlayableMedia));
             OnPropertyChanged(nameof(ShowMiniPlayer));
             (ShowPlayerCommand as RegistryCommand)?.RaiseCanExecuteChanged();
+            (TogglePictureInPictureCommand as RegistryCommand)?.RaiseCanExecuteChanged();
             OnPropertyChanged(nameof(CanTogglePlayback));
             OnPropertyChanged(nameof(CanStop));
             OnPropertyChanged(nameof(PlayPauseName));
@@ -586,12 +588,14 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
 
     private async Task OpenMediaAsync()
     {
+        RequestMainLayout();
         string? source = await _mediaSourcePicker.PickMediaAsync();
         if (!string.IsNullOrWhiteSpace(source)) OpenSource(source, MediaSourceKind.File);
     }
 
     private async Task OpenFolderAsync()
     {
+        RequestMainLayout();
         string? source = await _mediaSourcePicker.PickFolderAsync();
         if (!string.IsNullOrWhiteSpace(source)) await OpenFolderSourcesAsync(source);
     }
@@ -600,6 +604,7 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
 
     public void OpenSource(string? rawSource, MediaSourceKind kind)
     {
+        RequestMainLayout();
         MediaOpenResult result = _sourceValidator.Validate(rawSource, kind);
         if (!result.Succeeded || result.Source is null) { if (kind == MediaSourceKind.Recent && !string.IsNullOrWhiteSpace(rawSource)) TryHistory(() => _history?.RemoveRecent(rawSource)); _diagnostic?.Invoke(result.Diagnostic ?? "Media source validation failed."); OpenError = result.UserMessage ?? "Media could not be opened."; NotifyLibrary(); return; }
         CheckpointCurrent(true);
@@ -631,6 +636,7 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
 
     private async Task OpenMultipleDroppedAsync(IReadOnlyList<string> sources)
     {
+        RequestMainLayout();
         await Task.Yield();
         List<MediaSource> accepted = []; List<string> failures = [];
         foreach (string source in sources)
@@ -653,6 +659,7 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
 
     private async Task LoadPlaylistAsync()
     {
+        RequestMainLayout();
         if (_mediaSourcePicker is not IPlaylistDocumentPicker picker) return;
         string? path = await picker.PickPlaylistToOpenAsync();
         if (string.IsNullOrWhiteSpace(path)) return;

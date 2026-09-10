@@ -17,7 +17,9 @@ public partial class App : Application
         {
             MainWindow window = new();
             desktop.MainWindow = window;
-            if (desktop.Args?.Contains("--thumbnail-smoke", StringComparer.OrdinalIgnoreCase) == true)
+            if (desktop.Args?.Contains("--stop-smoke", StringComparer.OrdinalIgnoreCase) == true)
+                window.EnableStopSmoke(desktop);
+            else if (desktop.Args?.Contains("--thumbnail-smoke", StringComparer.OrdinalIgnoreCase) == true)
                 window.EnableThumbnailSmoke(desktop, false);
             else if (desktop.Args?.Contains("--thumbnail-review", StringComparer.OrdinalIgnoreCase) == true)
                 window.EnableThumbnailSmoke(desktop, true);

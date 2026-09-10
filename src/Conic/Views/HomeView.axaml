@@ -89,12 +89,13 @@
             </Border>
         </Grid>
         <Border Grid.Row="2" IsVisible="{Binding ShowMiniPlayer}" Background="#181818" BorderBrush="#303030" BorderThickness="0,1,0,0" Padding="12,8">
-            <Grid ColumnDefinitions="*,Auto,Auto,Auto" RowDefinitions="Auto,4" RowSpacing="8">
+            <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto" RowDefinitions="Auto,4" RowSpacing="8">
                 <Button Classes="menuAction" HorizontalContentAlignment="Stretch" Command="{Binding ShowPlayerCommand}"><TextBlock Text="{Binding MediaTitle}" TextTrimming="CharacterEllipsis"/></Button>
                 <Button Grid.Column="1" Classes="playbackAction" Content="{Binding PlayPauseName}" Command="{Binding TogglePauseCommand}"/>
-                <Button Grid.Column="2" Classes="playbackAction" Content="↗" Command="{Binding ShowPlayerCommand}" ToolTip.Tip="Return to player" AutomationProperties.Name="Return to player"/>
-                <Button Grid.Column="3" Classes="playbackAction" Command="{Binding TogglePictureInPictureCommand}" ToolTip.Tip="Picture in picture" AutomationProperties.Name="Picture in picture"><PathIcon Width="18" Height="18" Data="M2,3 H22 V21 H2 Z M4,5 V19 H20 V5 Z M12,12 H18 V17 H12 Z"/></Button>
-                <ProgressBar Grid.Row="1" Grid.ColumnSpan="4" Minimum="0" Maximum="1" Value="{Binding Position}" Foreground="{DynamicResource PlayerAccent}" Height="3"/>
+                <Button x:Name="HomeStopButton" Grid.Column="2" Classes="playbackAction" Command="{Binding StopCommand}" ToolTip.Tip="Stop playback" AutomationProperties.Name="Stop playback"><PathIcon Width="14" Height="14" Data="M4,4 H20 V20 H4 Z"/></Button>
+                <Button Grid.Column="3" Classes="playbackAction" Content="↗" Command="{Binding ShowPlayerCommand}" ToolTip.Tip="Return to player" AutomationProperties.Name="Return to player"/>
+                <Button Grid.Column="4" Classes="playbackAction" Command="{Binding TogglePictureInPictureCommand}" ToolTip.Tip="Picture in picture" AutomationProperties.Name="Picture in picture"><PathIcon Width="18" Height="18" Data="M2,3 H22 V21 H2 Z M4,5 V19 H20 V5 Z M12,12 H18 V17 H12 Z"/></Button>
+                <ProgressBar Grid.Row="1" Grid.ColumnSpan="5" Minimum="0" Maximum="1" Value="{Binding Position}" Foreground="{DynamicResource PlayerAccent}" Height="3"/>
             </Grid>
         </Border>
     </Grid>

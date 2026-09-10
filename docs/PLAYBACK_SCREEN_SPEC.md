@@ -2,6 +2,12 @@
 
 Status: **implemented; VLC 3 native qualification refreshed; Gate P2 accepted 2026-09-10**
 
+September 10 follow-up: the user requested a visible Stop button. Stop now appears
+in the primary transport and Home mini-player at desktop and compact widths,
+using the existing shared command. This supersedes the overflow-only Stop
+placement described below. Speed remains in overflow. Home clears its mini-player
+after Stop or natural end; see `STOP_PLAYBACK_REVIEW_2026-09-10.md`.
+
 September 10 execution: the compatible baseline is restored and the Playback
 fidelity pass is implemented. Debug/Release tests, native composition/lifecycle
 checks and review captures are recorded in

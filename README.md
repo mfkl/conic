@@ -13,7 +13,7 @@ boundaries are in [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md).
 
 The active [VLC 4 UI fidelity plan](docs/VLC4_SCREEN_BY_SCREEN_PLAN.md) covers
 the visual redesign in Avalonia while keeping VLCLR/VLC 3: Playback and the
-Home/navigation shell are implemented; PiP, Settings and integration follow.
+Home/navigation shell and PiP are implemented; Settings and integration follow.
 It includes the local VLC master source map and visual acceptance criteria.
 The [September 10 Playback review](docs/PLAYBACK_REVIEW_2026-09-10.md) records
 the latest implementation, validation results, captures and review launcher.
@@ -100,6 +100,8 @@ implementation, qualification commands, measured counters, and remaining work.
 - Start on Home to browse recent media, favorites and saved positions, with
   search and grid/list views. `Alt+Home` returns there during playback; the
   now-playing strip returns to the same playback session.
+- Use **Picture in picture** in More or `Ctrl+Shift+P` for a compact always-on-top
+  player. Escape restores the previous window and route; closing PiP exits VLC.
 - Open a file with `Ctrl+O`, a URL with `Ctrl+L`, the queue with `Ctrl+J`, the
   Library with `Ctrl+Shift+L`, and Settings with `Ctrl+,`.
 - The Library is deliberately lightweight: it presents recent media, explicit

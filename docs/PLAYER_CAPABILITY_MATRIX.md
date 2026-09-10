@@ -112,7 +112,8 @@ space have focus; persisted overrides are conflict checked.
 | Fullscreen | Working | `F11` | Window-state service |
 | Playback speed | Working selector/menu | Keyboard focus and Enter; no default | Rate binding |
 | Toggle queue | Working | `Ctrl+J` | Queue snapshot |
-| Library | Working | `Ctrl+Shift+L` | Local history document |
+| Library | Working; Home adds sections, search and grid/list | `Ctrl+Shift+L`, `Alt+Home` | Local history document |
+| Picture in picture | Working on Windows; compact same-window mode | `Ctrl+Shift+P`, Escape to return | Same attached engine/surface; multi-window PiP deferred |
 | Subtitle/audio track menus | Working | Keyboard focus and Enter; no default | T1 |
 | Settings | Working | `Ctrl+,` | Settings service |
 | Media information | Working generation-safe metadata drawer with redacted clipboard diagnostics; codec-stream details remain unavailable. | `Ctrl+I` | M1 complete for copied media metadata; codec streams unavailable |

@@ -1,0 +1,17 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Conic.ViewModels"
+             x:Class="Conic.Views.VideoAdjustmentsView"
+             x:DataType="vm:VideoAdjustmentsViewModel" x:CompileBindings="True">
+    <StackPanel Spacing="14">
+        <TextBlock Text="Video" FontWeight="SemiBold" />
+        <TextBlock IsVisible="{Binding !Available}" Text="Play a video to adjust its picture." Classes="settingHint" TextWrapping="Wrap" />
+        <StackPanel IsVisible="{Binding Available}" Spacing="16">
+            <StackPanel Spacing="6"><TextBlock Text="Aspect ratio" /><ComboBox ItemsSource="{Binding Aspects}" SelectedItem="{Binding Aspect, Mode=TwoWay}" HorizontalAlignment="Stretch" AutomationProperties.Name="Aspect ratio" /></StackPanel>
+            <StackPanel Spacing="6"><TextBlock Text="Crop" /><ComboBox ItemsSource="{Binding Crops}" SelectedItem="{Binding Crop, Mode=TwoWay}" HorizontalAlignment="Stretch" AutomationProperties.Name="Video crop" /></StackPanel>
+            <StackPanel Spacing="6"><TextBlock Text="Zoom" /><ComboBox ItemsSource="{Binding Zooms}" SelectedItem="{Binding Zoom, Mode=TwoWay}" HorizontalAlignment="Stretch" AutomationProperties.Name="Video zoom" /></StackPanel>
+            <TextBlock Text="Fit keeps the picture inside the window. Fixed sizes may extend beyond its edges." Classes="settingHint" TextWrapping="Wrap" />
+            <Button Content="Reset video adjustments" Click="OnReset" HorizontalAlignment="Left" />
+        </StackPanel>
+    </StackPanel>
+</UserControl>

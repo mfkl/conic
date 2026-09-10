@@ -3,7 +3,7 @@ using Conic.Controls;
 
 namespace Conic.Services;
 
-internal sealed class CompositionVideoTransport : IPlayerTransport, IQueueTransport, IMediaCapabilitiesTransport, IMediaInformationTransport
+internal sealed class CompositionVideoTransport : IPlayerTransport, IQueueTransport, IMediaCapabilitiesTransport, IMediaInformationTransport, IVideoAdjustmentTransport
 {
     private readonly CompositionVideoSurface _surface;
     public CompositionVideoTransport(CompositionVideoSurface surface)
@@ -12,12 +12,16 @@ internal sealed class CompositionVideoTransport : IPlayerTransport, IQueueTransp
         _surface.QueueStateChanged += (_, state) => QueueStateChanged?.Invoke(this, state);
         _surface.MediaCapabilitiesChanged += (_, state) => MediaCapabilitiesChanged?.Invoke(this, state);
         _surface.MediaInformationChanged += (_, state) => MediaInformationChanged?.Invoke(this, state);
+        _surface.VideoAdjustmentsChanged += (_, state) => VideoAdjustmentsChanged?.Invoke(this, state);
     }
     public PlaybackQueueState QueueState => _surface.QueueState;
     public event EventHandler<PlaybackQueueState>? QueueStateChanged;
     public MediaCapabilitiesState MediaCapabilities => _surface.MediaCapabilities;
     public event EventHandler<MediaCapabilitiesState>? MediaCapabilitiesChanged;
     public MediaInformationState MediaInformation => _surface.MediaInformation;
+    public VideoAdjustmentState VideoAdjustments => _surface.VideoAdjustments;
+    public event EventHandler<VideoAdjustmentState>? VideoAdjustmentsChanged;
+    public void SetVideoAdjustment(VideoAdjustmentState expected, string setting, string value) => _surface.SetVideoAdjustment(expected, setting, value);
     public event EventHandler<MediaInformationState>? MediaInformationChanged;
     public void RefreshMediaInformation() => _surface.RefreshMediaInformation();
     public void Open(string source) => _surface.MediaPath = source;

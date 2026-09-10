@@ -20,6 +20,7 @@ namespace VLCAvalonia;
 public partial class MainWindow : Window
 {
     private readonly PlayerPresentationViewModel _presentation;
+    private bool _focusQueueOnLayout;
     private readonly PlayerSettingsService _settings;
     private readonly SettingsViewModel _settingsViewModel;
     private readonly DispatcherTimer _autoHideTimer = new() { Interval = TimeSpan.FromSeconds(3) };
@@ -358,6 +359,33 @@ public partial class MainWindow : Window
         e.Handled = true;
     }
 
+    private void OnQueueDrawerLayoutUpdated(object? sender, EventArgs e)
+    {
+        if (_focusQueueOnLayout && QueueDrawer.IsEffectivelyVisible && CloseQueueButton.Focus())
+            _focusQueueOnLayout = false;
+    }
+
+    private void OnDrawerTabsKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Source is not Button current || e.KeyModifiers != KeyModifiers.None) return;
+        Button[] tabs = DrawerTabs.Children.OfType<Button>().ToArray();
+        int index = Array.IndexOf(tabs, current);
+        if (index < 0) return;
+        int next = e.Key switch
+        {
+            Key.Left => (index + tabs.Length - 1) % tabs.Length,
+            Key.Right => (index + 1) % tabs.Length,
+            Key.Home => 0,
+            Key.End => tabs.Length - 1,
+            _ => -1
+        };
+        if (next < 0) return;
+        Button target = tabs[next];
+        target.Focus(NavigationMethod.Directional);
+        if (target.Command?.CanExecute(target.CommandParameter) == true) target.Command.Execute(target.CommandParameter);
+        e.Handled = true;
+    }
+
     private void OnMoveQueueItemUp(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
         if (sender is Button { DataContext: QueueItem item } && item.Index > 0)
@@ -409,7 +437,9 @@ public partial class MainWindow : Window
                 SettingsPanel.IsVisible = false;
             }
             WakeChrome();
-            Dispatcher.UIThread.Post(() => { if (_presentation.IsQueueOpen) CloseQueueButton.Focus(); else RestoreRouteFocus(QueueButton); });
+            // The view-model notification can precede the visibility binding and layout.
+            _focusQueueOnLayout = _presentation.IsQueueOpen;
+            if (!_presentation.IsQueueOpen) Dispatcher.UIThread.Post(() => RestoreRouteFocus(QueueButton));
         }
         if (e.PropertyName == nameof(PlayerPresentationViewModel.IsLibraryOpen))
         {

@@ -7,6 +7,27 @@ namespace VLCAvalonia.UITests;
 
 public sealed class PlayerPresentationViewModelTests
 {
+    [Theory]
+    [InlineData(MediaTrackKind.Audio)]
+    [InlineData(MediaTrackKind.Subtitle)]
+    public void DisableTrackIsASelectableVlcChoiceAndSelectionWaitsForReadback(MediaTrackKind kind)
+    {
+        CapabilityTransport transport = new();
+        var vm = new PlayerPresentationViewModel(transport, new EmptyPicker(), () => { });
+        MediaTrack[] tracks = [new("-1", "Disable", true, false), new("1", "English", false, true)];
+        var state = new MediaCapabilitiesState(1, 1, MediaCapabilityLoadState.Ready, tracks, tracks, [], [], new(0, 0));
+        transport.Publish(state);
+        var command = kind == MediaTrackKind.Audio ? vm.SelectAudioTrackCommand : vm.SelectSubtitleTrackCommand;
+        Assert.True(command.CanExecute("-1"));
+        Assert.False(command.CanExecute("unknown"));
+        command.Execute("-1");
+        Assert.Equal((kind, "-1"), transport.LastTrack);
+        Assert.False(vm.AudioTracks[0].IsSelected);
+        Assert.False(vm.SubtitleTracks[0].IsSelected);
+        transport.Publish(state with { Status = MediaCapabilityLoadState.Loading });
+        Assert.False(command.CanExecute("-1"));
+    }
+
     [Fact]
     public void StopThenPlayReopensFromTheBeginningAndAcceptsTheNewGenerationWithoutResumePrompt()
     {
@@ -807,8 +828,10 @@ public sealed class PlayerPresentationViewModelTests
         public MediaCapabilitiesState MediaCapabilities { get; private set; } = MediaCapabilitiesState.Initial;
         public event EventHandler<MediaCapabilitiesState>? MediaCapabilitiesChanged;
         public int LastAudioDelay { get; private set; }
+        public (MediaTrackKind Kind, string Id)? LastTrack { get; private set; }
         public void Publish(MediaCapabilitiesState state) { MediaCapabilities = state; MediaCapabilitiesChanged?.Invoke(this, state); }
-        public void SelectTrack(MediaTrackKind kind, string id) { } public void SelectTitle(string id) { } public void SelectChapter(string id) { }
+        public void SelectTrack(MediaTrackKind kind, string id) => LastTrack = (kind, id);
+        public void SelectTitle(string id) { } public void SelectChapter(string id) { }
         public void SetDelayMilliseconds(MediaTrackKind kind, int milliseconds) { if (kind == MediaTrackKind.Audio) LastAudioDelay = milliseconds; }
         public void ResetDelay(MediaTrackKind kind) { }
         public ExternalTrackAttachmentState AttachExternalTrack(MediaTrackKind kind, string path) => new(true, true, false);

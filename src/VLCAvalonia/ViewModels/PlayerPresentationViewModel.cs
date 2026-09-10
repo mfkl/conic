@@ -142,8 +142,8 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
         registry.Register(new(PlayerCommandId.LoadPlaylist, "Load playlist", "Media"), _ => _ = LoadPlaylistAsync(), _ => _mediaSourcePicker is IPlaylistDocumentPicker && _queue is not null);
         registry.Register(new(PlayerCommandId.SavePlaylist, "Save playlist", "Media"), _ => _ = SavePlaylistAsync(), _ => _mediaSourcePicker is IPlaylistDocumentPicker && QueueItems.Count > 0);
         registry.Register(new(PlayerCommandId.ToggleMediaControls, "Tracks and synchronization", "Playback"), p => { DrawerTab = p as string ?? "Audio"; IsQueueOpen = true; }, _ => _mediaControls is not null);
-        registry.Register(new(PlayerCommandId.SelectAudioTrack, "Select audio track", "Audio"), p => _mediaControls?.SelectTrack(MediaTrackKind.Audio, p as string ?? string.Empty), p => p is string id && AudioTracks.Any(x => x.Id == id && !x.IsDisabled));
-        registry.Register(new(PlayerCommandId.SelectSubtitleTrack, "Select subtitle track", "Subtitles"), p => _mediaControls?.SelectTrack(MediaTrackKind.Subtitle, p as string ?? string.Empty), p => p is string id && SubtitleTracks.Any(x => x.Id == id && !x.IsDisabled));
+        registry.Register(new(PlayerCommandId.SelectAudioTrack, "Select audio track", "Audio"), p => _mediaControls?.SelectTrack(MediaTrackKind.Audio, p as string ?? string.Empty), p => CanAdjustDelays && p is string id && AudioTracks.Any(x => x.Id == id));
+        registry.Register(new(PlayerCommandId.SelectSubtitleTrack, "Select subtitle track", "Subtitles"), p => _mediaControls?.SelectTrack(MediaTrackKind.Subtitle, p as string ?? string.Empty), p => CanAdjustDelays && p is string id && SubtitleTracks.Any(x => x.Id == id));
         registry.Register(new(PlayerCommandId.SelectTitle, "Select title", "Playback"), p => _mediaControls?.SelectTitle(p as string ?? string.Empty), p => p is string id && Titles.Any(x => x.Id == id));
         registry.Register(new(PlayerCommandId.SelectChapter, "Select chapter", "Playback"), p => _mediaControls?.SelectChapter(p as string ?? string.Empty), p => p is string id && Chapters.Any(x => x.Id == id));
         registry.Register(new(PlayerCommandId.AdjustAudioDelay, "Adjust audio delay", "Audio"), p => _mediaControls?.SetDelayMilliseconds(MediaTrackKind.Audio, MediaDelayPolicy.Clamp(AudioDelayMilliseconds + (int)ToDouble(p))), _ => CanAdjustDelays);
@@ -721,7 +721,7 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
         { _diagnostic?.Invoke(exception.ToString()); OpenError = "That playlist could not be saved."; }
     }
 
-    private void ApplyQueueState(PlaybackQueueState state)
+    internal void ApplyQueueState(PlaybackQueueState state)
     {
         if (state.Generation < QueueState.Generation || (_activeGeneration >= 0 && state.Generation > 0 && state.Generation != _activeGeneration)) return;
         QueueState = state;
@@ -730,7 +730,7 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
         (SavePlaylistCommand as RegistryCommand)?.RaiseCanExecuteChanged();
     }
 
-    private void ApplyMediaCapabilities(MediaCapabilitiesState state)
+    internal void ApplyMediaCapabilities(MediaCapabilitiesState state)
     {
         if (state.QueueGeneration < MediaCapabilities.QueueGeneration ||
             (_activeGeneration >= 0 && state.QueueGeneration > 0 && state.QueueGeneration != _activeGeneration)) return;

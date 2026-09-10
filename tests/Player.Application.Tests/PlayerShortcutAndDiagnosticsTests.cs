@@ -6,6 +6,22 @@ namespace Player.Application.Tests;
 public sealed class PlayerShortcutAndDiagnosticsTests
 {
     [Fact]
+    public void CodecFieldsAreCopiedAndDiagnosticsRedactStreamText()
+    {
+        Dictionary<string, string> fields = new() { ["Codec"] = "H264", ["Description"] = "secret https://example.com/a?token=private\nextra" };
+        MediaCodecStream stream = new(0, fields);
+        fields["Codec"] = "changed";
+        Assert.Equal("H264", stream.Fields["Codec"]);
+        Assert.Throws<NotSupportedException>(() => ((IDictionary<string, string>)stream.Fields).Add("x", "y"));
+        MediaInformationState state = new(1, 1, MediaInformationLoadState.Ready, "Movie", new Dictionary<string, string>(), CodecStreams: [stream]);
+        string diagnostics = MediaDiagnostics.Build(state);
+        Assert.Contains("codecStreams=1", diagnostics);
+        Assert.Contains("stream.0.Codec=H264", diagnostics);
+        Assert.DoesNotContain("token=private", diagnostics);
+        Assert.DoesNotContain("\nextra", diagnostics);
+    }
+
+    [Fact]
     public void ShortcutNormalizationIsDeterministicAndConflictsAreRejected()
     {
         Assert.Equal("Ctrl+Shift+S", PlayerShortcutPolicy.Normalize("shift + control + s"));
@@ -18,7 +34,7 @@ public sealed class PlayerShortcutAndDiagnosticsTests
     {
         MediaInformationState state = new(4, 1, MediaInformationLoadState.Ready, "Movie", new Dictionary<string, string> { ["title"] = "A title", ["description"] = "line one\nline two" });
         string output = MediaDiagnostics.Build(state);
-        Assert.Contains("codecStreams=unavailable-through-engine-ABI", output);
+        Assert.Contains("codecStreams=0", output);
         Assert.DoesNotContain("file://", output);
         Assert.DoesNotContain("line one\nline two", output);
     }

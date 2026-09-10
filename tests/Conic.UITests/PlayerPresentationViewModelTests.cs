@@ -8,6 +8,39 @@ namespace Conic.UITests;
 public sealed class PlayerPresentationViewModelTests
 {
     [Fact]
+    public void QueueInputChangeClearsInformationAndRejectsLateInformationFromThePreviousInput()
+    {
+        CapabilityTransport transport = new();
+        var vm = new PlayerPresentationViewModel(transport, new EmptyPicker(), () => { });
+        var old = new MediaInformationState(1, 1, MediaInformationLoadState.Ready, "first", MediaInformationState.Unavailable.Metadata,
+            CodecStreams: [new MediaCodecStream(0, new Dictionary<string, string> { ["Codec"] = "H264" })]);
+        transport.PublishInformation(old);
+        Assert.True(vm.MediaInformation.HasStreams);
+        transport.Publish(MediaCapabilitiesState.Initial with { QueueGeneration = 1, MediaGeneration = 2 });
+        Assert.False(vm.MediaInformation.HasStreams);
+        Assert.Equal(MediaInformationLoadState.Stale, vm.MediaInformation.Status);
+        transport.PublishInformation(old);
+        Assert.False(vm.MediaInformation.HasStreams);
+        transport.PublishInformation(old with { MediaGeneration = 2, Name = "second" });
+        Assert.Equal("second", vm.MediaInformation.Name);
+    }
+
+    [Fact]
+    public void SwitchingInformationTabNotifiesItsVisibilityBinding()
+    {
+        var vm = CreateViewModel(new RecordingTransport());
+        List<string?> changed = [];
+        vm.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+        vm.DrawerTab = "Information";
+        Assert.True(vm.IsInformationTab);
+        Assert.Contains(nameof(vm.IsInformationTab), changed);
+        changed.Clear();
+        vm.DrawerTab = "Queue";
+        Assert.False(vm.IsInformationTab);
+        Assert.Contains(nameof(vm.IsInformationTab), changed);
+    }
+
+    [Fact]
     public async Task CopyDiagnosticsWaitsForClipboardCompletionAndSurfacesResult()
     {
         Clipboard clipboard = new();
@@ -712,8 +745,12 @@ public sealed class PlayerPresentationViewModelTests
         public void OpenQueue(IReadOnlyList<string> sources) => OpenedQueues.Add(sources.ToArray()); public void Enqueue(IEnumerable<string> sources) { } public void SelectAndPlay(string token) => Selected = token; public void Move(string token, int destinationIndex) { } public void Remove(string token) { } public void ClearQueue() { } public void Previous() { } public void Next() { } public void SetRepeatMode(QueueRepeatMode mode) => Repeat = mode; public void SetOrder(QueueOrder order) { }
     }
 
-    private sealed class CapabilityTransport : IPlayerTransport, IMediaCapabilitiesTransport
+    private sealed class CapabilityTransport : IPlayerTransport, IMediaCapabilitiesTransport, IMediaInformationTransport
     {
+        public MediaInformationState MediaInformation { get; private set; } = MediaInformationState.Unavailable;
+        public event EventHandler<MediaInformationState>? MediaInformationChanged;
+        public void RefreshMediaInformation() { }
+        public void PublishInformation(MediaInformationState state) { MediaInformation = state; MediaInformationChanged?.Invoke(this, state); }
         public MediaCapabilitiesState MediaCapabilities { get; private set; } = MediaCapabilitiesState.Initial;
         public event EventHandler<MediaCapabilitiesState>? MediaCapabilitiesChanged;
         public int LastAudioDelay { get; private set; }

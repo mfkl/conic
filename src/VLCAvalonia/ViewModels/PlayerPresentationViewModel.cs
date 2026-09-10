@@ -30,6 +30,7 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
     private string _mediaTitle = "VLC Avalonia";
     private bool _isFullscreen;
     private MediaSource? _currentSource;
+    private string? _stoppedSource;
     private ResumeEntry? _pendingResume;
     private string _openError = string.Empty;
     private string _urlText = string.Empty;
@@ -113,8 +114,13 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
         registry.Register(new(PlayerCommandId.AcceptResume, "Resume playback", "Media"), _ => ApplyResume(), _ => _pendingResume is not null && _resumeReady);
         registry.Register(new(PlayerCommandId.DeclineResume, "Start from beginning", "Media"), _ => DeclineResume(), _ => _pendingResume is not null && _resumeReady);
         registry.Register(new(PlayerCommandId.OpenTestMedia, "Open test video", "Media"), _ => _openTestMedia());
-        registry.Register(new(PlayerCommandId.TogglePause, "Play or pause", "Playback", "Space"), _ => _transport.TogglePause(), _ => CanTogglePlayback);
-        registry.Register(new(PlayerCommandId.Stop, "Stop", "Playback"), _ => { CheckpointCurrent(true); _transport.Stop(); }, _ => CanStop);
+        registry.Register(new(PlayerCommandId.TogglePause, "Play or pause", "Playback", "Space"), _ => TogglePlayback(), _ => CanTogglePlayback);
+        registry.Register(new(PlayerCommandId.Stop, "Stop", "Playback"), _ =>
+        {
+            CheckpointCurrent(true);
+            _stoppedSource = QueueItems.FirstOrDefault(item => item.IsCurrent)?.Source ?? _currentSource?.CanonicalSource ?? _lastState?.Source;
+            _transport.Stop();
+        }, _ => CanStop);
         registry.Register(new(PlayerCommandId.Seek, "Seek", "Playback"), parameter => _transport.Seek(ToDouble(parameter)));
         registry.Register(new(PlayerCommandId.SetVolume, "Set volume", "Audio"), parameter => _transport.SetVolume(Math.Clamp(ToDouble(parameter), 0, 200) / 100), _ => HasPlayableMedia);
         registry.Register(new(PlayerCommandId.ToggleMute, "Mute", "Audio", "M"), _ => _transport.SetMuted(!IsMuted), _ => HasPlayableMedia);
@@ -605,17 +611,38 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
 
     public void OpenUrl() => OpenSource(UrlText, MediaSourceKind.NetworkUrl);
 
-    public void OpenSource(string? rawSource, MediaSourceKind kind)
+    private void TogglePlayback()
+    {
+        if (PlaybackStatus != PlaybackStatus.Stopped) { _transport.TogglePause(); return; }
+        // At EOF VLC still owns the queue. Restart its selected item without replacing it.
+        if (_queue is not null && QueueState.Status == QueueLoadState.Ready && QueueItems.Count > 0)
+        {
+            var item = QueueItems.FirstOrDefault(item => item.IsCurrent) ?? QueueItems[0];
+            try { _queue.SelectAndPlay(item.Token); OpenError = string.Empty; }
+            catch (Exception error) { _diagnostic?.Invoke(error.ToString()); OpenError = "Media could not be restarted."; }
+            return;
+        }
+        // Stop tears down the core. Reopen through the normal generation-safe path,
+        // from the beginning, without offering the resume position saved by Stop.
+        string? source = _stoppedSource ?? _currentSource?.CanonicalSource ?? _lastState?.Source;
+        if (Uri.TryCreate(source, UriKind.Absolute, out var uri) && uri.IsFile) source = uri.LocalPath;
+        OpenSource(source, MediaSourceKind.File, offerResume: false);
+    }
+
+    public void OpenSource(string? rawSource, MediaSourceKind kind) => OpenSource(rawSource, kind, offerResume: true);
+
+    private void OpenSource(string? rawSource, MediaSourceKind kind, bool offerResume)
     {
         RequestMainLayout();
         MediaOpenResult result = _sourceValidator.Validate(rawSource, kind);
         if (!result.Succeeded || result.Source is null) { if (kind == MediaSourceKind.Recent && !string.IsNullOrWhiteSpace(rawSource)) TryHistory(() => _history?.RemoveRecent(rawSource)); _diagnostic?.Invoke(result.Diagnostic ?? "Media source validation failed."); OpenError = result.UserMessage ?? "Media could not be opened."; NotifyLibrary(); return; }
         CheckpointCurrent(true);
+        _stoppedSource = null;
         _currentSource = result.Source;
         IsHomeOpen = false;
         PlaybackStatus = PlaybackStatus.Opening;
         _generationFloor = _lastObservedGeneration; _activeGeneration = -1; _resumeReady = false; _lastState = null; _recordedOpenGeneration = -1;
-        _pendingResume = (_settings?.Current.ResumePlayback ?? true) && (_settings?.Current.RememberResumeHistory ?? true) ? TryFindResume(_currentSource) : null;
+        _pendingResume = offerResume && (_settings?.Current.ResumePlayback ?? true) && (_settings?.Current.RememberResumeHistory ?? true) ? TryFindResume(_currentSource) : null;
         NotifyPendingResume();
         OpenError = string.Empty;
         try { if (_queue is not null) _queue.OpenQueue([_currentSource.CanonicalSource]); else _transport.Open(_currentSource.CanonicalSource); }
@@ -654,6 +681,7 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
     {
         if (expansion.Sources.Count == 0) { OpenError = expansion.Failures.FirstOrDefault() ?? "No usable media files were found."; return; }
         if (_queue is null) { OpenError = "The playback queue is not ready yet."; return; }
+        _stoppedSource = null;
         _currentSource = expansion.Sources[0]; _generationFloor = _lastObservedGeneration; _activeGeneration = -1; _resumeReady = false; _pendingResume = null; NotifyPendingResume();
         try { if (replace) _queue.OpenQueue(expansion.Sources.Select(x => x.CanonicalSource).ToArray()); else _queue.Enqueue(expansion.Sources.Select(x => x.CanonicalSource)); }
         catch (Exception exception) { _diagnostic?.Invoke(exception.ToString()); OpenError = "Media could not be queued."; return; }

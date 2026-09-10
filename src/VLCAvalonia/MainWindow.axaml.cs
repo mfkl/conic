@@ -52,7 +52,8 @@ public partial class MainWindow : Window
             showUrlPanel: ShowUrlPanel,
             clipboard: new AvaloniaClipboardService(() => Clipboard));
         _settingsViewModel = new SettingsViewModel(_settings, _presentation.Registry);
-        SettingsPanel.DataContext = _settingsViewModel;
+        SettingsPanel.Initialize(_settingsViewModel, _presentation);
+        SettingsPanel.CloseRequested += (_, _) => CloseSettings();
         DataContext = _presentation;
         HomeScreen.MoreRequested += (_, _) => OnOpenOptions(null, new Avalonia.Interactivity.RoutedEventArgs());
         _presentation.PropertyChanged += OnPresentationPropertyChanged;
@@ -193,10 +194,11 @@ public partial class MainWindow : Window
         UrlPanel.IsVisible = false;
         ClearRecentPrompt.IsVisible = false;
         SettingsPanel.IsVisible = true;
+        SettingsPanel.ResetTransientState();
         UpdateOpenErrorSurface();
         _chromeVisibility.Wake();
         SetChromeVisibility(true);
-        Dispatcher.UIThread.Post(() => SettingsSearch.Focus());
+        Dispatcher.UIThread.Post(() => SettingsPanel.SettingsSearch.Focus());
     }
 
     private static MediaHistoryService CreateHistory()
@@ -401,7 +403,11 @@ public partial class MainWindow : Window
             UpdateOpenErrorSurface();
         if (e.PropertyName == nameof(PlayerPresentationViewModel.IsQueueOpen))
         {
-            if (_presentation.IsQueueOpen) ExitPictureInPicture(restoreRoute: false);
+            if (_presentation.IsQueueOpen)
+            {
+                ExitPictureInPicture(restoreRoute: false);
+                SettingsPanel.IsVisible = false;
+            }
             WakeChrome();
             Dispatcher.UIThread.Post(() => { if (_presentation.IsQueueOpen) CloseQueueButton.Focus(); else RestoreRouteFocus(QueueButton); });
         }
@@ -454,79 +460,29 @@ public partial class MainWindow : Window
         _presentation.IsLibraryOpen = false;
     }
 
-    private void UpdateHistorySettingsControls()
-    {
-        SettingsClearRecentButton.IsEnabled = _presentation.HasRecentItems;
-        SettingsClearResumeButton.IsEnabled = _presentation.HasResumeItems;
-        SettingsHistoryError.IsVisible = _presentation.HasHistoryError;
-        SettingsHistoryError.Text = _presentation.HistoryError;
-    }
+    private void UpdateHistorySettingsControls() => SettingsPanel.UpdateHistory(_presentation);
 
     private void OnAcceptResume(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => _presentation.Registry.Execute(Player.Application.PlayerCommandId.AcceptResume);
 
     private void OnDeclineResume(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => _presentation.Registry.Execute(Player.Application.PlayerCommandId.DeclineResume);
 
-    private void OnSettingsClearRecent(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
-    {
-        SettingsClearRecentButton.IsVisible = false;
-        SettingsClearRecentPrompt.IsVisible = true;
-    }
-
-    private void OnSettingsCancelClearRecent(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
-    {
-        SettingsClearRecentPrompt.IsVisible = false;
-        SettingsClearRecentButton.IsVisible = true;
-    }
-
-    private void OnSettingsConfirmClearRecent(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
-    {
-        _presentation.Registry.Execute(Player.Application.PlayerCommandId.ClearRecent);
-        if (!_presentation.HasRecentItems)
-        {
-            SettingsClearRecentPrompt.IsVisible = false;
-            SettingsClearRecentButton.IsVisible = true;
-        }
-    }
-
-    private void OnSettingsClearResume(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
-    {
-        SettingsClearResumeButton.IsVisible = false;
-        SettingsClearResumePrompt.IsVisible = true;
-    }
-
-    private void OnSettingsCancelClearResume(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
-    {
-        SettingsClearResumePrompt.IsVisible = false;
-        SettingsClearResumeButton.IsVisible = true;
-    }
-
-    private void OnSettingsConfirmClearResume(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
-    {
-        _presentation.Registry.Execute(Player.Application.PlayerCommandId.ClearResumeHistory);
-        if (!_presentation.HasResumeItems)
-        {
-            SettingsClearResumePrompt.IsVisible = false;
-            SettingsClearResumeButton.IsVisible = true;
-        }
-    }
-
     private void CloseSettings()
     {
         SettingsPanel.IsVisible = false;
-        SettingsClearRecentPrompt.IsVisible = false;
-        SettingsClearResumePrompt.IsVisible = false;
+        SettingsPanel.ResetTransientState();
         UpdateOpenErrorSurface();
+        WakeChrome();
         RestoreRouteFocus(OpenSettingsButton);
         if (_presentation.IsPlaying) { _autoHideTimer.Stop(); _autoHideTimer.Start(); }
     }
 
     private void RestoreRouteFocus(Control playerControl)
     {
-        if (_presentation.IsHomeOpen) HomeScreen.FocusPrimary(); else playerControl.Focus();
+        if (_presentation.IsHomeOpen) HomeScreen.FocusPrimary();
+        else if (playerControl.IsEffectivelyVisible) playerControl.Focus();
+        else HomeButton.Focus();
     }
 
-    private void OnSettingsClose(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => CloseSettings();
-    private void OnSettingsSearchChanged(object? sender, TextChangedEventArgs e) => _settingsViewModel.Search = (sender as TextBox)?.Text ?? string.Empty;
 
     private void ApplyLiveSettings(PlayerSettings settings)
     {
@@ -687,11 +643,11 @@ public partial class MainWindow : Window
                     case 20: ValidateMediaDrawer(width); _presentation.IsQueueOpen = false; ValidateSurface("open-menu", OpenMenu, [OpenMenu, OpenFolderAction]); CloseOpenMenu(); ShowUrlPanel(); phase = 2; return;
                     case 2: ValidateSurface("url-panel", UrlPanel, [UrlPanel, UrlTextBox, UrlCancelButton, UrlSubmitButton]); CloseUrlPanel(); ResumePanel.IsVisible = true; Dispatcher.UIThread.Post(() => ResumeAction.Focus()); phase++; return;
                     case 3: ValidateSurface("resume-panel", ResumePanel, [ResumePanel, ResumeAction, DeclineResumeAction]); ResumePanel.IsVisible = false; OpenSettings(); _settingsViewModel.SelectedPage = _settingsViewModel.Pages[0]; ApplyResponsiveSettings(); phase++; return;
-                    case 4: ValidateSettingsLayout(width, compact); BringSettingsControlIntoView(SettingsClearRecentButton); phase++; return;
-                    case 5: ValidateSettingsControl("recent-clear", SettingsClearRecentButton); SettingsClearRecentPrompt.IsVisible = true; BringSettingsControlIntoView(SettingsConfirmClearRecentButton); phase++; return;
-                    case 6: ValidateSettingsControl("recent-confirm", SettingsConfirmClearRecentButton); SettingsClearRecentPrompt.IsVisible = false; BringSettingsControlIntoView(SettingsClearResumeButton); phase++; return;
-                    case 7: ValidateSettingsControl("resume-clear", SettingsClearResumeButton); SettingsClearResumePrompt.IsVisible = true; BringSettingsControlIntoView(SettingsConfirmClearResumeButton); phase++; return;
-                    case 8: ValidateSettingsControl("resume-confirm", SettingsConfirmClearResumeButton); SettingsClearResumePrompt.IsVisible = false; CloseSettings(); OpenErrorToast.IsVisible = true; phase++; return;
+                    case 4: ValidateSettingsLayout(width, compact); BringSettingsControlIntoView(SettingsPanel.SettingsClearRecentButton); phase++; return;
+                    case 5: ValidateSettingsControl("recent-clear", SettingsPanel.SettingsClearRecentButton); SettingsPanel.SettingsClearRecentPrompt.IsVisible = true; BringSettingsControlIntoView(SettingsPanel.SettingsConfirmClearRecentButton); phase++; return;
+                    case 6: ValidateSettingsControl("recent-confirm", SettingsPanel.SettingsConfirmClearRecentButton); SettingsPanel.SettingsClearRecentPrompt.IsVisible = false; BringSettingsControlIntoView(SettingsPanel.SettingsClearResumeButton); phase++; return;
+                    case 7: ValidateSettingsControl("resume-clear", SettingsPanel.SettingsClearResumeButton); SettingsPanel.SettingsClearResumePrompt.IsVisible = true; BringSettingsControlIntoView(SettingsPanel.SettingsConfirmClearResumeButton); phase++; return;
+                    case 8: ValidateSettingsControl("resume-confirm", SettingsPanel.SettingsConfirmClearResumeButton); SettingsPanel.SettingsClearResumePrompt.IsVisible = false; CloseSettings(); OpenErrorToast.IsVisible = true; phase++; return;
                     case 9: ValidateToastForSmoke(); OpenErrorToast.IsVisible = false; Width = 480; phase++; return;
                     case 10: ApplyResponsiveChrome(); ApplyResponsiveSettings(); ValidateLayout(width, true); ValidateTopChrome(width); OpenMenu.IsVisible = true; UrlPanel.IsVisible = true; SettingsPanel.IsVisible = true; _presentation.IsQueueOpen = true; _presentation.IsLibraryOpen = true; phase = 31; return;
                     case 31: ValidateLibraryDrawer(width); _presentation.IsLibraryOpen = false; ShowOpenMenuForSmoke(); _presentation.IsQueueOpen = true; phase = 11; return;
@@ -699,11 +655,11 @@ public partial class MainWindow : Window
                     case 21: ValidateMediaDrawer(width); _presentation.IsQueueOpen = false; ValidateSurface("open-menu", OpenMenu, [OpenMenu, OpenFolderAction]); CloseOpenMenu(); ShowUrlPanel(); phase = 12; return;
                     case 12: ValidateSurface("url-panel", UrlPanel, [UrlPanel, UrlTextBox, UrlCancelButton, UrlSubmitButton]); CloseUrlPanel(); ResumePanel.IsVisible = true; Dispatcher.UIThread.Post(() => ResumeAction.Focus()); phase++; return;
                     case 13: ValidateSurface("resume-panel", ResumePanel, [ResumePanel, ResumeAction, DeclineResumeAction]); ResumePanel.IsVisible = false; OpenSettings(); _settingsViewModel.SelectedPage = _settingsViewModel.Pages[0]; ApplyResponsiveSettings(); phase++; return;
-                    case 14: ValidateSettingsLayout(width, true); BringSettingsControlIntoView(SettingsClearRecentButton); phase++; return;
-                    case 15: ValidateSettingsControl("recent-clear", SettingsClearRecentButton); SettingsClearRecentPrompt.IsVisible = true; BringSettingsControlIntoView(SettingsConfirmClearRecentButton); phase++; return;
-                    case 16: ValidateSettingsControl("recent-confirm", SettingsConfirmClearRecentButton); SettingsClearRecentPrompt.IsVisible = false; BringSettingsControlIntoView(SettingsClearResumeButton); phase++; return;
-                    case 17: ValidateSettingsControl("resume-clear", SettingsClearResumeButton); SettingsClearResumePrompt.IsVisible = true; BringSettingsControlIntoView(SettingsConfirmClearResumeButton); phase++; return;
-                    case 18: ValidateSettingsControl("resume-confirm", SettingsConfirmClearResumeButton); SettingsClearResumePrompt.IsVisible = false; CloseSettings(); OpenErrorToast.IsVisible = true; phase++; return;
+                    case 14: ValidateSettingsLayout(width, true); BringSettingsControlIntoView(SettingsPanel.SettingsClearRecentButton); phase++; return;
+                    case 15: ValidateSettingsControl("recent-clear", SettingsPanel.SettingsClearRecentButton); SettingsPanel.SettingsClearRecentPrompt.IsVisible = true; BringSettingsControlIntoView(SettingsPanel.SettingsConfirmClearRecentButton); phase++; return;
+                    case 16: ValidateSettingsControl("recent-confirm", SettingsPanel.SettingsConfirmClearRecentButton); SettingsPanel.SettingsClearRecentPrompt.IsVisible = false; BringSettingsControlIntoView(SettingsPanel.SettingsClearResumeButton); phase++; return;
+                    case 17: ValidateSettingsControl("resume-clear", SettingsPanel.SettingsClearResumeButton); SettingsPanel.SettingsClearResumePrompt.IsVisible = true; BringSettingsControlIntoView(SettingsPanel.SettingsConfirmClearResumeButton); phase++; return;
+                    case 18: ValidateSettingsControl("resume-confirm", SettingsPanel.SettingsConfirmClearResumeButton); SettingsPanel.SettingsClearResumePrompt.IsVisible = false; CloseSettings(); OpenErrorToast.IsVisible = true; phase++; return;
                     case 19: ValidateToastForSmoke(); OpenErrorToast.IsVisible = false; timer.Stop(); timeout?.Stop(); Console.WriteLine("[layout-smoke] PASS opening surfaces wide-and-compact"); desktop.Shutdown(0); return;
                     default: throw new InvalidOperationException("[layout-smoke] unexpected phase");
                 }
@@ -813,10 +769,10 @@ public partial class MainWindow : Window
 
     private void ValidateSettingsLayout(double width, bool compact)
     {
-        Control navigation = compact ? CompactSettingsPages : SettingsPages;
-        Control[] required = [SettingsPanel, SettingsSearch, navigation, SettingsContent];
+        Control navigation = compact ? SettingsPanel.CompactSettingsPages : SettingsPanel.SettingsPages;
+        Control[] required = [SettingsPanel, SettingsPanel.SettingsSearch, navigation, SettingsPanel.SettingsContent];
         bool contained = required.All(IsContained);
-        Console.WriteLine($"[settings-layout-smoke] width={width} compact={compact} panel={SettingsPanel.Bounds} search={SettingsSearch.Bounds} navigation={navigation.Bounds} content={SettingsContent.Bounds} recent-clear={SettingsClearRecentButton.Bounds} resume-clear={SettingsClearResumeButton.Bounds} open={OpenSettingsButton.Bounds} reset={SettingsResetRow.Bounds} contained={contained}");
+        Console.WriteLine($"[settings-layout-smoke] width={width} compact={compact} panel={SettingsPanel.Bounds} search={SettingsPanel.SettingsSearch.Bounds} navigation={navigation.Bounds} content={SettingsPanel.SettingsContent.Bounds} recent-clear={SettingsPanel.SettingsClearRecentButton.Bounds} resume-clear={SettingsPanel.SettingsClearResumeButton.Bounds} open={OpenSettingsButton.Bounds} reset={SettingsPanel.SettingsResetRow.Bounds} contained={contained}");
         if (!contained || !navigation.IsVisible)
             throw new InvalidOperationException("[settings-layout-smoke] FAIL bounds or responsive navigation");
     }
@@ -985,20 +941,7 @@ public partial class MainWindow : Window
         }, DispatcherPriority.Loaded);
     }
 
-    private void ApplyResponsiveSettings()
-    {
-        bool compact = Bounds.Width < 900;
-        SettingsPages.IsVisible = !compact;
-        CompactSettingsPages.IsVisible = compact;
-        SettingsGrid.ColumnDefinitions = compact ? new ColumnDefinitions("*") : new ColumnDefinitions("190,*");
-        SettingsGrid.RowDefinitions = compact ? new RowDefinitions("Auto,Auto,*") : new RowDefinitions("Auto,*");
-        Grid.SetRow(SettingsSearch, 0);
-        Grid.SetColumn(SettingsSearch, 0);
-        Grid.SetColumnSpan(SettingsSearch, compact ? 1 : 2);
-        Grid.SetRow(SettingsPages, 1); Grid.SetColumn(SettingsPages, 0);
-        Grid.SetRow(CompactSettingsPages, 1); Grid.SetColumn(CompactSettingsPages, 0); Grid.SetColumnSpan(CompactSettingsPages, compact ? 1 : 2);
-        Grid.SetRow(SettingsContent, compact ? 2 : 1); Grid.SetColumn(SettingsContent, compact ? 0 : 1);
-    }
+    private void ApplyResponsiveSettings() => SettingsPanel.ApplyResponsiveLayout();
 
     private void OnEngineStateChanged(object? sender, MediaEngineState state) =>
         _presentation.ApplyEngineState(state);

@@ -1,6 +1,22 @@
 # Playback screen specification
 
-Status: **implemented; awaiting Gate P2 visual approval and completion of blocked native runtime qualification**
+Status: **implemented; VLC 3 native qualification refreshed; Gate P2 accepted 2026-09-10**
+
+September 10 execution: the compatible baseline is restored and the Playback
+fidelity pass is implemented. Debug/Release tests, native composition/lifecycle
+checks and review captures are recorded in
+[PLAYBACK_REVIEW_2026-09-10.md](PLAYBACK_REVIEW_2026-09-10.md). This includes the
+native-caption difference and outstanding visual coverage. After the live
+demonstration, the user said “ok great commit it”; this records acceptance of
+the current Playback result, with the documented qualification limits preserved.
+
+September 10 direction update: the user explicitly wants VLC 4 UI fidelity on
+the existing **VLCLR / VLC 3 engine**. This supersedes the earlier request to use
+VLC 4-targeting VLCLR `main`. Restore an isolated compatible framework/runtime
+baseline from `eng/versions.json` for the pending native checks. The unsuccessful
+main experiment is retained in [VLCLR_MAIN_MIGRATION.md](VLCLR_MAIN_MIGRATION.md)
+as historical evidence. The active source map, visual foundation and delivery
+order are in [VLC4_SCREEN_BY_SCREEN_PLAN.md](VLC4_SCREEN_BY_SCREEN_PLAN.md).
 
 Playback review corrections requested on 2026-09-08 supersede the corresponding
 layout/component details below:
@@ -31,6 +47,11 @@ must not be committed.
 
 Reference runtime/source: VLC `4.0.0-dev-38799-g5dd4aebdab` /
 `5dd4aebdabf4a625822036bda08a24a91295158c`.
+
+Supplemental source reference inspected September 10: local VLC `master` at
+`1a8533156079724db7b63dc6cb73675c76458b14`. This does not change the screenshot
+baseline or override user corrections. New token/layout adjustments from that
+source must be included in the Playback comparison and result review.
 
 ## 1. Decision and product outcome
 

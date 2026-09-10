@@ -37,6 +37,10 @@ public partial class App : Application
             {
                 window.EnableLayoutSmoke(desktop);
             }
+            else if (desktop.Args?.Contains("--playback-review", StringComparer.OrdinalIgnoreCase) == true)
+            {
+                window.EnablePlaybackReview();
+            }
         }
 
         base.OnFrameworkInitializationCompleted();

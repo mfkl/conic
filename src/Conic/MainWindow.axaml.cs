@@ -55,6 +55,7 @@ public partial class MainWindow : Window
         SettingsPanel.DataContext = _settingsViewModel;
         DataContext = _presentation;
         _presentation.PropertyChanged += OnPresentationPropertyChanged;
+        UpdatePlaybackRateSelection();
         UpdateHistorySettingsControls();
         _settings.Changed += (_, settings) => ApplyLiveSettings(settings);
         VideoSurface.AudioStartupArguments = ToAudioArguments(_settings.Current);
@@ -357,6 +358,8 @@ public partial class MainWindow : Window
 
     private void OnPresentationPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
+        if (e.PropertyName == nameof(PlayerPresentationViewModel.PlaybackRate))
+            UpdatePlaybackRateSelection();
         if (e.PropertyName is nameof(PlayerPresentationViewModel.IsPlaying) or nameof(PlayerPresentationViewModel.PlaybackStatus))
         {
             _chromeVisibility.SetPlaybackState(_presentation.IsPlaying, _settings.Current.ReduceMotion);
@@ -501,9 +504,25 @@ public partial class MainWindow : Window
 
     private void OnSpeedChanged(object? sender, SelectionChangedEventArgs e)
     {
+        if (_updatingPlaybackRate) return;
         if ((sender as ComboBox)?.SelectedItem is ComboBoxItem { Tag: string value } &&
             double.TryParse(value, System.Globalization.CultureInfo.InvariantCulture, out double rate))
             _presentation.Registry.Execute(Player.Application.PlayerCommandId.SetPlaybackRate, rate);
+        UpdatePlaybackRateSelection();
+    }
+
+    private bool _updatingPlaybackRate;
+
+    private void UpdatePlaybackRateSelection()
+    {
+        _updatingPlaybackRate = true;
+        try
+        {
+            SpeedSelector.SelectedItem = SpeedSelector.Items.OfType<ComboBoxItem>().FirstOrDefault(item =>
+                item.Tag is string value && double.TryParse(value, System.Globalization.CultureInfo.InvariantCulture, out double rate)
+                && Math.Abs(rate - _presentation.PlaybackRate) < .001);
+        }
+        finally { _updatingPlaybackRate = false; }
     }
 
     internal void EnableGPUCompositionSmoke(
@@ -602,7 +621,7 @@ public partial class MainWindow : Window
                     $"adapter-luid={adapter}");
                 desktop.Shutdown(0);
             };
-        timeout.Start();
+        Opened += (_, _) => { OpenTestMedia(); timeout.Start(); };
     }
 
     internal void EnableLayoutSmoke(IClassicDesktopStyleApplicationLifetime desktop)
@@ -730,7 +749,7 @@ public partial class MainWindow : Window
     {
         bool contained = required.All(IsContained);
         Console.WriteLine($"[layout-smoke] {name} bounds={surface.Bounds} contained={contained}");
-        if (!contained || (name == "open-menu" && OpenMenu.Bounds.Height > 380))
+        if (!contained || (name == "open-menu" && GetClientRect(OpenMenu).Top < GetClientRect(OpenOptionsButton).Bottom))
             throw new InvalidOperationException($"[layout-smoke] FAIL {name} bounds or capability gate");
     }
 
@@ -835,7 +854,7 @@ public partial class MainWindow : Window
                 desktop.Shutdown(0);
             }
         };
-        timeout.Start();
+        Opened += (_, _) => { OpenTestMedia(); timeout.Start(); };
     }
 
     private void OnSeekStarted(object? sender, EventArgs e) =>
@@ -881,6 +900,7 @@ public partial class MainWindow : Window
     private void ApplyResponsiveChrome()
     {
         PlayerLayoutResult layout = PlayerLayoutPolicy.ForWidth(Bounds.Width);
+        OpenMenu.MaxHeight = Math.Max(160, Bounds.Height - 90);
         bool compactTopChrome = Bounds.Width < PlayerLayoutPolicy.CompactWidth;
         TopChrome.Margin = new Thickness(0);
         TopChromeTitle.IsVisible = true;
@@ -917,6 +937,13 @@ public partial class MainWindow : Window
         RightTransport.HorizontalAlignment = layout.IsCompact
             ? Avalonia.Layout.HorizontalAlignment.Center
             : Avalonia.Layout.HorizontalAlignment.Right;
+        // Row reassignment can happen during the window's arrange pass. Queue
+        // a fresh measure so the dock grows before the compact volume row paints.
+        Dispatcher.UIThread.Post(() =>
+        {
+            DockGrid.InvalidateMeasure();
+            PlayerDock.InvalidateMeasure();
+        }, DispatcherPriority.Loaded);
     }
 
     private void ApplyResponsiveSettings()

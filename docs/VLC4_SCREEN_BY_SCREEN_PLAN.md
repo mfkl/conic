@@ -1,12 +1,20 @@
-# VLC 4-inspired UI screen-by-screen plan
+# VLC 4 UI fidelity plan for Avalonia / VLCLR / VLC 3
 
-Status: active phase-two execution plan; planning only
+Status: active UI roadmap, updated 2026-09-10. Playback fidelity changes and
+fresh VLC 3 native qualification are complete for this pass; the user accepted
+Playback on 2026-09-10 after the live review. See
+[the review report](PLAYBACK_REVIEW_2026-09-10.md). Home/Library and
+Settings need their phase-two redesign. The engine target is **VLCLR + VLC 3**;
+the earlier proposed move to VLC 4-targeting VLCLR main is superseded.
 
 Product baseline: `feature/modern-player-ui` at
 `c6e1f70e7a3c25a4041757b05d319283479d63b3`
 
-Reference source: VLC `4.0.0-dev` at
-`5dd4aebdabf4a625822036bda08a24a91295158c`
+Reference source: local VLC `master` at
+`1a8533156079724db7b63dc6cb73675c76458b14` (2026-09-07), inspected on
+2026-09-10 through `git show master:<path>` in `../vlc`. Local `origin/master`
+resolves to the same commit; remote freshness was not checked. The checkout
+has unrelated work on `fix/win32-stat-utc-mtime` and was not switched or edited.
 
 Reference executable: local read-only VLC `4.0.0-dev-38799-g5dd4aebdab`
 bundle is temporarily available. Runtime capture is supporting evidence, not a
@@ -16,6 +24,171 @@ specified.
 This plan controls phase-two dispatch and supersedes the batch-oriented package
 order in Sections 15--17 of `UI_IMPLEMENTATION_PLAN.md`. That document remains
 the product boundary and technical inventory.
+
+## 0. Updated direction and executable roadmap
+
+### Product decision
+
+Make the application immediately recognizable as the VLC 4 desktop UI, with
+close matching of composition, proportions, typography, icons, colors, control
+placement, and interaction states. Avalonia renders the presentation; VLCLR and
+the VLC 3 internal core continue to provide playback. UI fidelity does not
+require adopting Qt, VLC 4 native APIs, or VLC 4's indexed media library.
+
+The latest user instruction explicitly preserves VLC 3. Use the compatible
+framework pin in `eng/versions.json` (`e90b786de74c6ed440dea8bf65329907739b0c60`,
+`feature/modern-player-ui-transport`) as the recovery baseline, with VLC
+`3.0.24-beta1` / module ABI `3_0_0f`. Verify that complete combination before
+claiming it runs today. The sibling VLCLR checkout currently targets different
+work; select an isolated compatible checkout through `VLCLR_ROOT` when execution
+resumes. The failed VLC 4-main experiment remains historical evidence in
+[VLCLR_MAIN_MIGRATION.md](VLCLR_MAIN_MIGRATION.md), not a UI prerequisite.
+
+Evidence precedence: explicit user corrections, user-supplied screenshots for
+the states they show, a matching reference runtime, then pinned source inference.
+The older executable below does not match the newly inspected master; record
+that difference instead of claiming runtime confirmation. Source dimensions are
+logical values subject to VLC's scale; screenshot pixels are not automatically
+Avalonia DIPs. Keep the September 8 playback corrections, including the title
+beside the cone and compact controls below 900 DIPs.
+
+This roadmap covers the whole product. The per-screen gates below govern
+implementation and detailed screen specifications; they do not block maintaining
+the roadmap. The original planning update did not imply visual acceptance;
+Playback was subsequently accepted after the user reviewed the running result.
+
+### Current gap assessment
+
+Source audit: `MainWindow.axaml`, `MainWindow.axaml.cs`,
+`Styles/PlayerChrome.axaml`, `ViewModels/PlayerPresentationViewModel.cs`, and
+the existing playback specification. This is a code/screenshot-reference audit,
+not a new runtime visual pass.
+
+| Area | Existing foundation | Work needed for the requested result |
+|---|---|---|
+| Playback | Edge-to-edge video, cone/title header, centered transport, custom timeline/volume, auto-hide, fullscreen, More and track controls | Finish September 8 corrections in the running app; compare proportions, glyphs, gradients, endpoint painting and focus/hover states against the reference |
+| Visual system | Shared `PlayerChrome.axaml`, but many literal colors, radii and inline icon paths in the window | Introduce semantic VLC-derived resources and a consistent icon set; replace inconsistent warm-orange borders, blue-tinted grays and oversized panel rounding where the reference differs |
+| Home | A 430-DIP Library drawer with recent/favorite/resume data | Build the actual VLC-like landing page and navigation shell; preserve existing data and no-scan behavior |
+| Queue and tracks | Existing queue/media drawer and generation-safe commands | Match VLC row density, current-item indication, toolbar and selection treatments; make tracks/speed/delay controls a coherent playback surface |
+| Settings | Centered panel, existing categories, search and persistence | Build a polished page using the same shell/resources, with clear category hierarchy, spacing, validation and compact navigation |
+| Window and navigation | Most screens and overlay coordination live in `MainWindow` | Extract screen views as they change; keep one playback session/video host alive through Home, Settings, queue and fullscreen transitions |
+
+### VLC 4 source map
+
+Paths below are relative to `../vlc/modules/gui/qt` at the reference commit.
+They are inspection targets for layout and behavior, not dependencies to link
+into the app. Some files were inventoried only; detailed behavior must be read
+when the corresponding screen is specified.
+
+| Presentation concern | Upstream reference | Avalonia destination / deliverable |
+|---|---|---|
+| Spacing, text sizes, radii, motion, colors | `style/VLCStyle.qml`, `style/systempalette.hpp`, `style/systempalette.cpp`, `style/colorcontext.cpp` | Shared semantic brushes, dimensions, typography and interaction styles under `Styles/` |
+| Shell, navigation, empty Home | `maininterface/qml/MainDisplay.qml`, `MainViewLoader.qml`, `SideNavigationPane.qml`, `SideNavigationDelegate.qml`, `NoMedialibHome.qml` in the same directory | Shell and Home views, active navigation, cone/open state, compact navigation |
+| Populated media surfaces | `medialibrary/qml/HomeDisplay.qml`, `HomePage.qml`, `VideoGridItem.qml`, `widgets/qml/GridItem.qml`, `MediaCover.qml` | Recent/continue/favorite sections and reusable cards/rows over existing history |
+| Playback composition | `player/qml/Player.qml`, `TopBar.qml`, `ControlBar.qml`, `PlayerControlLayout.qml`, `SliderBar.qml` | Playback view, top/bottom overlays, timeline and balanced transport groups |
+| Volume and visibility | `player/qml/controlbarcontrols/VolumeWidget.qml`, `player/qml/PlayerToolbarVisibilityFSM.qml`, `PlayerPlaylistVisibilityFSM.qml` | Existing slider/chrome controllers with equivalent observable behavior |
+| Queue and playback menus | `playlist/qml/PlaylistPane.qml`, `PlaylistDelegate.qml`, `PlaylistToolbar.qml`, `player/qml/TracksMenu.qml`, `PlaybackSpeed.qml` | Queue rows/toolbar, track selection, speed/delay menus and focus restoration |
+| Icons and placeholders | `pixmaps/VLCIcons.ttf`, `pixmaps/toolbar/`, `pixmaps/placeholder/`, `widgets/qml/IconToolButton.qml` | Audited vector assets or consistent Avalonia geometries with source/license attribution |
+| Preference semantics | `dialogs/preferences/simple_preferences.cpp`, `preferences.cpp` | Capability-backed settings inventory; visual treatment follows our VLC-like shell |
+
+Read reference files through the pinned Git object while the sibling checkout is
+in use. Refresh master only if a specific missing UI change justifies it, then
+record the new hash and affected reference states. Do not move the visual target
+mid-screen without recording the difference.
+
+### Visual foundation to specify and apply
+
+These are source-backed starting values, not retroactive approval of new pixels:
+
+| Token / pattern | Source observation | Planned treatment |
+|---|---|---|
+| Accent | `orange500 = #FF8800` in `systempalette.hpp` | Default VLC orange for progress, selected navigation and primary actions; preserve accessible foreground contrast |
+| Surfaces | `darkGrey300 = #212121`; neutral gray family `#1E1E1E` to `#303030` | Near-black shell/video and charcoal content; assign separate semantic tokens to surfaces, borders, hover and selection |
+| Spacing | `VLCStyle` uses 2, 4, 8, 12, 16, 24, 32, 36 before scaling | Reuse a small shared spacing scale; calibrate actual placement against screenshots |
+| Typography/icons | Normal text 12, large 14, xlarge 16, xxlarge 20, xxxlarge 24; normal icon 24 before scaling | Define roles and deterministic font fallbacks; preserve optical glyph alignment and use larger accessible hit areas where needed |
+| Navigation | Expanded pane 160 and navigation button height 35 before scaling | Match the screenshot's sidebar/content proportions after scale calibration; collapse to a usable compact route selector |
+| Shape/motion | Button radius 4, grid cover radius 4; short/long durations 100/200 ms | Small, consistent rounding and restrained fades; retain reduced-motion behavior |
+| Playback groups | `PlayerControlLayout` defines left/center/right groups; normal group gap 36 and control gap 16 before scaling | Keep primary transport centered on the window, with collision-free edge groups and explicit compact layout |
+| Volume | `VolumeWidget` derives its range from `MainCtx.maxVolume`, displays percentage, and marks 100% when amplification is possible | Keep the requested 0–200% product range and visible percentage; verify native readback. Do not infer a fixed upstream maximum |
+
+Create shared styles for icon buttons, primary actions, menu rows, navigation
+items, sliders, cards, empty/error states and focus rings. Use VLC vector/icon
+sources where suitable, preserving applicable attribution; otherwise use
+consistent vector geometries. No bitmap mockups or generated logos are needed.
+Audit ordinary Avalonia control templates too, so combo boxes, scrollbars,
+menus and dialogs do not fall back to a visibly different design language.
+
+### Delivery order and concrete exit criteria
+
+| Step | Scope and deliverables | Exit evidence |
+|---|---|---|
+| F0 — Re-establish the VLC 3 baseline | Select isolated pinned VLCLR/runtime inputs; build and launch the current app; capture current Playback and record capability status | Reproducible dependency paths, build results, native smoke result and before captures; engine stays VLC 3 |
+| P — Finish Playback fidelity | Apply shared resources needed by Playback; audit existing September 8 fixes; refine header, cone, glyphs, gradients, transport, seek/volume, More, queue and tracks; cover audio-only, loading and error states | Playback state contact sheet, interaction tests, CPU/GPU overlay checks and Gate P2 review |
+| H — Implement VLC-like Home and shell | After P2, write the detailed Home spec. Build sidebar, header, charcoal content panel, centered empty cone/open actions, then recent/continue/favorite cards/rows; add compact navigation and a persistent mini-player when media is active | H1 spec review, then empty/populated/compact captures and Home → Playback → Home flow without reopening or losing playback; H2 result review |
+| S — Unify Settings | After H2, specify category navigation/search and shared page styling; use existing settings/hotkey services; cover validation/reset/reopen/restart semantics | S1 spec review, then every category at desktop/compact sizes with keyboard and persistence evidence; S2 result review |
+| I — Final visual and functional qualification | Review all menus, dialogs, focus/hover/disabled states, density, DPI, long titles and navigation transitions; complete native regression and document intentional differences | Complete Windows walkthrough/contact sheets, native results and difference ledger; I1 review; macOS/Linux remain separate qualification work |
+
+Implementation should extract `PlaybackView`, `HomeView`, `SettingsView` and
+reusable navigation/queue controls incrementally as their screens change.
+`MainWindow` owns the shell and video-host lifetime; engine-neutral view models
+own presentation state. Reuse the command registry, queue snapshots, history and
+settings services. Keep the native transport and D3D11/CPU surface boundaries.
+Avoid turning a visual redesign into a parallel engine or data-store rewrite.
+
+Home is the startup destination when no media is requested; opening media takes
+the user to Playback. Returning Home keeps active media playing, with a compact
+now-playing strip for title, play/pause, progress and return-to-player. Specify
+focus restoration, Settings return route, Back, stop, queue and fullscreen
+transitions before implementing H. No second player instance is created.
+
+For artwork, use already available artwork/local cache through an asynchronous
+presentation service, with bounded decoding and cancellation. Provide matching
+VLC-style placeholders when artwork is missing. A thumbnail extraction engine
+is not required to finish Home; scanning disks is still excluded.
+
+### Fidelity boundaries and intentional differences
+
+| VLC 4 reference feature | Product decision |
+|---|---|
+| Empty Home cone and primary actions | Match hierarchy and spacing. Use Open file plus a supported Open folder/network action in place of Open Disc until disc opening is explicitly supported |
+| Browse / Discover navigation | Match navigation styling. Include only destinations with real content/actions; discovery services and network-device browsing are not supplied by the current contracts |
+| Indexed Video/Music/Artists/Albums library | Reuse the visual card/list patterns for explicit history/favorites/resume; do not imply indexing, fabricate metadata or add empty catalog destinations |
+| Bookmark and title placement in supplied Playback image | Keep the user's later corrections: no bookmark action in the bar, title aligned with cone |
+| Casting, snapshot, aspect/crop/zoom, deinterlace | Omit unavailable actions; add only after corresponding VLCLR/VLC 3 capabilities and native checks exist |
+| Subtitle menu | Preserve track/delay controls but keep visual subtitle rendering unqualified until subpicture composition passes both native and visual tests |
+| Qt preferences and platform window decorations | Settings uses the coherent modern shell. Keep platform window behavior/accessibility; any title-bar visual differences are reviewed explicitly |
+
+### Visual acceptance standard
+
+Passing builds proves functionality, not that the application looks like VLC 4.
+For each screen, produce a same-state comparison at matched client dimensions,
+scale and theme. Include reference, Avalonia result and annotated differences;
+mask differing video/artwork content when evaluating chrome. Do not compare
+unmatched executable versions as if they were the same state.
+
+- Cover 1920x1080 and 1280x720 client sizes, the original 1920x1140 reference
+  where useful, and compact 480x360; test 100%, 125%, 150% scale. Record physical
+  versus simulated scale separately. Playback also checks the 900-DIP breakpoint.
+- Playback: paused/playing with controls, hidden controls, fullscreen, queue,
+  audio/subtitles, More, seek at both ends, volume 0/100/200, long title,
+  audio-only, opening/buffering, error and unavailable capabilities.
+- Home: empty, populated with/without artwork, selected/hover/focus, missing
+  media, privacy-disabled history, compact sidebar and active mini-player.
+- Settings: every category, search results/no results, editing/conflict/error,
+  reset confirmation, scroll containment and compact navigation.
+- Review composition/proportions first, then typography/icons, then colors and
+  surfaces, then state/motion polish. No clipped thumbs/text, overlapping control
+  groups, inconsistent glyph weights, lost focus, or dead visible actions.
+- Record each intentional difference with its reason and acceptance status.
+  A numeric screenshot score alone cannot accept a screen; font rasterization
+  and native decorations may differ, while misplaced controls still need fixing.
+
+Keep raw references under ignored artifacts and commit derived specifications
+and product-owned comparison evidence as appropriate. Run affected managed tests
+per screen and the relevant existing `--playback-controls-smoke`, layout,
+queue/media-capabilities and composition/lifecycle modes. Final qualification
+includes Debug/Release, Native AOT, hardware opaque, software upload, CPU and
+forced-adapter fallback. Do not rerun native suites for this documentation edit.
 
 ## 1. Working agreement
 
@@ -179,7 +352,8 @@ must never be reported as a macOS/Linux pass.
 
 ## 5. Screen 1 — Playback
 
-This is the first and only active screen until the user accepts it.
+Gate P2 was accepted on 2026-09-10. Preserve the accepted Playback baseline while
+the Home/Library specification is prepared; targeted corrections remain possible.
 
 ### PLAYBACK-SPEC — Full playback screen specification
 
@@ -438,18 +612,42 @@ branch. No push or merge happens without separate user direction.
 
 ## 10. Approval ledger
 
-Update only after the named user gate:
+Record implementation and validation evidence as it becomes available. Record
+user approval only after the named user gate; implementation is not evidence of
+result approval.
 
 | Screen | Reference evidence | Spec commit | Spec approval | Implementation tip | Windows validation | User result approval | macOS | Linux |
 |---|---|---|---|---|---|---|---|---|
-| Playback | local hover/paused capture available | ready in `PLAYBACK_SCREEN_SPEC.md` | pending Gate P1 | pending | pending | pending | unqualified | unqualified |
-| Home / Library | local Home capture queued | pending | blocked by Playback | pending | pending | pending | unqualified | unqualified |
+| Playback | local hover/paused capture, master source map, refreshed state captures and native window capture | `9913358`, volume correction `24e53f9`; current `PLAYBACK_SCREEN_SPEC.md` includes September 8 review corrections | implementation already proceeded; original approval date not recorded | `a088ead` plus September 10 fidelity changes on `feature/modern-player-ui` | Debug/Release 156 tests each; native matrix passed with documented skips; see `PLAYBACK_REVIEW_2026-09-10.md` | Gate P2 accepted 2026-09-10: “ok great commit it” after live review | unqualified | unqualified |
+| Home / Library | local Home capture queued | next: write full specification | pending Gate H1; Playback prerequisite satisfied | pending | pending | pending | unqualified | unqualified |
 | Settings | deferred | pending | blocked by Home / Library | pending | pending | pending | unqualified | unqualified |
 | Integration | n/a | n/a | blocked by all screens | pending | pending | pending | deferred | deferred |
 
 ## 11. Immediate next step
 
-Stop at Gate P1 and wait for explicit user approval of
-`PLAYBACK_SCREEN_SPEC.md`. Do not dispatch an implementation agent, change
-product code, or start the Home/Library specification until the user approves
-the Playback specification or supplies corrections.
+F0 and the Playback fidelity pass are complete. Following the live demonstration,
+the user said “ok great commit it” on 2026-09-10; record this as Gate P2 result
+acceptance and authorization to commit the work.
+
+Next is HOME-SPEC: specify the VLC-like Home/navigation shell, empty/open state,
+recent/favorite/resume cards and rows, compact navigation, and a mini-player that
+keeps the existing playback session alive. Present the complete Home specification
+at Gate H1 before implementing it. Settings follows Home result acceptance.
+
+Media information remains part of Playback: More → Media information, the drawer's
+Info tab, and `Ctrl+I` already expose metadata and diagnostics copy. Preserve those
+entry points during Home integration. Detailed codec/stream information is the
+remaining M1 capability work in `PLAYER_CAPABILITY_MATRIX.md`; it needs reviewed
+VLCLR/VLC 3 bindings and is not claimed by the current metadata surface.
+
+The completed F0 procedure selected the existing
+VLC 3-compatible VLCLR pin in an isolated checkout, set `VLCLR_ROOT` and the
+matching `VLC_DIRECTORY`, and built/launched the current Playback screen. The
+report records actual dependency paths and revisions. Do not switch unrelated sibling
+working trees or migrate the product to VLC 4-targeting main.
+
+The actual implementation branch is `feature/modern-player-ui`; the proposed
+`feature/vlc4-ui-parity` branch was not created. Continue on the existing branch.
+The user's follow-up “go” authorized execution after the planning update; their
+later acceptance after the demonstration completed Gate P2. Home/Library now
+follows, then Settings and cross-screen integration.

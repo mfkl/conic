@@ -15,6 +15,16 @@ namespace Conic;
 
 public partial class MainWindow
 {
+    // Interactive review uses the actual VLC 3 engine and the configured local
+    // fixture. It deliberately stays open for pointer/keyboard inspection.
+    internal void EnablePlaybackReview()
+    {
+        WindowState = WindowState.Normal;
+        Width = 1280;
+        Height = 720;
+        Opened += (_, _) => OpenTestMedia();
+    }
+
     // Exercises the actual styled controls and routed input without opening media.
     internal void EnablePlaybackControlsSmoke(IClassicDesktopStyleApplicationLifetime desktop)
     {
@@ -34,6 +44,10 @@ public partial class MainWindow
                     Duration = TimeSpan.FromSeconds(120), Volume = .75,
                     Title = "Playback controls review"
                 };
+                _presentation.ApplyEngineState(playing);
+                Require(SpeedSelector.SelectedItem is ComboBoxItem { Tag: "1" }, "speed displays effective normal rate");
+                _presentation.ApplyEngineState(playing with { PlaybackRate = 1.5 });
+                Require(SpeedSelector.SelectedItem is ComboBoxItem { Tag: "1.5" }, "speed follows native readback");
                 _presentation.ApplyEngineState(playing);
                 _chromeVisibility.SetPlaybackState(true, false);
                 _autoHideTimer.Interval = TimeSpan.FromMilliseconds(150);
@@ -84,15 +98,63 @@ public partial class MainWindow
                 Require(PlayerDock.IsVisible, "paused controls stay visible");
 
                 SavePlaybackCapture("playback-controls-wide.png");
+                Require(Math.Abs(GetClientRect(CenterTransport).Center.X - ClientSize.Width / 2) < 1,
+                    "primary transport remains centered on the window");
+                Require(GetClientRect(PlayerTimeline).Width > ClientSize.Width * .9,
+                    "timeline spans the player independently of the time labels");
+                foreach (double level in new[] { 0d, 100d, 200d })
+                {
+                    _presentation.ApplyEngineState(playing with { Status = PlaybackStatus.Paused, Volume = level / 100 });
+                    await Task.Delay(80);
+                    Require(IsContained(RequireTrack(PlayerVolume).Thumb!), "volume thumb stays contained at all endpoints");
+                    SavePlaybackCapture($"playback-volume-{level:0}.png");
+                }
+                _presentation.ApplyEngineState(playing with { Status = PlaybackStatus.Paused, Position = .4 });
+                OpenOptionsButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                await Task.Delay(80);
+                SavePlaybackCapture("playback-more.png");
+                Press(VideoArea, new Point(ClientSize.Width / 2, ClientSize.Height / 2));
+                _presentation.IsQueueOpen = true;
+                await Task.Delay(80);
+                SavePlaybackCapture("playback-queue.png");
+                _presentation.DrawerTab = "Audio";
+                await Task.Delay(80);
+                SavePlaybackCapture("playback-audio.png");
+                _presentation.IsQueueOpen = false;
+                WindowState = WindowState.FullScreen;
+                await Task.Delay(200);
+                SavePlaybackCapture("playback-fullscreen.png");
+                SetChromeVisibility(false);
+                SavePlaybackCapture("playback-hidden.png");
+                WindowState = WindowState.Normal;
+                WakeChrome();
                 Width = 900;
                 await Task.Delay(200);
                 ValidateLayout(900, false);
+                Width = 899;
+                await Task.Delay(150);
+                ValidateLayout(899, true);
                 Width = 480;
+                Height = 360;
                 await Task.Delay(200);
                 ValidateLayout(480, true);
                 RequireTrack(PlayerVolume);
                 Require(PlayerVolume.IsVisible && IsContained(PlayerVolume), "compact volume remains visible");
                 SavePlaybackCapture("playback-controls-compact.png");
+                _presentation.ApplyEngineState(playing with { Status = PlaybackStatus.Paused,
+                    Title = "A very long media title that must remain inside the header beside queue and More controls" });
+                await Task.Delay(80);
+                ValidateTopChrome(480);
+                SavePlaybackCapture("playback-long-title.png");
+                Width = 1280;
+                Height = 720;
+                foreach (PlaybackStatus status in new[] { PlaybackStatus.Opening, PlaybackStatus.Faulted, PlaybackStatus.Closed })
+                {
+                    _presentation.ApplyEngineState(MediaEngineState.Initial with { Status = status, Title = "Playback review" });
+                    WakeChrome();
+                    await Task.Delay(80);
+                    SavePlaybackCapture($"playback-{status.ToString().ToLowerInvariant()}.png");
+                }
                 Console.WriteLine("[playback-controls-smoke] PASS sliders, seeking, volume, title alignment, menu placement/dismissal, inactivity, keyboard focus, compact layout");
                 desktop.Shutdown(0);
             }

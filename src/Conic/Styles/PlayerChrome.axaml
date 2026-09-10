@@ -304,6 +304,9 @@
         <Setter Property="Background" Value="{DynamicResource PlayerHover}" />
         <Setter Property="Foreground" Value="{DynamicResource PlayerText}" />
     </Style>
+    <Style Selector="Button.drawerTab">
+        <Setter Property="Margin" Value="0,0,4,4" />
+    </Style>
     <Style Selector="Button.drawerTab.selected, Button.menuAction.selected, Button.recentItem.selected">
         <Setter Property="Background" Value="{DynamicResource PlayerSelection}" />
         <Setter Property="Foreground" Value="{DynamicResource PlayerAccent}" />

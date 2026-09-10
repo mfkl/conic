@@ -7,8 +7,8 @@
     "moduleAbi": "3_0_0f"
   },
   "vlclr": {
-    "branch": "feature/vlc3-codec-information",
-    "commit": "b12127b096d80a6024c4c4940008aa31aca8e7fc",
+    "branch": "feature/vlc3-video-adjustments",
+    "commit": "50d849200c3dfb2b047e20a174ae66b56a19adcd",
     "consumption": "sibling-project-reference"
   }
 }

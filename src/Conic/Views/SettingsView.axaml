@@ -170,7 +170,7 @@
                             </Border>
                             <Border Classes="settingsCard" IsVisible="{Binding IsVideo}">
                                 <StackPanel Spacing="14">
-                                    <TextBlock Text="Aspect ratio, crop, zoom, deinterlacing and snapshots are not available yet." Classes="settingHint" TextWrapping="Wrap" />
+                                    <TextBlock Text="Adjust aspect ratio, crop and zoom during playback from More → Video adjustments. Deinterlacing and snapshots are not available yet." Classes="settingHint" TextWrapping="Wrap" />
                                 </StackPanel>
                             </Border>
                             <Border Classes="settingsCard" IsVisible="{Binding IsSubtitles}">

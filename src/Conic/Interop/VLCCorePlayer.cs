@@ -11,7 +11,7 @@ using VLCLR.Native;
 namespace Conic.Interop;
 
 [SupportedOSPlatform("windows")]
-internal sealed unsafe class VLCCorePlayer : IMediaEngine, IQueueTransport, IMediaCapabilitiesTransport, IMediaInformationTransport, IVLCPlaylistQueueSmokeAdapter, IVLCMediaCapabilitySmokeAdapter
+internal sealed unsafe partial class VLCCorePlayer : IMediaEngine, IQueueTransport, IMediaCapabilitiesTransport, IMediaInformationTransport, IVideoAdjustmentTransport, IVLCPlaylistQueueSmokeAdapter, IVLCMediaCapabilitySmokeAdapter
 {
     private const int PlaylistStopped = 0;
     private const int PlaylistRunning = 1;
@@ -58,6 +58,16 @@ internal sealed unsafe class VLCCorePlayer : IMediaEngine, IQueueTransport, IMed
         _playlistBridge.ConnectPlaylist();
         _mediaControls = new VLCMediaCapabilities(TryGetCurrentInputLease);
         _playerCapabilities = new VLCPlayerCapabilities(TryGetCurrentInputLease);
+        _videoControls = new VLCVideoPresentation(TryGetCurrentInputLease);
+        _states.Changed += (_, state) =>
+        {
+            if (state.Status is not (PlaybackStatus.Playing or PlaybackStatus.Paused))
+            {
+                var unavailable = VideoAdjustmentState.Unavailable with { QueueGeneration = state.Generation };
+                lock (_gate) _videoAdjustments = unavailable;
+                VideoAdjustmentsChanged?.Invoke(this, unavailable);
+            }
+        };
     }
 
     public MediaEngineState State => _states.State;
@@ -305,9 +315,16 @@ internal sealed unsafe class VLCCorePlayer : IMediaEngine, IQueueTransport, IMed
     internal void PollMediaCapabilitiesForSmoke() =>
         _ = InvokeMediaCapabilityForSmoke(adapter => adapter.TryGetTracks(out _));
 
-    /// <summary>Runs the VLCLR capability probe on the VLC owner dispatcher. Unsupported vout features are intentionally skipped.</summary>
-    internal VLCPlayerSmokeReport RunPlayerCapabilitiesForSmoke() =>
-        InvokeMediaCapabilityForSmoke(_ => VLCPlayerCapabilitiesSmoke.Run(_playerCapabilities));
+    /// <summary>Runs capability discovery on the VLC owner dispatcher. Video rendering is verified by --video-smoke.</summary>
+    internal VLCPlayerSmokeReport RunPlayerCapabilitiesForSmoke() => InvokeMediaCapabilityForSmoke(adapter =>
+    {
+        var report = VLCPlayerCapabilitiesSmoke.Run(_playerCapabilities);
+        var video = _videoControls.Read(out var result);
+        return new VLCPlayerSmokeReport(report.Steps.Select(step => step.Phase == VLCPlayerSmokePhase.VideoPresentation
+            ? new VLCPlayerSmokeStep(step.Phase, video is null ? VLCPlayerSmokeDisposition.Skipped : VLCPlayerSmokeDisposition.Passed, result,
+                video is null ? "No single active video output." : "Held VLC 3 output exposes aspect/crop/zoom choices and readback; rendering qualification uses --video-smoke.")
+            : step).ToArray());
+    });
 
     public void Enqueue(IEnumerable<string> sources)
     {
@@ -791,6 +808,7 @@ internal sealed unsafe class VLCCorePlayer : IMediaEngine, IQueueTransport, IMed
             playbackRate: playbackRate);
         PublishQueueSnapshot(generation);
         PublishMediaCapabilitiesSnapshot(generation);
+        PublishVideoAdjustments();
     }
 
     VLCPlaylistSnapshot? IVLCPlaylistQueueSmokeAdapter.TryGetSnapshot(out VLCPlaylistResult result)

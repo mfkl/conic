@@ -39,15 +39,25 @@ public partial class MainWindow
                 await Task.Delay(100);
                 Require(!_presentation.ShowMiniPlayer && !homeStop.IsEffectivelyVisible, "Stop clears the Home bar");
                 Require(_presentation.HomeItems.Count > 0, "Stop preserves recent history");
-                _presentation.OpenSource(RepositoryPaths.TestMediaPath, MediaSourceKind.File);
-                await WaitFor(() => _presentation.IsPlaying && _presentation.CanSeek, "media can reopen after Stop");
+                _presentation.ShowPlayerCommand.Execute(null);
+                _presentation.TogglePauseCommand.Execute(null);
+                await WaitFor(() => _presentation.IsPlaying && _presentation.CanSeek, "Play restarts after Stop");
+                Require(VideoSurface.Player!.State.Position < .3, "Play after Stop starts from the beginning");
+                _presentation.TogglePauseCommand.Execute(null);
+                await WaitFor(() => _presentation.PlaybackStatus == PlaybackStatus.Paused, "Play toggles to Pause after restart");
+                _presentation.TogglePauseCommand.Execute(null);
+                await WaitFor(() => _presentation.IsPlaying, "Play resumes paused media");
                 VideoSurface.Player!.Seek(.92);
                 _presentation.ShowHomeCommand.Execute(null);
                 await WaitFor(() => _presentation.PlaybackStatus == PlaybackStatus.Stopped, "media ends naturally");
                 await Task.Delay(150);
                 Require(!_presentation.ShowMiniPlayer && !homeStop.IsEffectivelyVisible, "end of media clears the Home bar");
                 CaptureHome("home-after-playback");
-                Console.WriteLine("[stop-smoke] PASS visible Stop wide/compact, native Stop, reopen, natural end, cleared Home bar and retained history");
+                _presentation.TogglePauseCommand.Execute(null);
+                await WaitFor(() => _presentation.IsPlaying && _presentation.CanSeek, "Play restarts after natural EOF");
+                double start = VideoSurface.Player!.State.Position;
+                await WaitFor(() => VideoSurface.Player.State.Position > start, "restarted playback advances");
+                Console.WriteLine("[stop-smoke] PASS visible Stop wide/compact, Stop then Play, pause/resume, EOF then Play, advancing position, cleared Home bar and retained history");
                 desktop.Shutdown(0);
             }
             catch (Exception error) { Console.Error.WriteLine($"[stop-smoke] FAIL {error}"); desktop.Shutdown(1); }

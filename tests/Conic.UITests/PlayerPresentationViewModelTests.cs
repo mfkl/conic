@@ -8,6 +8,59 @@ namespace Conic.UITests;
 public sealed class PlayerPresentationViewModelTests
 {
     [Fact]
+    public void StopThenPlayReopensFromTheBeginningAndAcceptsTheNewGenerationWithoutResumePrompt()
+    {
+        RecordingTransport transport = new();
+        var vm = CreateOpeningViewModel(transport, SeedHistory());
+        vm.OpenSource("a.mp4", MediaSourceKind.File);
+        var playing = State(.4, PlaybackStatus.Playing, true) with { Source = "a.mp4" };
+        vm.ApplyEngineState(playing);
+        vm.StopCommand.Execute(null);
+        vm.ApplyEngineState(playing with { Status = PlaybackStatus.Stopped });
+        vm.TogglePauseCommand.Execute(null);
+        Assert.Equal(new[] { "a.mp4", "a.mp4" }, transport.Opened);
+        Assert.Equal(PlaybackStatus.Opening, vm.PlaybackStatus);
+        Assert.False(vm.TogglePauseCommand.CanExecute(null));
+        vm.ApplyEngineState(playing with { Generation = 2, Position = 0, Elapsed = TimeSpan.Zero });
+        Assert.True(vm.IsPlaying);
+        Assert.Equal(0, vm.Position);
+        Assert.False(vm.HasPendingResume);
+    }
+
+    [Fact]
+    public void StopThenPlayUsesTheSelectedQueueFileAndDecodesItsFileUri()
+    {
+        QueueTransport transport = new();
+        var vm = CreateOpeningViewModel(transport);
+        string selected = Path.GetFullPath("second movie.mp4");
+        vm.OpenSource("first.mp4", MediaSourceKind.File);
+        var playing = State(.3, PlaybackStatus.Playing, true) with { Source = "first.mp4" };
+        vm.ApplyEngineState(playing);
+        transport.Publish(new(1, 1, QueueLoadState.Ready,
+            [new("one", "First", "first.mp4", 0, false), new("two", "Second", new Uri(selected).AbsoluteUri, 1, true)],
+            1, QueueRepeatMode.None, QueueOrder.Normal));
+        vm.StopCommand.Execute(null);
+        transport.Publish(new(1, 2, QueueLoadState.Unavailable, [], -1, QueueRepeatMode.None, QueueOrder.Normal));
+        vm.ApplyEngineState(playing with { Status = PlaybackStatus.Stopped });
+        vm.TogglePauseCommand.Execute(null);
+        Assert.Equal(selected, Assert.Single(transport.OpenedQueues[1]));
+    }
+
+    [Fact]
+    public void PlayAtEndOfMediaRestartsTheSelectedItemInTheExistingQueue()
+    {
+        QueueTransport transport = new();
+        var vm = CreateOpeningViewModel(transport);
+        vm.ApplyEngineState(State(1, PlaybackStatus.Stopped, false));
+        transport.Publish(new(1, 1, QueueLoadState.Ready,
+            [new("one", "First", "first.mp4", 0, false), new("two", "Second", "second.mp4", 1, true)],
+            1, QueueRepeatMode.None, QueueOrder.Normal));
+        vm.TogglePauseCommand.Execute(null);
+        Assert.Equal("two", transport.Selected);
+        Assert.Empty(transport.OpenedQueues);
+    }
+
+    [Fact]
     public void QueueInputChangeClearsInformationAndRejectsLateInformationFromThePreviousInput()
     {
         CapabilityTransport transport = new();

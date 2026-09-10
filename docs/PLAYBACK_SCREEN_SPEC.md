@@ -2,6 +2,11 @@
 
 Status: **implemented; VLC 3 native qualification refreshed; Gate P2 accepted 2026-09-10**
 
+September 10 V1 addendum: aspect ratio, crop and zoom now have qualified VLC 3
+controls in More → Video adjustments and the Video drawer tab. The specification
+and evidence in `VIDEO_ADJUSTMENTS_REVIEW_2026-09-10.md` supersede their earlier
+omission below. Deinterlace, snapshots and other unavailable actions remain out.
+
 September 10 follow-up: the user requested a visible Stop button. Stop now appears
 in the primary transport and Home mini-player at desktop and compact widths,
 using the existing shared command. This supersedes the overflow-only Stop

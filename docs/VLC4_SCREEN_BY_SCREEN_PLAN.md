@@ -681,7 +681,10 @@ The automated scaling/accessibility pass is implemented and validated; see
 `ACCESSIBILITY_SCALE_REVIEW_2026-09-10.md`. It covers 100–200% equivalent logical
 viewports, larger text, named actions and actual automation seek/volume readback.
 Physical DPI transitions and the Narrator walkthrough remain open.
-Next: V1 aspect/crop/zoom, followed by V2 deinterlace and V3 snapshot capabilities
+V1 aspect/crop/zoom is implemented with VLCLR prerequisite `50d8492`, a Video
+drawer, and shared CPU/GPU geometry handling. See
+`VIDEO_ADJUSTMENTS_REVIEW_2026-09-10.md` for its specification and native evidence.
+Next: V2 deinterlace, followed by V3 snapshot capabilities
 as separate VLCLR/VLC 3 packages with native validation, while incorporating
 visual feedback and completing manual platform qualification.
 Physical display-scale/accessibility and macOS/Linux native

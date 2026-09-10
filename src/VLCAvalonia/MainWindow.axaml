@@ -145,6 +145,7 @@
                 <Button Classes="menuAction" Content="Load playlist…" Command="{Binding LoadPlaylistCommand}" ToolTip.Tip="Load a flat M3U or M3U8 playback queue" />
                 <Button Classes="menuAction" Content="Stop" Command="{Binding StopCommand}" IsVisible="{Binding CanStop}" />
                 <Button Classes="menuAction" Content="Tracks and synchronization" Command="{Binding ToggleMediaControlsCommand}" CommandParameter="Audio" />
+                <Button Classes="menuAction" Content="Video adjustments" Command="{Binding ToggleMediaControlsCommand}" CommandParameter="Video" />
                 <Button Classes="menuAction" Content="Media information" Command="{Binding MediaInformationCommand}" />
                 <Button Classes="menuAction" Content="Picture in picture" Command="{Binding TogglePictureInPictureCommand}" ToolTip.Tip="Keep video above other windows (Ctrl+Shift+P)" />
                 <StackPanel Orientation="Horizontal" Spacing="8" Margin="12,2">
@@ -226,11 +227,13 @@
                 <WrapPanel x:Name="DrawerTabs" Grid.Row="1" Orientation="Horizontal" KeyDown="OnDrawerTabsKeyDown">
                     <Button Classes="drawerTab" Classes.selected="{Binding IsQueueTab}" Content="Queue" Command="{Binding ToggleMediaControlsCommand}" CommandParameter="Queue" />
                     <Button Classes="drawerTab" Classes.selected="{Binding IsAudioTab}" Content="Audio" Command="{Binding ToggleMediaControlsCommand}" CommandParameter="Audio" />
+                    <Button Classes="drawerTab" Classes.selected="{Binding IsVideoTab}" Content="Video" Command="{Binding ToggleMediaControlsCommand}" CommandParameter="Video" />
                     <Button Classes="drawerTab" Classes.selected="{Binding IsSubtitleTab}" Content="Subtitles" Command="{Binding ToggleMediaControlsCommand}" CommandParameter="Subtitles" />
                     <Button Classes="drawerTab" Classes.selected="{Binding IsChapterTab}" Content="Chapters" Command="{Binding ToggleMediaControlsCommand}" CommandParameter="Chapters" />
                     <Button Classes="drawerTab" Classes.selected="{Binding IsInformationTab}" Content="Info" Command="{Binding MediaInformationCommand}" />
                 </WrapPanel>
                 <Grid Grid.Row="2">
+                    <ScrollViewer IsVisible="{Binding IsVideoTab}" HorizontalScrollBarVisibility="Disabled"><views:VideoAdjustmentsView DataContext="{Binding VideoAdjustments}" /></ScrollViewer>
                     <Grid IsVisible="{Binding IsQueueTab}" RowDefinitions="Auto,*,Auto" RowSpacing="10">
                         <WrapPanel>
                             <Button Margin="0,0,8,4" Content="{Binding RepeatLabel}" Command="{Binding CycleRepeatCommand}" />

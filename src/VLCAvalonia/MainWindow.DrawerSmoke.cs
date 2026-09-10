@@ -81,8 +81,8 @@ public partial class MainWindow
                 tabs[0].RaiseEvent(new KeyEventArgs { RoutedEvent = KeyDownEvent, Key = Key.Right });
                 Require(_presentation.IsAudioTab && tabs[1].IsFocused, "Right arrow selects and focuses the next tab");
                 tabs[1].RaiseEvent(new KeyEventArgs { RoutedEvent = KeyDownEvent, Key = Key.End });
-                Require(_presentation.IsInformationTab && tabs[4].IsFocused, "End selects Info");
-                tabs[4].RaiseEvent(new KeyEventArgs { RoutedEvent = KeyDownEvent, Key = Key.Home });
+                Require(_presentation.IsInformationTab && tabs[^1].IsFocused, "End selects Info");
+                tabs[^1].RaiseEvent(new KeyEventArgs { RoutedEvent = KeyDownEvent, Key = Key.Home });
                 Require(_presentation.IsQueueTab && tabs[0].IsFocused, "Home selects Queue");
                 CloseQueueButton.Focus(NavigationMethod.Tab);
                 for (int index = 0; index < 110; index++)

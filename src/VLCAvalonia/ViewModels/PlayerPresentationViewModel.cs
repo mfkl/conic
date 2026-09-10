@@ -84,6 +84,7 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
         _queue = transport as IQueueTransport;
         _mediaControls = transport as IMediaCapabilitiesTransport;
         _mediaInformationTransport = transport as IMediaInformationTransport;
+        VideoAdjustments = new(transport as IVideoAdjustmentTransport);
         _sourceExpander = new MediaSourceExpander(_sourceValidator);
         if (_queue is not null) { _queueState = _queue.QueueState; _queue.QueueStateChanged += (_, state) => ApplyQueueState(state); }
         if (_mediaControls is not null) { _mediaCapabilities = _mediaControls.MediaCapabilities; _mediaControls.MediaCapabilitiesChanged += (_, state) => ApplyMediaCapabilities(state); }
@@ -493,6 +494,7 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
                 OnPropertyChanged(nameof(IsQueueTab)); OnPropertyChanged(nameof(IsAudioTab));
                 OnPropertyChanged(nameof(IsSubtitleTab)); OnPropertyChanged(nameof(IsChapterTab));
                 OnPropertyChanged(nameof(IsInformationTab));
+                OnPropertyChanged(nameof(IsVideoTab));
             }
         }
     }
@@ -501,6 +503,8 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
     public bool IsSubtitleTab => DrawerTab == "Subtitles";
     public bool IsChapterTab => DrawerTab == "Chapters";
     public bool IsInformationTab => DrawerTab == "Information";
+    public bool IsVideoTab => DrawerTab == "Video";
+    public VideoAdjustmentsViewModel VideoAdjustments { get; }
     public MediaInformationState MediaInformation { get => _mediaInformation; private set => Set(ref _mediaInformation, value); }
     public string CopyStatus { get => _copyStatus; private set => Set(ref _copyStatus, value); }
     public bool HasCopyStatus => !string.IsNullOrWhiteSpace(CopyStatus);

@@ -91,6 +91,17 @@ internal sealed unsafe class CompositionPluginBridge : IDisposable
 
     private readonly object _lifecycleGate = new();
     private readonly nint _library;
+    private readonly delegate* unmanaged[Cdecl]<VideoGeometry*, void> _getVideoGeometry;
+    public VideoGeometry GetVideoGeometry()
+    {
+        lock (_lifecycleGate)
+        {
+            ThrowIfDisposed();
+            VideoGeometry geometry = default;
+            _getVideoGeometry(&geometry);
+            return geometry;
+        }
+    }
     private readonly delegate* unmanaged[Cdecl]<nint, nint, void> _setCallback;
     private readonly delegate* unmanaged[Cdecl]<nint, nint, void> _setGPUCallback;
     private readonly delegate* unmanaged[Cdecl]<nint, nint, void>
@@ -125,6 +136,7 @@ internal sealed unsafe class CompositionPluginBridge : IDisposable
         string pluginPath = FindPluginPath();
         PluginDirectory = Path.GetDirectoryName(pluginPath)!;
         _library = NativeLibrary.Load(pluginPath);
+        _getVideoGeometry = (delegate* unmanaged[Cdecl]<VideoGeometry*, void>)NativeLibrary.GetExport(_library, "vlc_avalonia_get_video_geometry_v1");
         nint setter = NativeLibrary.GetExport(
             _library,
             "vlc_avalonia_set_frame_callback");

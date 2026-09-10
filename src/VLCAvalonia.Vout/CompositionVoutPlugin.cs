@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using VLCLR.Module;
 using VLCLR.Native;
+using VLCAvalonia.Interop;
 
 namespace VLCAvalonia.Vout;
 
@@ -26,6 +27,8 @@ public static unsafe class CompositionVoutPlugin
     // waits for an in-flight callback to return before the host frees its
     // callback userdata.
     private static readonly object CallbackGate = new();
+    private static VideoGeometry s_geometry;
+    private static nint s_geometryOwner;
     private static nint s_frameCallback;
     private static nint s_frameCallbackOpaque;
     private static nint s_GPUFrameCallback;
@@ -49,6 +52,7 @@ public static unsafe class CompositionVoutPlugin
 
     private sealed class DisplayState
     {
+        public VLCVideoFormat OriginalSource;
         public nint Pool;
         public D3D11SharedTexture? SharedTexture;
         public D3D11VideoProcessorConverter? Converter;
@@ -302,6 +306,7 @@ public static unsafe class CompositionVoutPlugin
 
             DisplayState state = new()
             {
+                OriginalSource = display->Source,
                 RequestedAdapterLowPart = adapterLowPart,
                 RequestedAdapterHighPart = adapterHighPart,
                 SourceChroma = display->Source.Chroma,
@@ -373,6 +378,7 @@ public static unsafe class CompositionVoutPlugin
             display->Control = (nint)(delegate* unmanaged[Cdecl]<nint, int, nint, int>)&Control;
             display->Manage = 0;
             display->Sys = GCHandle.ToIntPtr(stateHandle);
+            PublishGeometry(display, (DisplayConfiguration*)display->Configuration);
             PublishTelemetry(state);
             return Success;
         }
@@ -388,6 +394,10 @@ public static unsafe class CompositionVoutPlugin
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
     private static void Close(nint displayPtr)
     {
+        lock (CallbackGate)
+        {
+            if (s_geometryOwner == displayPtr) { s_geometry = default; s_geometryOwner = 0; }
+        }
         if (displayPtr == 0)
             return;
 
@@ -622,7 +632,61 @@ public static unsafe class CompositionVoutPlugin
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
     private static int Control(nint displayPtr, int query, nint arguments)
     {
+        var display = (VLCVoutDisplay*)displayPtr;
+        switch ((VLCVoutDisplayControl)query)
+        {
+            case VLCVoutDisplayControl.ChangeSourceAspect:
+            case VLCVoutDisplayControl.ChangeSourceCrop:
+                PublishGeometry(display, null);
+                break;
+            case VLCVoutDisplayControl.ChangeZoom:
+            case VLCVoutDisplayControl.ChangeDisplayFilled:
+            case VLCVoutDisplayControl.ChangeDisplaySize:
+                // Windows x64 va_list points to the first eight-byte argument slot.
+                if (arguments != 0) PublishGeometry(display, *(DisplayConfiguration**)arguments);
+                break;
+        }
         return Success;
+    }
+
+    [StructLayout(LayoutKind.Explicit, Size = 72)]
+    private struct DisplayConfiguration
+    {
+        // VLC 3 Windows x64 vout_display_cfg_t, pinned SDK vlc_vout_display.h.
+        [FieldOffset(40)] public byte Filled;
+        [FieldOffset(44)] public int ZoomNumerator;
+        [FieldOffset(48)] public int ZoomDenominator;
+    }
+
+    private static void PublishGeometry(VLCVoutDisplay* display, DisplayConfiguration* config)
+    {
+        var state = GetState(display);
+        if (state is null) return;
+        var original = state.OriginalSource;
+        var source = display->Source;
+        if (original.VisibleWidth == 0 || original.VisibleHeight == 0) return;
+        lock (CallbackGate)
+        {
+            s_geometryOwner = (nint)display;
+            s_geometry.X = ((double)source.XOffset - original.XOffset) / original.VisibleWidth;
+            s_geometry.Y = ((double)source.YOffset - original.YOffset) / original.VisibleHeight;
+            s_geometry.Width = (double)source.VisibleWidth / original.VisibleWidth;
+            s_geometry.Height = (double)source.VisibleHeight / original.VisibleHeight;
+            s_geometry.SampleAspect = source.SarNum > 0 && source.SarDen > 0 ? (double)source.SarNum / source.SarDen : 1;
+            s_geometry.Active = 1;
+            if (config != null)
+            {
+                s_geometry.AutoScale = config->Filled;
+                s_geometry.Zoom = config->ZoomDenominator > 0 ? (double)config->ZoomNumerator / config->ZoomDenominator : 1;
+            }
+        }
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "vlc_avalonia_get_video_geometry_v1", CallConvs = [typeof(CallConvCdecl)])]
+    public static void GetVideoGeometry(void* destination)
+    {
+        if (destination == null) return;
+        lock (CallbackGate) *(VideoGeometry*)destination = s_geometry;
     }
 
     private static DisplayState? GetState(VLCVoutDisplay* display)

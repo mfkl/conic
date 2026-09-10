@@ -17,7 +17,11 @@ public partial class App : Application
         {
             MainWindow window = new();
             desktop.MainWindow = window;
-            if (desktop.Args?.Contains("--accessibility-smoke", StringComparer.OrdinalIgnoreCase) == true)
+            if (desktop.Args?.Contains("--video-smoke", StringComparer.OrdinalIgnoreCase) == true)
+                window.EnableVideoSmoke(desktop, false);
+            else if (desktop.Args?.Contains("--video-cpu-smoke", StringComparer.OrdinalIgnoreCase) == true)
+                window.EnableVideoSmoke(desktop, true);
+            else if (desktop.Args?.Contains("--accessibility-smoke", StringComparer.OrdinalIgnoreCase) == true)
                 window.EnableAccessibilitySmoke(desktop, true);
             else if (desktop.Args?.Contains("--scale-smoke", StringComparer.OrdinalIgnoreCase) == true)
                 window.EnableAccessibilitySmoke(desktop, false);

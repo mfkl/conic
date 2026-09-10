@@ -28,6 +28,12 @@ public sealed class CompositionVideoSurface : Control, IDisposable
     private ICompositionImportedGpuImage? _importedImage;
     private CompositionDrawingSurface? _drawingSurface;
     private CompositionSurfaceVisual? _surfaceVisual;
+    private CompositionContainerVisual? _videoClip;
+    private VideoGeometry _geometry;
+    internal VideoGeometry GeometryForSmoke => _geometry;
+    internal bool HasCpuFrameForSmoke => _reportedFirstCPUFrame;
+    internal bool HasGpuFrameForSmoke => _reportedFirstGPUFrame;
+    internal VideoSurfaceLayout CurrentVideoLayout => VideoSurfaceLayout.Calculate(Bounds.Size, new Size(_videoWidth, _videoHeight), _geometry, TopLevel.GetTopLevel(this)?.RenderScaling ?? 1);
     private ulong _importedGeneration;
     private CompositionPluginBridge.AdapterLuid? _compositorAdapter;
     private int _videoWidth;
@@ -54,6 +60,9 @@ public sealed class CompositionVideoSurface : Control, IDisposable
     public event EventHandler<PlaybackQueueState>? QueueStateChanged;
     public event EventHandler<MediaCapabilitiesState>? MediaCapabilitiesChanged;
     public event EventHandler<MediaInformationState>? MediaInformationChanged;
+    public event EventHandler<VideoAdjustmentState>? VideoAdjustmentsChanged;
+    public VideoAdjustmentState VideoAdjustments => (_player as IVideoAdjustmentTransport)?.VideoAdjustments ?? VideoAdjustmentState.Unavailable;
+    public void SetVideoAdjustment(VideoAdjustmentState expected, string setting, string value) => (_player as IVideoAdjustmentTransport)?.SetVideoAdjustment(expected, setting, value);
     public MediaInformationState MediaInformation => (_player as IMediaInformationTransport)?.MediaInformation ?? MediaInformationState.Unavailable;
     public void RefreshMediaInformation() => (_player as IMediaInformationTransport)?.RefreshMediaInformation();
     internal event Action<ulong, ulong, string>? GPUFramePresentedForSmoke;
@@ -236,7 +245,10 @@ public sealed class CompositionVideoSurface : Control, IDisposable
             _surfaceVisual = elementVisual.Compositor.CreateSurfaceVisual();
             _surfaceVisual.Surface = _drawingSurface;
             _surfaceVisual.ClipToBounds = true;
-            ElementComposition.SetElementChildVisual(this, _surfaceVisual);
+            _videoClip = elementVisual.Compositor.CreateContainerVisual();
+            _videoClip.ClipToBounds = true;
+            _videoClip.Children.Add(_surfaceVisual);
+            ElementComposition.SetElementChildVisual(this, _videoClip);
             CompositionPluginBridge.AdapterLuid requestedAdapter =
                 ForceUnavailableAdapterForSmoke
                     ? new CompositionPluginBridge.AdapterLuid(
@@ -296,6 +308,8 @@ public sealed class CompositionVideoSurface : Control, IDisposable
                 capabilities.MediaCapabilitiesChanged += OnMediaCapabilitiesChanged;
             if (_player is IMediaInformationTransport information)
                 information.MediaInformationChanged += OnMediaInformationChanged;
+            if (_player is IVideoAdjustmentTransport video)
+                video.VideoAdjustmentsChanged += OnVideoAdjustmentsChanged;
             if (_pendingQueueSources is { } pending && _player is IQueueTransport pendingQueue)
             {
                 _pendingQueueSources = null;
@@ -316,10 +330,23 @@ public sealed class CompositionVideoSurface : Control, IDisposable
         Dispatcher.UIThread.Post(() => MediaCapabilitiesChanged?.Invoke(this, state));
     private void OnMediaInformationChanged(object? sender, MediaInformationState state) =>
         Dispatcher.UIThread.Post(() => MediaInformationChanged?.Invoke(this, state));
+    private void OnVideoAdjustmentsChanged(object? sender, VideoAdjustmentState state) =>
+        Dispatcher.UIThread.Post(() => VideoAdjustmentsChanged?.Invoke(this, state));
 
     private async Task PresentLatestFrameAsync()
     {
         ProcessLatestTelemetry();
+        UpdateSurfaceLayout();
+        if (_bridge is not null)
+        {
+            var geometry = _bridge.GetVideoGeometry();
+            if (!_geometry.Equals(geometry))
+            {
+                _geometry = geometry;
+                UpdateSurfaceLayout();
+                InvalidateVisual();
+            }
+        }
 
         if (_GPUEnabled && !_GPUUpdatePending &&
             _bridge?.TryTakeLatestGPU(
@@ -349,6 +376,8 @@ public sealed class CompositionVideoSurface : Control, IDisposable
         }
 
         CopyFrameToBitmap(frame, _bitmap);
+        _videoWidth = frame.Width;
+        _videoHeight = frame.Height;
 
         if (!_reportedFirstCPUFrame)
         {
@@ -504,38 +533,24 @@ public sealed class CompositionVideoSurface : Control, IDisposable
 
     private void UpdateSurfaceLayout()
     {
-        if (_surfaceVisual is null || _videoWidth <= 0 || _videoHeight <= 0)
+        if (_surfaceVisual is null || _videoClip is null || _videoWidth <= 0 || _videoHeight <= 0)
             return;
-
-        double scale = Math.Min(
-            Bounds.Width / _videoWidth,
-            Bounds.Height / _videoHeight);
-        double width = _videoWidth * scale;
-        double height = _videoHeight * scale;
-        _surfaceVisual.Size = new Vector(width, height);
-        _surfaceVisual.Offset = new Vector3D(
-            (Bounds.Width - width) / 2,
-            (Bounds.Height - height) / 2,
-            0);
+        _videoClip.Opacity = _geometry.Active != 0 ? 1 : 0;
+        var layout = CurrentVideoLayout;
+        _videoClip.Size = new Vector(layout.Destination.Width, layout.Destination.Height);
+        _videoClip.Offset = new Vector3D(layout.Destination.X, layout.Destination.Y, 0);
+        _surfaceVisual.Size = new Vector(layout.FullImage.Width, layout.FullImage.Height);
+        _surfaceVisual.Offset = new Vector3D(layout.FullImage.X, layout.FullImage.Y, 0);
     }
 
     public override void Render(DrawingContext context)
     {
         context.FillRectangle(Brushes.Black, Bounds);
-        if (_GPUEnabled || _bitmap is null)
+        if (_GPUEnabled || _bitmap is null || _geometry.Active == 0)
             return;
 
-        Rect source = new(_bitmap.Size);
-        double scale = Math.Min(
-            Bounds.Width / source.Width,
-            Bounds.Height / source.Height);
-        Size size = new(source.Width * scale, source.Height * scale);
-        Rect destination = new(
-            (Bounds.Width - size.Width) / 2,
-            (Bounds.Height - size.Height) / 2,
-            size.Width,
-            size.Height);
-        context.DrawImage(_bitmap, source, destination);
+        var layout = CurrentVideoLayout;
+        context.DrawImage(_bitmap, layout.Source, layout.Destination);
     }
 
     private void ReportStatus(string status)
@@ -552,6 +567,10 @@ public sealed class CompositionVideoSurface : Control, IDisposable
                 queue.QueueStateChanged -= OnQueueStateChanged;
             if (_player is IMediaCapabilitiesTransport capabilities)
                 capabilities.MediaCapabilitiesChanged -= OnMediaCapabilitiesChanged;
+            if (_player is IVideoAdjustmentTransport video)
+                video.VideoAdjustmentsChanged -= OnVideoAdjustmentsChanged;
+            if (_player is IMediaInformationTransport information)
+                information.MediaInformationChanged -= OnMediaInformationChanged;
             _player.Dispose();
             _player = null;
         }

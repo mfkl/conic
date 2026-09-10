@@ -60,7 +60,7 @@ internal sealed partial class PlayerPresentationViewModel
             OnPropertyChanged(nameof(ShowMiniPlayer));
         }
     }
-    public bool ShowMiniPlayer => IsHomeOpen && HasPlayableMedia;
+    public bool ShowMiniPlayer => IsHomeOpen && CanStop;
     public bool HomeListLayout { get => _homeListLayout; set { if (Set(ref _homeListLayout, value)) OnPropertyChanged(nameof(HomeLayoutLabel)); } }
     public string HomeLayoutLabel => HomeListLayout ? "Grid view" : "List view";
     public string HomeSection { get => _homeSection; set { if (Set(ref _homeSection, value)) NotifyHome(); } }

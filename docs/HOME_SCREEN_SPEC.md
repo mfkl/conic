@@ -25,7 +25,8 @@ database, inferred catalog, discovery services or unavailable disc action.
   automation names and selected state. Header labels reduce before actions clip.
 - Empty Home: centered cone, Open file and Open folder, and a quiet drop hint.
 - Populated view: section title/count, search, wrapping media cards or list rows.
-  Cards use vector placeholders when no existing artwork is available; media
+  On Windows, cards load local video thumbnails in the background and cache them
+  across visits. Unsupported, missing and network sources retain vector placeholders; media
   title ellipsizes, saved positions show progress, and item actions offer play,
   enqueue, favorite and remove as applicable. Local history remains the source
   of truth; search does not perform filesystem I/O.

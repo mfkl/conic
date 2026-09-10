@@ -17,7 +17,11 @@ public partial class App : Application
         {
             MainWindow window = new();
             desktop.MainWindow = window;
-            if (desktop.Args?.Contains("--media-information-smoke", StringComparer.OrdinalIgnoreCase) == true)
+            if (desktop.Args?.Contains("--thumbnail-smoke", StringComparer.OrdinalIgnoreCase) == true)
+                window.EnableThumbnailSmoke(desktop, false);
+            else if (desktop.Args?.Contains("--thumbnail-review", StringComparer.OrdinalIgnoreCase) == true)
+                window.EnableThumbnailSmoke(desktop, true);
+            else if (desktop.Args?.Contains("--media-information-smoke", StringComparer.OrdinalIgnoreCase) == true)
                 window.EnableMediaInformationSmoke(desktop);
             else if (desktop.Args?.Contains("--settings-smoke", StringComparer.OrdinalIgnoreCase) == true)
                 window.EnableSettingsSmoke(desktop);

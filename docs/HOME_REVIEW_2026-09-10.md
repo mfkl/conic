@@ -32,7 +32,11 @@ Local captures are under `artifacts/home-review/`: `home-wide.png`,
 Captures exercise an isolated `CONIC_PROFILE` directory with test history;
 the default profile remains the normal local application-data directory.
 
-Intentional limits: artwork uses vector placeholders, the library contains
+Follow-up: the missing-thumbnail report is addressed in
+`HOME_THUMBNAILS_REVIEW_2026-09-10.md`. Local video cards now use cached Windows
+thumbnails, with vector fallbacks when unavailable.
+
+Remaining limits: the library contains
 explicit local history only, and the first list implementation uses generous
 rows with inline item actions. Windows captures use this machine's display
 scale; additional physical scale, macOS and Linux qualification remains open.

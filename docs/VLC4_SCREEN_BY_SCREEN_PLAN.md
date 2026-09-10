@@ -664,15 +664,15 @@ PiP is implemented and validated; see `PICTURE_IN_PICTURE_REVIEW_2026-09-10.md`.
 Settings is implemented and validated; see `SETTINGS_REVIEW_2026-09-10.md`.
 The final Windows integration matrix passed; see
 `WINDOWS_UI_INTEGRATION_2026-09-10.md`. Next is combined visual review of Home,
-PiP and Settings, followed by targeted feedback and the separate M1 codec/stream
-information work. Physical display-scale/accessibility and macOS/Linux native
+PiP and Settings, followed by targeted feedback. M1 codec/stream information is
+implemented; see `MEDIA_INFORMATION_REVIEW_2026-09-10.md`. The user's missing
+Home thumbnail report is the current follow-up. Physical display-scale/accessibility and macOS/Linux native
 qualification remain open. Record visual acceptance only when the user reviews.
 
 Media information remains part of Playback: More → Media information, the drawer's
-Info tab, and `Ctrl+I` already expose metadata and diagnostics copy. Preserve those
-entry points during Home integration. Detailed codec/stream information is the
-remaining M1 capability work in `PLAYER_CAPABILITY_MATRIX.md`; it needs reviewed
-VLCLR/VLC 3 bindings and is not claimed by the current metadata surface.
+Info tab, and `Ctrl+I` expose metadata, detailed codec/stream fields, refresh and
+diagnostics copy. M1 now uses reviewed VLCLR/VLC 3 bindings pinned to `b12127b`;
+the engine remains VLC 3. See `PLAYER_CAPABILITY_MATRIX.md` for limits.
 
 The completed F0 procedure selected the existing
 VLC 3-compatible VLCLR pin in an isolated checkout, set `VLCLR_ROOT` and the

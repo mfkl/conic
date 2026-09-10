@@ -203,7 +203,7 @@
                             </Border>
                             <Border Classes="settingsCard" IsVisible="{Binding IsAdvanced}">
                                 <StackPanel Spacing="14">
-                                    <TextBlock Text="View information about the current media and copy playback diagnostics. Detailed codec streams are not available yet." Classes="settingHint" TextWrapping="Wrap" />
+                                    <TextBlock Text="View the current media, codec streams and playback diagnostics." Classes="settingHint" TextWrapping="Wrap" />
                                     <Button Content="Media information" Command="{Binding OpenMediaInformationCommand}" HorizontalAlignment="Left" />
                                 </StackPanel>
                             </Border>

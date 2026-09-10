@@ -1,0 +1,30 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:app="clr-namespace:Player.Application;assembly=Player.Application"
+             x:Class="VLCAvalonia.Views.MediaInformationView" x:DataType="app:MediaInformationState">
+    <UserControl.DataTemplates>
+        <DataTemplate DataType="app:MediaInformationField" x:DataType="app:MediaInformationField">
+            <Grid ColumnDefinitions="110,*" ColumnSpacing="12" Margin="0,4">
+                <TextBlock Text="{Binding Name}" Foreground="{DynamicResource PlayerSecondaryText}" FontSize="12" TextWrapping="Wrap" />
+                <TextBlock Grid.Column="1" Text="{Binding Value}" FontSize="12" TextWrapping="Wrap" />
+            </Grid>
+        </DataTemplate>
+    </UserControl.DataTemplates>
+    <StackPanel Spacing="12">
+        <TextBlock Text="Media information" FontSize="18" FontWeight="SemiBold" />
+        <TextBlock Text="{Binding Name}" TextWrapping="Wrap" />
+        <TextBlock Text="{Binding Summary}" Classes="settingHint" TextWrapping="Wrap" />
+        <ItemsControl ItemsSource="{Binding MetadataFields}" />
+        <ItemsControl ItemsSource="{Binding Streams}">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="app:MediaCodecStream">
+                    <Border Padding="12" Margin="0,4" CornerRadius="6" Background="#292929">
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="{Binding Heading}" FontWeight="SemiBold" Foreground="{DynamicResource PlayerAccent}" />
+                            <ItemsControl ItemsSource="{Binding Details}" />
+                        </StackPanel>
+                    </Border>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+    </StackPanel>
+</UserControl>

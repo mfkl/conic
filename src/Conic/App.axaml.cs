@@ -17,7 +17,11 @@ public partial class App : Application
         {
             MainWindow window = new();
             desktop.MainWindow = window;
-            if (desktop.Args?.Contains("--pip-smoke", StringComparer.OrdinalIgnoreCase) == true)
+            if (desktop.Args?.Contains("--settings-smoke", StringComparer.OrdinalIgnoreCase) == true)
+                window.EnableSettingsSmoke(desktop);
+            else if (desktop.Args?.Contains("--settings-review", StringComparer.OrdinalIgnoreCase) == true)
+                window.EnableSettingsReview();
+            else if (desktop.Args?.Contains("--pip-smoke", StringComparer.OrdinalIgnoreCase) == true)
                 window.EnablePictureInPictureSmoke(desktop);
             else if (desktop.Args?.Contains("--pip-review", StringComparer.OrdinalIgnoreCase) == true)
                 window.EnablePictureInPictureReview();

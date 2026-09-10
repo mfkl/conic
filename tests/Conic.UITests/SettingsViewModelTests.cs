@@ -8,6 +8,58 @@ namespace Conic.UITests;
 
 public sealed class SettingsViewModelTests
 {
+    [Fact]
+    public void ShortcutWriteFailuresKeepPendingEditsAndShowAnInlineError()
+    {
+        PlayerSettingsService service = new(new ThrowingStorage());
+        PlayerCommandRegistry registry = new();
+        registry.Register(new(PlayerCommandId.OpenMedia, "Open media", "Media", "Ctrl+O"), _ => { });
+        SettingsViewModel viewModel = new(service, registry);
+        ShortcutRow row = Assert.Single(viewModel.EditableShortcutRows);
+        row.PendingGesture = "Ctrl+M";
+        Assert.False(viewModel.SaveShortcut(row));
+        Assert.True(viewModel.HasError);
+        Assert.Equal("Ctrl+M", row.PendingGesture);
+        viewModel.ResetShortcut(PlayerCommandId.OpenMedia);
+        Assert.True(viewModel.HasError);
+        Assert.Equal("Ctrl+M", row.PendingGesture);
+        viewModel.ResetAllShortcuts();
+        Assert.True(viewModel.HasError);
+        Assert.Equal("Ctrl+O", PlayerShortcutPolicy.Effective(registry, service.Current.ShortcutOverrides)[PlayerCommandId.OpenMedia]);
+    }
+
+    [Fact]
+    public void EmptySearchHasNoCategoryContentAndNullSelectionKeepsAValidPage()
+    {
+        SettingsViewModel viewModel = Create(out _);
+        viewModel.Search = "no-such-setting-abcdef";
+        Assert.False(viewModel.HasSettingsResults);
+        viewModel.SelectedPage = null!;
+        Assert.NotNull(viewModel.SelectedPage);
+        viewModel.Search = "skip";
+        Assert.True(viewModel.HasSettingsResults);
+        Assert.True(viewModel.IsPlayback);
+    }
+
+    [Fact]
+    public void ConfirmedResetRefreshesVisibleShortcutRows()
+    {
+        PlayerSettingsService service = new(new MemoryStorage());
+        PlayerCommandRegistry registry = new();
+        registry.Register(new(PlayerCommandId.OpenMedia, "Open media", "Media", "Ctrl+O"), _ => { });
+        SettingsViewModel viewModel = new(service, registry);
+        ShortcutRow row = Assert.Single(viewModel.EditableShortcutRows);
+        row.PendingGesture = "Ctrl+M";
+        Assert.True(viewModel.SaveShortcut(row));
+        viewModel.ResetAllCommand.Execute(null);
+        Assert.Equal("Ctrl+M", row.PendingGesture);
+        viewModel.ResetAllCommand.Execute(null);
+        Assert.Equal("Ctrl+O", row.PendingGesture);
+        Assert.False(viewModel.ConfirmReset);
+        viewModel.ShortcutSearch = "missing";
+        Assert.False(viewModel.HasShortcutResults);
+    }
+
     [Theory]
     [InlineData("theme", "Appearance")]
     [InlineData("skip", "Playback")]

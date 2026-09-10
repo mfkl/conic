@@ -73,6 +73,12 @@ public partial class MainWindow
                     await Task.Delay(150);
                     Require(!_presentation.IsHomeOpen && ReferenceEquals(engine, VideoSurface.Player) && engine.State.Generation == generation,
                         "return to Playback does not reopen media");
+                    before = engine.State.Position;
+                    OpenSettings();
+                    await Task.Delay(750);
+                    Require(SettingsPanel.IsVisible && ReferenceEquals(engine, VideoSurface.Player) && engine.State.Generation == generation && engine.State.Position > before,
+                        "Settings preserves advancing playback");
+                    CloseSettings();
                 }
                 Console.WriteLine($"[home-smoke] PASS startup, search, grid/list, compact containment; native-session={native}");
                 desktop.Shutdown(0);

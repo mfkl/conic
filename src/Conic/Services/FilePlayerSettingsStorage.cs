@@ -5,7 +5,7 @@ namespace Conic.Services;
 internal sealed class FilePlayerSettingsStorage : IPlayerSettingsStorage
 {
     private readonly string _path;
-    public FilePlayerSettingsStorage(string? path = null) => _path = path ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Conic", "settings.json");
+    public FilePlayerSettingsStorage(string? path = null) => _path = path ?? PlayerProfile.FilePath("settings.json");
     public string? Read() => File.Exists(_path) ? File.ReadAllText(_path) : null;
     public void WriteAtomically(string content)
     {

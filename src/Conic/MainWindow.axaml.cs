@@ -54,12 +54,14 @@ public partial class MainWindow : Window
         _settingsViewModel = new SettingsViewModel(_settings, _presentation.Registry);
         SettingsPanel.DataContext = _settingsViewModel;
         DataContext = _presentation;
+        HomeScreen.MoreRequested += (_, _) => OnOpenOptions(null, new Avalonia.Interactivity.RoutedEventArgs());
         _presentation.PropertyChanged += OnPresentationPropertyChanged;
         UpdatePlaybackRateSelection();
         UpdateHistorySettingsControls();
         _settings.Changed += (_, settings) => ApplyLiveSettings(settings);
         VideoSurface.AudioStartupArguments = ToAudioArguments(_settings.Current);
         ApplyLiveSettings(_settings.Current);
+        SetChromeVisibility(false);
         _autoHideTimer.Tick += (_, _) =>
         {
             bool menuOpen = (VideoArea.ContextMenu?.IsOpen ?? false) || SettingsPanel.IsVisible || OpenMenu.IsVisible || UrlPanel.IsVisible || ResumePanel.IsVisible || QueueDrawer.IsVisible || LibraryPanel.IsVisible;
@@ -127,7 +129,7 @@ public partial class MainWindow : Window
         if (e.Key == Key.Escape && QueueDrawer.IsVisible)
         {
             _presentation.IsQueueOpen = false;
-            QueueButton.Focus();
+            RestoreRouteFocus(QueueButton);
             e.Handled = true;
             return;
         }
@@ -224,7 +226,7 @@ public partial class MainWindow : Window
     {
         UrlPanel.IsVisible = false;
         UpdateOpenErrorSurface();
-        OpenOptionsButton.Focus();
+        RestoreRouteFocus(OpenOptionsButton);
     }
 
     private void CloseOpenMenu(bool restoreFocus = true)
@@ -232,7 +234,7 @@ public partial class MainWindow : Window
         OpenMenu.IsVisible = false;
         ClearRecentPrompt.IsVisible = false;
         UpdateOpenErrorSurface();
-        if (restoreFocus) OpenOptionsButton.Focus();
+        if (restoreFocus) RestoreRouteFocus(OpenOptionsButton);
         WakeChrome();
     }
 
@@ -303,7 +305,7 @@ public partial class MainWindow : Window
     {
         _presentation.IsLibraryOpen = false;
         ClearLibraryPrompt.IsVisible = false;
-        LibraryButton.Focus();
+        RestoreRouteFocus(LibraryButton);
         if (_presentation.IsPlaying) { _autoHideTimer.Stop(); _autoHideTimer.Start(); }
     }
     private void OnClearLibrary(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
@@ -358,6 +360,23 @@ public partial class MainWindow : Window
 
     private void OnPresentationPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
+        if (e.PropertyName == nameof(PlayerPresentationViewModel.IsHomeOpen))
+        {
+            CloseRightDrawers();
+            OpenMenu.IsVisible = false;
+            UrlPanel.IsVisible = false;
+            SettingsPanel.IsVisible = false;
+            if (_presentation.IsHomeOpen && WindowState == WindowState.FullScreen)
+            {
+                WindowState = WindowState.Normal;
+                _presentation.IsFullscreen = false;
+            }
+            SetChromeVisibility(true);
+            Dispatcher.UIThread.Post(() =>
+            {
+                if (_presentation.IsHomeOpen) HomeScreen.FocusPrimary(); else HomeButton.Focus();
+            });
+        }
         if (e.PropertyName == nameof(PlayerPresentationViewModel.PlaybackRate))
             UpdatePlaybackRateSelection();
         if (e.PropertyName is nameof(PlayerPresentationViewModel.IsPlaying) or nameof(PlayerPresentationViewModel.PlaybackStatus))
@@ -372,7 +391,7 @@ public partial class MainWindow : Window
         if (e.PropertyName == nameof(PlayerPresentationViewModel.IsQueueOpen))
         {
             WakeChrome();
-            Dispatcher.UIThread.Post(() => { if (_presentation.IsQueueOpen) CloseQueueButton.Focus(); else QueueButton.Focus(); });
+            Dispatcher.UIThread.Post(() => { if (_presentation.IsQueueOpen) CloseQueueButton.Focus(); else RestoreRouteFocus(QueueButton); });
         }
         if (e.PropertyName == nameof(PlayerPresentationViewModel.IsLibraryOpen))
         {
@@ -385,7 +404,7 @@ public partial class MainWindow : Window
                 UpdateOpenErrorSurface();
             }
             WakeChrome();
-            Dispatcher.UIThread.Post(() => { if (_presentation.IsLibraryOpen) LibraryRecentTab.Focus(); else LibraryButton.Focus(); });
+            Dispatcher.UIThread.Post(() => { if (_presentation.IsLibraryOpen) LibraryRecentTab.Focus(); else RestoreRouteFocus(LibraryButton); });
         }
         if (e.PropertyName == nameof(PlayerPresentationViewModel.HasPendingResume))
             UpdateResumePrompt();
@@ -484,8 +503,13 @@ public partial class MainWindow : Window
         SettingsClearRecentPrompt.IsVisible = false;
         SettingsClearResumePrompt.IsVisible = false;
         UpdateOpenErrorSurface();
-        OpenSettingsButton.Focus();
+        RestoreRouteFocus(OpenSettingsButton);
         if (_presentation.IsPlaying) { _autoHideTimer.Stop(); _autoHideTimer.Start(); }
+    }
+
+    private void RestoreRouteFocus(Control playerControl)
+    {
+        if (_presentation.IsHomeOpen) HomeScreen.FocusPrimary(); else playerControl.Focus();
     }
 
     private void OnSettingsClose(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => CloseSettings();
@@ -626,6 +650,7 @@ public partial class MainWindow : Window
 
     internal void EnableLayoutSmoke(IClassicDesktopStyleApplicationLifetime desktop)
     {
+        _presentation.IsHomeOpen = false;
         WindowState = WindowState.Normal;
         Width = 1280;
         Height = 720;
@@ -893,8 +918,8 @@ public partial class MainWindow : Window
 
     private void SetChromeVisibility(bool visible)
     {
-        PlayerDock.IsVisible = visible;
-        TopChrome.IsVisible = visible;
+        PlayerDock.IsVisible = visible && !_presentation.IsHomeOpen;
+        TopChrome.IsVisible = visible && !_presentation.IsHomeOpen;
     }
 
     private void ApplyResponsiveChrome()

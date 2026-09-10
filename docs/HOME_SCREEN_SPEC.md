@@ -68,3 +68,7 @@ return to Playback and prove the same engine, generation and advancing position;
 retest compositor fullscreen/reopen where affected. Record results before commit.
 
 PiP follows Home as a separate validated step. It must preserve this same session.
+
+Implemented and validated on Windows: see [Home review](HOME_REVIEW_2026-09-10.md).
+User visual acceptance remains pending; continued implementation and commits
+are authorized by the updated working agreement.

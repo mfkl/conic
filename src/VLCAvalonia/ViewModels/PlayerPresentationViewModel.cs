@@ -7,7 +7,7 @@ using VLCAvalonia.Commands;
 
 namespace VLCAvalonia.ViewModels;
 
-internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
+internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChanged
 {
     private readonly IPlayerTransport _transport;
     private readonly IMediaSourcePicker _mediaSourcePicker;
@@ -200,6 +200,7 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
         MediaInformationCommand = new RegistryCommand(registry, PlayerCommandId.MediaInformation);
         CopyDiagnosticsCommand = new RelayCommand(_ => _ = CopyDiagnosticsAsync());
         SnapshotCommand = new RegistryCommand(registry, PlayerCommandId.Snapshot);
+        InitializeHomeCommands(registry);
     }
 
     public IPlayerCommandRegistry Registry { get; }
@@ -314,6 +315,8 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
             OnPropertyChanged(nameof(IsFaulted));
             OnPropertyChanged(nameof(IsNoMedia));
             OnPropertyChanged(nameof(HasPlayableMedia));
+            OnPropertyChanged(nameof(ShowMiniPlayer));
+            (ShowPlayerCommand as RegistryCommand)?.RaiseCanExecuteChanged();
             OnPropertyChanged(nameof(CanTogglePlayback));
             OnPropertyChanged(nameof(CanStop));
             OnPropertyChanged(nameof(PlayPauseName));
@@ -544,6 +547,11 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
         try
         {
             _lastState = state;
+            if (state.Status == PlaybackStatus.Opening && state.Generation != _homeMediaGeneration)
+            {
+                _homeMediaGeneration = state.Generation;
+                IsHomeOpen = false;
+            }
             IsPlaying = state.Status == PlaybackStatus.Playing;
             PlaybackStatus = state.Status;
             OnPropertyChanged(nameof(PlayPauseName));
@@ -596,6 +604,7 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
         if (!result.Succeeded || result.Source is null) { if (kind == MediaSourceKind.Recent && !string.IsNullOrWhiteSpace(rawSource)) TryHistory(() => _history?.RemoveRecent(rawSource)); _diagnostic?.Invoke(result.Diagnostic ?? "Media source validation failed."); OpenError = result.UserMessage ?? "Media could not be opened."; NotifyLibrary(); return; }
         CheckpointCurrent(true);
         _currentSource = result.Source;
+        IsHomeOpen = false;
         PlaybackStatus = PlaybackStatus.Opening;
         _generationFloor = _lastObservedGeneration; _activeGeneration = -1; _resumeReady = false; _lastState = null; _recordedOpenGeneration = -1;
         _pendingResume = (_settings?.Current.ResumePlayback ?? true) && (_settings?.Current.RememberResumeHistory ?? true) ? TryFindResume(_currentSource) : null;
@@ -722,6 +731,7 @@ internal sealed class PlayerPresentationViewModel : INotifyPropertyChanged
     }
     private void NotifyLibrary()
     {
+        NotifyHome();
         NotifyRecent(); NotifyResume();
         OnPropertyChanged(nameof(FavoriteItems)); OnPropertyChanged(nameof(HasFavoriteItems)); OnPropertyChanged(nameof(HasLibraryItems)); OnPropertyChanged(nameof(IsCurrentFavorite)); OnPropertyChanged(nameof(FavoriteName));
         (ClearFavoritesCommand as RegistryCommand)?.RaiseCanExecuteChanged(); (ClearLibraryCommand as RegistryCommand)?.RaiseCanExecuteChanged(); (AddFavoriteCommand as RegistryCommand)?.RaiseCanExecuteChanged();

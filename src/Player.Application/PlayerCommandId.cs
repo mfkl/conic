@@ -55,4 +55,9 @@ public enum PlayerCommandId
     AttachExternalSubtitle,
     MediaInformation,
     Snapshot,
+    ShowHome,
+    ShowPlayer,
+    SelectHomeSection,
+    RemoveHomeItem,
+    ToggleHomeLayout,
 }

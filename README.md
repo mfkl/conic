@@ -13,8 +13,9 @@ boundaries are in [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md).
 
 The active [VLC 4 UI fidelity plan](docs/VLC4_SCREEN_BY_SCREEN_PLAN.md) covers
 the visual redesign in Avalonia while keeping VLCLR/VLC 3: Playback and the
-Home/navigation shell, PiP and Settings are implemented; Windows integration
-qualification and visual review follow.
+Home/navigation shell, PiP and Settings are implemented and qualified on Windows.
+The [integration report](docs/WINDOWS_UI_INTEGRATION_2026-09-10.md) records the
+passing checks, captures and remaining visual/platform reviews.
 It includes the local VLC master source map and visual acceptance criteria.
 The [September 10 Playback review](docs/PLAYBACK_REVIEW_2026-09-10.md) records
 the latest implementation, validation results, captures and review launcher.

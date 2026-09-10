@@ -667,7 +667,14 @@ The final Windows integration matrix passed; see
 PiP and Settings, followed by targeted feedback. M1 codec/stream information is
 implemented; see `MEDIA_INFORMATION_REVIEW_2026-09-10.md`. The user's missing
 Home thumbnail report is fixed with background local-file thumbnails and caching;
-see `HOME_THUMBNAILS_REVIEW_2026-09-10.md`. Next is visual feedback on these screens.
+see `HOME_THUMBNAILS_REVIEW_2026-09-10.md`. The subsequent Stop/end-of-playback
+feedback is addressed: visible Stop controls and an active-only Home mini-player;
+see `STOP_PLAYBACK_REVIEW_2026-09-10.md`.
+
+Next: complete the I-phase polish of queue/track drawers, keyboard focus,
+long titles and display scaling, incorporating visual feedback on the screens.
+After that, address the remaining V1 aspect/crop/zoom, V2 deinterlace and V3
+snapshot capabilities as separate VLCLR/VLC 3 packages with native validation.
 Physical display-scale/accessibility and macOS/Linux native
 qualification remain open. Record visual acceptance only when the user reviews.
 

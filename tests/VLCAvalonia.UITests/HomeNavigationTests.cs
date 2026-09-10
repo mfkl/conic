@@ -7,6 +7,47 @@ namespace VLCAvalonia.UITests;
 
 public sealed class HomeNavigationTests
 {
+    [Theory]
+    [InlineData(PlaybackStatus.Stopped)]
+    [InlineData(PlaybackStatus.Closed)]
+    [InlineData(PlaybackStatus.Faulted)]
+    public void FinishedPlaybackClearsTheMiniPlayerButKeepsHistory(PlaybackStatus terminal)
+    {
+        Transport transport = new();
+        MediaHistoryService history = new(new Storage());
+        var vm = Create(transport, history);
+        vm.OpenSource(Path.GetFullPath("movie.mp4"), MediaSourceKind.File);
+        var state = MediaEngineState.Initial with { Generation = 1, Source = Path.GetFullPath("movie.mp4") };
+        vm.ApplyEngineState(state with { Status = PlaybackStatus.Playing });
+        Assert.Equal(PlaybackStatus.Playing, vm.PlaybackStatus);
+        vm.ShowHomeCommand.Execute(null);
+        Assert.True(vm.ShowMiniPlayer);
+        vm.ApplyEngineState(state with { Status = PlaybackStatus.Paused });
+        Assert.True(vm.ShowMiniPlayer);
+        List<string?> changed = [];
+        vm.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+        vm.ApplyEngineState(state with { Status = terminal });
+        Assert.False(vm.ShowMiniPlayer);
+        Assert.False(vm.CanStop);
+        Assert.Contains(nameof(vm.ShowMiniPlayer), changed);
+        Assert.Single(vm.HomeItems);
+        Assert.Single(history.Recent);
+    }
+
+    [Fact]
+    public void MiniPlayerStopUsesTheSharedTransportAndClearsOnReadback()
+    {
+        Transport transport = new();
+        var vm = Create(transport);
+        vm.ApplyEngineState(MediaEngineState.Initial with { Generation = 1, Status = PlaybackStatus.Playing });
+        vm.ShowHomeCommand.Execute(null);
+        vm.StopCommand.Execute(null);
+        Assert.Equal("stop", Assert.Single(transport.Calls));
+        vm.ApplyEngineState(MediaEngineState.Initial with { Generation = 1, Status = PlaybackStatus.Stopped });
+        Assert.False(vm.ShowMiniPlayer);
+        Assert.False(vm.StopCommand.CanExecute(null));
+    }
+
     [Fact]
     public void BrowsingHomeDoesNotReopenOrStopPlaybackAndPollingPreservesRoute()
     {

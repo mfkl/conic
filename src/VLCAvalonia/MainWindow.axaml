@@ -325,6 +325,10 @@
                                           Data="M7,5 L11,5 L11,19 L7,19 Z M14,5 L18,5 L18,19 L14,19 Z" />
                             </Grid>
                         </Button>
+                         <Button x:Name="StopButton" Classes="transport" Command="{Binding StopCommand}"
+                                 AutomationProperties.Name="Stop playback" ToolTip.Tip="Stop playback">
+                            <PathIcon Width="17" Height="17" Data="M4,4 H20 V20 H4 Z" />
+                         </Button>
                          <Button x:Name="NextButton" Classes="transport"
                                   Command="{Binding NextCommand}"
                                   AutomationProperties.Name="Next queue item"

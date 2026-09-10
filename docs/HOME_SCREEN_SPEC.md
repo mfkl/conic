@@ -33,9 +33,10 @@ database, inferred catalog, discovery services or unavailable disc action.
 - The existing Library management surface remains available for individual and
   section clear actions, with confirmations. A visible Manage library action
   provides access during the transition to the new Home surface.
-- While playing/paused/stopped with a usable source, a bottom now-playing strip
-  shows title, position, play/pause and return to Playback. It shares the existing
-  commands and transport; it does not own another video surface.
+- While opening, playing or paused, a bottom now-playing strip shows title,
+  position, play/pause, Stop and return to Playback. Stop, end of playback, closing
+  and failure clear the strip; recent/favorite history remains. It shares the
+  existing commands and transport; it does not own another video surface.
 
 ## State and behavior
 

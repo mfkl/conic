@@ -76,9 +76,9 @@
                                             </StackPanel>
                                         </Button>
                                         <StackPanel Orientation="Horizontal" Spacing="4" Margin="4,0,4,4">
-                                            <Button Classes="playbackAction" Content="+ Queue" Command="{Binding DataContext.EnqueueHomeItemCommand, ElementName=HomeRoot}" CommandParameter="{Binding Source}"/>
-                                            <Button Classes="playbackAction" Content="☆" Command="{Binding DataContext.AddFavoriteCommand, ElementName=HomeRoot}" CommandParameter="{Binding Source}" ToolTip.Tip="Add to favorites" AutomationProperties.Name="Add to favorites"/>
-                                            <Button Classes="playbackAction" Content="×" Command="{Binding DataContext.RemoveHomeItemCommand, ElementName=HomeRoot}" CommandParameter="{Binding}" ToolTip.Tip="Remove from this section" AutomationProperties.Name="Remove from this section"/>
+                                            <Button Classes="playbackAction" Content="+ Queue" Command="{Binding DataContext.EnqueueHomeItemCommand, ElementName=HomeRoot}" CommandParameter="{Binding Source}" AutomationProperties.Name="{Binding Title, StringFormat='Add {0} to queue'}"/>
+                                            <Button Classes="playbackAction" Content="☆" Command="{Binding DataContext.AddFavoriteCommand, ElementName=HomeRoot}" CommandParameter="{Binding Source}" ToolTip.Tip="Add to favorites" AutomationProperties.Name="{Binding Title, StringFormat='Add {0} to favorites'}"/>
+                                            <Button Classes="playbackAction" Content="×" Command="{Binding DataContext.RemoveHomeItemCommand, ElementName=HomeRoot}" CommandParameter="{Binding}" ToolTip.Tip="Remove from this section" AutomationProperties.Name="{Binding Title, StringFormat='Remove {0} from this section'}"/>
                                         </StackPanel>
                                     </StackPanel>
                                 </Border>

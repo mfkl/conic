@@ -677,10 +677,13 @@ The I-phase queue/track drawer pass is implemented and validated: scrolling for
 long lists, ellipsized labels with full tooltips, selectable Disable choices,
 keyboard tab navigation, contained focus and reliable focus on opening. See
 `DRAWER_REVIEW_2026-09-10.md`.
-Next: finish the display-scaling/accessibility walkthrough and incorporate
-visual feedback on the screens.
-After that, address the remaining V1 aspect/crop/zoom, V2 deinterlace and V3
-snapshot capabilities as separate VLCLR/VLC 3 packages with native validation.
+The automated scaling/accessibility pass is implemented and validated; see
+`ACCESSIBILITY_SCALE_REVIEW_2026-09-10.md`. It covers 100–200% equivalent logical
+viewports, larger text, named actions and actual automation seek/volume readback.
+Physical DPI transitions and the Narrator walkthrough remain open.
+Next: V1 aspect/crop/zoom, followed by V2 deinterlace and V3 snapshot capabilities
+as separate VLCLR/VLC 3 packages with native validation, while incorporating
+visual feedback and completing manual platform qualification.
 Physical display-scale/accessibility and macOS/Linux native
 qualification remain open. Record visual acceptance only when the user reviews.
 

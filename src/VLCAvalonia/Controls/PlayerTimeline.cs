@@ -1,12 +1,30 @@
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Automation.Peers;
+using Avalonia.Automation.Provider;
+using Avalonia.Controls.Automation.Peers;
 
 namespace VLCAvalonia.Controls;
 
 public sealed class PlayerTimeline : Slider
 {
     protected override Type StyleKeyOverride => typeof(Slider);
+    protected override AutomationPeer OnCreateAutomationPeer() => new TimelineAutomationPeer(this);
+
+    private sealed class TimelineAutomationPeer(PlayerTimeline owner) : SliderAutomationPeer(owner), IRangeValueProvider
+    {
+        void IRangeValueProvider.SetValue(double value)
+        {
+            if (!owner.IsEffectivelyEnabled) throw new InvalidOperationException("Playback position is unavailable.");
+            if (!double.IsFinite(value) || value < owner.Minimum || value > owner.Maximum)
+                throw new ArgumentOutOfRangeException(nameof(value));
+            owner._seeking = true;
+            owner.SeekStarted?.Invoke(owner, EventArgs.Empty);
+            try { base.SetValue(value); }
+            finally { owner.CommitOnce(); }
+        }
+    }
 
     private bool _seeking;
     public event EventHandler? SeekStarted;

@@ -88,7 +88,8 @@ internal sealed unsafe class VLCCorePlayer : IMediaEngine, IQueueTransport, IMed
         long queue = State.Generation;
         MediaInformationState next = snapshot is null
             ? new(queue, MediaInformation.MediaGeneration, result.Code == VLCPlayerCapabilityResultCode.StaleSnapshot ? MediaInformationLoadState.Stale : MediaInformationLoadState.Unavailable, "", new Dictionary<string, string>(), result.Code.ToString())
-            : new(queue, snapshot.Generation.MediaGeneration, snapshot.Metadata.Count == 0 ? MediaInformationLoadState.Empty : MediaInformationLoadState.Ready, snapshot.Name, new System.Collections.ObjectModel.ReadOnlyDictionary<string, string>(new Dictionary<string, string>(snapshot.Metadata)), null);
+            : new(queue, snapshot.Generation.MediaGeneration, snapshot.Metadata.Count == 0 && snapshot.Streams.Count == 0 ? MediaInformationLoadState.Empty : MediaInformationLoadState.Ready, snapshot.Name, new System.Collections.ObjectModel.ReadOnlyDictionary<string, string>(new Dictionary<string, string>(snapshot.Metadata)), null,
+                Array.AsReadOnly(snapshot.Streams.Select(stream => new MediaCodecStream(stream.Index, stream.Fields)).ToArray()));
         lock (_gate)
         {
             if (next.QueueGeneration < _mediaInformation.QueueGeneration || (next.QueueGeneration == _mediaInformation.QueueGeneration && next.MediaGeneration < _mediaInformation.MediaGeneration)) return;

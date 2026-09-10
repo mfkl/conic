@@ -486,6 +486,7 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
             {
                 OnPropertyChanged(nameof(IsQueueTab)); OnPropertyChanged(nameof(IsAudioTab));
                 OnPropertyChanged(nameof(IsSubtitleTab)); OnPropertyChanged(nameof(IsChapterTab));
+                OnPropertyChanged(nameof(IsInformationTab));
             }
         }
     }
@@ -549,6 +550,8 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
         try
         {
             _lastState = state;
+            if (state.Generation > _mediaInformation.QueueGeneration)
+                MediaInformation = new(state.Generation, 0, MediaInformationLoadState.Loading, "", MediaInformationState.Unavailable.Metadata);
             if (state.Status == PlaybackStatus.Opening && state.Generation != _homeMediaGeneration)
             {
                 _homeMediaGeneration = state.Generation;
@@ -704,6 +707,9 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
         if (state.QueueGeneration < MediaCapabilities.QueueGeneration ||
             (_activeGeneration >= 0 && state.QueueGeneration > 0 && state.QueueGeneration != _activeGeneration)) return;
         if (state.QueueGeneration == MediaCapabilities.QueueGeneration && state.MediaGeneration < MediaCapabilities.MediaGeneration) return;
+        if (state.QueueGeneration > MediaInformation.QueueGeneration ||
+            (state.QueueGeneration == MediaInformation.QueueGeneration && state.MediaGeneration > MediaInformation.MediaGeneration))
+            MediaInformation = new(state.QueueGeneration, state.MediaGeneration, MediaInformationLoadState.Stale, "", MediaInformationState.Unavailable.Metadata);
         _isUpdatingCapabilities = true;
         try { MediaCapabilities = state; }
         finally { _isUpdatingCapabilities = false; }

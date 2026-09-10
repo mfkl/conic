@@ -4,7 +4,7 @@ Status: active UI roadmap, updated 2026-09-10. Playback fidelity changes and
 fresh VLC 3 native qualification are complete for this pass; the user accepted
 Playback on 2026-09-10 after the live review. See
 [the review report](PLAYBACK_REVIEW_2026-09-10.md). Home/Library is implemented
-and validated; PiP then Settings follow. The engine target is **VLCLR + VLC 3**;
+and validated, along with PiP; Settings follows. The engine target is **VLCLR + VLC 3**;
 the earlier proposed move to VLC 4-targeting VLCLR main is superseded.
 
 Product baseline: `feature/modern-player-ui` at
@@ -646,7 +646,7 @@ result approval.
 |---|---|---|---|---|---|---|---|---|
 | Playback | local hover/paused capture, master source map, refreshed state captures and native window capture | `9913358`, volume correction `24e53f9`; current `PLAYBACK_SCREEN_SPEC.md` includes September 8 review corrections | implementation already proceeded; original approval date not recorded | `a088ead` plus September 10 fidelity changes on `feature/modern-player-ui` | Debug/Release 156 tests each; native matrix passed with documented skips; see `PLAYBACK_REVIEW_2026-09-10.md` | Gate P2 accepted 2026-09-10: “ok great commit it” after live review | unqualified | unqualified |
 | Home / Library | local Home capture and VLC master source | `2812915`, `HOME_SCREEN_SPEC.md` | continued execution authorized 2026-09-10 | Home shell, shared history and mini-player | Release 160 tests; Home native/session and player/layout smokes passed; `HOME_REVIEW_2026-09-10.md` | pending visual review | unqualified | unqualified |
-| Picture in picture | VLC master `PIPPlayer.qml` | working agreement above | continued execution authorized 2026-09-10 | next | pending | pending | unqualified | unqualified |
+| Picture in picture | VLC master `PIPPlayer.qml` | `PICTURE_IN_PICTURE_SPEC.md` | continued execution authorized 2026-09-10 | compact same-window mode | Release 162 tests; native PiP, compositor/fallback and Home/Playback regressions passed; `PICTURE_IN_PICTURE_REVIEW_2026-09-10.md` | pending visual review | unqualified | unqualified |
 | Settings | deferred | pending | blocked by Home / Library | pending | pending | pending | unqualified | unqualified |
 | Integration | n/a | n/a | blocked by all screens | pending | pending | pending | deferred | deferred |
 
@@ -657,8 +657,8 @@ the user said “ok great commit it” on 2026-09-10; record this as Gate P2 res
 acceptance and authorization to commit the work.
 
 Home is now implemented and validated; see `HOME_REVIEW_2026-09-10.md`.
-Next is PiP: compact always-on-top mode preserving the same native session.
-Settings follows PiP. Continue and commit validated steps under the updated
+PiP is implemented and validated; see `PICTURE_IN_PICTURE_REVIEW_2026-09-10.md`.
+Next is Settings. Continue and commit validated steps under the updated
 working agreement; record visual acceptance separately when the user reviews.
 
 Media information remains part of Playback: More → Media information, the drawer's

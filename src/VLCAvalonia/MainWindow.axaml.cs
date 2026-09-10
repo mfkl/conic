@@ -56,6 +56,7 @@ public partial class MainWindow : Window
         DataContext = _presentation;
         HomeScreen.MoreRequested += (_, _) => OnOpenOptions(null, new Avalonia.Interactivity.RoutedEventArgs());
         _presentation.PropertyChanged += OnPresentationPropertyChanged;
+        InitializePictureInPicture();
         UpdatePlaybackRateSelection();
         UpdateHistorySettingsControls();
         _settings.Changed += (_, settings) => ApplyLiveSettings(settings);
@@ -65,8 +66,8 @@ public partial class MainWindow : Window
         _autoHideTimer.Tick += (_, _) =>
         {
             bool menuOpen = (VideoArea.ContextMenu?.IsOpen ?? false) || SettingsPanel.IsVisible || OpenMenu.IsVisible || UrlPanel.IsVisible || ResumePanel.IsVisible || QueueDrawer.IsVisible || LibraryPanel.IsVisible;
-            bool chromeFocused = _keyboardNavigation && (PlayerDock.IsKeyboardFocusWithin || TopChrome.IsKeyboardFocusWithin);
-            bool chromePointerOver = TopChrome.IsPointerOver || PlayerDock.IsPointerOver;
+            bool chromeFocused = _keyboardNavigation && (PlayerDock.IsKeyboardFocusWithin || TopChrome.IsKeyboardFocusWithin || PictureInPictureChrome.IsKeyboardFocusWithin);
+            bool chromePointerOver = TopChrome.IsPointerOver || PlayerDock.IsPointerOver || PictureInPictureHeader.IsPointerOver || PictureInPicturePlay.IsPointerOver || PictureInPictureTimeline.IsPointerOver;
             if (_chromeVisibility.TryHide(_isSeeking || _isVolumeDragging, menuOpen, chromePointerOver, chromeFocused))
             {
                 SetChromeVisibility(false);
@@ -104,7 +105,7 @@ public partial class MainWindow : Window
         WakeChrome();
         if (e.ClickCount == 2 && (ReferenceEquals(e.Source, VideoSurface) || ReferenceEquals(e.Source, VideoArea)))
         {
-            ToggleFullscreen();
+            if (_presentation.IsPictureInPicture) ExitPictureInPicture(); else ToggleFullscreen();
             e.Handled = true;
         }
     }
@@ -159,6 +160,12 @@ public partial class MainWindow : Window
             e.Handled = true;
             return;
         }
+        if (e.Key == Key.Escape && _presentation.IsPictureInPicture)
+        {
+            ExitPictureInPicture();
+            e.Handled = true;
+            return;
+        }
         if (SettingsPanel.IsVisible || ShortcutFocusPolicy.Suppresses(e.Source)) return;
         string key = e.Key == Key.OemComma ? "," : e.Key.ToString();
         string modifiers = (e.KeyModifiers.HasFlag(KeyModifiers.Control) ? "Ctrl+" : "") + (e.KeyModifiers.HasFlag(KeyModifiers.Alt) ? "Alt+" : "") + (e.KeyModifiers.HasFlag(KeyModifiers.Shift) ? "Shift+" : "");
@@ -169,6 +176,7 @@ public partial class MainWindow : Window
 
     private void ToggleFullscreen()
     {
+        ExitPictureInPicture();
         WindowState = WindowState == WindowState.FullScreen ? WindowState.Normal : WindowState.FullScreen;
         _presentation.IsFullscreen = WindowState == WindowState.FullScreen;
         _chromeVisibility.SetFullscreen(_presentation.IsFullscreen);
@@ -179,6 +187,7 @@ public partial class MainWindow : Window
 
     private void OpenSettings()
     {
+        ExitPictureInPicture();
         CloseRightDrawers();
         OpenMenu.IsVisible = false;
         UrlPanel.IsVisible = false;
@@ -211,6 +220,7 @@ public partial class MainWindow : Window
 
     private void ShowUrlPanel()
     {
+        ExitPictureInPicture();
         CloseRightDrawers();
         OpenMenu.IsVisible = false;
         ClearRecentPrompt.IsVisible = false;
@@ -362,6 +372,7 @@ public partial class MainWindow : Window
     {
         if (e.PropertyName == nameof(PlayerPresentationViewModel.IsHomeOpen))
         {
+            if (_presentation.IsHomeOpen) ExitPictureInPicture(restoreRoute: false);
             CloseRightDrawers();
             OpenMenu.IsVisible = false;
             UrlPanel.IsVisible = false;
@@ -390,6 +401,7 @@ public partial class MainWindow : Window
             UpdateOpenErrorSurface();
         if (e.PropertyName == nameof(PlayerPresentationViewModel.IsQueueOpen))
         {
+            if (_presentation.IsQueueOpen) ExitPictureInPicture(restoreRoute: false);
             WakeChrome();
             Dispatcher.UIThread.Post(() => { if (_presentation.IsQueueOpen) CloseQueueButton.Focus(); else RestoreRouteFocus(QueueButton); });
         }
@@ -397,6 +409,7 @@ public partial class MainWindow : Window
         {
             if (_presentation.IsLibraryOpen)
             {
+                ExitPictureInPicture(restoreRoute: false);
                 OpenMenu.IsVisible = false;
                 UrlPanel.IsVisible = false;
                 ClearRecentPrompt.IsVisible = false;
@@ -918,8 +931,9 @@ public partial class MainWindow : Window
 
     private void SetChromeVisibility(bool visible)
     {
-        PlayerDock.IsVisible = visible && !_presentation.IsHomeOpen;
-        TopChrome.IsVisible = visible && !_presentation.IsHomeOpen;
+        PlayerDock.IsVisible = visible && !_presentation.IsHomeOpen && !_presentation.IsPictureInPicture;
+        TopChrome.IsVisible = visible && !_presentation.IsHomeOpen && !_presentation.IsPictureInPicture;
+        PictureInPictureChrome.IsVisible = visible && _presentation.IsPictureInPicture;
     }
 
     private void ApplyResponsiveChrome()
@@ -991,6 +1005,7 @@ public partial class MainWindow : Window
 
     private void OpenTestMedia()
     {
+        ExitPictureInPicture();
         if (FindTestFile() is { } testFile)
             VideoSurface.MediaPath = testFile;
     }

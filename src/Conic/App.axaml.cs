@@ -17,7 +17,11 @@ public partial class App : Application
         {
             MainWindow window = new();
             desktop.MainWindow = window;
-            if (desktop.Args?.Contains("--stop-smoke", StringComparer.OrdinalIgnoreCase) == true)
+            if (desktop.Args?.Contains("--drawer-smoke", StringComparer.OrdinalIgnoreCase) == true)
+                window.EnableDrawerSmoke(desktop, false);
+            else if (desktop.Args?.Contains("--drawer-native-smoke", StringComparer.OrdinalIgnoreCase) == true)
+                window.EnableDrawerSmoke(desktop, true);
+            else if (desktop.Args?.Contains("--stop-smoke", StringComparer.OrdinalIgnoreCase) == true)
                 window.EnableStopSmoke(desktop);
             else if (desktop.Args?.Contains("--thumbnail-smoke", StringComparer.OrdinalIgnoreCase) == true)
                 window.EnableThumbnailSmoke(desktop, false);

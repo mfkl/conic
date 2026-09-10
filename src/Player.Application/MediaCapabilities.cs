@@ -4,6 +4,7 @@ namespace Player.Application;
 public enum MediaCapabilityLoadState { Unavailable, Loading, Ready, Empty, Failed }
 public enum MediaTrackKind { Audio, Subtitle }
 
+/// <summary>IsDisabled identifies VLC's selectable "Disable" choice, not an unavailable command.</summary>
 public sealed record MediaTrack(string Id, string Label, bool IsDisabled, bool IsSelected);
 public sealed record MediaTitle(string Id, string Label, bool IsSelected);
 public sealed record MediaChapter(string Id, string Label, bool IsSelected);

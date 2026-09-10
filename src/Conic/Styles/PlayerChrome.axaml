@@ -308,7 +308,7 @@
         <Setter Property="Background" Value="{DynamicResource PlayerSelection}" />
         <Setter Property="Foreground" Value="{DynamicResource PlayerAccent}" />
     </Style>
-    <Style Selector="Button.playbackAction:focus-visible, Button.drawerTab:focus-visible, Button.iconChrome:focus-visible, Button.transport:focus-visible, Button.mute:focus-visible">
+    <Style Selector="Button.playbackAction:focus-visible, Button.drawerTab:focus-visible, Button.menuAction:focus-visible, Button.recentItem:focus-visible, Button.iconChrome:focus-visible, Button.transport:focus-visible, Button.mute:focus-visible">
         <Setter Property="BorderThickness" Value="2" />
         <Setter Property="BorderBrush" Value="{DynamicResource PlayerAccent}" />
     </Style>

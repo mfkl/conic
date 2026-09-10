@@ -32,6 +32,7 @@ public partial class MainWindow
         Width = 1280;
         Height = 720;
         VideoSurface.EngineStateChanged -= OnEngineStateChanged;
+        _presentation.IsHomeOpen = false;
         Opened += async (_, _) =>
         {
             try

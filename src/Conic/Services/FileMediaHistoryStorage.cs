@@ -5,7 +5,7 @@ namespace Conic.Services;
 internal sealed class FileMediaHistoryStorage : IMediaHistoryStorage
 {
     private readonly string _path;
-    public FileMediaHistoryStorage(string? path = null) => _path = path ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Conic", "media-history.json");
+    public FileMediaHistoryStorage(string? path = null) => _path = path ?? PlayerProfile.FilePath("media-history.json");
     public string? Read() => File.Exists(_path) ? File.ReadAllText(_path) : null;
     public void WriteAtomically(string content)
     {

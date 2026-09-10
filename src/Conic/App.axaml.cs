@@ -17,7 +17,11 @@ public partial class App : Application
         {
             MainWindow window = new();
             desktop.MainWindow = window;
-            if (desktop.Args?.Contains(
+            if (desktop.Args?.Contains("--home-smoke", StringComparer.OrdinalIgnoreCase) == true)
+                window.EnableHomeSmoke(desktop, false);
+            else if (desktop.Args?.Contains("--home-session-smoke", StringComparer.OrdinalIgnoreCase) == true)
+                window.EnableHomeSmoke(desktop, true);
+            else if (desktop.Args?.Contains(
                     "--adapter-mismatch-smoke",
                     StringComparer.OrdinalIgnoreCase) == true)
             {

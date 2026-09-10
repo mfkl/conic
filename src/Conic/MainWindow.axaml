@@ -6,6 +6,7 @@
         xmlns:viewModels="clr-namespace:Conic.ViewModels"
         xmlns:application="clr-namespace:Player.Application;assembly=Player.Application"
         xmlns:input="clr-namespace:Avalonia.Input;assembly=Avalonia.Base"
+        xmlns:views="clr-namespace:Conic.Views"
         mc:Ignorable="d"
         d:DesignWidth="1280"
         d:DesignHeight="720"
@@ -46,6 +47,7 @@
             </ContextMenu>
         </Grid.ContextMenu>
         <controls:CompositionVideoSurface x:Name="VideoSurface" />
+        <views:HomeView x:Name="HomeScreen" ZIndex="1" IsVisible="{Binding IsHomeOpen}" />
 
         <StackPanel x:Name="NoMediaSurface" IsVisible="{Binding IsNoMedia}"
                     HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="14">
@@ -75,12 +77,12 @@
             </Border.Background>
             <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="44">
                 <!-- VLC cone vector from VideoLAN's vlc/modules/gui/qt/pixmaps/misc/cone.svg. -->
-                <Viewbox x:Name="ProductMark" Width="34" Height="34" HorizontalAlignment="Left">
+                <StackPanel Orientation="Horizontal" Spacing="8"><Button x:Name="HomeButton" Classes="iconChrome" Command="{Binding ShowHomeCommand}" ToolTip.Tip="Home (Alt+Home)" AutomationProperties.Name="Home"><PathIcon Width="18" Height="18" Data="M10,3 L1,12 L10,21 L12,19 L6,13 H23 V11 H6 L12,5 Z" /></Button><Viewbox x:Name="ProductMark" Width="34" Height="34" HorizontalAlignment="Left">
                     <Canvas Width="130" Height="130">
                         <Path Fill="#FF8800" Data="M65 8.76c-1.511 0-3.023.369-4.219 1.108-2.675 1.654-4.219 8.438-4.219 8.438L54.031 25.9c7.312 4.599 14.625 4.647 21.938 0l-2.532-7.594s-1.543-6.784-4.218-8.438C68.022 9.129 66.511 8.761 65 8.761zM47.281 46.15l-8.437 25.312c17.304 11.16 34.739 11.376 52.312 0L82.72 46.15c-11.912 8.86-23.725 8.888-35.438 0zM22.812 81.587 11 121.243h108l-11.813-39.656H94.531l1.688 5.063s1.401 4.523 0 5.906c-14.817 14.618-47.82 13.973-62.438-.844-1.185-1.201 0-5.062 0-5.062l1.688-5.063z" />
                         <Path Fill="White" Data="m35.469 81.585-1.688 5.063s-1.185 3.86 0 5.062c14.618 14.817 47.62 15.462 62.438.844 1.401-1.383 0-5.906 0-5.906l-1.688-5.063-3.375-10.125c-17.573 11.376-35.008 11.159-52.312 0zm11.812-35.437c11.713 8.888 23.526 8.86 35.438 0l-6.75-20.25c-7.313 4.647-14.625 4.599-21.938 0z" />
                     </Canvas>
-                </Viewbox>
+                </Viewbox></StackPanel>
                 <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
                     <Button x:Name="QueueButton" Classes="iconChrome" Command="{Binding ToggleQueueCommand}" CommandParameter="Queue"
                             ToolTip.Tip="Playback queue (Ctrl+J)" AutomationProperties.Name="Open playback queue">
@@ -158,7 +160,7 @@
             </StackPanel>
             </ScrollViewer>
         </Border>
-        <Border x:Name="LibraryPanel" IsVisible="{Binding IsLibraryOpen}" Focusable="True" Width="430" MaxWidth="430" HorizontalAlignment="Right" VerticalAlignment="Stretch" Margin="0,76,16,18" Padding="16" CornerRadius="6" Background="{DynamicResource PlayerSurface}" BorderBrush="{DynamicResource PlayerBorder}" BorderThickness="1" BoxShadow="0 12 32 0 #80000000" AutomationProperties.Name="{Binding LibraryPanelAutomationName}">
+        <Border x:Name="LibraryPanel" ZIndex="30" IsVisible="{Binding IsLibraryOpen}" Focusable="True" Width="430" MaxWidth="430" HorizontalAlignment="Right" VerticalAlignment="Stretch" Margin="0,76,16,18" Padding="16" CornerRadius="6" Background="{DynamicResource PlayerSurface}" BorderBrush="{DynamicResource PlayerBorder}" BorderThickness="1" BoxShadow="0 12 32 0 #80000000" AutomationProperties.Name="{Binding LibraryPanelAutomationName}">
             <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="10">
                 <Grid ColumnDefinitions="*,Auto"><StackPanel><TextBlock Text="{Binding LibraryTitle}" FontSize="17" FontWeight="SemiBold" /><TextBlock Text="{Binding LibraryDescription}" Classes="settingHint" TextWrapping="Wrap" /></StackPanel><Button x:Name="CloseLibraryButton" Grid.Column="1" Content="×" Click="OnCloseLibrary" ToolTip.Tip="{Binding LibraryCloseToolTip}" AutomationProperties.Name="{Binding LibraryCloseAutomationName}" /></Grid>
                 <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="5"><Button x:Name="LibraryRecentTab" Content="{Binding LibraryRecentTabText}" Click="OnLibraryTab" Tag="Recent" AutomationProperties.Name="{Binding LibraryRecentTabAutomationName}" /><Button Content="{Binding LibraryFavoritesTabText}" Click="OnLibraryTab" Tag="Favorites" AutomationProperties.Name="{Binding LibraryFavoritesTabAutomationName}" /><Button Content="{Binding LibraryResumeTabText}" Click="OnLibraryTab" Tag="Resume" AutomationProperties.Name="{Binding LibraryResumeTabAutomationName}" /><Button Content="{Binding LibraryFavoriteCurrent}" Command="{Binding AddFavoriteCommand}" IsVisible="{Binding !IsCurrentFavorite}" ToolTip.Tip="{Binding LibraryFavoriteCurrentToolTip}" AutomationProperties.Name="{Binding LibraryFavoriteCurrentAutomationName}" /></StackPanel>
@@ -170,7 +172,7 @@
                 <StackPanel Grid.Row="3" Spacing="6"><TextBlock Text="{Binding LibraryPrivacy}" Classes="settingHint" TextWrapping="Wrap" /><StackPanel x:Name="ClearLibraryPrompt" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" IsVisible="False"><TextBlock Text="{Binding LibraryClearPrompt}" VerticalAlignment="Center" Classes="settingHint" /><Button x:Name="CancelClearLibraryButton" Content="{Binding LibraryCancel}" Click="OnCancelClearLibrary" /><Button Content="{Binding LibraryClearAll}" Command="{Binding ClearLibraryCommand}" Click="OnConfirmClearLibrary" AutomationProperties.Name="{Binding LibraryClearAllAutomationName}" /></StackPanel><Button x:Name="ClearLibraryButton" Content="{Binding LibraryClear}" HorizontalAlignment="Right" Click="OnClearLibrary" IsEnabled="{Binding HasLibraryItems}" AutomationProperties.Name="{Binding LibraryClearAutomationName}" /></StackPanel>
             </Grid>
         </Border>
-        <Border x:Name="UrlPanel" IsVisible="False" MaxWidth="460" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="24,82,24,0"
+        <Border x:Name="UrlPanel" ZIndex="30" IsVisible="False" MaxWidth="460" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="24,82,24,0"
                 Padding="16" CornerRadius="16" Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}" BorderBrush="#45FF9A55" BorderThickness="1" BoxShadow="0 12 32 0 #80000000">
             <StackPanel Spacing="10">
                 <TextBlock Text="Open network URL" FontWeight="SemiBold" FontSize="16" />
@@ -180,10 +182,10 @@
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8"><Button x:Name="UrlCancelButton" Content="Cancel" Click="OnUrlCancel" AutomationProperties.Name="Cancel opening URL" /><Button x:Name="UrlSubmitButton" Content="Open" Click="OnUrlSubmit" AutomationProperties.Name="Open network URL" /></StackPanel>
             </StackPanel>
         </Border>
-        <Border x:Name="ResumePanel" IsVisible="{Binding HasPendingResume}" MaxWidth="420" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="24" Padding="20" CornerRadius="18" Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}" BorderBrush="#FFFF9A55" BorderThickness="1" BoxShadow="0 16 42 0 #90000000">
+        <Border x:Name="ResumePanel" ZIndex="30" IsVisible="{Binding HasPendingResume}" MaxWidth="420" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="24" Padding="20" CornerRadius="18" Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}" BorderBrush="#FFFF9A55" BorderThickness="1" BoxShadow="0 16 42 0 #90000000">
             <StackPanel Spacing="10"><TextBlock Text="Resume playback" FontSize="17" FontWeight="SemiBold" /><TextBlock Text="{Binding PendingResumeText}" FontSize="16" /><TextBlock Text="The saved position is available for this media." Classes="settingHint" TextWrapping="Wrap" /><TextBlock IsVisible="{Binding HasHistoryError}" Text="{Binding HistoryError}" Foreground="#FFD6CE" TextWrapping="Wrap" AutomationProperties.Name="Resume history error" /><StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8"><Button x:Name="DeclineResumeAction" Content="Start over" Click="OnDeclineResume" ToolTip.Tip="Start this media from the beginning" AutomationProperties.Name="Start media over" /><Button x:Name="ResumeAction" Content="Resume" Click="OnAcceptResume" ToolTip.Tip="Resume from the saved position" AutomationProperties.Name="Resume media" /></StackPanel></StackPanel>
         </Border>
-        <Border x:Name="OpenErrorToast" IsVisible="False" MaxWidth="560" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="24,90,24,0" Padding="10" Background="#E02B1717" CornerRadius="10"><TextBlock Text="{Binding OpenError}" Foreground="#FFD6CE" TextWrapping="Wrap" /></Border>
+        <Border x:Name="OpenErrorToast" ZIndex="30" IsVisible="False" MaxWidth="560" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="24,90,24,0" Padding="10" Background="#E02B1717" CornerRadius="10"><TextBlock Text="{Binding OpenError}" Foreground="#FFD6CE" TextWrapping="Wrap" /></Border>
 
         <Border x:Name="QueueDrawer" ZIndex="10" IsVisible="{Binding IsQueueOpen}" Focusable="True" Width="390" MaxWidth="390" HorizontalAlignment="Right" VerticalAlignment="Stretch" Margin="0,76,16,18" Padding="16" CornerRadius="6" Background="{DynamicResource PlayerSurface}" BorderBrush="{DynamicResource PlayerBorder}" BorderThickness="1" BoxShadow="0 12 32 0 #80000000" AutomationProperties.Name="Playback queue and media controls">
             <Grid RowDefinitions="Auto,Auto,*" RowSpacing="10">
@@ -357,7 +359,7 @@
             </Grid>
         </Border>
 
-        <Border x:Name="SettingsPanel" x:DataType="viewModels:SettingsViewModel" IsVisible="False" MaxWidth="760" MaxHeight="580" Margin="24"
+        <Border x:Name="SettingsPanel" ZIndex="30" x:DataType="viewModels:SettingsViewModel" IsVisible="False" MaxWidth="760" MaxHeight="580" Margin="24"
                 HorizontalAlignment="Center" VerticalAlignment="Center" Padding="24" CornerRadius="18"
                 Background="{DynamicResource SystemControlBackgroundBaseLowBrush}" BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}" BorderThickness="1" BoxShadow="0 24 60 0 #B0000000">
             <Grid x:Name="SettingsGrid" ColumnDefinitions="190,*" RowDefinitions="Auto,*" RowSpacing="18" ColumnSpacing="22">

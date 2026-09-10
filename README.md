@@ -11,6 +11,13 @@ pinned native/framework inputs are recorded in [`eng/versions.json`](eng/version
 The dispatch-ready Windows work packages, validation gates, and commit
 boundaries are in [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md).
 
+The active [VLC 4 UI fidelity plan](docs/VLC4_SCREEN_BY_SCREEN_PLAN.md) covers
+the visual redesign in Avalonia while keeping VLCLR/VLC 3: finish Playback,
+build the Home/navigation shell, unify Settings, then qualify the complete app.
+It includes the local VLC master source map and visual acceptance criteria.
+The [September 10 Playback review](docs/PLAYBACK_REVIEW_2026-09-10.md) records
+the latest implementation, validation results, captures and review launcher.
+
 ## Current state
 
 - Pure C#; no native C shim.
@@ -76,6 +83,14 @@ dotnet run --project src/VLCAvalonia -- --engine-smoke --cycles=25
 
 Override local paths with `VLCLR_ROOT`, `VLC_DIRECTORY`, and
 `VLC_AVALONIA_TEST_MEDIA`.
+
+`VLCLR_ROOT` also selects the VLCLR project and native import library at build
+time; use an absolute path when selecting a separate checkout. Use the VLC 3
+framework/runtime pins in `eng/versions.json`; if the sibling checkout is on
+unrelated work, select an isolated compatible checkout. VLC 4-targeting VLCLR
+main is incompatible with this product. The earlier migration experiment is
+preserved in [the compatibility record](docs/VLCLR_MAIN_MIGRATION.md); the active
+UI plan keeps VLC 3 and requires fresh qualification of the selected inputs.
 
 See [docs/D3D11_COMPOSITION.md](docs/D3D11_COMPOSITION.md) for the validated
 implementation, qualification commands, measured counters, and remaining work.

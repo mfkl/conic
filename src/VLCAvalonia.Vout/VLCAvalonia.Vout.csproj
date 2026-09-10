@@ -17,12 +17,12 @@
 
   <ItemGroup>
     <PackageReference Include="TerraFX.Interop.Windows" Version="10.0.20348-beta1" />
-    <ProjectReference Include="..\..\..\vlclr\src\VLCLR\VLCLR.csproj" />
+    <ProjectReference Include="$(VLCLR_ROOT)\src\VLCLR\VLCLR.csproj" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(RuntimeIdentifier)' == 'win-x64'">
     <DirectPInvoke Include="libvlccore" />
-    <NativeLibrary Include="..\..\..\vlclr\lib\libvlccore.lib" />
+    <NativeLibrary Include="$(VLCLR_ROOT)\lib\libvlccore.lib" />
   </ItemGroup>
 
 </Project>

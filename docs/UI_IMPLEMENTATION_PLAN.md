@@ -10,6 +10,15 @@ Primary scope: modern Windows desktop UI with daily-use VLC playback parity
 Background track: GPU presentation of VLC-rendered subpictures on the opaque
 D3D11 path
 
+2026-09-10 direction: the active roadmap targets close VLC 4 **visual and
+interaction fidelity in Avalonia**, retaining **VLCLR / VLC 3** for playback.
+Section 0 of [VLC4_SCREEN_BY_SCREEN_PLAN.md](VLC4_SCREEN_BY_SCREEN_PLAN.md)
+records the current source audit, visual tokens, screen gaps, delivery order
+and comparison criteria. Earlier UI-00–08 qualification is historical; it does
+not imply the phase-two screens are visually accepted or the currently selected
+sibling framework checkout is compatible. A VLC 4 engine migration is outside
+this UI roadmap.
+
 ## 1. Outcome
 
 Turn the current video-first proof of concept into a polished desktop player

@@ -666,7 +666,9 @@ The final Windows integration matrix passed; see
 `WINDOWS_UI_INTEGRATION_2026-09-10.md`. Next is combined visual review of Home,
 PiP and Settings, followed by targeted feedback. M1 codec/stream information is
 implemented; see `MEDIA_INFORMATION_REVIEW_2026-09-10.md`. The user's missing
-Home thumbnail report is the current follow-up. Physical display-scale/accessibility and macOS/Linux native
+Home thumbnail report is fixed with background local-file thumbnails and caching;
+see `HOME_THUMBNAILS_REVIEW_2026-09-10.md`. Next is visual feedback on these screens.
+Physical display-scale/accessibility and macOS/Linux native
 qualification remain open. Record visual acceptance only when the user reviews.
 
 Media information remains part of Playback: More → Media information, the drawer's

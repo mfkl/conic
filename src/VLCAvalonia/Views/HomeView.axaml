@@ -71,7 +71,7 @@
                                     <StackPanel>
                                         <Button Classes="menuAction" Padding="0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Command="{Binding DataContext.OpenRecentCommand, ElementName=HomeRoot}" CommandParameter="{Binding Source}" AutomationProperties.Name="{Binding Title}">
                                             <StackPanel>
-                                                <Border Classes="artwork" Height="116" Background="#303030"><PathIcon Width="32" Height="32" Foreground="#999999" Data="M7,3 L22,12 L7,21 Z"/></Border>
+                                                <Border Classes="artwork" Height="116" Background="#303030"><controls:MediaThumbnail Source="{Binding Source}"/></Border>
                                                 <StackPanel Margin="12" Spacing="6"><TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" FontWeight="SemiBold"/><TextBlock Text="{Binding Detail}" Foreground="{DynamicResource PlayerSecondaryText}" FontSize="12"/><ProgressBar IsVisible="{Binding HasProgress}" Minimum="0" Maximum="1" Value="{Binding Progress}" Height="3" Foreground="{DynamicResource PlayerAccent}"/></StackPanel>
                                             </StackPanel>
                                         </Button>

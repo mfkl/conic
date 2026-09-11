@@ -139,9 +139,11 @@ implementation, qualification commands, measured counters, and remaining work.
 
 ## Tests and CI
 
-The twelve-job GitHub Actions matrix runs on pushes and pull requests:
+The fifteen-job GitHub Actions matrix runs on pushes and pull requests:
 
 - Core: 72 tests per configuration on Windows, Ubuntu and macOS.
+- Native ABI: compile and execute VLCLR's layout probe against the pinned VLC
+  source headers using the native Windows, Linux and macOS compilers.
 - Desktop app: build the app and run 149 managed UI tests per configuration on
   Ubuntu and macOS, using the pinned sibling VLCLR checkout.
 - Full Windows: all 221 managed tests per configuration, plus the Release
@@ -165,6 +167,8 @@ decoding or compositor behavior; those checks run separately on GPU machines.
 See [CI setup](docs/CI.md) and [platform qualification](docs/CROSS_PLATFORM.md).
 The [video backend guide](docs/VIDEO_BACKENDS.md) describes compositor ownership,
 attachment lifecycle, and the remaining native work for Linux/macOS.
+The [target qualification guide](docs/TARGET_QUALIFICATION.md) explains native
+layout checks and `--graphics-probe`, which queries the compositor without VLC.
 
 ## Using the player
 

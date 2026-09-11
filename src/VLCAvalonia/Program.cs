@@ -10,6 +10,8 @@ internal static class Program
     [STAThread]
     public static int Main(string[] args)
     {
+        if (args.Contains("--graphics-probe", StringComparer.OrdinalIgnoreCase))
+            return BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
         bool runsWindowsSmoke = args.Any(arg => arg.Equals("--engine-smoke", StringComparison.OrdinalIgnoreCase) || arg.Equals("--queue-smoke", StringComparison.OrdinalIgnoreCase) || arg.Equals("--media-capabilities-smoke", StringComparison.OrdinalIgnoreCase) || arg.Equals("--player-capabilities-smoke", StringComparison.OrdinalIgnoreCase) || arg.Equals("--opaque-smoke", StringComparison.OrdinalIgnoreCase) || arg.Equals("--smoke", StringComparison.OrdinalIgnoreCase));
         if (runsWindowsSmoke && !NativePlaybackSupport.IsAvailable)
         {

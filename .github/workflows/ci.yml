@@ -14,6 +14,10 @@ on:
         description: 'Also build the app and run managed UI tests on Linux/macOS (requires VLCLR_SSH_KEY)'
         type: boolean
         default: false
+      native_abi:
+        description: 'Also compile and run pinned VLC header layout probes on all three OSes (requires VLCLR_SSH_KEY)'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -63,6 +67,63 @@ jobs:
         with:
           name: core-${{ matrix.os }}-${{ matrix.configuration }}
           path: vlc-avalonia/artifacts/ci/Core/${{ matrix.configuration }}/*.trx
+          if-no-files-found: warn
+          retention-days: 14
+
+  native_abi:
+    name: Native ABI / ${{ matrix.os }}
+    if: vars.VLCLR_CI_ENABLED == 'true' || (github.event_name == 'workflow_dispatch' && inputs.native_abi)
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, ubuntu-24.04, macos-15]
+    defaults:
+      run:
+        shell: pwsh
+        working-directory: vlc-avalonia
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          path: vlc-avalonia
+          persist-credentials: false
+      - name: Read native pins and check dependency access
+        id: pins
+        env:
+          VLCLR_SSH_KEY: ${{ secrets.VLCLR_SSH_KEY }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:VLCLR_SSH_KEY)) {
+            throw 'Configure VLCLR_SSH_KEY with the read-only dependency deploy key. See docs/CI.md.'
+          }
+          $pins = Get-Content eng/versions.json -Raw | ConvertFrom-Json
+          "framework_repository=$($pins.vlclr.repository)" >> $env:GITHUB_OUTPUT
+          "framework_commit=$($pins.vlclr.commit)" >> $env:GITHUB_OUTPUT
+          "vlc_repository=$($pins.vlc.repository)" >> $env:GITHUB_OUTPUT
+          "vlc_commit=$($pins.vlc.sourceCommit)" >> $env:GITHUB_OUTPUT
+      - name: Checkout pinned VLCLR probe
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: ${{ steps.pins.outputs.framework_repository }}
+          ref: ${{ steps.pins.outputs.framework_commit }}
+          path: vlclr
+          ssh-key: ${{ secrets.VLCLR_SSH_KEY }}
+          persist-credentials: false
+      - name: Checkout pinned VLC headers
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: ${{ steps.pins.outputs.vlc_repository }}
+          ref: ${{ steps.pins.outputs.vlc_commit }}
+          path: vlc
+          persist-credentials: false
+      - name: Compile and execute native layout probe
+        run: ./eng/verify-native-abi.ps1 -FrameworkRoot ../vlclr -VlcSourceRoot ../vlc
+      - name: Upload native ABI evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: native-abi-${{ matrix.os }}
+          path: vlc-avalonia/artifacts/native-abi/
           if-no-files-found: warn
           retention-days: 14
 

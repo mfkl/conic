@@ -90,6 +90,10 @@ CPU-based port is introduced by this boundary.
    `vlclr_abi.cpp`, using headers built for the actual target. Existing layout
    assertions are an input to qualification, not proof that variadic calls or
    hardware surface ownership work on that target.
+   `eng/verify-native-abi.ps1` now orchestrates the existing probe against the
+   pinned source headers on all three CI platforms; `--graphics-probe` collects
+   actual compositor capabilities on a target machine without starting VLC.
+   See [the target qualification guide](TARGET_QUALIFICATION.md).
 3. Keep the new Linux/macOS Desktop CI matrix passing as native work proceeds.
    It builds the app and runs 149 managed UI tests per configuration, without
    loading VLC or running a graphical session. This remains distinct from a

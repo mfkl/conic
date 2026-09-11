@@ -24,9 +24,22 @@ it excludes the Windows-only Native AOT vout project. It does not load native
 VLC or require a graphical session. These tests cover presentation models,
 storage, layout policies and backend lifecycle, not rendered UI or playback.
 
-The complete workflow has twelve jobs. `VLCLR_CI_ENABLED=true` enables both app
+The complete workflow has fifteen jobs. `VLCLR_CI_ENABLED=true` enables both app
 matrices automatically; the `desktop_app` manual input can also request the
 Linux/macOS matrix independently of `full_windows`.
+
+## Native ABI coverage
+
+Three Native ABI jobs compile and execute the pinned VLCLR layout probe against
+the exact VLC source revision in `eng/versions.json`, using MSVC x64 on Windows
+and the host C++ compiler on Linux/macOS. A third sibling checkout, `vlc`, supplies
+the source headers. These jobs share the dependency-access settings; the
+`native_abi` manual input can request them independently. Their artifacts include
+JSON provenance and compiler/probe logs, even on failure.
+
+This checks the existing probe's static size/offset assertions and module ABI
+constants. It does not qualify native VLC calls, variadic arguments, decoder
+surfaces or playback. See [target qualification](TARGET_QUALIFICATION.md).
 
 ## Full Windows coverage
 

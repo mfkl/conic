@@ -9,7 +9,7 @@ public sealed class LibraryHistoryTests
     public void FavoritesAreExplicitDeduplicatedAndDoNotScan()
     {
         MemoryStorage storage = new();
-        MediaHistoryService history = new(storage, () => DateTimeOffset.UnixEpoch);
+        MediaHistoryService history = new(storage, () => DateTimeOffset.UnixEpoch, new MediaSourceIdentity(caseSensitiveFiles: false));
         MediaSource first = new("C:/media/first.mp4", MediaSourceKind.File, "first.mp4");
         MediaSource duplicate = new("c:/MEDIA/first.mp4", MediaSourceKind.File, "renamed.mp4");
 

@@ -51,7 +51,7 @@ public sealed class MediaOpeningTests
     [Fact]
     public void FileIdentityDeduplicatesCase()
     {
-        MemoryHistory storage = new(); MediaHistoryService history = new(storage);
+        MemoryHistory storage = new(); MediaHistoryService history = new(storage, identity: new MediaSourceIdentity(caseSensitiveFiles: false));
         history.RecordOpened(new("C:\\A.mp4", MediaSourceKind.File, "A"), true);
         history.RecordOpened(new("c:\\a.mp4", MediaSourceKind.File, "a"), true);
         Assert.Single(history.Recent);
@@ -60,7 +60,7 @@ public sealed class MediaOpeningTests
     public void LoadNormalizesFileDuplicatesAndPreservesUrlCase()
     {
         MemoryHistory storage = new() { Content = "{\"Version\":1,\"Recent\":[{\"Source\":\"C:\\\\A.mp4\",\"DisplayName\":\"old\",\"LastOpenedUtc\":\"2020-01-01T00:00:00Z\"},{\"Source\":\"c:\\\\a.mp4\",\"DisplayName\":\"new\",\"LastOpenedUtc\":\"2021-01-01T00:00:00Z\"},{\"Source\":\"https://example.com/A?q=x\",\"DisplayName\":\"old-url\",\"LastOpenedUtc\":\"2020-01-01T00:00:00Z\"},{\"Source\":\"https://example.com/A?q=x\",\"DisplayName\":\"new-url\",\"LastOpenedUtc\":\"2021-01-01T00:00:00Z\"},{\"Source\":\"https://example.com/a?q=x\",\"DisplayName\":\"a\",\"LastOpenedUtc\":\"2021-01-01T00:00:00Z\"}]}" };
-        MediaHistoryService history = new(storage); history.Load(); Assert.Equal(3, history.Recent.Count); Assert.Contains(history.Recent, x => x.DisplayName == "new"); Assert.Contains(history.Recent, x => x.DisplayName == "new-url");
+        MediaHistoryService history = new(storage, identity: new MediaSourceIdentity(caseSensitiveFiles: false)); history.Load(); Assert.Equal(3, history.Recent.Count); Assert.Contains(history.Recent, x => x.DisplayName == "new"); Assert.Contains(history.Recent, x => x.DisplayName == "new-url");
     }
     [Fact]
     public void DisabledAndNearEndHistoryWritesFollowPolicy()

@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using Player.Application;
 
 namespace Conic.Services;
 
@@ -18,7 +19,7 @@ internal sealed class MediaThumbnailCache(string directory, Func<string, Task<by
         {
             var file = LocalFile(source);
             if (file is null) return null;
-            string identity = $"v1|{file.FullName.ToUpperInvariant()}|{file.Length}|{file.LastWriteTimeUtc.Ticks}";
+            string identity = $"v2|{MediaSourceIdentity.Current.FileKey(file.FullName)}|{file.Length}|{file.LastWriteTimeUtc.Ticks}";
             string key = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(identity)));
             Task<byte[]?> task;
             lock (_gate)

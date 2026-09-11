@@ -1,0 +1,74 @@
+# Continuous integration
+
+The [Build and test workflow](../.github/workflows/ci.yml) runs on pushes and pull
+requests. It uses the .NET SDK from `eng/versions.json`, commit-pinned actions,
+read-only repository permissions and cancels superseded runs on the same ref.
+
+## Automatic coverage
+
+The Core matrix runs Debug and Release tests on Windows Server 2022, Ubuntu
+24.04 and macOS 15. It builds and tests `Player.Application.Tests` and
+`Player.Engine.ContractTests`: currently 72 cases per matrix entry. Neither
+project needs VLCLR, native VLC, a display server or a GPU. TRX results are
+uploaded even when a test fails and retained for 14 days.
+
+Core checks do not build the UI or native plugin, and do not qualify playback.
+
+## Full Windows coverage
+
+The optional Windows matrix builds the complete solution and runs all 213
+managed tests in Debug and Release. Release also publishes the Windows x64
+Native AOT plugin. It verifies the dependency HEAD against `eng/versions.json`
+and rejects modified tracked dependency files. Test results and native outputs
+are retained for 14 days.
+
+This job is initially disabled because the pinned VLCLR commit is local-only.
+On 2026-09-11, GitHub reported that commit
+`50d849200c3dfb2b047e20a174ae66b56a19adcd` was absent from both
+`mfkl/vlclr` and `mfkl/vlclr-private`; the product repository had no Actions secrets.
+To enable the full job:
+
+1. Publish the reviewed dependency commit to `mfkl/vlclr-private` (the repository
+   in `eng/versions.json`). Keep the product pin; do not substitute current VLCLR
+   main, which targets another VLC ABI.
+2. Configure the product repository secret `VLCLR_READ_TOKEN` with Contents: read
+   access to that private dependency repository. The built-in GitHub token cannot
+   read a different private repository. Credentials are not persisted by checkout.
+3. Trigger **Build and test** with `full_windows` enabled. Manual dispatch becomes
+   available after the workflow reaches the default branch.
+4. Set repository variable `VLCLR_CI_ENABLED=true` to run full Windows checks on
+   subsequent pushes and pull requests. Require the full jobs in branch protection
+   only after they are enabled and passing. A missing token or inaccessible pin
+   fails the requested job explicitly.
+
+No dependency commits, secrets or repository variables are published/configured
+by the workflow itself. Pull requests from forks do not receive this secret;
+their Core jobs can still run, while an enabled full Windows job will fail its
+prerequisite check. Do not use `pull_request_target` to execute untrusted PR code.
+
+Hosted jobs do not run hardware-decoding or compositor smokes. Those require
+qualified GPU machines and the pinned native VLC runtime, as described in
+[CROSS_PLATFORM.md](CROSS_PLATFORM.md). Local Windows hardware results are recorded
+there separately from CI coverage.
+
+## Run the same checks locally
+
+PowerShell 7 and .NET 10 are required. Restore is enabled by default; use
+`-NoRestore` only after dependencies have been restored.
+
+```powershell
+./eng/test.ps1 -Scope Core -Configuration Release
+./eng/test.ps1 -Scope Windows -Configuration Debug -FrameworkRoot /path/to/pinned/vlclr
+./eng/test.ps1 -Scope Windows -Configuration Release -FrameworkRoot /path/to/pinned/vlclr
+```
+
+The scripts return failure when a build, test, native publish or pin check fails.
+They write results under `artifacts/ci`. CI creates a job-local `global.json` to
+enforce the exact SDK pin; local scripts use the installed SDK selection.
+
+Local validation on Windows: actionlint 1.7.12 passed; the Core Release script
+passed 72 tests; the full Windows script passed 213 tests in both Debug and
+Release. Release built with zero warnings/errors and published the AOT plugin.
+These runs used the installed SDK
+10.0.303 and restored dependencies. Execution on hosted runners, including the
+exact SDK 10.0.102 pin and Linux/macOS matrix entries, awaits pushing the workflow.

@@ -8,6 +8,8 @@ tree without child-window airspace limitations.
 The authoritative architecture boundary is recorded in
 [`docs/rfc/0001-port-boundaries.md`](docs/rfc/0001-port-boundaries.md), and the
 pinned native/framework inputs are recorded in [`eng/versions.json`](eng/versions.json).
+The [CI guide](docs/CI.md) describes automatic Core tests across all three desktop
+OSes and the prerequisites for full Windows build/test/AOT jobs.
 The dispatch-ready Windows work packages, validation gates, and commit
 boundaries are in [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md).
 
@@ -83,8 +85,16 @@ dotnet run --project src/Conic -- --ui-smoke
 dotnet run --project src/Conic -- --engine-smoke --cycles=25
 ```
 
-Override local paths with `VLCLR_ROOT`, `VLC_DIRECTORY`, and
-`CONIC_TEST_MEDIA`.
+Override local paths with `VLCLR_ROOT`, `VLC_DIRECTORY`, and `CONIC_TEST_MEDIA`.
+Installed applications can discover VLC in an adjacent `vlc` directory without
+either source checkout. `VLC_DIRECTORY` takes precedence and must point to the
+directory containing the native VLC libraries. The default plugin location is
+`plugins/video_output` beneath that directory.
+
+Linux/macOS runtime discovery and managed portability fixes are in place;
+their native hardware playback backends are still unimplemented. Hardware
+decoding and GPU presentation are required on all three desktop platforms.
+See [the cross-platform status and qualification plan](docs/CROSS_PLATFORM.md).
 
 `VLCLR_ROOT` also selects the VLCLR project and native import library at build
 time; use an absolute path when selecting a separate checkout. Use the VLC 3

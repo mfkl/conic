@@ -134,7 +134,7 @@ Follow-up Windows regression checks also passed:
 
 The initial GitHub Actions check on 2026-09-11 found zero workflows/runs.
 The new [CI workflow](CI.md) adds automatic Core tests on Windows/Linux/macOS
-and optional full Windows build/test/AOT checks. The full job requires publishing
-the pinned VLCLR commit and configuring dependency access. The results above are
-local Windows validation; remote runs and hardware-runner qualification remain
-separate evidence.
+and full Windows build/test/AOT checks. The pinned VLCLR commit and read-only
+dependency access are configured, and both full Windows jobs passed their first
+hosted run. The results above are local Windows validation; hosted Core tests
+and Windows builds do not qualify Linux/macOS hardware playback.

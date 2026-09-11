@@ -8,8 +8,9 @@ tree without child-window airspace limitations.
 The authoritative architecture boundary is recorded in
 [`docs/rfc/0001-port-boundaries.md`](docs/rfc/0001-port-boundaries.md), and the
 pinned native/framework inputs are recorded in [`eng/versions.json`](eng/versions.json).
-The [CI guide](docs/CI.md) describes automatic Core tests across all three desktop
-OSes and the prerequisites for full Windows build/test/AOT jobs.
+The [CI workflow](https://github.com/mfkl/vlc-avalonia/actions/workflows/ci.yml)
+runs Core tests across all three desktop OSes and full Windows build/test/AOT jobs.
+The [CI guide](docs/CI.md) documents coverage and private dependency access.
 The dispatch-ready Windows work packages, validation gates, and commit
 boundaries are in [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md).
 
@@ -23,6 +24,16 @@ The [September 10 Playback review](docs/PLAYBACK_REVIEW_2026-09-10.md) records
 the latest implementation, validation results, captures and review launcher.
 
 ## Current state
+
+| Platform | Playback | Hosted CI |
+| --- | --- | --- |
+| Windows x64 | D3D11 hardware decoding and GPU presentation implemented | Full solution tests in Debug/Release; Release Native AOT publish |
+| Linux | Hardware backend still to be implemented | Core tests in Debug/Release |
+| macOS | Hardware backend still to be implemented | Core tests in Debug/Release |
+
+Hardware decoding and GPU presentation are required for the Linux/macOS ports.
+Runtime discovery and managed portability groundwork are implemented; passing
+Core tests does not mean native playback is available on those platforms.
 
 - Pure C#; no native C shim.
 - VLC 3 internal-core playback through the sibling VLCLR repository.
@@ -45,7 +56,7 @@ the composition document for measured evidence and explicit coverage limits.
 
 ## Repository layout
 
-This first version intentionally uses a project reference to VLCLR:
+The application uses a project reference to a separate, pinned VLCLR checkout:
 
 ```text
 videolabs/
@@ -53,10 +64,29 @@ videolabs/
   vlc-avalonia/
 ```
 
-VLCLR and the pinned VLC 3 runtime remain in `../vlclr`. NuGet package
-references can replace the project references later.
+VLCLR is not vendored into this repository or published to NuGet. CI checks out
+`mfkl/vlclr-private` alongside the product using a read-only deploy key.
+Local full builds require access to that private repository too.
+
+From the product directory, create a new sibling checkout at the reviewed pin:
+
+```powershell
+$pins = Get-Content eng/versions.json -Raw | ConvertFrom-Json
+git clone --branch $pins.vlclr.branch "https://github.com/$($pins.vlclr.repository).git" ../vlclr
+git -C ../vlclr checkout --detach $pins.vlclr.commit
+```
+
+If `../vlclr` already contains unrelated work, use a separate compatible checkout
+and set `VLCLR_ROOT` to its absolute path. Current VLCLR main targets VLC 4 and
+is incompatible with this application's VLC 3 internal ABI.
 
 ## Build and run
+
+Windows x64 playback development requires PowerShell 7, .NET 10 (CI pins SDK
+10.0.102), the Visual Studio C++ build tools and Windows SDK for Native AOT, and
+the VLC 3 runtime matching `eng/versions.json`. The following commands assume
+that runtime is available at `../vlclr/vlc-3.0.24-beta1`; it must be supplied
+separately from the managed build.
 
 ```powershell
 dotnet publish src/VLCAvalonia.Vout -c Release -r win-x64
@@ -106,6 +136,29 @@ UI plan keeps VLC 3 and requires fresh qualification of the selected inputs.
 
 See [docs/D3D11_COMPOSITION.md](docs/D3D11_COMPOSITION.md) for the validated
 implementation, qualification commands, measured counters, and remaining work.
+
+## Tests and CI
+
+The eight-job GitHub Actions matrix runs on pushes and pull requests:
+
+- Core: 72 tests per configuration on Windows, Ubuntu and macOS.
+- Full Windows: all 213 managed tests per configuration, plus the Release
+  Windows x64 Native AOT plugin publish.
+
+All eight jobs passed for commit `f709051` in
+[the initial successful hosted run](https://github.com/mfkl/vlc-avalonia/actions/runs/34602849422).
+Run the same checks locally with PowerShell 7:
+
+```powershell
+./eng/test.ps1 -Scope Core -Configuration Release
+./eng/test.ps1 -Scope Windows -Configuration Debug -FrameworkRoot ../vlclr
+./eng/test.ps1 -Scope Windows -Configuration Release -FrameworkRoot ../vlclr
+```
+
+Core tests need neither VLCLR nor native VLC. Full Windows checks require the
+exact VLCLR pin with clean tracked files. Hosted runners do not qualify hardware
+decoding or compositor behavior; those checks run separately on GPU machines.
+See [CI setup](docs/CI.md) and [platform qualification](docs/CROSS_PLATFORM.md).
 
 ## Using the player
 

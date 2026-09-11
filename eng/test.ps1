@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [ValidateSet('Core', 'Windows')]
+    [ValidateSet('Core', 'Desktop', 'Windows')]
     [string] $Scope = 'Core',
     [ValidateSet('Debug', 'Release')]
     [string] $Configuration = 'Release',
@@ -32,7 +32,7 @@ try {
         }
     }
     else {
-        if (-not $IsWindows) { throw 'The full Windows job requires a Windows runner.' }
+        if ($Scope -eq 'Windows' -and -not $IsWindows) { throw 'The full Windows job requires a Windows runner.' }
         if ([string]::IsNullOrWhiteSpace($FrameworkRoot)) { throw 'Set VLCLR_ROOT to the pinned VLCLR checkout.' }
         $env:VLCLR_ROOT = (Resolve-Path -LiteralPath $FrameworkRoot).Path
         $pins = Get-Content eng/versions.json -Raw | ConvertFrom-Json
@@ -43,10 +43,13 @@ try {
         $dirty = & git -C $env:VLCLR_ROOT status --porcelain --untracked-files=no
         if ($LASTEXITCODE -ne 0 -or $dirty) { throw 'The pinned VLCLR checkout must have no modified tracked files.' }
 
-        Invoke-Dotnet build vlc-avalonia.slnx -c $Configuration @restoreArguments '-p:UsedAvaloniaProducts=' --verbosity minimal
-        Invoke-Dotnet test vlc-avalonia.slnx -c $Configuration --no-build --no-restore `
+        # Desktop builds the real app through its test project, without building
+        # the Windows-only Native AOT vout or loading any native VLC library.
+        $buildTarget = if ($Scope -eq 'Desktop') { 'tests/VLCAvalonia.UITests/VLCAvalonia.UITests.csproj' } else { 'vlc-avalonia.slnx' }
+        Invoke-Dotnet build $buildTarget -c $Configuration @restoreArguments '-p:UsedAvaloniaProducts=' --verbosity minimal
+        Invoke-Dotnet test $buildTarget -c $Configuration --no-build --no-restore `
             --logger trx --results-directory $results --verbosity minimal
-        if ($Configuration -eq 'Release') {
+        if ($Scope -eq 'Windows' -and $Configuration -eq 'Release') {
             Invoke-Dotnet publish src/VLCAvalonia.Vout/VLCAvalonia.Vout.csproj -c Release -r win-x64 @restoreArguments `
                 -o (Join-Path $results 'native') --verbosity minimal
         }

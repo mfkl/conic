@@ -2,9 +2,9 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
-namespace VLCAvalonia.Interop;
+namespace VLCAvalonia.Interop.Windows;
 
-internal sealed unsafe class CompositionPluginBridge : IDisposable
+internal sealed unsafe class D3D11PluginBridge : IDisposable
 {
     internal readonly record struct AdapterLuid(uint LowPart, int HighPart)
     {
@@ -131,7 +131,7 @@ internal sealed unsafe class CompositionPluginBridge : IDisposable
 
     public string PluginDirectory { get; }
 
-    public CompositionPluginBridge(bool registerFrameCallback = true)
+    public D3D11PluginBridge(bool registerFrameCallback = true)
     {
         NativePlaybackSupport.RequireAvailable();
         string pluginPath = FindPluginPath();
@@ -389,7 +389,7 @@ internal sealed unsafe class CompositionPluginBridge : IDisposable
     {
         try
         {
-            CompositionPluginBridge? bridge = GetBridge(opaque);
+            D3D11PluginBridge? bridge = GetBridge(opaque);
             if (bridge is null || bridge.IsDisposed)
                 return;
 
@@ -415,7 +415,7 @@ internal sealed unsafe class CompositionPluginBridge : IDisposable
     {
         try
         {
-            CompositionPluginBridge? bridge = GetBridge(opaque);
+            D3D11PluginBridge? bridge = GetBridge(opaque);
             if (bridge is null || bridge.IsDisposed || pixels == 0)
                 return;
             if (width is 0 or > 16384 || height is 0 or > 16384)
@@ -462,7 +462,7 @@ internal sealed unsafe class CompositionPluginBridge : IDisposable
     {
         try
         {
-            CompositionPluginBridge? bridge = GetBridge(opaque);
+            D3D11PluginBridge? bridge = GetBridge(opaque);
             if (bridge is null || bridge.IsDisposed || sharedHandle == 0)
                 return;
             if (width is 0 or > 16384 || height is 0 or > 16384)
@@ -500,7 +500,7 @@ internal sealed unsafe class CompositionPluginBridge : IDisposable
     {
         try
         {
-            CompositionPluginBridge? bridge = GetBridge(opaque);
+            D3D11PluginBridge? bridge = GetBridge(opaque);
             if (bridge is null || bridge.IsDisposed)
                 return;
 
@@ -539,11 +539,11 @@ internal sealed unsafe class CompositionPluginBridge : IDisposable
             _ => $"unknown-{fallbackReason}",
         };
 
-    private static CompositionPluginBridge? GetBridge(nint opaque)
+    private static D3D11PluginBridge? GetBridge(nint opaque)
     {
         if (opaque == 0)
             return null;
-        return GCHandle.FromIntPtr(opaque).Target as CompositionPluginBridge;
+        return GCHandle.FromIntPtr(opaque).Target as D3D11PluginBridge;
     }
 
     private bool IsDisposed => Volatile.Read(ref _disposed) != 0;

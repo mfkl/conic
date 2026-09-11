@@ -2,9 +2,9 @@ using Player.Application;
 using Player.Contracts;
 using VLCLR;
 
-namespace VLCAvalonia.Interop;
+namespace VLCAvalonia.Interop.Windows;
 
-internal sealed partial class VLCCorePlayer
+internal sealed partial class WindowsVlcCorePlayer
 {
     private readonly VLCVideoPresentation _videoControls;
     private VideoAdjustmentState _videoAdjustments = VideoAdjustmentState.Unavailable;

@@ -13,7 +13,7 @@ LUIDs do not cross the interface.
 
 `Video/Windows/D3D11VideoBackend` owns the existing VLC plugin bridge and Avalonia
 compositor resources. It selects the compositor's adapter before creating the
-matching `VLCCorePlayer`, imports shared textures and performs keyed-mutex
+matching `WindowsVlcCorePlayer`, imports shared textures and performs keyed-mutex
 presentation. Decoder picture pools and GPU color conversion remain in the
 Windows Native AOT vout plugin. Existing Windows compatibility fallback behavior
 is preserved and is not a qualification path for future hardware backends.
@@ -70,6 +70,14 @@ These are local Windows GPU results; hosted CI runs managed checks and publishin
 
 ## Next native milestones
 
+The product's native engine, D3D11 plugin bridge, texture probe and native smokes
+now live in `Interop/Windows`. Windows DLL loading is selected by
+`VideoBackendFactory.InitializeRuntime`; `Program` has no Windows P/Invoke.
+`WindowsVlcCoreApi` contains the fixed-signature interface-startup export.
+The unused product copy of Win64 `input_vaControl` seeking was removed; actual
+seek/rate operations continue through VLCLR's guarded `VLCTransportControl`.
+This isolation does not make those framework ABI declarations portable.
+
 The factory still enables Windows x64 only. No Linux/macOS native playback or
 CPU-based port is introduced by this boundary.
 
@@ -82,9 +90,10 @@ CPU-based port is introduced by this boundary.
    `vlclr_abi.cpp`, using headers built for the actual target. Existing layout
    assertions are an input to qualification, not proof that variadic calls or
    hardware surface ownership work on that target.
-3. Extend hosted coverage to build the app and run its managed UI tests on
-   Linux/macOS before enabling new native backends. Core-only coverage remains
-   distinct from an app build or hardware test.
+3. Keep the new Linux/macOS Desktop CI matrix passing as native work proceeds.
+   It builds the app and runs 149 managed UI tests per configuration, without
+   loading VLC or running a graphical session. This remains distinct from a
+   native ABI probe or hardware test.
 4. On the Linux/macOS GPU machines, implement decoder-surface ownership,
    conversion, synchronization and compositor import behind this boundary.
    Validate the hardware-only acceptance gates in `CROSS_PLATFORM.md` before

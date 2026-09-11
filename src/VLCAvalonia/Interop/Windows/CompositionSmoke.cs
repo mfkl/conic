@@ -4,7 +4,7 @@ using Player.Contracts;
 using Player.Application;
 using VLCLR;
 
-namespace VLCAvalonia.Interop;
+namespace VLCAvalonia.Interop.Windows;
 
 [SupportedOSPlatform("windows")]
 internal static class CompositionSmoke
@@ -36,12 +36,12 @@ internal static class CompositionSmoke
 
         try
         {
-            using CompositionPluginBridge bridge = new();
+            using D3D11PluginBridge bridge = new();
             bool expectHardware = expectedPath == "hardware-opaque-gpu";
             bool expectGPU = expectedPath != "cpu-bitmap";
             if (expectGPU)
             {
-                CompositionPluginBridge.AdapterLuid adapter =
+                D3D11PluginBridge.AdapterLuid adapter =
                     D3D11SharedTextureProbe.GetDefaultHardwareAdapterForSmoke();
                 bridge.ConfigureAdapter(adapter);
                 bridge.EnableGPUFrames();
@@ -51,11 +51,11 @@ internal static class CompositionSmoke
                 bridge.ClearAdapterSelection();
             }
             bridge.ForceCPUOutput(!expectHardware);
-            CompositionPluginBridge.PoolTelemetry before =
+            D3D11PluginBridge.PoolTelemetry before =
                 bridge.ReadPoolTelemetry();
             bool receivedFrame = false;
             string? actualPath = null;
-            using (VLCCorePlayer player = new(
+            using (WindowsVlcCorePlayer player = new(
                 hardwareDecoding: expectHardware))
             {
                 player.StateChanged += (_, state) =>
@@ -67,7 +67,7 @@ internal static class CompositionSmoke
                 while (timeout.Elapsed < TimeSpan.FromSeconds(15))
                 {
                     if (expectGPU && bridge.TryTakeLatestGPU(
-                            out CompositionPluginBridge.GPUFrame? GPUFrame) &&
+                            out D3D11PluginBridge.GPUFrame? GPUFrame) &&
                         GPUFrame is not null)
                     {
                         string probe =
@@ -84,7 +84,7 @@ internal static class CompositionSmoke
                         break;
                     }
                     if (!expectGPU && bridge.TryTakeLatest(
-                            out CompositionPluginBridge.Frame? frame) &&
+                            out D3D11PluginBridge.Frame? frame) &&
                         frame is not null)
                     {
                         actualPath = "cpu-bitmap";
@@ -102,7 +102,7 @@ internal static class CompositionSmoke
                 player.Stop();
             }
 
-            CompositionPluginBridge.PoolTelemetry after =
+            D3D11PluginBridge.PoolTelemetry after =
                 bridge.ReadPoolTelemetry();
             Console.WriteLine(after.ToMachineReadableString());
             if (!receivedFrame || actualPath != expectedPath)
@@ -153,7 +153,7 @@ internal static class CompositionSmoke
             string[] copies = Enumerable.Range(1, 3).Select(index => Path.Combine(directory, $"queue-{index}.mkv")).ToArray();
             foreach (string copy in copies) File.Copy(fixture, copy);
             string[] uris = copies.Select(path => new Uri(path).AbsoluteUri).ToArray();
-            VLCCorePlayer player = new(verboseLogging: verboseLogging);
+            WindowsVlcCorePlayer player = new(verboseLogging: verboseLogging);
             player.OpenEmptyQueueSessionForSmoke();
             WaitForQueueState(player, "queue empty session", state => state.Status == QueueLoadState.Empty, PlaybackStageTimeout);
             QueueSmokeDiagnostics adapter = new(player, player);
@@ -180,7 +180,7 @@ internal static class CompositionSmoke
         }
     }
 
-    private static bool DisposeQueueSmokePlayer(VLCCorePlayer player)
+    private static bool DisposeQueueSmokePlayer(WindowsVlcCorePlayer player)
     {
         Stopwatch total = Stopwatch.StartNew();
         try
@@ -209,7 +209,7 @@ internal static class CompositionSmoke
     }
 
     private static void WaitForQueueState(
-        VLCCorePlayer player,
+        WindowsVlcCorePlayer player,
         string stage,
         Func<PlaybackQueueState, bool> condition,
         TimeSpan timeout)
@@ -232,7 +232,7 @@ internal static class CompositionSmoke
     /// <summary>Bounded diagnostic wrapper for the native queue contract.</summary>
     private sealed class QueueSmokeDiagnostics(
         IVLCPlaylistQueueSmokeAdapter inner,
-        VLCCorePlayer player) : IVLCPlaylistQueueSmokeAdapter
+        WindowsVlcCorePlayer player) : IVLCPlaylistQueueSmokeAdapter
     {
         private readonly Queue<string> _samples = new();
         private string _stage = "initial";
@@ -352,15 +352,15 @@ internal static class CompositionSmoke
 
         try
         {
-            using CompositionPluginBridge monitor = new();
-            CompositionPluginBridge.AdapterLuid adapter =
+            using D3D11PluginBridge monitor = new();
+            D3D11PluginBridge.AdapterLuid adapter =
                 D3D11SharedTextureProbe.GetDefaultHardwareAdapterForSmoke();
             monitor.ConfigureAdapter(adapter);
             monitor.ForceCPUOutput(false);
             monitor.EnableGPUFrames();
-            CompositionPluginBridge.PoolTelemetry before =
+            D3D11PluginBridge.PoolTelemetry before =
                 monitor.ReadPoolTelemetry();
-            using (VLCCorePlayer player = new())
+            using (WindowsVlcCorePlayer player = new())
             {
                 OpenAndWait(player, mediaPath, "opaque-open");
                 WaitForOpaquePool(monitor, before, "opaque-open");
@@ -368,7 +368,7 @@ internal static class CompositionSmoke
             }
 
             WaitForReleaseBalance(monitor, before.ReleaseBalance, "opaque");
-            CompositionPluginBridge.PoolTelemetry after =
+            D3D11PluginBridge.PoolTelemetry after =
                 monitor.ReadPoolTelemetry();
             Console.WriteLine(after.ToMachineReadableString());
             if (after.CpuUploads != before.CpuUploads)
@@ -398,19 +398,19 @@ internal static class CompositionSmoke
             return 2;
         }
 
-        VLCCorePlayer? player = null;
+        WindowsVlcCorePlayer? player = null;
         try
         {
-            using CompositionPluginBridge monitor = new();
-            CompositionPluginBridge.AdapterLuid adapter =
+            using D3D11PluginBridge monitor = new();
+            D3D11PluginBridge.AdapterLuid adapter =
                 D3D11SharedTextureProbe.GetDefaultHardwareAdapterForSmoke();
             monitor.ConfigureAdapter(adapter);
             monitor.ForceCPUOutput(false);
             monitor.EnableGPUFrames();
-            CompositionPluginBridge.PoolTelemetry initial =
+            D3D11PluginBridge.PoolTelemetry initial =
                 monitor.ReadPoolTelemetry();
 
-            player = new VLCCorePlayer();
+            player = new WindowsVlcCorePlayer();
             OpenAndWait(player, mediaPath, "open");
             WaitForOpaquePool(monitor, initial, "open");
 
@@ -468,7 +468,7 @@ internal static class CompositionSmoke
             DisposeAndWait(player, "dispose");
             player = null;
 
-            player = new VLCCorePlayer();
+            player = new WindowsVlcCorePlayer();
             OpenAndWait(player, mediaPath, "reopen-after-dispose");
             StopAndWait(player, "final-stop");
             DisposeAndWait(player, "final-dispose");
@@ -482,9 +482,9 @@ internal static class CompositionSmoke
             for (int cycle = 1; cycle <= cycles; cycle++)
             {
                 monitor.TryTakeLatestGPU(out _);
-                CompositionPluginBridge.PoolTelemetry before =
+                D3D11PluginBridge.PoolTelemetry before =
                     monitor.ReadPoolTelemetry();
-                using VLCCorePlayer cyclePlayer = new();
+                using WindowsVlcCorePlayer cyclePlayer = new();
                 OpenAndWait(
                     cyclePlayer,
                     mediaPath,
@@ -503,7 +503,7 @@ internal static class CompositionSmoke
                     $"[engine-smoke] PASS stress-cycle={cycle}/{cycles}");
             }
 
-            CompositionPluginBridge.PoolTelemetry final =
+            D3D11PluginBridge.PoolTelemetry final =
                 monitor.ReadPoolTelemetry();
             Console.WriteLine(final.ToMachineReadableString());
             if (final.CpuUploads != initial.CpuUploads)
@@ -541,11 +541,11 @@ internal static class CompositionSmoke
         string mediaPath = RepositoryPaths.TestMediaPath;
         if (!File.Exists(mediaPath)) { Console.Error.WriteLine($"[media-capabilities-smoke] FAIL fixture missing: {mediaPath}"); return 2; }
         string attachment = Path.Combine(Path.GetTempPath(), $"vlc-avalonia-{Guid.NewGuid():N}.srt");
-        VLCCorePlayer? player = null;
+        WindowsVlcCorePlayer? player = null;
         try
         {
             File.WriteAllText(attachment, "1\n00:00:00,000 --> 00:00:01,000\nCapability smoke\n");
-            player = new VLCCorePlayer(hardwareDecoding: false);
+            player = new WindowsVlcCorePlayer(hardwareDecoding: false);
             OpenAndWait(player, mediaPath, "media-capabilities-open");
             IVLCMediaCapabilitySmokeAdapter adapter = new DispatchingMediaCapabilitySmokeAdapter(player);
             VLCTitleChapterSnapshot? titleSnapshot = adapter.TryGetTitlesAndChapters(out VLCMediaResult titleRead);
@@ -590,10 +590,10 @@ internal static class CompositionSmoke
     {
         string mediaPath = RepositoryPaths.TestMediaPath;
         if (!File.Exists(mediaPath)) { Console.Error.WriteLine($"[player-capabilities-smoke] FAIL fixture missing: {mediaPath}"); return 2; }
-        VLCCorePlayer? player = null;
+        WindowsVlcCorePlayer? player = null;
         try
         {
-            player = new VLCCorePlayer(hardwareDecoding: false);
+            player = new WindowsVlcCorePlayer(hardwareDecoding: false);
             OpenAndWait(player, mediaPath, "player-capabilities-open");
             VLCPlayerSmokeReport report = player.RunPlayerCapabilitiesForSmoke();
             int passed = 0, skipped = 0, failed = 0;
@@ -609,7 +609,7 @@ internal static class CompositionSmoke
         finally { try { player?.Dispose(); } catch (Exception exception) { Console.Error.WriteLine($"[player-capabilities-smoke] cleanup player: {exception.Message}"); } }
     }
 
-    private sealed class DispatchingMediaCapabilitySmokeAdapter(VLCCorePlayer player) : IVLCMediaCapabilitySmokeAdapter
+    private sealed class DispatchingMediaCapabilitySmokeAdapter(WindowsVlcCorePlayer player) : IVLCMediaCapabilitySmokeAdapter
     {
         public VLCTrackSnapshot? TryGetTracks(out VLCMediaResult result)
         {
@@ -632,21 +632,21 @@ internal static class CompositionSmoke
     }
 
     private static void WaitForOpaquePool(
-        CompositionPluginBridge monitor,
-        CompositionPluginBridge.PoolTelemetry before,
+        D3D11PluginBridge monitor,
+        D3D11PluginBridge.PoolTelemetry before,
         string stage)
     {
         Stopwatch elapsed = Stopwatch.StartNew();
         while (elapsed.Elapsed < PlaybackStageTimeout)
         {
-            CompositionPluginBridge.PoolTelemetry current =
+            D3D11PluginBridge.PoolTelemetry current =
                 monitor.ReadPoolTelemetry();
             if (current.OpaquePoolGenerations >
                     before.OpaquePoolGenerations &&
                 current.OpaquePicturesReceived >
                     before.OpaquePicturesReceived &&
                 monitor.TryTakeLatestGPU(
-                    out CompositionPluginBridge.GPUFrame? frame) &&
+                    out D3D11PluginBridge.GPUFrame? frame) &&
                 frame is not null)
             {
                 try
@@ -674,7 +674,7 @@ internal static class CompositionSmoke
             Thread.Sleep(20);
         }
 
-        CompositionPluginBridge.PoolTelemetry last =
+        D3D11PluginBridge.PoolTelemetry last =
             monitor.ReadPoolTelemetry();
         Console.Error.WriteLine(last.ToMachineReadableString());
         throw new TimeoutException(
@@ -683,21 +683,21 @@ internal static class CompositionSmoke
     }
 
     private static void WaitForReleaseBalance(
-        CompositionPluginBridge monitor,
+        D3D11PluginBridge monitor,
         long expectedBalance,
         string stage)
     {
         Stopwatch elapsed = Stopwatch.StartNew();
         while (elapsed.Elapsed < ControlStageTimeout)
         {
-            CompositionPluginBridge.PoolTelemetry current =
+            D3D11PluginBridge.PoolTelemetry current =
                 monitor.ReadPoolTelemetry();
             if (current.ReleaseBalance == expectedBalance)
                 return;
             Thread.Sleep(20);
         }
 
-        CompositionPluginBridge.PoolTelemetry last =
+        D3D11PluginBridge.PoolTelemetry last =
             monitor.ReadPoolTelemetry();
         Console.Error.WriteLine(last.ToMachineReadableString());
         throw new InvalidOperationException(
@@ -706,7 +706,7 @@ internal static class CompositionSmoke
     }
 
     private static void OpenAndWait(
-        VLCCorePlayer player,
+        WindowsVlcCorePlayer player,
         string mediaPath,
         string stage)
     {
@@ -719,7 +719,7 @@ internal static class CompositionSmoke
             PlaybackStageTimeout);
     }
 
-    private static void StopAndWait(VLCCorePlayer player, string stage)
+    private static void StopAndWait(WindowsVlcCorePlayer player, string stage)
     {
         RunAction(stage, player.Stop, TimeSpan.FromSeconds(12));
         WaitForState(
@@ -729,7 +729,7 @@ internal static class CompositionSmoke
             ControlStageTimeout);
     }
 
-    private static void DisposeAndWait(VLCCorePlayer player, string stage) =>
+    private static void DisposeAndWait(WindowsVlcCorePlayer player, string stage) =>
         RunAction(stage, player.Dispose, TimeSpan.FromSeconds(12));
 
     private static void RunAction(
@@ -751,7 +751,7 @@ internal static class CompositionSmoke
     }
 
     private static void WaitForState(
-        VLCCorePlayer player,
+        WindowsVlcCorePlayer player,
         string stage,
         Func<Player.Contracts.MediaEngineState, bool> predicate,
         TimeSpan timeout)

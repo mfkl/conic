@@ -14,6 +14,20 @@ uploaded even when a test fails and retained for 14 days.
 
 Core checks do not build the UI or native plugin, and do not qualify playback.
 
+## Linux/macOS app coverage
+
+Four Desktop jobs build the real Avalonia app and run all 149 managed UI tests
+on Ubuntu 24.04 and macOS 15, in Debug and Release. They use the same pinned
+sibling VLCLR checkout and dependency-access settings as the Windows jobs.
+The `Desktop` script scope builds the UI test project and its app references;
+it excludes the Windows-only Native AOT vout project. It does not load native
+VLC or require a graphical session. These tests cover presentation models,
+storage, layout policies and backend lifecycle, not rendered UI or playback.
+
+The complete workflow has twelve jobs. `VLCLR_CI_ENABLED=true` enables both app
+matrices automatically; the `desktop_app` manual input can also request the
+Linux/macOS matrix independently of `full_windows`.
+
 ## Full Windows coverage
 
 The Windows matrix builds the complete solution and runs all 221
@@ -27,10 +41,10 @@ CI checks out the repositories side by side in the runner workspace:
 ```text
 $GITHUB_WORKSPACE/
   vlc-avalonia/    # product checkout; build/test working directory
-  vlclr/          # separate pinned dependency checkout; full Windows job only
+  vlclr/          # separate pinned dependency checkout; Desktop/Windows jobs
 ```
 
-The full job passes `-FrameworkRoot ../vlclr`, which sets `VLCLR_ROOT` for the
+The app jobs pass `-FrameworkRoot ../vlclr`, which sets `VLCLR_ROOT` for the
 build. VLCLR is neither cloned inside the product checkout nor committed to it.
 No NuGet publication is needed. Artifact upload paths are relative to the runner
 workspace and point into `vlc-avalonia/artifacts/ci`.
@@ -57,7 +71,7 @@ For a fresh repository, reproduce the setup as follows:
 
 No dependency commits, secrets or repository variables are published/configured
 by the workflow itself. Pull requests from forks do not receive this secret;
-their Core jobs can still run, while an enabled full Windows job will fail its
+their Core jobs can still run, while enabled app jobs will fail their
 prerequisite check. Do not use `pull_request_target` to execute untrusted PR code.
 
 Hosted jobs do not run hardware-decoding or compositor smokes. Those require
@@ -72,6 +86,7 @@ PowerShell 7 and .NET 10 are required. Restore is enabled by default; use
 
 ```powershell
 ./eng/test.ps1 -Scope Core -Configuration Release
+./eng/test.ps1 -Scope Desktop -Configuration Release -FrameworkRoot ../vlclr
 ./eng/test.ps1 -Scope Windows -Configuration Debug -FrameworkRoot ../vlclr
 ./eng/test.ps1 -Scope Windows -Configuration Release -FrameworkRoot ../vlclr
 ```

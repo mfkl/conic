@@ -1,11 +1,11 @@
 using TerraFX.Interop;
 using static TerraFX.Interop.Windows;
 
-namespace VLCAvalonia.Interop;
+namespace VLCAvalonia.Interop.Windows;
 
 internal static unsafe class D3D11SharedTextureProbe
 {
-    public static CompositionPluginBridge.AdapterLuid
+    public static D3D11PluginBridge.AdapterLuid
         GetDefaultHardwareAdapterForSmoke()
     {
         ID3D11Device* device = null;
@@ -53,7 +53,7 @@ internal static unsafe class D3D11SharedTextureProbe
             CheckHResult(
                 adapter->GetDesc(&description),
                 "IDXGIAdapter.GetDesc(smoke selector)");
-            return new CompositionPluginBridge.AdapterLuid(
+            return new D3D11PluginBridge.AdapterLuid(
                 description.AdapterLuid.LowPart,
                 description.AdapterLuid.HighPart);
         }
@@ -71,7 +71,7 @@ internal static unsafe class D3D11SharedTextureProbe
     }
 
     public static string OpenAndSynchronize(
-        CompositionPluginBridge.GPUFrame frame)
+        D3D11PluginBridge.GPUFrame frame)
     {
         ID3D11Device* device = null;
         ID3D11DeviceContext* context = null;

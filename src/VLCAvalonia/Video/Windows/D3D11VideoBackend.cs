@@ -1,3 +1,4 @@
+using VLCAvalonia.Interop.Windows;
 using System.Buffers.Binary;
 using Avalonia;
 using Avalonia.Controls;
@@ -16,7 +17,7 @@ internal sealed class D3D11VideoBackend : IVideoBackend
 {
     private readonly Control _host;
     private readonly VideoBackendOptions _options;
-    private CompositionPluginBridge? _bridge;
+    private D3D11PluginBridge? _bridge;
     private bool _disposed;
     private WriteableBitmap? _bitmap;
     private ICompositionGpuInterop? _GPUInterop;
@@ -27,7 +28,7 @@ internal sealed class D3D11VideoBackend : IVideoBackend
     private VideoGeometry _geometry;
     internal VideoSurfaceLayout CurrentVideoLayout => VideoSurfaceLayout.Calculate(_host.Bounds.Size, new Size(_videoWidth, _videoHeight), _geometry, TopLevel.GetTopLevel(_host)?.RenderScaling ?? 1);
     private ulong _importedGeneration;
-    private CompositionPluginBridge.AdapterLuid? _compositorAdapter;
+    private D3D11PluginBridge.AdapterLuid? _compositorAdapter;
     private int _videoWidth;
     private int _videoHeight;
     private bool _GPUUpdatePending;
@@ -39,7 +40,7 @@ internal sealed class D3D11VideoBackend : IVideoBackend
     {
         _host = host;
         _options = options;
-        _bridge = new CompositionPluginBridge();
+        _bridge = new D3D11PluginBridge();
         try { _bridge.ClearAdapterSelection(); }
         catch
         {
@@ -60,7 +61,7 @@ internal sealed class D3D11VideoBackend : IVideoBackend
         ObjectDisposedException.ThrowIf(_disposed, this);
         if (!NativePlaybackSupport.IsAvailable)
             throw new PlatformNotSupportedException(NativePlaybackSupport.CurrentUnavailableReason);
-        return new VLCCorePlayer(audioStartupArguments: audioStartupArguments);
+        return new WindowsVlcCorePlayer(audioStartupArguments: audioStartupArguments);
     }
 
     public async Task InitializeAsync()
@@ -89,7 +90,7 @@ internal sealed class D3D11VideoBackend : IVideoBackend
                 return;
             }
 
-            CompositionPluginBridge.AdapterLuid compositorAdapter =
+            D3D11PluginBridge.AdapterLuid compositorAdapter =
                 ParseAdapterLuid(interop.DeviceLuid);
 
             CompositionGpuImportedImageSynchronizationCapabilities sync =
@@ -114,9 +115,9 @@ internal sealed class D3D11VideoBackend : IVideoBackend
             _videoClip.ClipToBounds = true;
             _videoClip.Children.Add(_surfaceVisual);
             ElementComposition.SetElementChildVisual(_host, _videoClip);
-            CompositionPluginBridge.AdapterLuid requestedAdapter =
+            D3D11PluginBridge.AdapterLuid requestedAdapter =
                 _options.ForceUnavailableAdapter
-                    ? new CompositionPluginBridge.AdapterLuid(
+                    ? new D3D11PluginBridge.AdapterLuid(
                         compositorAdapter.LowPart ^ uint.MaxValue,
                         compositorAdapter.HighPart ^ int.MinValue)
                     : compositorAdapter;
@@ -137,7 +138,7 @@ internal sealed class D3D11VideoBackend : IVideoBackend
         }
     }
 
-    private static CompositionPluginBridge.AdapterLuid ParseAdapterLuid(
+    private static D3D11PluginBridge.AdapterLuid ParseAdapterLuid(
         byte[]? bytes)
     {
         if (bytes is null || bytes.Length != 8)
@@ -146,7 +147,7 @@ internal sealed class D3D11VideoBackend : IVideoBackend
                 "Avalonia compositor did not expose an 8-byte D3D adapter LUID.");
         }
 
-        return new CompositionPluginBridge.AdapterLuid(
+        return new D3D11PluginBridge.AdapterLuid(
             BinaryPrimitives.ReadUInt32LittleEndian(bytes.AsSpan(0, 4)),
             BinaryPrimitives.ReadInt32LittleEndian(bytes.AsSpan(4, 4)));
     }
@@ -169,14 +170,14 @@ internal sealed class D3D11VideoBackend : IVideoBackend
 
         if (_GPUEnabled && !_GPUUpdatePending &&
             _bridge?.TryTakeLatestGPU(
-                out CompositionPluginBridge.GPUFrame? GPUFrame) == true &&
+                out D3D11PluginBridge.GPUFrame? GPUFrame) == true &&
             GPUFrame is not null)
         {
             await PresentGPUFrameAsync(GPUFrame);
             return;
         }
 
-        if (_bridge?.TryTakeLatest(out CompositionPluginBridge.Frame? frame)
+        if (_bridge?.TryTakeLatest(out D3D11PluginBridge.Frame? frame)
             != true || frame is null)
         {
             return;
@@ -210,7 +211,7 @@ internal sealed class D3D11VideoBackend : IVideoBackend
     private void ProcessLatestTelemetry()
     {
         if (_bridge?.TryTakeLatestTelemetry(
-                out CompositionPluginBridge.DeviceTelemetry? telemetry) !=
+                out D3D11PluginBridge.DeviceTelemetry? telemetry) !=
             true || telemetry is null)
         {
             return;
@@ -263,7 +264,7 @@ internal sealed class D3D11VideoBackend : IVideoBackend
     }
 
     private static unsafe void CopyFrameToBitmap(
-        CompositionPluginBridge.Frame frame,
+        D3D11PluginBridge.Frame frame,
         WriteableBitmap bitmap)
     {
         using ILockedFramebuffer locked = bitmap.Lock();
@@ -278,7 +279,7 @@ internal sealed class D3D11VideoBackend : IVideoBackend
     }
 
     private async Task PresentGPUFrameAsync(
-        CompositionPluginBridge.GPUFrame frame)
+        D3D11PluginBridge.GPUFrame frame)
     {
         if (_GPUInterop is null || _drawingSurface is null ||
             _surfaceVisual is null)

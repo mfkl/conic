@@ -667,8 +667,11 @@ public sealed class PlayerPresentationViewModelTests
             PlayerPresentationViewModel vm = new(transport, new PlaylistPicker(null, playlist), () => { });
             transport.Publish(new(1, 1, QueueLoadState.Ready, [new("one", "One", "first.mp4", 0, true), new("two", "Two", "https://example.test/second.mp4", 1, false)], 0, QueueRepeatMode.None, QueueOrder.Normal));
 
-            vm.Registry.Execute(PlayerCommandId.SavePlaylist);
-            string content = await WaitForReadableTextAsync(playlist);
+            Assert.True(vm.SavePlaylistCommand.CanExecute(null));
+            // Unix can read a newly created file before its asynchronous write
+            // finishes. Await completion instead of relying on Windows sharing.
+            await vm.SavePlaylistAsync();
+            string content = await File.ReadAllTextAsync(playlist);
 
             Assert.Equal(["first.mp4", "https://example.test/second.mp4"], M3uPlaylistDocument.Parse(content));
         }
@@ -683,16 +686,6 @@ public sealed class PlayerPresentationViewModelTests
             await Task.Delay(10);
         }
         Assert.True(condition(), "The asynchronous playlist operation did not complete.");
-    }
-
-    private static async Task<string> WaitForReadableTextAsync(string path)
-    {
-        for (int attempt = 0; attempt < 50; attempt++)
-        {
-            try { return await File.ReadAllTextAsync(path); }
-            catch (IOException) { await Task.Delay(10); }
-        }
-        return await File.ReadAllTextAsync(path);
     }
 
     [Fact]

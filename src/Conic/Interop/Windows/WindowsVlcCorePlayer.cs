@@ -8,10 +8,10 @@ using Player.Application;
 using VLCLR;
 using VLCLR.Native;
 
-namespace Conic.Interop;
+namespace Conic.Interop.Windows;
 
 [SupportedOSPlatform("windows")]
-internal sealed unsafe partial class VLCCorePlayer : IMediaEngine, IQueueTransport, IMediaCapabilitiesTransport, IMediaInformationTransport, IVideoAdjustmentTransport, IVLCPlaylistQueueSmokeAdapter, IVLCMediaCapabilitySmokeAdapter
+internal sealed unsafe partial class WindowsVlcCorePlayer : IMediaEngine, IQueueTransport, IMediaCapabilitiesTransport, IMediaInformationTransport, IVideoAdjustmentTransport, IVLCPlaylistQueueSmokeAdapter, IVLCMediaCapabilitySmokeAdapter
 {
     private const int PlaylistStopped = 0;
     private const int PlaylistRunning = 1;
@@ -22,7 +22,7 @@ internal sealed unsafe partial class VLCCorePlayer : IMediaEngine, IQueueTranspo
     private readonly object _gate = new();
     private readonly object _disposeGate = new();
     private readonly MediaEngineStateStore _states = new();
-    private readonly CompositionPluginBridge _playlistBridge;
+    private readonly D3D11PluginBridge _playlistBridge;
     private readonly bool _ownsPlaylistBridge;
     private readonly bool _hardwareDecoding;
     private readonly bool _verboseLogging;
@@ -47,13 +47,13 @@ internal sealed unsafe partial class VLCCorePlayer : IMediaEngine, IQueueTranspo
     private nint _lastObservedInputIdentity;
     private int _disposed;
 
-    public VLCCorePlayer(bool hardwareDecoding = true, bool verboseLogging = false, IReadOnlyList<string>? audioStartupArguments = null)
+    public WindowsVlcCorePlayer(bool hardwareDecoding = true, bool verboseLogging = false, IReadOnlyList<string>? audioStartupArguments = null)
     {
         NativePlaybackSupport.RequireAvailable();
         _hardwareDecoding = hardwareDecoding;
         _verboseLogging = verboseLogging;
         _audioStartupArguments = audioStartupArguments?.ToArray() ?? [];
-        _playlistBridge = new CompositionPluginBridge(
+        _playlistBridge = new D3D11PluginBridge(
             registerFrameCallback: false);
         _ownsPlaylistBridge = true;
         _playlistBridge.ConnectPlaylist();
@@ -653,7 +653,7 @@ internal sealed unsafe partial class VLCCorePlayer : IMediaEngine, IQueueTranspo
                     $"libvlc_InternalInit failed with {result}.");
             initialized = true;
 
-            result = VLC3PlaylistControl.AddInterface(
+            result = WindowsVlcCoreApi.AddInterface(
                 core,
                 "vlc_avalonia_control");
             if (result != 0)
@@ -907,44 +907,4 @@ internal sealed unsafe partial class VLCCorePlayer : IMediaEngine, IQueueTranspo
             Volatile.Read(ref _disposed) != 0,
             this);
 
-    private static class VLC3PlaylistControl
-    {
-        private const int InputSetPositionQuery = 1;
-        private static readonly nint Library =
-            NativeLibrary.Load(RepositoryPaths.CoreLibraryPath);
-        private static readonly delegate* unmanaged[Cdecl]<nint, byte*, int>
-            AddIntf =
-                (delegate* unmanaged[Cdecl]<nint, byte*, int>)
-                NativeLibrary.GetExport(Library, "libvlc_InternalAddIntf");
-        private static readonly delegate* unmanaged[Cdecl]<nint, int, nint, int>
-            InputVaControl =
-                (delegate* unmanaged[Cdecl]<nint, int, nint, int>)
-                NativeLibrary.GetExport(Library, "input_vaControl");
-
-        public static int AddInterface(nint core, string name)
-        {
-            nint pointer = Marshal.StringToCoTaskMemUTF8(name);
-            try
-            {
-                return AddIntf(core, (byte*)pointer);
-            }
-            finally
-            {
-                Marshal.FreeCoTaskMem(pointer);
-            }
-        }
-
-        public static int SetInputPosition(nint input, double position)
-        {
-            // On the pinned Win64 VLC 3 ABI, va_list is a pointer into the
-            // argument save area. Calling exported input_vaControl with a
-            // single double avoids pretending variadic input_Control is a
-            // fixed-signature P/Invoke.
-            double argument = position;
-            return InputVaControl(
-                input,
-                InputSetPositionQuery,
-                (nint)(void*)(&argument));
-        }
-    }
 }

@@ -28,8 +28,8 @@ the latest implementation, validation results, captures and review launcher.
 | Platform | Playback | Hosted CI |
 | --- | --- | --- |
 | Windows x64 | D3D11 hardware decoding and GPU presentation implemented | Full solution tests in Debug/Release; Release Native AOT publish |
-| Linux | Hardware backend still to be implemented | Core tests in Debug/Release |
-| macOS | Hardware backend still to be implemented | Core tests in Debug/Release |
+| Linux | Hardware backend still to be implemented | App build, managed UI tests and Core tests in Debug/Release |
+| macOS | Hardware backend still to be implemented | App build, managed UI tests and Core tests in Debug/Release |
 
 Hardware decoding and GPU presentation are required for the Linux/macOS ports.
 Runtime discovery and managed portability groundwork are implemented; passing
@@ -139,10 +139,16 @@ implementation, qualification commands, measured counters, and remaining work.
 
 ## Tests and CI
 
-The eight-job GitHub Actions matrix runs on pushes and pull requests:
+The fifteen-job GitHub Actions matrix runs on pushes and pull requests:
 
 - Core: 72 tests per configuration on Windows, Ubuntu and macOS.
-- Full Windows: all 213 managed tests per configuration, plus the Release
+- Hosted graphics diagnostics in Release jobs: launch the compositor probe and
+  retain capability reports. Linux uses Xvfb; this does not qualify hardware playback.
+- Native ABI: compile and execute VLCLR's layout probe against the pinned VLC
+  source headers using the native Windows, Linux and macOS compilers.
+- Desktop app: build the app and run 149 managed UI tests per configuration on
+  Ubuntu and macOS, using the pinned sibling VLCLR checkout.
+- Full Windows: all 221 managed tests per configuration, plus the Release
   Windows x64 Native AOT plugin publish.
 
 All eight jobs passed for commit `f709051` in
@@ -151,14 +157,20 @@ Run the same checks locally with PowerShell 7:
 
 ```powershell
 ./eng/test.ps1 -Scope Core -Configuration Release
+./eng/test.ps1 -Scope Desktop -Configuration Release -FrameworkRoot ../vlclr
 ./eng/test.ps1 -Scope Windows -Configuration Debug -FrameworkRoot ../vlclr
 ./eng/test.ps1 -Scope Windows -Configuration Release -FrameworkRoot ../vlclr
 ```
 
-Core tests need neither VLCLR nor native VLC. Full Windows checks require the
-exact VLCLR pin with clean tracked files. Hosted runners do not qualify hardware
+Core tests need neither VLCLR nor native VLC. Desktop and full Windows checks
+require the exact VLCLR pin with clean tracked files. Desktop tests do not load
+native VLC or open a graphical session. Hosted runners do not qualify hardware
 decoding or compositor behavior; those checks run separately on GPU machines.
 See [CI setup](docs/CI.md) and [platform qualification](docs/CROSS_PLATFORM.md).
+The [video backend guide](docs/VIDEO_BACKENDS.md) describes compositor ownership,
+attachment lifecycle, and the remaining native work for Linux/macOS.
+The [target qualification guide](docs/TARGET_QUALIFICATION.md) explains native
+layout checks and `--graphics-probe`, which queries the compositor without VLC.
 
 ## Using the player
 

@@ -86,6 +86,11 @@ CPU-based port is introduced by this boundary.
    `VLCVideoPresentation` explicitly guards Windows x64. The product's vout and
    internal-core integration are also Windows-specific. Reusable fixes and
    native ABI probes belong in VLCLR, followed by a reviewed product pin update.
+   The pinned VLC 3 branch now supplies an opt-in `VLC3ControlBridge`: fixed
+   managed signatures call a native helper compiled against VLC 3 headers.
+   Its calling conventions are exercised by native fixtures in CI; the existing
+   playback owners still use their Windows path until real-runtime integration
+   and native bridge packaging are validated.
 2. Start from VLCLR's `tests/AbiValidation/verify-vlc-abi.sh` and
    `vlclr_abi.cpp`, using headers built for the actual target. Existing layout
    assertions are an input to qualification, not proof that variadic calls or

@@ -173,6 +173,17 @@ jobs:
           dotnet-version: ${{ steps.pins.outputs.sdk }}
       - name: Build, test and publish native plugin
         run: ./eng/test.ps1 -Scope Windows -Configuration '${{ matrix.configuration }}' -FrameworkRoot ../vlclr
+      - name: Exercise graphics diagnostic on hosted Windows
+        if: matrix.configuration == 'Release'
+        run: ./eng/test-graphics.ps1 -AllowUnavailable
+      - name: Upload Windows graphics diagnostic
+        if: always() && matrix.configuration == 'Release'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: graphics-windows-2022
+          path: vlc-avalonia/artifacts/graphics-ci/
+          if-no-files-found: warn
+          retention-days: 14
       - name: Upload Windows results and native plugin
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -229,6 +240,26 @@ jobs:
           dotnet-version: ${{ steps.pins.outputs.sdk }}
       - name: Build app and run managed UI tests
         run: ./eng/test.ps1 -Scope Desktop -Configuration '${{ matrix.configuration }}' -FrameworkRoot ../vlclr
+      - name: Install Linux virtual display tools
+        if: matrix.os == 'ubuntu-24.04' && matrix.configuration == 'Release'
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y xvfb xauth
+      - name: Exercise graphics diagnostic on hosted Linux
+        if: matrix.os == 'ubuntu-24.04' && matrix.configuration == 'Release'
+        run: ./eng/test-graphics.ps1 -UseXvfb -AllowUnavailable
+      - name: Exercise graphics diagnostic on hosted macOS
+        if: matrix.os == 'macos-15' && matrix.configuration == 'Release'
+        run: ./eng/test-graphics.ps1 -AllowUnavailable
+      - name: Upload desktop graphics diagnostic
+        if: always() && matrix.configuration == 'Release'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: graphics-${{ matrix.os }}
+          path: vlc-avalonia/artifacts/graphics-ci/
+          if-no-files-found: warn
+          retention-days: 14
       - name: Upload app test results
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

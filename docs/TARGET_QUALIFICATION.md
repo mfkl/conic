@@ -64,6 +64,13 @@ automatically select or force a compositor backend.
 
 ## Evidence needed next
 
+CI now exercises the graphics diagnostic in Release app jobs on all three OSes,
+using Xvfb for Linux. `eng/test-graphics.ps1` rejects crashes, missing/invalid
+reports and timeouts. Hosted jobs pass `-AllowUnavailable` so a valid report that
+the compositor lacks interop is retained as `interop-unavailable`; it is never
+recorded as a hardware-playback pass. Download the `graphics-*` artifacts to
+inspect each runner's actual capabilities before planning a GPU-backed test.
+
 Keep the native ABI report, compiler/probe logs, graphics JSON and the GPU/driver
 and OS details together. Next, validate actual native exports and the framework's
 variadic-call ABI, then implement decoder surface ownership, GPU conversion,

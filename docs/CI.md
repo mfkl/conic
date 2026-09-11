@@ -28,6 +28,20 @@ The complete workflow has fifteen jobs. `VLCLR_CI_ENABLED=true` enables both app
 matrices automatically; the `desktop_app` manual input can also request the
 Linux/macOS matrix independently of `full_windows`.
 
+## Hosted graphics diagnostics
+
+Release app jobs also launch `--graphics-probe`: Ubuntu uses an Xvfb X11 display;
+macOS and Windows use the runner desktop. No native VLC runtime is loaded.
+`eng/test-graphics.ps1` enforces a 45-second process timeout, validates the JSON
+and exit code, and uploads stdout/stderr, capability JSON and `result.json`.
+Crashes, malformed/missing reports, timeouts and query errors fail the job.
+
+Hosted diagnostics explicitly allow a valid `interop-unavailable` result. A
+green job establishes that GUI startup and reporting work; it does not establish
+GPU access or hardware decoding. `interop-advertised` also remains unqualified
+for actual image import and playback. There is no `continue-on-error` bypass.
+Linux coverage here is X11 through Xvfb, not a Wayland session.
+
 ## Native ABI coverage
 
 Three Native ABI jobs compile and execute the pinned VLCLR layout probe against

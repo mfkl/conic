@@ -2,9 +2,9 @@ using Player.Application;
 using Player.Contracts;
 using VLCLR;
 
-namespace Conic.Interop;
+namespace Conic.Interop.Windows;
 
-internal sealed partial class VLCCorePlayer
+internal sealed partial class WindowsVlcCorePlayer
 {
     private readonly VLCVideoPresentation _videoControls;
     private VideoAdjustmentState _videoAdjustments = VideoAdjustmentState.Unavailable;

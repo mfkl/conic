@@ -2,6 +2,7 @@
   "dotnetSdk": "10.0.102",
   "avalonia": "12.1.1",
   "vlc": {
+    "repository": "videolan/vlc",
     "version": "3.0.24-beta1",
     "sourceCommit": "5fbc6904a2e4a96e9956a5d8503ac4db4ebaf702",
     "moduleAbi": "3_0_0f"

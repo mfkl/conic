@@ -15,6 +15,12 @@ public partial class App : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
+            if (desktop.Args?.Contains("--graphics-probe", StringComparer.OrdinalIgnoreCase) == true)
+            {
+                desktop.MainWindow = Video.GraphicsInteropProbe.CreateWindow(desktop, desktop.Args);
+                base.OnFrameworkInitializationCompleted();
+                return;
+            }
             MainWindow window = new();
             desktop.MainWindow = window;
             if (desktop.Args?.Contains("--video-smoke", StringComparer.OrdinalIgnoreCase) == true)

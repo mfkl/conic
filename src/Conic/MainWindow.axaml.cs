@@ -559,6 +559,8 @@ public partial class MainWindow : Window
         ulong firstDeviceGeneration = 0;
         ulong firstResourceGeneration = 0;
         string? firstAdapter = null;
+        IMediaEngine? playerBeforeDetach = null;
+        int reattachments = 0;
         int phase = 0;
         DispatcherTimer timeout = new()
         {
@@ -588,6 +590,26 @@ public partial class MainWindow : Window
         VideoSurface.GPUFramePresentedForSmoke +=
             (deviceGeneration, resourceGeneration, adapter) =>
             {
+                if (phase == 3) return; // The detach is queued after this frame callback.
+                if (phase == 4)
+                {
+                    if (VideoSurface.Player is null || ReferenceEquals(playerBeforeDetach, VideoSurface.Player) ||
+                        !string.Equals(firstAdapter, adapter, StringComparison.Ordinal))
+                    {
+                        timeout.Stop();
+                        Console.Error.WriteLine("[composition-ui-smoke] Reattachment did not create a new player on the same adapter.");
+                        desktop.Shutdown(1);
+                        return;
+                    }
+                    Console.WriteLine($"[composition-ui-smoke] PASS reattach={++reattachments} adapter-luid={adapter}");
+                    if (reattachments == 3)
+                    {
+                        timeout.Stop();
+                        desktop.Shutdown(0);
+                    }
+                    else ReattachSurface();
+                    return;
+                }
                 if (phase == 0)
                 {
                     firstDeviceGeneration = deviceGeneration;
@@ -640,14 +662,35 @@ public partial class MainWindow : Window
                     return;
                 }
 
-                timeout.Stop();
                 Console.WriteLine(
                     "[composition-ui-smoke] PASS reopen " +
                     $"device-generation={deviceGeneration} " +
                     $"resource-generation={resourceGeneration} " +
                     $"adapter-luid={adapter}");
-                desktop.Shutdown(0);
+                ReattachSurface();
             };
+
+        void ReattachSurface()
+        {
+            playerBeforeDetach = VideoSurface.Player;
+            phase = 3;
+            Dispatcher.UIThread.Post(() =>
+            {
+                try
+                {
+                    int index = VideoArea.Children.IndexOf(VideoSurface);
+                    VideoArea.Children.RemoveAt(index);
+                    VideoArea.Children.Insert(index, VideoSurface);
+                    phase = 4;
+                }
+                catch (Exception exception)
+                {
+                    timeout.Stop();
+                    Console.Error.WriteLine($"[composition-ui-smoke] Reattachment failed: {exception}");
+                    desktop.Shutdown(1);
+                }
+            });
+        }
         Opened += (_, _) => { OpenTestMedia(); timeout.Start(); };
     }
 

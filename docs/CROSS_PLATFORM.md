@@ -7,6 +7,11 @@ evidence that hardware decoding occurred.
 
 ## Implemented from Windows
 
+- The shared video control delegates native transport and rendering to an
+  attachment-scoped backend. The Windows implementation owns adapter selection,
+  D3D11 import/synchronization and fallback resources. Session ownership prevents
+  player startup and queued notifications after detachment. See
+  [the backend boundary and regression evidence](VIDEO_BACKENDS.md).
 - Runtime discovery no longer initializes repository paths as a prerequisite
   for installed playback. Explicit `VLC_DIRECTORY` takes precedence over
   app-local libraries and the development sibling checkout. Invalid explicit

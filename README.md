@@ -142,7 +142,7 @@ implementation, qualification commands, measured counters, and remaining work.
 The eight-job GitHub Actions matrix runs on pushes and pull requests:
 
 - Core: 72 tests per configuration on Windows, Ubuntu and macOS.
-- Full Windows: all 213 managed tests per configuration, plus the Release
+- Full Windows: all 221 managed tests per configuration, plus the Release
   Windows x64 Native AOT plugin publish.
 
 All eight jobs passed for commit `f709051` in
@@ -159,6 +159,8 @@ Core tests need neither VLCLR nor native VLC. Full Windows checks require the
 exact VLCLR pin with clean tracked files. Hosted runners do not qualify hardware
 decoding or compositor behavior; those checks run separately on GPU machines.
 See [CI setup](docs/CI.md) and [platform qualification](docs/CROSS_PLATFORM.md).
+The [video backend guide](docs/VIDEO_BACKENDS.md) describes compositor ownership,
+attachment lifecycle, and the remaining native work for Linux/macOS.
 
 ## Using the player
 

@@ -16,7 +16,7 @@ Core checks do not build the UI or native plugin, and do not qualify playback.
 
 ## Full Windows coverage
 
-The Windows matrix builds the complete solution and runs all 213
+The Windows matrix builds the complete solution and runs all 221
 managed tests in Debug and Release. Release also publishes the Windows x64
 Native AOT plugin. It verifies the dependency HEAD against `eng/versions.json`
 and rejects modified tracked dependency files. Test results and native outputs

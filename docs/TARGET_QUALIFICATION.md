@@ -1,7 +1,7 @@
 # Preparing a Linux/macOS hardware port
 
-Two diagnostics collect different evidence before a native playback backend is
-enabled. Neither starts a decoder or qualifies hardware playback.
+Three diagnostics collect different evidence before a native playback backend is
+enabled. None starts a decoder or qualifies hardware playback.
 
 ## Native header layouts
 
@@ -33,6 +33,27 @@ calls, every VLC structure, decoder surfaces or GPU presentation.
 
 The three Native ABI CI jobs perform this check on Windows, Linux and macOS.
 The product, VLCLR and VLC are separate sibling checkouts on those runners.
+
+## Native control calling conventions
+
+The pinned VLC 3 framework includes an opt-in typed native control bridge. It
+uses the target C++ compiler to construct `va_list` and call VLC's variadic
+playlist export instead of passing Windows argument slots from managed code.
+
+```powershell
+../vlclr/eng/test-control-bridge.ps1 -VlcIncludeDirectory ../vlc-vlc3-abi/include
+```
+
+The executable crosses the C# / native boundary and checks a native fixture's
+argument consumption: position/rate round trips, output arrays, error status,
+playlist queries, locking flags and disposal. CI runs it on all three hosts,
+against this application's pinned VLC 3 headers. The framework also checks
+its own header pin. The fixture is not a VLC runtime and must not be deployed.
+
+This is a reusable call boundary, not yet wired into the existing Windows
+transport/queue/video owners. Real runtime export/call checks, ownership
+integration and native library packaging remain necessary before enabling it
+in a playback backend. Its introduction does not enable Unix playback.
 
 ## Actual compositor capabilities
 
@@ -72,8 +93,8 @@ recorded as a hardware-playback pass. Download the `graphics-*` artifacts to
 inspect each runner's actual capabilities before planning a GPU-backed test.
 
 Keep the native ABI report, compiler/probe logs, graphics JSON and the GPU/driver
-and OS details together. Next, validate actual native exports and the framework's
-variadic-call ABI, then implement decoder surface ownership, GPU conversion,
+and OS details together. Next, validate actual native exports, integrate the
+tested control bridge into playback owners, then implement decoder surface ownership, GPU conversion,
 synchronization and compositor import. Follow the hardware-only acceptance gates
 in [CROSS_PLATFORM.md](CROSS_PLATFORM.md), including H.264/HEVC where supported,
 zero CPU transfers, lifecycle, color/subtitles and installed-app checks.

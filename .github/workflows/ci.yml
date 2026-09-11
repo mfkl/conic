@@ -101,6 +101,9 @@ jobs:
           "framework_commit=$($pins.vlclr.commit)" >> $env:GITHUB_OUTPUT
           "vlc_repository=$($pins.vlc.repository)" >> $env:GITHUB_OUTPUT
           "vlc_commit=$($pins.vlc.sourceCommit)" >> $env:GITHUB_OUTPUT
+          "sdk=$($pins.dotnetSdk)" >> $env:GITHUB_OUTPUT
+          @{ sdk = @{ version = $pins.dotnetSdk; rollForward = 'disable' } } |
+            ConvertTo-Json -Depth 3 | Set-Content global.json
       - name: Checkout pinned VLCLR probe
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -118,6 +121,11 @@ jobs:
           persist-credentials: false
       - name: Compile and execute native layout probe
         run: ./eng/verify-native-abi.ps1 -FrameworkRoot ../vlclr -VlcSourceRoot ../vlc
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          dotnet-version: ${{ steps.pins.outputs.sdk }}
+      - name: Exercise typed VLC 3 native control calls
+        run: ../vlclr/eng/test-control-bridge.ps1 -VlcIncludeDirectory ../vlc/include -OutputDirectory artifacts/native-abi/control-bridge
       - name: Upload native ABI evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       full_windows:
-        description: 'Also build/test the full Windows app and AOT plugin (requires published VLCLR pin and VLCLR_READ_TOKEN)'
+        description: 'Also build/test the full Windows app and AOT plugin (requires pushed VLCLR pin and VLCLR_SSH_KEY)'
         type: boolean
         default: false
 
@@ -83,10 +83,10 @@ jobs:
       - name: Read pins and check dependency access
         id: pins
         env:
-          VLCLR_READ_TOKEN: ${{ secrets.VLCLR_READ_TOKEN }}
+          VLCLR_SSH_KEY: ${{ secrets.VLCLR_SSH_KEY }}
         run: |
-          if ([string]::IsNullOrWhiteSpace($env:VLCLR_READ_TOKEN)) {
-            throw 'Configure VLCLR_READ_TOKEN with Contents: read access to the pinned private VLCLR repository. See docs/CI.md.'
+          if ([string]::IsNullOrWhiteSpace($env:VLCLR_SSH_KEY)) {
+            throw 'Configure VLCLR_SSH_KEY with a read-only deploy key for the pinned private VLCLR repository. See docs/CI.md.'
           }
           $pins = Get-Content eng/versions.json -Raw | ConvertFrom-Json
           "sdk=$($pins.dotnetSdk)" >> $env:GITHUB_OUTPUT
@@ -100,7 +100,7 @@ jobs:
           repository: ${{ steps.pins.outputs.repository }}
           ref: ${{ steps.pins.outputs.commit }}
           path: vlclr
-          token: ${{ secrets.VLCLR_READ_TOKEN }}
+          ssh-key: ${{ secrets.VLCLR_SSH_KEY }}
           persist-credentials: false
       - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
         with:

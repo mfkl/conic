@@ -80,7 +80,7 @@ public sealed class MediaOpeningTests
     [Fact]
     public void HistoryDeduplicatesAndHonorsPrivacyAndThresholds()
     {
-        MemoryHistory storage = new(); MediaHistoryService history = new(storage, () => DateTimeOffset.UnixEpoch);
+        MemoryHistory storage = new(); MediaHistoryService history = new(storage, () => DateTimeOffset.UnixEpoch, identity: new MediaSourceIdentity(caseSensitiveFiles: false));
         MediaSource source = new("C:\\Media\\One.mp4", MediaSourceKind.File, "One.mp4");
         history.RecordOpened(source, true); history.RecordOpened(source with { CanonicalSource = "c:\\media\\one.mp4" }, true);
         Assert.Single(history.Recent); history.Checkpoint(source, TimeSpan.FromSeconds(45), TimeSpan.FromMinutes(2), true, 30, 20);

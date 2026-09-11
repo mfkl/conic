@@ -22,13 +22,26 @@ Native AOT plugin. It verifies the dependency HEAD against `eng/versions.json`
 and rejects modified tracked dependency files. Test results and native outputs
 are retained for 14 days.
 
+CI checks out the repositories side by side in the runner workspace:
+
+```text
+$GITHUB_WORKSPACE/
+  conic/    # product checkout; build/test working directory
+  vlclr/          # separate pinned dependency checkout; full Windows job only
+```
+
+The full job passes `-FrameworkRoot ../vlclr`, which sets `VLCLR_ROOT` for the
+build. VLCLR is neither cloned inside the product checkout nor committed to it.
+No NuGet publication is needed. Artifact upload paths are relative to the runner
+workspace and point into `conic/artifacts/ci`.
+
 This job is initially disabled because the pinned VLCLR commit is local-only.
 On 2026-09-11, GitHub reported that commit
 `50d849200c3dfb2b047e20a174ae66b56a19adcd` was absent from both
 `mfkl/vlclr` and `mfkl/vlclr-private`; the product repository had no Actions secrets.
 To enable the full job:
 
-1. Publish the reviewed dependency commit to `mfkl/vlclr-private` (the repository
+1. Push the reviewed Git commit to `mfkl/vlclr-private` (the repository
    in `eng/versions.json`). Keep the product pin; do not substitute current VLCLR
    main, which targets another VLC ABI.
 2. Configure the product repository secret `VLCLR_READ_TOKEN` with Contents: read
@@ -58,11 +71,12 @@ PowerShell 7 and .NET 10 are required. Restore is enabled by default; use
 
 ```powershell
 ./eng/test.ps1 -Scope Core -Configuration Release
-./eng/test.ps1 -Scope Windows -Configuration Debug -FrameworkRoot /path/to/pinned/vlclr
-./eng/test.ps1 -Scope Windows -Configuration Release -FrameworkRoot /path/to/pinned/vlclr
+./eng/test.ps1 -Scope Windows -Configuration Debug -FrameworkRoot ../vlclr
+./eng/test.ps1 -Scope Windows -Configuration Release -FrameworkRoot ../vlclr
 ```
 
 The scripts return failure when a build, test, native publish or pin check fails.
+The local sibling checkout must be at the pinned commit with clean tracked files.
 They write results under `artifacts/ci`. CI creates a job-local `global.json` to
 enforce the exact SDK pin; local scripts use the installed SDK selection.
 

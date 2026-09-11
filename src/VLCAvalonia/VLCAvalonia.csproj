@@ -24,9 +24,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="..\Shared\VideoGeometry.cs" Link="Interop\VideoGeometry.cs" />
     <ProjectReference Include="..\Player.Contracts\Player.Contracts.csproj" />
     <ProjectReference Include="..\Player.Domain\Player.Domain.csproj" />
-    <ProjectReference Include="..\..\..\vlclr\src\VLCLR\VLCLR.csproj" />
+    <ProjectReference Include="..\Player.Application\Player.Application.csproj" />
+    <ProjectReference Include="$(VLCLR_ROOT)\src\VLCLR\VLCLR.csproj" />
   </ItemGroup>
 
 </Project>

@@ -7,6 +7,7 @@ using Avalonia.Platform;
 using Avalonia.Rendering.Composition;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using Player.Application;
 using Player.Contracts;
 using VLCAvalonia.Interop;
 
@@ -21,11 +22,18 @@ public sealed class CompositionVideoSurface : Control, IDisposable
     private readonly DispatcherTimer _frameTimer;
     private CompositionPluginBridge? _bridge;
     private IMediaEngine? _player;
+    internal IMediaEngine? Player => _player;
     private WriteableBitmap? _bitmap;
     private ICompositionGpuInterop? _GPUInterop;
     private ICompositionImportedGpuImage? _importedImage;
     private CompositionDrawingSurface? _drawingSurface;
     private CompositionSurfaceVisual? _surfaceVisual;
+    private CompositionContainerVisual? _videoClip;
+    private VideoGeometry _geometry;
+    internal VideoGeometry GeometryForSmoke => _geometry;
+    internal bool HasCpuFrameForSmoke => _reportedFirstCPUFrame;
+    internal bool HasGpuFrameForSmoke => _reportedFirstGPUFrame;
+    internal VideoSurfaceLayout CurrentVideoLayout => VideoSurfaceLayout.Calculate(Bounds.Size, new Size(_videoWidth, _videoHeight), _geometry, TopLevel.GetTopLevel(this)?.RenderScaling ?? 1);
     private ulong _importedGeneration;
     private CompositionPluginBridge.AdapterLuid? _compositorAdapter;
     private int _videoWidth;
@@ -35,6 +43,13 @@ public sealed class CompositionVideoSurface : Control, IDisposable
     private bool _reportedFirstGPUFrame;
     private bool _reportedFirstCPUFrame;
     private bool _attached;
+    private IReadOnlyList<string>? _pendingQueueSources;
+    private IReadOnlyList<string> _audioStartupArguments = [];
+    internal IReadOnlyList<string> AudioStartupArguments
+    {
+        get => _audioStartupArguments;
+        set => _audioStartupArguments = Array.AsReadOnly((value ?? []).ToArray());
+    }
 
     internal bool ForceUnavailableAdapterForSmoke { get; set; }
 
@@ -42,6 +57,14 @@ public sealed class CompositionVideoSurface : Control, IDisposable
 
     public event Action<string>? StatusChanged;
     public event EventHandler<MediaEngineState>? EngineStateChanged;
+    public event EventHandler<PlaybackQueueState>? QueueStateChanged;
+    public event EventHandler<MediaCapabilitiesState>? MediaCapabilitiesChanged;
+    public event EventHandler<MediaInformationState>? MediaInformationChanged;
+    public event EventHandler<VideoAdjustmentState>? VideoAdjustmentsChanged;
+    public VideoAdjustmentState VideoAdjustments => (_player as IVideoAdjustmentTransport)?.VideoAdjustments ?? VideoAdjustmentState.Unavailable;
+    public void SetVideoAdjustment(VideoAdjustmentState expected, string setting, string value) => (_player as IVideoAdjustmentTransport)?.SetVideoAdjustment(expected, setting, value);
+    public MediaInformationState MediaInformation => (_player as IMediaInformationTransport)?.MediaInformation ?? MediaInformationState.Unavailable;
+    public void RefreshMediaInformation() => (_player as IMediaInformationTransport)?.RefreshMediaInformation();
     internal event Action<ulong, ulong, string>? GPUFramePresentedForSmoke;
 
     public string? MediaPath
@@ -72,6 +95,11 @@ public sealed class CompositionVideoSurface : Control, IDisposable
     {
         base.OnAttachedToVisualTree(e);
         _attached = true;
+        if (!NativePlaybackSupport.IsAvailable)
+        {
+            ReportStatus(NativePlaybackSupport.CurrentUnavailableReason!);
+            return;
+        }
         try
         {
             _bridge = new CompositionPluginBridge();
@@ -100,7 +128,12 @@ public sealed class CompositionVideoSurface : Control, IDisposable
         if (_attached && _player is not null &&
             !string.IsNullOrWhiteSpace(path))
         {
-            _player.Open(path);
+            if (_pendingQueueSources is { } sources && _player is IQueueTransport queue)
+            {
+                _pendingQueueSources = null;
+                queue.OpenQueue(sources);
+            }
+            else _player.Open(path);
         }
     }
 
@@ -112,7 +145,37 @@ public sealed class CompositionVideoSurface : Control, IDisposable
     public void SetVolume(double normalizedVolume) =>
         _player?.SetVolume(normalizedVolume);
 
+    public void SetMuted(bool muted) => _player?.SetMuted(muted);
+
+    public void Skip(TimeSpan offset) => _player?.Skip(offset);
+
+    public void SetPlaybackRate(double playbackRate) => _player?.SetPlaybackRate(playbackRate);
+
     public void Stop() => _player?.Stop();
+
+    public PlaybackQueueState QueueState => (_player as IQueueTransport)?.QueueState ?? PlaybackQueueState.Initial;
+    public MediaCapabilitiesState MediaCapabilities => (_player as IMediaCapabilitiesTransport)?.MediaCapabilities ?? MediaCapabilitiesState.Initial;
+    public void OpenQueue(IReadOnlyList<string> sources)
+    {
+        if (sources.Count == 0) return;
+        if (_player is IQueueTransport queue) queue.OpenQueue(sources);
+        else { _pendingQueueSources = sources.ToArray(); MediaPath = sources[0]; }
+    }
+    public void Enqueue(IEnumerable<string> sources) => (_player as IQueueTransport)?.Enqueue(sources);
+    public void SelectAndPlay(string token) => (_player as IQueueTransport)?.SelectAndPlay(token);
+    public void MoveQueueItem(string token, int destination) => (_player as IQueueTransport)?.Move(token, destination);
+    public void RemoveQueueItem(string token) => (_player as IQueueTransport)?.Remove(token);
+    public void ClearQueue() => (_player as IQueueTransport)?.ClearQueue();
+    public void PreviousQueueItem() => (_player as IQueueTransport)?.Previous();
+    public void NextQueueItem() => (_player as IQueueTransport)?.Next();
+    public void SetQueueRepeat(QueueRepeatMode mode) => (_player as IQueueTransport)?.SetRepeatMode(mode);
+    public void SetQueueOrder(QueueOrder order) => (_player as IQueueTransport)?.SetOrder(order);
+    public void SelectTrack(MediaTrackKind kind, string id) => (_player as IMediaCapabilitiesTransport)?.SelectTrack(kind, id);
+    public void SelectTitle(string id) => (_player as IMediaCapabilitiesTransport)?.SelectTitle(id);
+    public void SelectChapter(string id) => (_player as IMediaCapabilitiesTransport)?.SelectChapter(id);
+    public void SetDelayMilliseconds(MediaTrackKind kind, int milliseconds) => (_player as IMediaCapabilitiesTransport)?.SetDelayMilliseconds(kind, milliseconds);
+    public void ResetDelay(MediaTrackKind kind) => (_player as IMediaCapabilitiesTransport)?.ResetDelay(kind);
+    public ExternalTrackAttachmentState AttachExternalTrack(MediaTrackKind kind, string path) => (_player as IMediaCapabilitiesTransport)?.AttachExternalTrack(kind, path) ?? new(false, false, false, "Media controls are unavailable.");
 
     internal void ReopenForSmoke()
     {
@@ -187,7 +250,10 @@ public sealed class CompositionVideoSurface : Control, IDisposable
             _surfaceVisual = elementVisual.Compositor.CreateSurfaceVisual();
             _surfaceVisual.Surface = _drawingSurface;
             _surfaceVisual.ClipToBounds = true;
-            ElementComposition.SetElementChildVisual(this, _surfaceVisual);
+            _videoClip = elementVisual.Compositor.CreateContainerVisual();
+            _videoClip.ClipToBounds = true;
+            _videoClip.Children.Add(_surfaceVisual);
+            ElementComposition.SetElementChildVisual(this, _videoClip);
             CompositionPluginBridge.AdapterLuid requestedAdapter =
                 ForceUnavailableAdapterForSmoke
                     ? new CompositionPluginBridge.AdapterLuid(
@@ -231,12 +297,30 @@ public sealed class CompositionVideoSurface : Control, IDisposable
         if (!_attached || _player is not null)
             return;
 
+        if (!NativePlaybackSupport.IsAvailable)
+        {
+            ReportStatus(NativePlaybackSupport.CurrentUnavailableReason!);
+            return;
+        }
+
         try
         {
-            _player = new VLCCorePlayer();
+            _player = new VLCCorePlayer(audioStartupArguments: _audioStartupArguments);
             _player.StateChanged += OnEngineStateChanged;
-            if (!string.IsNullOrWhiteSpace(MediaPath))
-                _player.Open(MediaPath);
+            if (_player is IQueueTransport queue)
+                queue.QueueStateChanged += OnQueueStateChanged;
+            if (_player is IMediaCapabilitiesTransport capabilities)
+                capabilities.MediaCapabilitiesChanged += OnMediaCapabilitiesChanged;
+            if (_player is IMediaInformationTransport information)
+                information.MediaInformationChanged += OnMediaInformationChanged;
+            if (_player is IVideoAdjustmentTransport video)
+                video.VideoAdjustmentsChanged += OnVideoAdjustmentsChanged;
+            if (_pendingQueueSources is { } pending && _player is IQueueTransport pendingQueue)
+            {
+                _pendingQueueSources = null;
+                pendingQueue.OpenQueue(pending);
+            }
+            else if (!string.IsNullOrWhiteSpace(MediaPath)) _player.Open(MediaPath);
         }
         catch (Exception exception)
         {
@@ -244,9 +328,30 @@ public sealed class CompositionVideoSurface : Control, IDisposable
         }
     }
 
+    private void OnQueueStateChanged(object? sender, PlaybackQueueState state) =>
+        Dispatcher.UIThread.Post(() => QueueStateChanged?.Invoke(this, state));
+
+    private void OnMediaCapabilitiesChanged(object? sender, MediaCapabilitiesState state) =>
+        Dispatcher.UIThread.Post(() => MediaCapabilitiesChanged?.Invoke(this, state));
+    private void OnMediaInformationChanged(object? sender, MediaInformationState state) =>
+        Dispatcher.UIThread.Post(() => MediaInformationChanged?.Invoke(this, state));
+    private void OnVideoAdjustmentsChanged(object? sender, VideoAdjustmentState state) =>
+        Dispatcher.UIThread.Post(() => VideoAdjustmentsChanged?.Invoke(this, state));
+
     private async Task PresentLatestFrameAsync()
     {
         ProcessLatestTelemetry();
+        UpdateSurfaceLayout();
+        if (_bridge is not null)
+        {
+            var geometry = _bridge.GetVideoGeometry();
+            if (!_geometry.Equals(geometry))
+            {
+                _geometry = geometry;
+                UpdateSurfaceLayout();
+                InvalidateVisual();
+            }
+        }
 
         if (_GPUEnabled && !_GPUUpdatePending &&
             _bridge?.TryTakeLatestGPU(
@@ -276,6 +381,8 @@ public sealed class CompositionVideoSurface : Control, IDisposable
         }
 
         CopyFrameToBitmap(frame, _bitmap);
+        _videoWidth = frame.Width;
+        _videoHeight = frame.Height;
 
         if (!_reportedFirstCPUFrame)
         {
@@ -431,38 +538,24 @@ public sealed class CompositionVideoSurface : Control, IDisposable
 
     private void UpdateSurfaceLayout()
     {
-        if (_surfaceVisual is null || _videoWidth <= 0 || _videoHeight <= 0)
+        if (_surfaceVisual is null || _videoClip is null || _videoWidth <= 0 || _videoHeight <= 0)
             return;
-
-        double scale = Math.Min(
-            Bounds.Width / _videoWidth,
-            Bounds.Height / _videoHeight);
-        double width = _videoWidth * scale;
-        double height = _videoHeight * scale;
-        _surfaceVisual.Size = new Vector(width, height);
-        _surfaceVisual.Offset = new Vector3D(
-            (Bounds.Width - width) / 2,
-            (Bounds.Height - height) / 2,
-            0);
+        _videoClip.Opacity = _geometry.Active != 0 ? 1 : 0;
+        var layout = CurrentVideoLayout;
+        _videoClip.Size = new Vector(layout.Destination.Width, layout.Destination.Height);
+        _videoClip.Offset = new Vector3D(layout.Destination.X, layout.Destination.Y, 0);
+        _surfaceVisual.Size = new Vector(layout.FullImage.Width, layout.FullImage.Height);
+        _surfaceVisual.Offset = new Vector3D(layout.FullImage.X, layout.FullImage.Y, 0);
     }
 
     public override void Render(DrawingContext context)
     {
         context.FillRectangle(Brushes.Black, Bounds);
-        if (_GPUEnabled || _bitmap is null)
+        if (_GPUEnabled || _bitmap is null || _geometry.Active == 0)
             return;
 
-        Rect source = new(_bitmap.Size);
-        double scale = Math.Min(
-            Bounds.Width / source.Width,
-            Bounds.Height / source.Height);
-        Size size = new(source.Width * scale, source.Height * scale);
-        Rect destination = new(
-            (Bounds.Width - size.Width) / 2,
-            (Bounds.Height - size.Height) / 2,
-            size.Width,
-            size.Height);
-        context.DrawImage(_bitmap, source, destination);
+        var layout = CurrentVideoLayout;
+        context.DrawImage(_bitmap, layout.Source, layout.Destination);
     }
 
     private void ReportStatus(string status)
@@ -475,6 +568,14 @@ public sealed class CompositionVideoSurface : Control, IDisposable
         if (_player is not null)
         {
             _player.StateChanged -= OnEngineStateChanged;
+            if (_player is IQueueTransport queue)
+                queue.QueueStateChanged -= OnQueueStateChanged;
+            if (_player is IMediaCapabilitiesTransport capabilities)
+                capabilities.MediaCapabilitiesChanged -= OnMediaCapabilitiesChanged;
+            if (_player is IVideoAdjustmentTransport video)
+                video.VideoAdjustmentsChanged -= OnVideoAdjustmentsChanged;
+            if (_player is IMediaInformationTransport information)
+                information.MediaInformationChanged -= OnMediaInformationChanged;
             _player.Dispose();
             _player = null;
         }

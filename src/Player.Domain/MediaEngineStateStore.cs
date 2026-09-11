@@ -34,6 +34,30 @@ public sealed class MediaEngineStateStore
                 Duration = TimeSpan.Zero,
                 CanSeek = false,
                 Error = null,
+                Title = Path.GetFileNameWithoutExtension(source),
+            };
+            _state = next;
+        }
+        Changed?.Invoke(this, next);
+        return next.Generation;
+    }
+
+    public long BeginEmpty()
+    {
+        MediaEngineState next;
+        lock (_gate)
+        {
+            next = _state with
+            {
+                Generation = _state.Generation + 1,
+                Status = PlaybackStatus.Stopped,
+                Source = null,
+                Position = 0,
+                Elapsed = TimeSpan.Zero,
+                Duration = TimeSpan.Zero,
+                CanSeek = false,
+                Error = null,
+                Title = null,
             };
             _state = next;
         }
@@ -49,7 +73,10 @@ public sealed class MediaEngineStateStore
         TimeSpan duration,
         double volume,
         bool canSeek,
-        string? error = null)
+        string? error = null,
+        bool isMuted = false,
+        double playbackRate = 1,
+        string? title = null)
     {
         MediaEngineState? next = null;
         lock (_gate)
@@ -63,9 +90,14 @@ public sealed class MediaEngineStateStore
                 Position = Math.Clamp(position, 0, 1),
                 Elapsed = elapsed < TimeSpan.Zero ? TimeSpan.Zero : elapsed,
                 Duration = duration < TimeSpan.Zero ? TimeSpan.Zero : duration,
-                Volume = Math.Clamp(volume, 0, 1.25),
+                Volume = Math.Clamp(volume, 0, 2),
                 CanSeek = canSeek,
                 Error = error,
+                IsMuted = isMuted,
+                PlaybackRate = double.IsFinite(playbackRate)
+                    ? Math.Clamp(playbackRate, 1d / 32, 31.25)
+                    : _state.PlaybackRate,
+                Title = title ?? _state.Title,
             };
             _state = next;
         }

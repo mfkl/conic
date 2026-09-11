@@ -1,0 +1,117 @@
+name: Build and test
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      full_windows:
+        description: 'Also build/test the full Windows app and AOT plugin (requires pushed VLCLR pin and VLCLR_SSH_KEY)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+  DOTNET_NOLOGO: '1'
+
+jobs:
+  core:
+    name: Core / ${{ matrix.os }} / ${{ matrix.configuration }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, ubuntu-24.04, macos-15]
+        configuration: [Debug, Release]
+    defaults:
+      run:
+        shell: pwsh
+        working-directory: vlc-avalonia
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          path: vlc-avalonia
+          persist-credentials: false
+      - name: Read SDK pin
+        id: pins
+        run: |
+          $pins = Get-Content eng/versions.json -Raw | ConvertFrom-Json
+          "sdk=$($pins.dotnetSdk)" >> $env:GITHUB_OUTPUT
+          @{ sdk = @{ version = $pins.dotnetSdk; rollForward = 'disable' } } |
+            ConvertTo-Json -Depth 3 | Set-Content global.json
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          dotnet-version: ${{ steps.pins.outputs.sdk }}
+      - name: Test application and engine contracts
+        run: ./eng/test.ps1 -Scope Core -Configuration '${{ matrix.configuration }}'
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: core-${{ matrix.os }}-${{ matrix.configuration }}
+          path: vlc-avalonia/artifacts/ci/Core/${{ matrix.configuration }}/*.trx
+          if-no-files-found: warn
+          retention-days: 14
+
+  windows:
+    name: Full Windows / ${{ matrix.configuration }}
+    # Automatic full builds can be enabled after the private dependency is ready.
+    if: vars.VLCLR_CI_ENABLED == 'true' || (github.event_name == 'workflow_dispatch' && inputs.full_windows)
+    runs-on: windows-2022
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        configuration: [Debug, Release]
+    defaults:
+      run:
+        shell: pwsh
+        working-directory: vlc-avalonia
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          path: vlc-avalonia
+          persist-credentials: false
+      - name: Read pins and check dependency access
+        id: pins
+        env:
+          VLCLR_SSH_KEY: ${{ secrets.VLCLR_SSH_KEY }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:VLCLR_SSH_KEY)) {
+            throw 'Configure VLCLR_SSH_KEY with a read-only deploy key for the pinned private VLCLR repository. See docs/CI.md.'
+          }
+          $pins = Get-Content eng/versions.json -Raw | ConvertFrom-Json
+          "sdk=$($pins.dotnetSdk)" >> $env:GITHUB_OUTPUT
+          "repository=$($pins.vlclr.repository)" >> $env:GITHUB_OUTPUT
+          "commit=$($pins.vlclr.commit)" >> $env:GITHUB_OUTPUT
+          @{ sdk = @{ version = $pins.dotnetSdk; rollForward = 'disable' } } |
+            ConvertTo-Json -Depth 3 | Set-Content global.json
+      - name: Checkout pinned VLCLR
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: ${{ steps.pins.outputs.repository }}
+          ref: ${{ steps.pins.outputs.commit }}
+          path: vlclr
+          ssh-key: ${{ secrets.VLCLR_SSH_KEY }}
+          persist-credentials: false
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          dotnet-version: ${{ steps.pins.outputs.sdk }}
+      - name: Build, test and publish native plugin
+        run: ./eng/test.ps1 -Scope Windows -Configuration '${{ matrix.configuration }}' -FrameworkRoot ../vlclr
+      - name: Upload Windows results and native plugin
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: windows-${{ matrix.configuration }}
+          path: vlc-avalonia/artifacts/ci/Windows/${{ matrix.configuration }}/
+          if-no-files-found: warn
+          retention-days: 14

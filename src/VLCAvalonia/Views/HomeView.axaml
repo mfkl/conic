@@ -1,0 +1,102 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:VLCAvalonia.ViewModels" xmlns:controls="clr-namespace:VLCAvalonia.Controls"
+             x:Class="VLCAvalonia.Views.HomeView" x:Name="HomeRoot" x:DataType="vm:PlayerPresentationViewModel"
+             Classes.list="{Binding HomeListLayout}" Background="Black">
+    <UserControl.Styles>
+        <Style Selector="Button.navigation">
+            <Setter Property="HorizontalContentAlignment" Value="Left"/><Setter Property="HorizontalAlignment" Value="Stretch"/><Setter Property="Height" Value="44"/>
+            <Setter Property="Padding" Value="12,0"/><Setter Property="Margin" Value="4,2"/>
+            <Setter Property="Background" Value="Transparent"/><Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="{DynamicResource PlayerSecondaryText}"/>
+        </Style>
+        <Style Selector="Button.navigation.selected"><Setter Property="Foreground" Value="{DynamicResource PlayerAccent}"/><Setter Property="Background" Value="{DynamicResource PlayerSelection}"/></Style>
+        <Style Selector=":is(UserControl).compact TextBlock.navLabel"><Setter Property="IsVisible" Value="False"/></Style>
+        <Style Selector=":is(UserControl).compact Button.navigation"><Setter Property="Padding" Value="10,0"/></Style>
+        <Style Selector=":is(UserControl).compact Button.headerOpen"><Setter Property="IsVisible" Value="False"/></Style>
+        <Style Selector="Border.mediaCard"><Setter Property="Width" Value="232"/><Setter Property="Margin" Value="0,0,16,16"/></Style>
+        <Style Selector="ItemsControl.mediaItems"><Setter Property="ItemsPanel"><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></Setter></Style>
+        <Style Selector=":is(UserControl).list ItemsControl.mediaItems"><Setter Property="ItemsPanel"><ItemsPanelTemplate><StackPanel/></ItemsPanelTemplate></Setter></Style>
+        <Style Selector=":is(UserControl).list Border.mediaCard"><Setter Property="Width" Value="NaN"/><Setter Property="Margin" Value="0,0,0,8"/></Style>
+        <Style Selector=":is(UserControl).list Border.artwork"><Setter Property="IsVisible" Value="False"/></Style>
+    </UserControl.Styles>
+    <Grid RowDefinitions="52,*,Auto">
+        <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto,Auto" Margin="12,0">
+            <Button Classes="iconChrome" Command="{Binding ShowPlayerCommand}" ToolTip.Tip="Return to player" AutomationProperties.Name="Return to player">
+                <PathIcon Width="20" Height="20" Data="M10,3 L1,12 L10,21 L12,19 L6,13 H23 V11 H6 L12,5 Z"/>
+            </Button>
+            <controls:VlcCone Grid.Column="1" Width="30" Height="34" Margin="12,0"/>
+            <TextBlock Grid.Column="2" Text="VLC" FontSize="18" VerticalAlignment="Center" Foreground="{DynamicResource PlayerText}"/>
+            <Button Grid.Column="3" Classes="playbackAction headerOpen" Content="Open file" Command="{Binding OpenMediaCommand}"/>
+            <Button Grid.Column="4" Classes="iconChrome" Command="{Binding ToggleQueueCommand}" ToolTip.Tip="Playback queue" AutomationProperties.Name="Playback queue">
+                <PathIcon Width="20" Height="20" Data="M3,5 H21 V7 H3 Z M3,11 H21 V13 H3 Z M3,17 H15 V19 H3 Z"/>
+            </Button>
+            <Button Grid.Column="5" Classes="iconChrome" Content="⋮" FontSize="24" Click="OnMore" ToolTip.Tip="Open options" AutomationProperties.Name="Open options"/>
+        </Grid>
+        <Grid Grid.Row="1" x:Name="HomeColumns" ColumnDefinitions="176,*">
+            <Grid RowDefinitions="*,Auto">
+                <StackPanel Margin="0,8,0,0">
+                    <Button Classes="navigation" Classes.selected="{Binding IsHomeSection}" Command="{Binding SelectHomeSectionCommand}" CommandParameter="Home" ToolTip.Tip="Home" AutomationProperties.Name="Home"><StackPanel Orientation="Horizontal" Spacing="14"><PathIcon Width="22" Height="22" Data="M2,11 L12,2 L22,11 L20,13 L19,12 V22 H14 V15 H10 V22 H5 V12 L4,13 Z"/><TextBlock Classes="navLabel" Text="Home" VerticalAlignment="Center"/></StackPanel></Button>
+                    <Button Classes="navigation" Classes.selected="{Binding IsRecentSection}" Command="{Binding SelectHomeSectionCommand}" CommandParameter="Recent" ToolTip.Tip="Recent" AutomationProperties.Name="Recent"><StackPanel Orientation="Horizontal" Spacing="14"><PathIcon Width="22" Height="22" Data="M12,2 A10,10 0 1 0 12,22 A10,10 0 1 0 12,2 M12,4 A8,8 0 1 1 12,20 A8,8 0 1 1 12,4 M11,6 H13 V12 L17,15 L16,17 L11,13 Z"/><TextBlock Classes="navLabel" Text="Recent" VerticalAlignment="Center"/></StackPanel></Button>
+                    <Button Classes="navigation" Classes.selected="{Binding IsFavoritesSection}" Command="{Binding SelectHomeSectionCommand}" CommandParameter="Favorites" ToolTip.Tip="Favorites" AutomationProperties.Name="Favorites"><StackPanel Orientation="Horizontal" Spacing="14"><PathIcon Width="22" Height="22" Data="M12,2 L15,9 L23,9 L17,14 L19,22 L12,17 L5,22 L7,14 L1,9 L9,9 Z"/><TextBlock Classes="navLabel" Text="Favorites" VerticalAlignment="Center"/></StackPanel></Button>
+                    <Button Classes="navigation" Classes.selected="{Binding IsContinueSection}" Command="{Binding SelectHomeSectionCommand}" CommandParameter="Continue watching" ToolTip.Tip="Continue watching" AutomationProperties.Name="Continue watching"><StackPanel Orientation="Horizontal" Spacing="14"><PathIcon Width="22" Height="22" Data="M3,3 H21 V21 H3 Z M7,6 V18 L18,12 Z"/><TextBlock Classes="navLabel" Text="Continue" VerticalAlignment="Center"/></StackPanel></Button>
+                </StackPanel>
+                <Button Grid.Row="1" Classes="navigation" Command="{Binding OpenSettingsCommand}" ToolTip.Tip="Preferences" AutomationProperties.Name="Preferences"><StackPanel Orientation="Horizontal" Spacing="14"><TextBlock Text="⚙" FontSize="25" Width="22"/><TextBlock Classes="navLabel" Text="Preferences" VerticalAlignment="Center"/></StackPanel></Button>
+            </Grid>
+            <Border Grid.Column="1" Background="#212121" CornerRadius="8,0,0,0">
+                <Grid Margin="24" RowDefinitions="Auto,Auto,*">
+                    <Grid IsVisible="{Binding !ShowHomeWelcome}" ColumnDefinitions="*,Auto" Margin="0,0,0,16">
+                        <TextBlock Text="{Binding HomeSection}" FontSize="24" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                        <Button Grid.Column="1" Classes="playbackAction" Content="{Binding HomeLayoutLabel}" Command="{Binding ToggleHomeLayoutCommand}"/>
+                    </Grid>
+                    <StackPanel Grid.Row="1" Spacing="8" Margin="0,0,0,16" IsVisible="{Binding !ShowHomeWelcome}">
+                        <TextBox x:Name="HomeSearchBox" Text="{Binding HomeSearch}" PlaceholderText="Search your media" AutomationProperties.Name="Search your media"/>
+                        <TextBlock IsVisible="{Binding HomeHistoryPrivate}" Text="Some history is turned off in Preferences." TextWrapping="Wrap" Foreground="{DynamicResource PlayerSecondaryText}" FontSize="12"/>
+                        <Button Classes="playbackAction" Content="Manage library" Command="{Binding OpenLibraryCommand}" HorizontalAlignment="Left"/>
+                    </StackPanel>
+                    <Grid Grid.RowSpan="3" IsVisible="{Binding ShowHomeWelcome}">
+                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="24">
+                            <controls:VlcCone Width="108" Height="108" HorizontalAlignment="Center"/>
+                            <StackPanel Orientation="Horizontal" Spacing="16" HorizontalAlignment="Center">
+                                <Button x:Name="HomeOpenFile" Classes="openMedia" MinWidth="100" Height="40" CornerRadius="4" Content="Open file" Command="{Binding OpenMediaCommand}"/>
+                                <Button Classes="openMedia" MinWidth="100" Height="40" CornerRadius="4" Content="Open folder" Command="{Binding OpenFolderCommand}"/>
+                            </StackPanel>
+                            <TextBlock Text="or drop media anywhere" FontSize="12" Foreground="{DynamicResource PlayerSecondaryText}" HorizontalAlignment="Center"/>
+                        </StackPanel>
+                    </Grid>
+                    <TextBlock Grid.Row="2" IsVisible="{Binding ShowHomeEmpty}" Text="{Binding HomeEmptyMessage}" TextWrapping="Wrap" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource PlayerSecondaryText}"/>
+                    <ScrollViewer Grid.Row="2" IsVisible="{Binding HomeHasItems}" HorizontalScrollBarVisibility="Disabled">
+                        <ItemsControl Classes="mediaItems" ItemsSource="{Binding HomeItems}">
+                            <ItemsControl.ItemTemplate><DataTemplate x:DataType="vm:HomeMediaItem">
+                                <Border Classes="mediaCard" Background="#292929" CornerRadius="6" ClipToBounds="True">
+                                    <StackPanel>
+                                        <Button Classes="menuAction" Padding="0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Command="{Binding DataContext.OpenRecentCommand, ElementName=HomeRoot}" CommandParameter="{Binding Source}" AutomationProperties.Name="{Binding Title}">
+                                            <StackPanel>
+                                                <Border Classes="artwork" Height="116" Background="#303030"><controls:MediaThumbnail Source="{Binding Source}"/></Border>
+                                                <StackPanel Margin="12" Spacing="6"><TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" FontWeight="SemiBold"/><TextBlock Text="{Binding Detail}" Foreground="{DynamicResource PlayerSecondaryText}" FontSize="12"/><ProgressBar IsVisible="{Binding HasProgress}" Minimum="0" Maximum="1" Value="{Binding Progress}" Height="3" Foreground="{DynamicResource PlayerAccent}"/></StackPanel>
+                                            </StackPanel>
+                                        </Button>
+                                        <StackPanel Orientation="Horizontal" Spacing="4" Margin="4,0,4,4">
+                                            <Button Classes="playbackAction" Content="+ Queue" Command="{Binding DataContext.EnqueueHomeItemCommand, ElementName=HomeRoot}" CommandParameter="{Binding Source}" AutomationProperties.Name="{Binding Title, StringFormat='Add {0} to queue'}"/>
+                                            <Button Classes="playbackAction" Content="☆" Command="{Binding DataContext.AddFavoriteCommand, ElementName=HomeRoot}" CommandParameter="{Binding Source}" ToolTip.Tip="Add to favorites" AutomationProperties.Name="{Binding Title, StringFormat='Add {0} to favorites'}"/>
+                                            <Button Classes="playbackAction" Content="×" Command="{Binding DataContext.RemoveHomeItemCommand, ElementName=HomeRoot}" CommandParameter="{Binding}" ToolTip.Tip="Remove from this section" AutomationProperties.Name="{Binding Title, StringFormat='Remove {0} from this section'}"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate></ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </Grid>
+            </Border>
+        </Grid>
+        <Border Grid.Row="2" IsVisible="{Binding ShowMiniPlayer}" Background="#181818" BorderBrush="#303030" BorderThickness="0,1,0,0" Padding="12,8">
+            <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto" RowDefinitions="Auto,4" RowSpacing="8">
+                <Button Classes="menuAction" HorizontalContentAlignment="Stretch" Command="{Binding ShowPlayerCommand}"><TextBlock Text="{Binding MediaTitle}" TextTrimming="CharacterEllipsis"/></Button>
+                <Button Grid.Column="1" Classes="playbackAction" Content="{Binding PlayPauseName}" Command="{Binding TogglePauseCommand}"/>
+                <Button x:Name="HomeStopButton" Grid.Column="2" Classes="playbackAction" Command="{Binding StopCommand}" ToolTip.Tip="Stop playback" AutomationProperties.Name="Stop playback"><PathIcon Width="14" Height="14" Data="M4,4 H20 V20 H4 Z"/></Button>
+                <Button Grid.Column="3" Classes="playbackAction" Content="↗" Command="{Binding ShowPlayerCommand}" ToolTip.Tip="Return to player" AutomationProperties.Name="Return to player"/>
+                <Button Grid.Column="4" Classes="playbackAction" Command="{Binding TogglePictureInPictureCommand}" ToolTip.Tip="Picture in picture" AutomationProperties.Name="Picture in picture"><PathIcon Width="18" Height="18" Data="M2,3 H22 V21 H2 Z M4,5 V19 H20 V5 Z M12,12 H18 V17 H12 Z"/></Button>
+                <ProgressBar Grid.Row="1" Grid.ColumnSpan="5" Minimum="0" Maximum="1" Value="{Binding Position}" Foreground="{DynamicResource PlayerAccent}" Height="3"/>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

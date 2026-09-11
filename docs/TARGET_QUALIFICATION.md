@@ -55,6 +55,14 @@ transport/queue/video owners. Real runtime export/call checks, ownership
 integration and native library packaging remain necessary before enabling it
 in a playback backend. Its introduction does not enable Unix playback.
 
+The initial bridge CI run passed on Windows x64, Linux x64 and macOS ARM64,
+alongside all 420 framework tests on each host. A Windows app build against
+the new framework code also passed the hardware engine smoke and three stress
+cycles on Intel Iris Xe: D3D11VA, zero CPU pictures/uploads, and 240 picture
+allocations/releases. Local evidence: `artifacts/vlc3-controls-engine.log`.
+This checks that the existing Windows path still works; it does not exercise
+the new bridge against a real VLC runtime.
+
 ## Actual compositor capabilities
 
 Build the app with the pinned VLCLR checkout, then run in a graphical session:

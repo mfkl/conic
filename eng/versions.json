@@ -10,7 +10,7 @@
   "vlclr": {
     "repository": "mfkl/vlclr-private",
     "branch": "feature/vlc3-portable-controls",
-    "commit": "f90ac0d130ce20996c288a29dca9f43d8738ef1e",
+    "commit": "09b46d50848cc0abe3c236e7a25e43679ee13c02",
     "consumption": "sibling-project-reference"
   }
 }

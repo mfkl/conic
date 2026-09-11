@@ -7,8 +7,9 @@
     "moduleAbi": "3_0_0f"
   },
   "vlclr": {
-    "branch": "3.x",
-    "commit": "dca5e306785e389257843a9121e10bb500054d9b",
+    "repository": "mfkl/vlclr-private",
+    "branch": "feature/vlc3-video-adjustments",
+    "commit": "50d849200c3dfb2b047e20a174ae66b56a19adcd",
     "consumption": "sibling-project-reference"
   }
 }

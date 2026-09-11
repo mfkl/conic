@@ -19,7 +19,10 @@ public sealed record MediaEngineState(
     TimeSpan Duration,
     double Volume,
     bool CanSeek,
-    string? Error)
+    string? Error,
+    bool IsMuted = false,
+    double PlaybackRate = 1,
+    string? Title = null)
 {
     public static MediaEngineState Initial { get; } = new(
         0,
@@ -46,6 +49,12 @@ public interface IMediaEngine : IDisposable
     void Seek(double normalizedPosition);
 
     void SetVolume(double normalizedVolume);
+
+    void SetMuted(bool muted);
+
+    void Skip(TimeSpan offset);
+
+    void SetPlaybackRate(double playbackRate);
 
     void Stop();
 }

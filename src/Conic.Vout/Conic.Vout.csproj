@@ -16,13 +16,19 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="..\Shared\VideoGeometry.cs" Link="Interop\VideoGeometry.cs" />
     <PackageReference Include="TerraFX.Interop.Windows" Version="10.0.20348-beta1" />
-    <ProjectReference Include="..\..\..\vlclr\src\VLCLR\VLCLR.csproj" />
+    <ProjectReference Include="$(VLCLR_ROOT)\src\VLCLR\VLCLR.csproj" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(RuntimeIdentifier)' == 'win-x64'">
     <DirectPInvoke Include="libvlccore" />
-    <NativeLibrary Include="..\..\..\vlclr\lib\libvlccore.lib" />
+    <NativeLibrary Include="$(VLCLR_ROOT)\lib\libvlccore.lib" />
   </ItemGroup>
+
+  <Target Name="RequireImplementedVideoBackend" BeforeTargets="PrepareForBuild"
+          Condition="'$(RuntimeIdentifier)' != 'win-x64'">
+    <Error Text="Conic.Vout implements the Windows x64 D3D11 backend. Linux/macOS hardware backends and their VLC ABIs must be implemented before publishing for $(RuntimeIdentifier)." />
+  </Target>
 
 </Project>

@@ -1,4 +1,5 @@
-using System.Runtime.InteropServices;
+using VLCAvalonia.Video;
+using VLCAvalonia.Interop.Windows;
 using Avalonia;
 using VLCAvalonia.Interop;
 
@@ -6,32 +7,18 @@ namespace VLCAvalonia;
 
 internal static class Program
 {
-    [DllImport("kernel32", CharSet = CharSet.Unicode)]
-    private static extern bool SetDllDirectoryW(string lpPathName);
-
-    private static void SetupVLCPath()
-    {
-        if (!NativePlaybackSupport.IsAvailable)
-            return;
-        string VLCDirectory = RepositoryPaths.VLCDirectory;
-        if (!Directory.Exists(VLCDirectory))
-            return;
-
-        SetDllDirectoryW(VLCDirectory);
-        NativeLibrary.Load(RepositoryPaths.CoreLibraryPath);
-        NativeLibrary.Load(RepositoryPaths.PublicLibraryPath);
-    }
-
     [STAThread]
     public static int Main(string[] args)
     {
+        if (args.Contains("--graphics-probe", StringComparer.OrdinalIgnoreCase))
+            return BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
         bool runsWindowsSmoke = args.Any(arg => arg.Equals("--engine-smoke", StringComparison.OrdinalIgnoreCase) || arg.Equals("--queue-smoke", StringComparison.OrdinalIgnoreCase) || arg.Equals("--media-capabilities-smoke", StringComparison.OrdinalIgnoreCase) || arg.Equals("--player-capabilities-smoke", StringComparison.OrdinalIgnoreCase) || arg.Equals("--opaque-smoke", StringComparison.OrdinalIgnoreCase) || arg.Equals("--smoke", StringComparison.OrdinalIgnoreCase));
         if (runsWindowsSmoke && !NativePlaybackSupport.IsAvailable)
         {
             Console.Error.WriteLine(NativePlaybackSupport.CurrentUnavailableReason);
             return 2;
         }
-        SetupVLCPath();
+        VideoBackendFactory.InitializeRuntime();
         int cycles = ParseCycles(args);
         if (args.Contains("--engine-smoke", StringComparer.OrdinalIgnoreCase))
             return CompositionSmoke.RunEngine(cycles);

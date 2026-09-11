@@ -133,6 +133,7 @@ internal sealed unsafe class CompositionPluginBridge : IDisposable
 
     public CompositionPluginBridge(bool registerFrameCallback = true)
     {
+        NativePlaybackSupport.RequireAvailable();
         string pluginPath = FindPluginPath();
         PluginDirectory = Path.GetDirectoryName(pluginPath)!;
         _library = NativeLibrary.Load(pluginPath);
@@ -550,50 +551,7 @@ internal sealed unsafe class CompositionPluginBridge : IDisposable
     private void ThrowIfDisposed() =>
         ObjectDisposedException.ThrowIf(IsDisposed, this);
 
-    private static string FindPluginPath()
-    {
-        string root = RepositoryPaths.Root;
-        string fileName = "libvlc_avalonia_plugin.dll";
-        string[] candidates =
-        [
-            Path.Combine(
-                RepositoryPaths.VLCDirectory,
-                "plugins",
-                "video_output",
-                fileName),
-            Path.Combine(
-                root,
-                "src",
-                "VLCAvalonia.Vout",
-                "bin",
-                "Release",
-                "net10.0",
-                "win-x64",
-                "native",
-                fileName),
-            Path.Combine(
-                root,
-                "src",
-                "VLCAvalonia.Vout",
-                "bin",
-                "Debug",
-                "net10.0",
-                "win-x64",
-                "native",
-                fileName),
-        ];
-
-        foreach (string candidate in candidates)
-        {
-            if (File.Exists(candidate))
-                return candidate;
-        }
-
-        throw new FileNotFoundException(
-            "Publish src/VLCAvalonia.Vout for win-x64 before starting " +
-            "VLC Avalonia.",
-            candidates[1]);
-    }
+    private static string FindPluginPath() => RepositoryPaths.PluginPath;
 
     public void Dispose()
     {

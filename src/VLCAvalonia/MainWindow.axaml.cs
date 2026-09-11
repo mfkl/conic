@@ -82,10 +82,14 @@ public partial class MainWindow : Window
         Activated += (_, _) => WakeChrome();
     }
 
-    internal static IReadOnlyList<string> ToAudioArguments(PlayerSettings settings) => new VLCAudioStartupOptions(
-        settings.AudioOutputModule == "Default" ? null : settings.AudioOutputModule,
-        settings.NormalizationMaximumLevel is double level ? (float)level : null,
-        settings.AudioPassthrough).ToArguments();
+    internal static IReadOnlyList<string> ToAudioArguments(PlayerSettings settings, bool? windows = null)
+    {
+        string output = AudioOutputPolicy.Effective(settings.AudioOutputModule, windows);
+        return new VLCAudioStartupOptions(
+            output == "Default" ? null : output,
+            settings.NormalizationMaximumLevel is double level ? (float)level : null,
+            settings.AudioPassthrough).ToArguments();
+    }
 
     private void OnPlayerInteraction(object? sender, PointerEventArgs e)
     {
@@ -170,7 +174,7 @@ public partial class MainWindow : Window
         }
         if (SettingsPanel.IsVisible || ShortcutFocusPolicy.Suppresses(e.Source)) return;
         string key = e.Key == Key.OemComma ? "," : e.Key.ToString();
-        string modifiers = (e.KeyModifiers.HasFlag(KeyModifiers.Control) ? "Ctrl+" : "") + (e.KeyModifiers.HasFlag(KeyModifiers.Alt) ? "Alt+" : "") + (e.KeyModifiers.HasFlag(KeyModifiers.Shift) ? "Shift+" : "");
+        string modifiers = (e.KeyModifiers.HasFlag(KeyModifiers.Control) ? "Ctrl+" : "") + (e.KeyModifiers.HasFlag(KeyModifiers.Alt) ? "Alt+" : "") + (e.KeyModifiers.HasFlag(KeyModifiers.Shift) ? "Shift+" : "") + (e.KeyModifiers.HasFlag(KeyModifiers.Meta) ? "Meta+" : "");
         string gesture = PlayerShortcutPolicy.Normalize(modifiers + key);
         IReadOnlyDictionary<PlayerCommandId, string> active = PlayerShortcutPolicy.Effective(_presentation.Registry, _settings.Current.ShortcutOverrides);
         e.Handled = PlayerShortcutPolicy.TryDispatch(_presentation.Registry, active, gesture);

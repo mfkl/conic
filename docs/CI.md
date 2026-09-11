@@ -84,6 +84,10 @@ enforce the exact SDK pin; local scripts use the installed SDK selection.
 Local validation on Windows: actionlint 1.7.12 passed; the Core Release script
 passed 72 tests; the full Windows script passed 213 tests in both Debug and
 Release. Release built with zero warnings/errors and published the AOT plugin.
-These runs used the installed SDK
-10.0.303 and restored dependencies. Execution on hosted runners, including the
-exact SDK 10.0.102 pin and Linux/macOS matrix entries, awaits pushing the workflow.
+These runs used the installed SDK 10.0.303 and restored dependencies.
+
+The first hosted run on 2026-09-11 passed both full Windows jobs and both Windows
+Core jobs with the exact SDK 10.0.102 pin. Linux/macOS exposed a history test that
+implicitly expected Windows filename comparison; the fixture now requests that
+policy explicitly. Current hosted results are available in
+[GitHub Actions](https://github.com/mfkl/conic/actions/workflows/ci.yml).

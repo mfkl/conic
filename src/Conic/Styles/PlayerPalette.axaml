@@ -1,0 +1,18 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- VLC master 1a853315: modules/gui/qt/style/systempalette.hpp.
+         Semantic playback colors; alpha overlays remain legible over video. -->
+    <SolidColorBrush x:Key="PlayerAccent" Color="#FF8800" />
+    <SolidColorBrush x:Key="PlayerAccentHover" Color="#FFA033" />
+    <SolidColorBrush x:Key="PlayerAccentPressed" Color="#DE7600" />
+    <SolidColorBrush x:Key="PlayerAmplified" Color="#FFB366" />
+    <SolidColorBrush x:Key="PlayerCanvas" Color="Black" />
+    <SolidColorBrush x:Key="PlayerSurface" Color="#F5212121" />
+    <SolidColorBrush x:Key="PlayerText" Color="#F5F5F5" />
+    <SolidColorBrush x:Key="PlayerSecondaryText" Color="#B3B3B3" />
+    <SolidColorBrush x:Key="PlayerBorder" Color="#30FFFFFF" />
+    <SolidColorBrush x:Key="PlayerHover" Color="#20FFFFFF" />
+    <SolidColorBrush x:Key="PlayerPressed" Color="#30FFFFFF" />
+    <SolidColorBrush x:Key="PlayerTrack" Color="#40FFFFFF" />
+    <SolidColorBrush x:Key="PlayerSelection" Color="#24FF8800" />
+</ResourceDictionary>

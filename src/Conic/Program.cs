@@ -1,8 +1,5 @@
 using System.Runtime.InteropServices;
 using Avalonia;
-#if DEBUG
-using Avalonia.Diagnostics;
-#endif
 using Conic.Interop;
 
 namespace Conic;
@@ -14,29 +11,43 @@ internal static class Program
 
     private static void SetupVLCPath()
     {
+        if (!NativePlaybackSupport.IsAvailable)
+            return;
         string VLCDirectory = RepositoryPaths.VLCDirectory;
         if (!Directory.Exists(VLCDirectory))
             return;
 
         SetDllDirectoryW(VLCDirectory);
-        NativeLibrary.Load(Path.Combine(VLCDirectory, "libvlc.dll"));
-        NativeLibrary.Load(Path.Combine(VLCDirectory, "libvlccore.dll"));
+        NativeLibrary.Load(RepositoryPaths.CoreLibraryPath);
+        NativeLibrary.Load(RepositoryPaths.PublicLibraryPath);
     }
 
     [STAThread]
     public static int Main(string[] args)
     {
+        bool runsWindowsSmoke = args.Any(arg => arg.Equals("--engine-smoke", StringComparison.OrdinalIgnoreCase) || arg.Equals("--queue-smoke", StringComparison.OrdinalIgnoreCase) || arg.Equals("--media-capabilities-smoke", StringComparison.OrdinalIgnoreCase) || arg.Equals("--player-capabilities-smoke", StringComparison.OrdinalIgnoreCase) || arg.Equals("--opaque-smoke", StringComparison.OrdinalIgnoreCase) || arg.Equals("--smoke", StringComparison.OrdinalIgnoreCase));
+        if (runsWindowsSmoke && !NativePlaybackSupport.IsAvailable)
+        {
+            Console.Error.WriteLine(NativePlaybackSupport.CurrentUnavailableReason);
+            return 2;
+        }
         SetupVLCPath();
         int cycles = ParseCycles(args);
         if (args.Contains("--engine-smoke", StringComparer.OrdinalIgnoreCase))
             return CompositionSmoke.RunEngine(cycles);
+        if (args.Contains("--queue-smoke", StringComparer.OrdinalIgnoreCase))
+            return CompositionSmoke.RunQueue(
+                args.Contains("--queue-smoke-verbose", StringComparer.OrdinalIgnoreCase));
+        if (args.Contains("--media-capabilities-smoke", StringComparer.OrdinalIgnoreCase))
+            return CompositionSmoke.RunMediaCapabilities();
+        if (args.Contains("--player-capabilities-smoke", StringComparer.OrdinalIgnoreCase))
+            return CompositionSmoke.RunPlayerCapabilities();
         if (args.Contains("--opaque-smoke", StringComparer.OrdinalIgnoreCase))
             return CompositionSmoke.RunOpaque();
         if (args.Contains("--smoke", StringComparer.OrdinalIgnoreCase))
             return CompositionSmoke.Run(ParseExpectedPath(args));
 
-        BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
-        return 0;
+        return BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
     }
 
     private static string? ParseExpectedPath(string[] args)
@@ -68,9 +79,6 @@ internal static class Program
     public static AppBuilder BuildAvaloniaApp()
         => AppBuilder.Configure<App>()
             .UsePlatformDetect()
-#if DEBUG
-            .WithDeveloperTools()
-#endif
             .WithInterFont()
             .LogToTrace();
 }

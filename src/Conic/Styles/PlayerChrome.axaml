@@ -1,0 +1,328 @@
+<Styles xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Styles.Resources>
+        <ControlTheme x:Key="PlayerSliderTrack" TargetType="RepeatButton">
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Border Background="Transparent">
+                        <Border Height="4" VerticalAlignment="Center" CornerRadius="2" Background="{TemplateBinding Background}" />
+                    </Border>
+                </ControlTemplate>
+            </Setter>
+        </ControlTheme>
+        <ControlTheme x:Key="PlayerSliderThumb" TargetType="Thumb">
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="{TemplateBinding CornerRadius}" />
+                </ControlTemplate>
+            </Setter>
+        </ControlTheme>
+    </Styles.Resources>
+    <Style Selector="Button.chrome">
+        <Setter Property="Height" Value="38" />
+        <Setter Property="Padding" Value="15,0" />
+        <Setter Property="CornerRadius" Value="12" />
+        <Setter Property="Background" Value="#B51B1D22" />
+        <Setter Property="BorderBrush" Value="#24FFFFFF" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Foreground" Value="{DynamicResource PlayerText}" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style Selector="Button.chrome:pointerover">
+        <Setter Property="Background" Value="#E12A2D34" />
+        <Setter Property="BorderBrush" Value="#45FFFFFF" />
+    </Style>
+    <Style Selector="Button.openPrimary">
+        <Setter Property="CornerRadius" Value="12,0,0,12" />
+        <Setter Property="Background" Value="#D724262C" />
+        <Setter Property="BorderBrush" Value="#56FF9A55" />
+    </Style>
+    <Style Selector="Button.openPrimary:pointerover">
+        <Setter Property="Background" Value="#EF353038" />
+        <Setter Property="BorderBrush" Value="#FFFF9A55" />
+    </Style>
+    <Style Selector="Button.openOptions">
+        <Setter Property="Width" Value="38" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="CornerRadius" Value="0,12,12,0" />
+        <Setter Property="Background" Value="#D724262C" />
+        <Setter Property="BorderBrush" Value="#56FF9A55" />
+    </Style>
+    <Style Selector="Button.openOptions:pointerover">
+        <Setter Property="Background" Value="#EF353038" />
+        <Setter Property="Foreground" Value="#FFFF9A55" />
+    </Style>
+    <Style Selector="Button.menuAction">
+        <Setter Property="HorizontalContentAlignment" Value="Left" />
+        <Setter Property="Padding" Value="12,8" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="CornerRadius" Value="4" />
+    </Style>
+    <Style Selector="Button.menuAction:pointerover">
+        <Setter Property="Background" Value="{DynamicResource PlayerHover}" />
+    </Style>
+    <Style Selector="Button.recentItem">
+        <Setter Property="HorizontalContentAlignment" Value="Left" />
+        <Setter Property="Padding" Value="12,7" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="CornerRadius" Value="4" />
+    </Style>
+    <Style Selector="Button.recentItem:pointerover">
+        <Setter Property="Background" Value="#1DFF9A55" />
+    </Style>
+    <Style Selector="Button.recentRemove">
+        <Setter Property="Width" Value="30" />
+        <Setter Property="Height" Value="30" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Foreground" Value="{DynamicResource PlayerSecondaryText}" />
+        <Setter Property="FontSize" Value="18" />
+    </Style>
+    <Style Selector="Button.transport">
+        <Setter Property="Width" Value="44" />
+        <Setter Property="Height" Value="44" />
+        <Setter Property="Padding" Value="10" />
+        <Setter Property="CornerRadius" Value="21" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Foreground" Value="{DynamicResource PlayerSecondaryText}" />
+    </Style>
+    <Style Selector="Button.transport:pointerover">
+        <Setter Property="Background" Value="{DynamicResource PlayerHover}" />
+        <Setter Property="Foreground" Value="White" />
+    </Style>
+    <Style Selector="Button.transport:disabled">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Opacity" Value="0.48" />
+    </Style>
+    <Style Selector="Button.mute">
+        <Setter Property="Width" Value="40" />
+        <Setter Property="Height" Value="40" />
+        <Setter Property="Padding" Value="10" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Foreground" Value="{DynamicResource PlayerSecondaryText}" />
+    </Style>
+    <Style Selector="Button.play">
+        <Setter Property="Width" Value="64" />
+        <Setter Property="Height" Value="64" />
+        <Setter Property="Padding" Value="18" />
+        <Setter Property="CornerRadius" Value="32" />
+        <Setter Property="Background" Value="{DynamicResource PlayerText}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource PlayerAccent}" />
+        <Setter Property="BorderThickness" Value="2" />
+        <Setter Property="Foreground" Value="#111318" />
+    </Style>
+    <Style Selector="Button.play:pointerover">
+        <Setter Property="Background" Value="White" />
+        <Setter Property="RenderTransform" Value="scale(1.05)" />
+    </Style>
+    <Style Selector="Window.reduced-motion Button.play:pointerover">
+        <Setter Property="RenderTransform" Value="none" />
+    </Style>
+    <Style Selector="Slider.timeline">
+        <Setter Property="Height" Value="28" />
+        <Setter Property="Padding" Value="8,0" />
+        <Setter Property="Foreground" Value="{DynamicResource PlayerText}" />
+        <Setter Property="Background" Value="{DynamicResource PlayerTrack}" />
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Grid Margin="{TemplateBinding Padding}">
+                    <Track Name="PART_Track" Orientation="Horizontal"
+                           Minimum="{TemplateBinding Minimum}" Maximum="{TemplateBinding Maximum}"
+                           Value="{TemplateBinding Value}">
+                        <Track.DecreaseButton>
+                            <RepeatButton Name="PART_DecreaseButton" Theme="{StaticResource PlayerSliderTrack}" Height="28" VerticalAlignment="Center"
+                                          Background="{DynamicResource PlayerAccent}" BorderThickness="0" />
+                        </Track.DecreaseButton>
+                        <Track.Thumb>
+                            <Thumb Theme="{StaticResource PlayerSliderThumb}" Width="14" Height="14" Background="{DynamicResource PlayerText}" BorderBrush="{DynamicResource PlayerAccent}"
+                                   BorderThickness="2" CornerRadius="7" />
+                        </Track.Thumb>
+                        <Track.IncreaseButton>
+                            <RepeatButton Name="PART_IncreaseButton" Theme="{StaticResource PlayerSliderTrack}" Height="28" VerticalAlignment="Center"
+                                          Background="{DynamicResource PlayerTrack}" BorderThickness="0" />
+                        </Track.IncreaseButton>
+                    </Track>
+                </Grid>
+            </ControlTemplate>
+        </Setter>
+    </Style>
+    <Style Selector="Slider.volume">
+        <Setter Property="Width" Value="120" />
+        <Setter Property="Height" Value="40" />
+        <Setter Property="Padding" Value="8,0" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="Foreground" Value="{DynamicResource PlayerText}" />
+        <Setter Property="Background" Value="{DynamicResource PlayerTrack}" />
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Grid Margin="{TemplateBinding Padding}">
+                    <Track Name="PART_Track" Orientation="Horizontal"
+                           Minimum="{TemplateBinding Minimum}" Maximum="{TemplateBinding Maximum}"
+                           Value="{TemplateBinding Value}">
+                        <Track.DecreaseButton>
+                            <RepeatButton Name="PART_DecreaseButton" Theme="{StaticResource PlayerSliderTrack}" Height="28" VerticalAlignment="Center"
+                                          Background="{DynamicResource PlayerAccent}" BorderThickness="0" />
+                        </Track.DecreaseButton>
+                        <Track.Thumb>
+                            <Thumb Theme="{StaticResource PlayerSliderThumb}" Width="16" Height="16" Background="{DynamicResource PlayerText}" BorderBrush="#111318"
+                                   BorderThickness="2" CornerRadius="8" />
+                        </Track.Thumb>
+                        <Track.IncreaseButton>
+                            <RepeatButton Name="PART_IncreaseButton" Theme="{StaticResource PlayerSliderTrack}" Height="28" VerticalAlignment="Center"
+                                          Background="{DynamicResource PlayerTrack}" BorderThickness="0" />
+                        </Track.IncreaseButton>
+                    </Track>
+                </Grid>
+            </ControlTemplate>
+        </Setter>
+    </Style>
+
+    <!-- Keep Fluent's system accent from turning the sliders blue. -->
+    <Style Selector="Slider.monochrome /template/ RepeatButton#PART_DecreaseButton">
+        <Setter Property="Background" Value="{DynamicResource PlayerText}" />
+    </Style>
+    <Style Selector="Slider.monochrome:pointerover /template/ RepeatButton#PART_DecreaseButton">
+        <Setter Property="Background" Value="White" />
+    </Style>
+    <Style Selector="Slider.monochrome:pressed /template/ RepeatButton#PART_DecreaseButton">
+        <Setter Property="Background" Value="#D9DCE2" />
+    </Style>
+    <Style Selector="Slider.monochrome /template/ RepeatButton#PART_IncreaseButton">
+        <Setter Property="Background" Value="{DynamicResource PlayerTrack}" />
+    </Style>
+    <Style Selector="Slider.monochrome:pointerover /template/ RepeatButton#PART_IncreaseButton">
+        <Setter Property="Background" Value="#52FFFFFF" />
+    </Style>
+    <Style Selector="Slider.monochrome:pressed /template/ RepeatButton#PART_IncreaseButton">
+        <Setter Property="Background" Value="#2EFFFFFF" />
+    </Style>
+    <Style Selector="Slider.monochrome /template/ Thumb">
+        <Setter Property="Background" Value="{DynamicResource PlayerText}" />
+    </Style>
+    <Style Selector="Slider.monochrome:pointerover /template/ Thumb">
+        <Setter Property="Background" Value="White" />
+    </Style>
+    <Style Selector="Slider.monochrome:pressed /template/ Thumb">
+        <Setter Property="Background" Value="#D9DCE2" />
+    </Style>
+    <!-- Orange marks elapsed playback; the remaining track and thumb stay
+         neutral so the accent remains crisp rather than overpowering. -->
+    <Style Selector="Slider.timeline /template/ RepeatButton#PART_DecreaseButton">
+        <Setter Property="Background" Value="{DynamicResource PlayerAccent}" />
+        <Setter Property="MinHeight" Value="4" />
+    </Style>
+    <Style Selector="Slider.timeline:pointerover /template/ RepeatButton#PART_DecreaseButton">
+        <Setter Property="Background" Value="{DynamicResource PlayerAccentHover}" />
+    </Style>
+    <Style Selector="Slider.timeline:pressed /template/ RepeatButton#PART_DecreaseButton">
+        <Setter Property="Background" Value="{DynamicResource PlayerAccentPressed}" />
+    </Style>
+    <!-- A dark center and light rim keep the volume thumb distinct from
+         both the filled and unfilled portions of the track. -->
+    <Style Selector="Slider.volume /template/ Thumb">
+        <Setter Property="Width" Value="16" />
+        <Setter Property="Height" Value="16" />
+        <Setter Property="Background" Value="#111318" />
+        <Setter Property="BorderBrush" Value="{DynamicResource PlayerText}" />
+        <Setter Property="BorderThickness" Value="2" />
+    </Style>
+    <Style Selector="Slider.volume /template/ RepeatButton#PART_DecreaseButton">
+        <Setter Property="Background" Value="{DynamicResource PlayerAccent}" />
+    </Style>
+    <Style Selector="Slider.volume:amplified /template/ RepeatButton#PART_DecreaseButton">
+        <Setter Property="Background" Value="{DynamicResource PlayerAccentHover}" />
+    </Style>
+    <Style Selector="Slider.volume:pointerover /template/ Thumb">
+        <Setter Property="Background" Value="#1B1D22" />
+        <Setter Property="BorderBrush" Value="White" />
+    </Style>
+    <Style Selector="Slider.volume:pressed /template/ Thumb">
+        <Setter Property="Background" Value="#D9DCE2" />
+        <Setter Property="BorderBrush" Value="#111318" />
+    </Style>
+    <Style Selector="CheckBox.monochrome:checked /template/ Border#NormalRectangle">
+        <Setter Property="Background" Value="{DynamicResource PlayerText}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource PlayerText}" />
+    </Style>
+    <Style Selector="CheckBox.monochrome:checked:pointerover /template/ Border#NormalRectangle">
+        <Setter Property="Background" Value="White" />
+        <Setter Property="BorderBrush" Value="White" />
+    </Style>
+    <Style Selector="CheckBox.monochrome:checked:pressed /template/ Border#NormalRectangle">
+        <Setter Property="Background" Value="#D9DCE2" />
+        <Setter Property="BorderBrush" Value="#D9DCE2" />
+    </Style>
+    <Style Selector="CheckBox.monochrome:checked /template/ Path#CheckGlyph">
+        <Setter Property="Fill" Value="#111318" />
+    </Style>
+    <Style Selector="Window.compact-density Button.chrome">
+        <Setter Property="Height" Value="32" />
+        <Setter Property="Padding" Value="10,0" />
+    </Style>
+    <Style Selector="Window.compact-density Border#PlayerDock">
+        <Setter Property="Padding" Value="16,10" />
+        <Setter Property="CornerRadius" Value="16" />
+    </Style>
+    <Style Selector="Button:focus-visible">
+        <Setter Property="Background" Value="#40FF9A55" />
+        <Setter Property="BorderBrush" Value="{DynamicResource PlayerAccent}" />
+        <Setter Property="BorderThickness" Value="2" />
+    </Style>
+    <Style Selector="Button.iconChrome">
+        <Setter Property="Width" Value="40" /><Setter Property="Height" Value="40" />
+        <Setter Property="Padding" Value="10" /><Setter Property="CornerRadius" Value="20" />
+        <Setter Property="Background" Value="#14000000" /><Setter Property="Foreground" Value="{DynamicResource PlayerText}" />
+        <Setter Property="BorderThickness" Value="0" />
+    </Style>
+    <Style Selector="Button.iconChrome:pointerover"><Setter Property="Background" Value="#28FFFFFF" /></Style>
+    <Style Selector="Button.openMedia">
+        <Setter Property="MinWidth" Value="148" /><Setter Property="Height" Value="48" />
+        <Setter Property="CornerRadius" Value="12" /><Setter Property="Background" Value="{DynamicResource PlayerAccent}" />
+        <Setter Property="Foreground" Value="#120B07" /><Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <!-- Override Fluent's template states as well as the outer Button so
+         disabled transport controls remain quiet over the video. -->
+    <Style Selector="Button.transport:disabled /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+    </Style>
+    <Style Selector="Button.playbackAction, Button.drawerTab">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="CornerRadius" Value="4" />
+        <Setter Property="Padding" Value="10,8" />
+        <Setter Property="Foreground" Value="{DynamicResource PlayerSecondaryText}" />
+    </Style>
+    <Style Selector="Button.playbackAction:pointerover, Button.drawerTab:pointerover">
+        <Setter Property="Background" Value="{DynamicResource PlayerHover}" />
+        <Setter Property="Foreground" Value="{DynamicResource PlayerText}" />
+    </Style>
+    <Style Selector="Button.drawerTab">
+        <Setter Property="Margin" Value="0,0,4,4" />
+    </Style>
+    <Style Selector="Button.drawerTab.selected, Button.menuAction.selected, Button.recentItem.selected">
+        <Setter Property="Background" Value="{DynamicResource PlayerSelection}" />
+        <Setter Property="Foreground" Value="{DynamicResource PlayerAccent}" />
+    </Style>
+    <Style Selector="Button.playbackAction:focus-visible, Button.drawerTab:focus-visible, Button.menuAction:focus-visible, Button.recentItem:focus-visible, Button.iconChrome:focus-visible, Button.transport:focus-visible, Button.mute:focus-visible">
+        <Setter Property="BorderThickness" Value="2" />
+        <Setter Property="BorderBrush" Value="{DynamicResource PlayerAccent}" />
+    </Style>
+    <Style Selector="TextBlock.settingBadge">
+        <Setter Property="Background" Value="#2AFF9A55" />
+        <Setter Property="Foreground" Value="#FFB77D" />
+        <Setter Property="Padding" Value="7,2" />
+        <Setter Property="FontSize" Value="11" />
+    </Style>
+    <Style Selector="TextBlock.settingHint">
+        <Setter Property="Foreground" Value="{DynamicResource PlayerSecondaryText}" />
+        <Setter Property="FontSize" Value="11" />
+    </Style>
+</Styles>

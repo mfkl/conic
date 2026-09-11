@@ -61,7 +61,20 @@ public sealed class MediaEngineStateStoreTests
         Assert.Equal(1, store.State.Position);
         Assert.Equal(TimeSpan.Zero, store.State.Elapsed);
         Assert.Equal(TimeSpan.Zero, store.State.Duration);
-        Assert.Equal(1.25, store.State.Volume);
+        Assert.Equal(2, store.State.Volume);
+    }
+
+    [Fact]
+    public void PlaybackRateIsBoundedAndTitleIsDerivedFromTheMediaName()
+    {
+        MediaEngineStateStore store = new();
+        long generation = store.BeginOpen("C:/media/example.movie.mp4");
+
+        store.Update(generation, PlaybackStatus.Playing, 0, TimeSpan.Zero,
+            TimeSpan.FromSeconds(10), .5, true, playbackRate: 100);
+
+        Assert.Equal(31.25, store.State.PlaybackRate);
+        Assert.Equal("example.movie", store.State.Title);
     }
 
     [Fact]
@@ -125,5 +138,23 @@ public sealed class MediaEngineStateStoreTests
         Assert.Equal(0.6, store.State.Volume);
         Assert.False(store.State.CanSeek);
         Assert.Null(store.State.Error);
+    }
+
+    [Fact]
+    public void BeginEmptyAdvancesGenerationAndRejectsStalePublication()
+    {
+        MediaEngineStateStore store = new();
+        long playing = store.BeginOpen("movie.mp4");
+        store.Update(playing, PlaybackStatus.Playing, .5, TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(10), .6, true);
+
+        long empty = store.BeginEmpty();
+        store.Fault(playing, "late native teardown");
+
+        Assert.Equal(playing + 1, empty);
+        Assert.Equal(empty, store.State.Generation);
+        Assert.Equal(PlaybackStatus.Stopped, store.State.Status);
+        Assert.Null(store.State.Source);
+        Assert.Null(store.State.Error);
+        Assert.False(store.State.CanSeek);
     }
 }

@@ -1,0 +1,222 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:controls="clr-namespace:Conic.Controls" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="Conic.Views.SettingsView" x:DataType="viewModels:SettingsViewModel" Classes.dense="{Binding IsCompactDensity}" Background="Black" xmlns:viewModels="clr-namespace:Conic.ViewModels">
+    <UserControl.Styles>
+        <Style Selector="Border.settingsCard">
+            <Setter Property="Padding" Value="20" />
+            <Setter Property="Background" Value="#292929" />
+            <Setter Property="CornerRadius" Value="6" />
+        </Style>
+        <Style Selector="Button">
+            <Setter Property="MinHeight" Value="40" />
+            <Setter Property="CornerRadius" Value="4" />
+        </Style>
+        <Style Selector="NumericUpDown">
+            <Setter Property="MinWidth" Value="132" />
+            <Setter Property="MinHeight" Value="40" />
+        </Style>
+        <Style Selector="ComboBox">
+            <Setter Property="MinHeight" Value="40" />
+        </Style>
+        <Style Selector="ListBoxItem">
+            <Setter Property="MinHeight" Value="44" />
+            <Setter Property="Padding" Value="12,10" />
+            <Setter Property="CornerRadius" Value="4" />
+        </Style>
+        <Style Selector="ListBoxItem:selected">
+            <Setter Property="Background" Value="{DynamicResource PlayerSelection}" />
+            <Setter Property="Foreground" Value="{DynamicResource PlayerAccent}" />
+        </Style>
+        <Style Selector="ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource PlayerSelection}" />
+            <Setter Property="Foreground" Value="{DynamicResource PlayerAccent}" />
+        </Style>
+        <Style Selector="TextBlock.settingHint">
+            <Setter Property="FontSize" Value="12" />
+        </Style>
+        <Style Selector="TextBlock.settingBadge">
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Background" Value="{DynamicResource PlayerSelection}" />
+        </Style>
+        <Style Selector=":is(UserControl).compact Border.settingsCard">
+            <Setter Property="Padding" Value="16" />
+        </Style>
+        <Style Selector=":is(UserControl).dense Border.settingsCard">
+            <Setter Property="Padding" Value="12" />
+        </Style>
+    </UserControl.Styles>
+    <Grid RowDefinitions="52,*">
+        <Grid ColumnDefinitions="Auto,Auto,*,Auto" Margin="12,0">
+            <Button Classes="iconChrome" Click="OnSettingsClose" AutomationProperties.Name="Close settings" ToolTip.Tip="Return (Escape)">
+                <PathIcon Width="20" Height="20" Data="M10,3 L1,12 L10,21 L12,19 L6,13 H23 V11 H6 L12,5 Z" />
+            </Button>
+            <controls:VlcCone Grid.Column="1" Width="30" Height="34" Margin="12,0" />
+            <TextBlock Grid.Column="2" Text="Preferences" FontSize="18" VerticalAlignment="Center" />
+        </Grid>
+        <Grid x:Name="SettingsColumns" Grid.Row="1" ColumnDefinitions="176,*" x:FieldModifier="internal">
+            <ListBox x:Name="SettingsPages" Margin="4,8,4,4" Background="Transparent" ItemsSource="{Binding FilteredPages}" SelectedItem="{Binding SelectedPage}" AutomationProperties.Name="Settings pages" x:FieldModifier="internal">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding Name}" />
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+            <Border x:Name="SettingsBody" Grid.Column="1" Background="#212121" CornerRadius="8,0,0,0" Padding="24" x:FieldModifier="internal">
+                <Grid RowDefinitions="Auto,Auto,Auto,*">
+                    <TextBox x:Name="SettingsSearch" Margin="0,0,0,16" Text="{Binding Search, Mode=TwoWay}" PlaceholderText="Search settings" AutomationProperties.Name="Search settings" x:FieldModifier="internal" />
+                    <ComboBox x:Name="CompactSettingsPages" Grid.Row="1" Margin="0,0,0,16" IsVisible="False" HorizontalAlignment="Stretch" ItemsSource="{Binding FilteredPages}" SelectedItem="{Binding SelectedPage}" AutomationProperties.Name="Settings pages" x:FieldModifier="internal">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Name}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <TextBlock Grid.Row="2" Margin="0,0,0,16" Text="{Binding ErrorMessage}" IsVisible="{Binding HasError}" Foreground="#FF9A55" TextWrapping="Wrap" AutomationProperties.Name="Settings error" />
+                    <TextBlock Grid.Row="3" IsVisible="{Binding !HasSettingsResults}" Text="No settings match your search." HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource PlayerSecondaryText}" />
+                    <ScrollViewer x:Name="SettingsContent" Grid.Row="3" IsVisible="{Binding HasSettingsResults}" HorizontalScrollBarVisibility="Disabled" x:FieldModifier="internal">
+                        <StackPanel Spacing="16" MaxWidth="880" HorizontalAlignment="Stretch">
+                            <TextBlock Text="{Binding SelectedPage.Name}" FontSize="24" FontWeight="SemiBold" />
+                            <TextBlock Text="{Binding PageSummary}" Classes="settingHint" TextWrapping="Wrap" />
+                            <Border Classes="settingsCard" IsVisible="{Binding IsGeneral}">
+                                <StackPanel Spacing="18">
+                                    <CheckBox Content="Resume playback" IsChecked="{Binding ResumePlayback, Mode=TwoWay}" AutomationProperties.Name="Resume playback" ToolTip.Tip="Ask to resume eligible media next time it opens" />
+                                    <TextBlock Text="Next open" Classes="settingHint" TextWrapping="Wrap" />
+                                    <CheckBox Content="Remember volume" IsChecked="{Binding RememberVolume, Mode=TwoWay}" AutomationProperties.Name="Remember volume" />
+                                    <TextBlock Text="Takes effect next time media is opened" Classes="settingHint" TextWrapping="Wrap" />
+                                    <CheckBox Content="Remember recent media" IsChecked="{Binding RememberRecentMedia, Mode=TwoWay}" AutomationProperties.Name="Remember recent media" ToolTip.Tip="Turning this off clears recent media immediately" />
+                                    <TextBlock Text="Live · turning this off immediately clears existing recent history." Classes="settingHint" TextWrapping="Wrap" />
+                                    <StackPanel Spacing="5">
+                                        <Button x:Name="SettingsClearRecentButton" Content="Clear recent history…" Click="OnSettingsClearRecent" HorizontalAlignment="Left" AutomationProperties.Name="Clear recent history" ToolTip.Tip="Clear recently opened media" x:FieldModifier="internal" />
+                                        <StackPanel x:Name="SettingsClearRecentPrompt" IsVisible="False" Spacing="5" x:FieldModifier="internal">
+                                            <TextBlock Text="Clear recent history?" Classes="settingHint" TextWrapping="Wrap" />
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <Button x:Name="SettingsCancelClearRecentButton" Content="Cancel" Click="OnSettingsCancelClearRecent" x:FieldModifier="internal" />
+                                                <Button x:Name="SettingsConfirmClearRecentButton" Content="Clear" Click="OnSettingsConfirmClearRecent" AutomationProperties.Name="Confirm clear recent history" x:FieldModifier="internal" />
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </StackPanel>
+                                    <CheckBox Content="Remember resume history" IsChecked="{Binding RememberResumeHistory, Mode=TwoWay}" AutomationProperties.Name="Remember resume history" ToolTip.Tip="Turning this off clears saved positions immediately" />
+                                    <TextBlock Text="Live · turning this off immediately clears saved positions and any pending prompt." Classes="settingHint" TextWrapping="Wrap" />
+                                    <StackPanel Spacing="5">
+                                        <Button x:Name="SettingsClearResumeButton" Content="Clear resume positions…" Click="OnSettingsClearResume" HorizontalAlignment="Left" AutomationProperties.Name="Clear resume positions" ToolTip.Tip="Clear saved media positions" x:FieldModifier="internal" />
+                                        <StackPanel x:Name="SettingsClearResumePrompt" IsVisible="False" Spacing="5" x:FieldModifier="internal">
+                                            <TextBlock Text="Clear saved resume positions?" Classes="settingHint" TextWrapping="Wrap" />
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <Button x:Name="SettingsCancelClearResumeButton" Content="Cancel" Click="OnSettingsCancelClearResume" x:FieldModifier="internal" />
+                                                <Button x:Name="SettingsConfirmClearResumeButton" Content="Clear" Click="OnSettingsConfirmClearResume" AutomationProperties.Name="Confirm clear resume positions" x:FieldModifier="internal" />
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </StackPanel>
+                                    <TextBlock x:Name="SettingsHistoryError" IsVisible="False" Foreground="#FFD6CE" TextWrapping="Wrap" AutomationProperties.Name="Media history error" x:FieldModifier="internal" />
+                                    <WrapPanel Orientation="Horizontal">
+                                        <TextBlock Text="Resume after (seconds)" Width="155" VerticalAlignment="Center" Margin="0,4,12,4" TextWrapping="Wrap" />
+                                        <NumericUpDown Minimum="0" Maximum="3600" Value="{Binding ResumeMinimumElapsedSeconds, Mode=TwoWay}" Margin="0,4,12,4" AutomationProperties.Name="Resume after (seconds)" />
+                                        <TextBlock Text="Next open" Classes="settingBadge" Margin="0,4,12,4" TextWrapping="Wrap" />
+                                    </WrapPanel>
+                                    <WrapPanel Orientation="Horizontal">
+                                        <TextBlock Text="Skip resume near end (seconds)" Width="155" VerticalAlignment="Center" Margin="0,4,12,4" TextWrapping="Wrap" />
+                                        <NumericUpDown Minimum="0" Maximum="3600" Value="{Binding ResumeMaximumRemainingSeconds, Mode=TwoWay}" Margin="0,4,12,4" AutomationProperties.Name="Do not resume within (seconds)" />
+                                        <TextBlock Text="Next open" Classes="settingBadge" Margin="0,4,12,4" TextWrapping="Wrap" />
+                                    </WrapPanel>
+                                </StackPanel>
+                            </Border>
+                            <Border Classes="settingsCard" IsVisible="{Binding IsAppearance}">
+                                <StackPanel Spacing="18">
+                                    <TextBlock Text="VLC uses a dark appearance for media browsing and playback." Classes="settingHint" TextWrapping="Wrap" />
+                                    <WrapPanel Orientation="Horizontal">
+                                        <TextBlock Text="Density" Width="155" VerticalAlignment="Center" Margin="0,4,12,4" TextWrapping="Wrap" />
+                                        <ComboBox ItemsSource="{Binding DensityOptions}" SelectedItem="{Binding Density, Mode=TwoWay}" Margin="0,4,12,4" AutomationProperties.Name="Density" />
+                                        <TextBlock Text="Live" Classes="settingBadge" Margin="0,4,12,4" TextWrapping="Wrap" />
+                                    </WrapPanel>
+                                    <WrapPanel Orientation="Horizontal">
+                                        <TextBlock Text="Controls hide after" Width="155" VerticalAlignment="Center" Margin="0,4,12,4" TextWrapping="Wrap" />
+                                        <NumericUpDown Minimum="1" Maximum="15" Value="{Binding ControlTimeoutSeconds, Mode=TwoWay}" Margin="0,4,12,4" AutomationProperties.Name="Controls hide after" />
+                                        <TextBlock Text="Live" Classes="settingBadge" Margin="0,4,12,4" TextWrapping="Wrap" />
+                                    </WrapPanel>
+                                    <CheckBox Content="Reduce motion" IsChecked="{Binding ReduceMotion, Mode=TwoWay}" AutomationProperties.Name="Reduce motion" ToolTip.Tip="Keeps playback controls visible and disables nonessential motion" />
+                                </StackPanel>
+                            </Border>
+                            <Border Classes="settingsCard" IsVisible="{Binding IsPlayback}">
+                                <StackPanel Spacing="18">
+                                    <WrapPanel Orientation="Horizontal">
+                                        <TextBlock Text="Default speed" Width="155" VerticalAlignment="Center" Margin="0,4,12,4" TextWrapping="Wrap" />
+                                        <ComboBox ItemsSource="{Binding SpeedOptions}" SelectedItem="{Binding DefaultSpeed, Mode=TwoWay}" Margin="0,4,12,4" AutomationProperties.Name="Default speed" />
+                                        <TextBlock Text="Next open" Classes="settingBadge" Margin="0,4,12,4" TextWrapping="Wrap" />
+                                    </WrapPanel>
+                                    <WrapPanel Orientation="Horizontal">
+                                        <TextBlock Text="Skip backward (seconds)" Width="155" VerticalAlignment="Center" Margin="0,4,12,4" TextWrapping="Wrap" />
+                                        <NumericUpDown Minimum="1" Maximum="120" Value="{Binding SkipBackwardSeconds, Mode=TwoWay}" Margin="0,4,12,4" AutomationProperties.Name="Skip backward (seconds)" />
+                                        <TextBlock Text="Live" Classes="settingBadge" Margin="0,4,12,4" TextWrapping="Wrap" />
+                                    </WrapPanel>
+                                    <WrapPanel Orientation="Horizontal">
+                                        <TextBlock Text="Skip forward (seconds)" Width="155" VerticalAlignment="Center" Margin="0,4,12,4" TextWrapping="Wrap" />
+                                        <NumericUpDown Minimum="1" Maximum="120" Value="{Binding SkipForwardSeconds, Mode=TwoWay}" Margin="0,4,12,4" AutomationProperties.Name="Skip forward (seconds)" />
+                                        <TextBlock Text="Live" Classes="settingBadge" Margin="0,4,12,4" TextWrapping="Wrap" />
+                                    </WrapPanel>
+                                </StackPanel>
+                            </Border>
+                            <Border Classes="settingsCard" IsVisible="{Binding IsAudio}">
+                                <StackPanel Spacing="18">
+                                    <WrapPanel Orientation="Horizontal">
+                                        <TextBlock Text="Output module" Width="155" VerticalAlignment="Center" Margin="0,4,12,4" TextWrapping="Wrap" />
+                                        <ComboBox ItemsSource="{Binding AudioOutputOptions}" SelectedItem="{Binding AudioOutputModule, Mode=TwoWay}" Margin="0,4,12,4" AutomationProperties.Name="Output module" />
+                                    </WrapPanel>
+                                    <WrapPanel Orientation="Horizontal">
+                                        <TextBlock Text="Normalization level" Width="155" VerticalAlignment="Center" Margin="0,4,12,4" TextWrapping="Wrap" />
+                                        <NumericUpDown Minimum="0.5" Maximum="10" Increment="0.5" Value="{Binding NormalizationMaximumLevel, Mode=TwoWay}" Margin="0,4,12,4" AutomationProperties.Name="Normvol max level" />
+                                    </WrapPanel>
+                                    <CheckBox Content="S/PDIF passthrough" IsChecked="{Binding AudioPassthrough, Mode=TwoWay}" AutomationProperties.Name="S/PDIF passthrough" />
+                                    <TextBlock Text="Audio device selection is not available yet. VLC uses the selected output module." Classes="settingHint" TextWrapping="Wrap" />
+                                    <Button Content="Audio tracks and timing" Command="{Binding OpenAudioControlsCommand}" CommandParameter="Audio" HorizontalAlignment="Left" />
+                                </StackPanel>
+                            </Border>
+                            <Border Classes="settingsCard" IsVisible="{Binding IsVideo}">
+                                <StackPanel Spacing="14">
+                                    <TextBlock Text="Adjust aspect ratio, crop and zoom during playback from More → Video adjustments. Deinterlacing and snapshots are not available yet." Classes="settingHint" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Border>
+                            <Border Classes="settingsCard" IsVisible="{Binding IsSubtitles}">
+                                <StackPanel Spacing="14">
+                                    <TextBlock Text="Choose tracks and adjust timing during playback. Subtitle rendering on this video path still needs further validation." Classes="settingHint" TextWrapping="Wrap" />
+                                    <Button Content="Subtitle tracks and timing" Command="{Binding OpenSubtitleControlsCommand}" CommandParameter="Subtitles" HorizontalAlignment="Left" />
+                                </StackPanel>
+                            </Border>
+                            <Border Classes="settingsCard" IsVisible="{Binding IsHotkeys}">
+                                <StackPanel Spacing="18">
+                                    <TextBox PlaceholderText="Search shortcuts" Text="{Binding ShortcutSearch, Mode=TwoWay}" AutomationProperties.Name="Search shortcuts" />
+                                    <TextBlock Text="Edit a shortcut, then Save. Conflicting shortcuts must be resolved before saving." TextWrapping="Wrap" Classes="settingHint" />
+                                    <ItemsControl ItemsSource="{Binding EditableShortcutRows}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="viewModels:ShortcutRow">
+                                                <Grid ColumnDefinitions="*,130,Auto,Auto" ColumnSpacing="6" Margin="0,3" Classes="shortcutRow">
+                                                    <StackPanel>
+                                                        <TextBlock Text="{Binding Name}" TextWrapping="Wrap" />
+                                                        <TextBlock Text="{Binding Category}" Classes="settingHint" TextWrapping="Wrap" />
+                                                    </StackPanel>
+                                                    <TextBox Grid.Column="1" Text="{Binding PendingGesture, Mode=TwoWay}" AutomationProperties.Name="{Binding Name, StringFormat='{}{0} shortcut'}" />
+                                                    <Button Grid.Column="2" Content="Save" Command="{Binding SaveCommand}" AutomationProperties.Name="{Binding Name, StringFormat='Save {0} shortcut'}" />
+                                                    <Button Grid.Column="3" Content="Reset" Command="{Binding ResetCommand}" AutomationProperties.Name="{Binding Name, StringFormat='Reset {0} shortcut'}" />
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                    <TextBlock Text="No shortcuts match your search." IsVisible="{Binding !HasShortcutResults}" Classes="settingHint" />
+                                </StackPanel>
+                            </Border>
+                            <Border Classes="settingsCard" IsVisible="{Binding IsAdvanced}">
+                                <StackPanel Spacing="14">
+                                    <TextBlock Text="View the current media, codec streams and playback diagnostics." Classes="settingHint" TextWrapping="Wrap" />
+                                    <Button Content="Media information" Command="{Binding OpenMediaInformationCommand}" HorizontalAlignment="Left" />
+                                </StackPanel>
+                            </Border>
+                            <WrapPanel x:Name="SettingsResetRow" Orientation="Horizontal" x:FieldModifier="internal">
+                                <Button Content="Reset page" Command="{Binding ResetPageCommand}" AutomationProperties.Name="Reset current settings page" Margin="0,4,8,4" IsVisible="{Binding CanResetPage}" />
+                                <Button Content="Reset all" Command="{Binding ResetAllCommand}" AutomationProperties.Name="Reset all settings" Margin="0,4,8,4" />
+                                <Button Content="Cancel" Command="{Binding CancelResetCommand}" IsVisible="{Binding ConfirmReset}" AutomationProperties.Name="Cancel settings reset" Margin="0,4,8,4" />
+                                <TextBlock Text="Click Reset all again to confirm" IsVisible="{Binding ConfirmReset}" Classes="settingHint" Margin="0,4,8,4" TextWrapping="Wrap" />
+                            </WrapPanel>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

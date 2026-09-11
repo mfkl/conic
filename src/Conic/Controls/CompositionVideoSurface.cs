@@ -95,6 +95,11 @@ public sealed class CompositionVideoSurface : Control, IDisposable
     {
         base.OnAttachedToVisualTree(e);
         _attached = true;
+        if (!NativePlaybackSupport.IsAvailable)
+        {
+            ReportStatus(NativePlaybackSupport.CurrentUnavailableReason!);
+            return;
+        }
         try
         {
             _bridge = new CompositionPluginBridge();
@@ -292,9 +297,9 @@ public sealed class CompositionVideoSurface : Control, IDisposable
         if (!_attached || _player is not null)
             return;
 
-        if (!OperatingSystem.IsWindows())
+        if (!NativePlaybackSupport.IsAvailable)
         {
-            ReportStatus("VLC composition playback is available on Windows only.");
+            ReportStatus(NativePlaybackSupport.CurrentUnavailableReason!);
             return;
         }
 

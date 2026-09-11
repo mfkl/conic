@@ -11,24 +11,24 @@ internal static class Program
 
     private static void SetupVLCPath()
     {
-        if (!OperatingSystem.IsWindows())
+        if (!NativePlaybackSupport.IsAvailable)
             return;
         string VLCDirectory = RepositoryPaths.VLCDirectory;
         if (!Directory.Exists(VLCDirectory))
             return;
 
         SetDllDirectoryW(VLCDirectory);
-        NativeLibrary.Load(Path.Combine(VLCDirectory, "libvlc.dll"));
-        NativeLibrary.Load(Path.Combine(VLCDirectory, "libvlccore.dll"));
+        NativeLibrary.Load(RepositoryPaths.CoreLibraryPath);
+        NativeLibrary.Load(RepositoryPaths.PublicLibraryPath);
     }
 
     [STAThread]
     public static int Main(string[] args)
     {
         bool runsWindowsSmoke = args.Any(arg => arg.Equals("--engine-smoke", StringComparison.OrdinalIgnoreCase) || arg.Equals("--queue-smoke", StringComparison.OrdinalIgnoreCase) || arg.Equals("--media-capabilities-smoke", StringComparison.OrdinalIgnoreCase) || arg.Equals("--player-capabilities-smoke", StringComparison.OrdinalIgnoreCase) || arg.Equals("--opaque-smoke", StringComparison.OrdinalIgnoreCase) || arg.Equals("--smoke", StringComparison.OrdinalIgnoreCase));
-        if (runsWindowsSmoke && !OperatingSystem.IsWindows())
+        if (runsWindowsSmoke && !NativePlaybackSupport.IsAvailable)
         {
-            Console.Error.WriteLine("VLC smoke modes are available on Windows only.");
+            Console.Error.WriteLine(NativePlaybackSupport.CurrentUnavailableReason);
             return 2;
         }
         SetupVLCPath();

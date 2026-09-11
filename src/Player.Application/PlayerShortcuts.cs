@@ -56,10 +56,11 @@ public static class PlayerShortcutPolicy
             if (part.Equals("Control", StringComparison.OrdinalIgnoreCase) || part.Equals("Ctrl", StringComparison.OrdinalIgnoreCase)) modifiers.Add("Ctrl");
             else if (part.Equals("Shift", StringComparison.OrdinalIgnoreCase)) modifiers.Add("Shift");
             else if (part.Equals("Alt", StringComparison.OrdinalIgnoreCase)) modifiers.Add("Alt");
+            else if (part.Equals("Meta", StringComparison.OrdinalIgnoreCase) || part.Equals("Cmd", StringComparison.OrdinalIgnoreCase) || part.Equals("Command", StringComparison.OrdinalIgnoreCase)) modifiers.Add("Meta");
             else if (key is null) key = CanonicalKey(part);
             else return string.Empty;
         }
-        return key is null ? string.Empty : string.Join('+', new[] { "Ctrl", "Alt", "Shift" }.Where(modifiers.Contains).Append(key));
+        return key is null ? string.Empty : string.Join('+', new[] { "Ctrl", "Alt", "Shift", "Meta" }.Where(modifiers.Contains).Append(key));
     }
 
     public static bool TryValidate(IEnumerable<PlayerShortcut> shortcuts, out string? error)

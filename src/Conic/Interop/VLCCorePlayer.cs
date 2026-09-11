@@ -49,6 +49,7 @@ internal sealed unsafe partial class VLCCorePlayer : IMediaEngine, IQueueTranspo
 
     public VLCCorePlayer(bool hardwareDecoding = true, bool verboseLogging = false, IReadOnlyList<string>? audioStartupArguments = null)
     {
+        NativePlaybackSupport.RequireAvailable();
         _hardwareDecoding = hardwareDecoding;
         _verboseLogging = verboseLogging;
         _audioStartupArguments = audioStartupArguments?.ToArray() ?? [];
@@ -910,7 +911,7 @@ internal sealed unsafe partial class VLCCorePlayer : IMediaEngine, IQueueTranspo
     {
         private const int InputSetPositionQuery = 1;
         private static readonly nint Library =
-            NativeLibrary.Load("libvlccore.dll");
+            NativeLibrary.Load(RepositoryPaths.CoreLibraryPath);
         private static readonly delegate* unmanaged[Cdecl]<nint, byte*, int>
             AddIntf =
                 (delegate* unmanaged[Cdecl]<nint, byte*, int>)

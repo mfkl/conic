@@ -26,4 +26,9 @@
     <NativeLibrary Include="$(VLCLR_ROOT)\lib\libvlccore.lib" />
   </ItemGroup>
 
+  <Target Name="RequireImplementedVideoBackend" BeforeTargets="PrepareForBuild"
+          Condition="'$(RuntimeIdentifier)' != 'win-x64'">
+    <Error Text="Conic.Vout implements the Windows x64 D3D11 backend. Linux/macOS hardware backends and their VLC ABIs must be implemented before publishing for $(RuntimeIdentifier)." />
+  </Target>
+
 </Project>

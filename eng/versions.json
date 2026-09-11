@@ -9,8 +9,8 @@
   },
   "vlclr": {
     "repository": "mfkl/vlclr-private",
-    "branch": "feature/vlc3-video-adjustments",
-    "commit": "50d849200c3dfb2b047e20a174ae66b56a19adcd",
+    "branch": "feature/vlc3-portable-controls",
+    "commit": "f90ac0d130ce20996c288a29dca9f43d8738ef1e",
     "consumption": "sibling-project-reference"
   }
 }

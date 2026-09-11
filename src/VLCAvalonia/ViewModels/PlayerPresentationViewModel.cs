@@ -715,7 +715,7 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
         { _diagnostic?.Invoke(exception.ToString()); OpenError = "That playlist could not be loaded safely."; }
     }
 
-    private async Task SavePlaylistAsync()
+    internal async Task SavePlaylistAsync()
     {
         if (_mediaSourcePicker is not IPlaylistDocumentPicker picker) return;
         string? path = await picker.PickPlaylistToSaveAsync();

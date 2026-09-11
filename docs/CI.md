@@ -16,7 +16,7 @@ Core checks do not build the UI or native plugin, and do not qualify playback.
 
 ## Full Windows coverage
 
-The optional Windows matrix builds the complete solution and runs all 213
+The Windows matrix builds the complete solution and runs all 213
 managed tests in Debug and Release. Release also publishes the Windows x64
 Native AOT plugin. It verifies the dependency HEAD against `eng/versions.json`
 and rejects modified tracked dependency files. Test results and native outputs
@@ -35,23 +35,24 @@ build. VLCLR is neither cloned inside the product checkout nor committed to it.
 No NuGet publication is needed. Artifact upload paths are relative to the runner
 workspace and point into `conic/artifacts/ci`.
 
-This job is initially disabled because the pinned VLCLR commit is local-only.
-On 2026-09-11, GitHub reported that commit
-`50d849200c3dfb2b047e20a174ae66b56a19adcd` was absent from both
-`mfkl/vlclr` and `mfkl/vlclr-private`; the product repository had no Actions secrets.
-To enable the full job:
+On 2026-09-11 the pinned VLCLR commit was pushed to the private repository,
+a read-only deploy key was provisioned, and `VLCLR_CI_ENABLED=true` was configured.
+The full Windows matrix now participates in pushes and pull requests.
+For a fresh repository, reproduce the setup as follows:
 
 1. Push the reviewed Git commit to `mfkl/vlclr-private` (the repository
    in `eng/versions.json`). Keep the product pin; do not substitute current VLCLR
    main, which targets another VLC ABI.
-2. Configure the product repository secret `VLCLR_READ_TOKEN` with Contents: read
-   access to that private dependency repository. The built-in GitHub token cannot
-   read a different private repository. Credentials are not persisted by checkout.
+2. Add a read-only SSH deploy key to the private VLCLR repository and store its
+   private key in the product repository secret `VLCLR_SSH_KEY`. This key grants
+   read access only to that dependency repository; no personal token is needed.
+   Credentials are not persisted by checkout. To rotate it, register a new key,
+   replace the secret, verify a successful checkout, then remove the old deploy key.
 3. Trigger **Build and test** with `full_windows` enabled. Manual dispatch becomes
    available after the workflow reaches the default branch.
 4. Set repository variable `VLCLR_CI_ENABLED=true` to run full Windows checks on
    subsequent pushes and pull requests. Require the full jobs in branch protection
-   only after they are enabled and passing. A missing token or inaccessible pin
+   only after they are enabled and passing. A missing key or inaccessible pin
    fails the requested job explicitly.
 
 No dependency commits, secrets or repository variables are published/configured

@@ -4,7 +4,7 @@ Prepared: 2026-09-12. Planning baseline: product `124bea99f53c4296e63ac8526703b8
 
 Objective: maximize the chance of a prize by shipping a dependable VLC desktop UI rewrite with demonstrable Avalonia engineering, useful migration lessons, and working desktop releases. Winning is uncertain; this plan defines deliverables we can control.
 
-This is a proposed execution plan. All checkboxes below are outstanding tasks, including tasks that verify existing functionality. Creating this document does not implement them, publish anything, or submit the entry.
+Execution started on this branch on September 12, scoped by the maintainer to Windows and locally achievable submission work; macOS/Linux implementation is deferred for this pass. [Current task status](contest/STATUS.md) records evidence and remaining gates. Unchecked items are still outstanding, including partially completed tasks. Nothing has been published or submitted.
 
 ## 1. Contest requirements and positioning
 
@@ -70,10 +70,10 @@ Explicitly defer: mobile/WebAssembly, full media indexing, transcoding/capture/b
 
 - [ ] Record product/framework/runtime hashes, installed toolchains and the current CI run for this exact product revision. Run the existing appropriate checks before changing native code.
 - [ ] Reconcile the capability matrix with current source: several rows still describe old prerequisites now implemented elsewhere. Add current status/evidence without rewriting historical reports as fresh results.
-- [ ] Select and record a pre-contest VLC release/source revision as the original application. Separate that baseline from later VLC 4 visual references. Define the migrated workflows and omissions in one table.
+- [x] Select and record a pre-contest VLC release/source revision as the original application. Separate that baseline from later VLC 4 visual references. Define the migrated workflows and omissions in one table.
 - [ ] Inventory physical Windows, Linux and macOS access, GPUs, OS/session versions, available disk/build tooling, and signing/notarization access. Arrange missing resources immediately; purchases/account actions remain future decisions.
 - [ ] Assign a named owner and capacity to each active package. Record unresolved dependencies and dates in a tracker derived from this document.
-- [ ] Create a proposed `docs/contest/STATUS.md` with task IDs, owner, status, blockers, evidence link and next decision date. Use Passed/Failed/Blocked/Not tested distinctly.
+- [x] Create `docs/contest/STATUS.md` with task IDs, owner, status, blockers, evidence link and next decision date. Use Passed/Failed/Blocked/Not tested distinctly.
 
 Acceptance: a fresh baseline report, named target machines, actual capacity and a bounded migration scope exist. No platform is marked supported solely from compilation.
 
@@ -90,12 +90,12 @@ Acceptance: another developer can obtain the release's inputs and reproduce the 
 
 ### W03 — Produce a judge-ready Windows package early
 
-- [ ] Add a proposed `eng/package.ps1` entry point accepting configuration, RID and output directory; validate inputs and use the pinned dependencies.
-- [ ] Publish the managed application and Windows Native AOT vout, stage the matching VLC runtime/plugins and required helper libraries, generate/validate the plugin cache, and exclude development-only fixtures/logs.
-- [ ] Produce a versioned self-contained Windows x64 portable ZIP first. Add installer conveniences only after the ZIP passes. Include app version, license notices, source link and SHA-256 checksums.
+- [x] Add `eng/package.ps1` accepting configuration, RID and output directory; validate inputs and use the pinned dependencies.
+- [x] Publish the managed application and Windows Native AOT vout locally, stage the matching VLC runtime/plugins and required helper libraries, generate/validate the plugin cache, and exclude development-only fixtures/logs.
+- [x] Produce a versioned self-contained Windows x64 portable review ZIP with app version, current notices, source link and SHA-256 checksums. Public distribution remains blocked on W02; this local package is not release approval.
 - [ ] Run from a path containing spaces and non-ASCII characters, with no SDK, installed VLC, sibling checkout or `VLCLR_ROOT`/`VLC_DIRECTORY` overrides. Test a normal non-admin account and an installed directory that is not writable by the app.
 - [ ] Verify profile/thumbnail storage uses user-writable locations; move or update the package without losing settings/history. Check missing/corrupt runtime failures are understandable and recoverable.
-- [ ] Write a one-page launch guide: download, extract, open a file, subtitles, queue, PiP, settings and known limitations.
+- [x] Write a one-page launch guide: download, extract, open a file, subtitles, queue, PiP, settings and known limitations.
 
 Acceptance: a fresh-machine user launches the package and reaches working video/audio without a terminal or developer setup. Keep a package hash and test record; a local `dotnet run` is insufficient.
 
@@ -199,7 +199,7 @@ The Windows scope and existing native smoke implementations are Windows-only at 
 ### W11 — Turn the work into a compelling migration account
 
 - [ ] Start a migration journal now: task, time spent, failure, decision, result and linked commit. Separate measured effort from retrospective estimates; describe AI assistance concretely where useful.
-- [ ] Draft a self-contained README submission narrative, targeting roughly 1,500–2,500 words plus linked technical appendices. This length is an editorial target, not a contest rule.
+- [x] Draft a succinct self-contained README migration narrative (roughly 200–300 words, per the maintainer's September 12 instruction). Link detailed evidence separately; final submission facts and human effort remain to be completed.
 - [ ] Explain the original desktop stack/workflows, why Avalonia, precisely what was rewritten/reused, and what is intentionally outside scope. Include the original pre-contest baseline and migration timeline.
 - [ ] Explain the difficult parts with diagrams and code links: engine/UI boundary, the child-window overlap problem, Native AOT vout, GPU conversion/import, surface ownership, portable native calls and subtitles.
 - [ ] Describe alternatives tried, what failed, work that transferred cleanly, platform-specific cost, actual effort and remaining limits. Translate internal task IDs into prose an unfamiliar developer can follow.

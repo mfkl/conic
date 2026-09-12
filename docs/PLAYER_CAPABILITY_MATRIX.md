@@ -1,6 +1,14 @@
 # Modern player capability matrix
 
-Status: UI-08 final product qualification at `6a5fc39` (feature commit
+Current reconciliation (2026-09-12): the Windows backend, queue/transport,
+media information and video geometry implementations supersede several early
+prerequisites in this inventory. The current VLCLR pin is in
+[`eng/versions.json`](../eng/versions.json); current delivery checks and remaining
+gates are in [contest status](contest/STATUS.md). Subtitle rendering,
+deinterlacing, snapshots and device selection remain unfinished. Test counts
+and commit references below describe their respective historical checks.
+
+Historical UI-08 product qualification at `6a5fc39` (feature commit
 `1c3bebf`); pinned sibling VLCLR
 revision `e90b786de74c6ed440dea8bf65329907739b0c60`.
 This is the product contract for the work packages in

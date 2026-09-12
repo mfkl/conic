@@ -30,7 +30,7 @@ public partial class MainWindow
                 Require(snapshot.HasStreams && snapshot.Streams.Any(s => s.Fields.ContainsKey("Video resolution")), "VLC reports video codec/resolution");
                 Require(snapshot.Streams.All(s => s.Fields.ContainsKey("Codec")), "all streams contain actual codec values");
                 Console.WriteLine("[media-information-smoke] " + MediaDiagnostics.Build(snapshot));
-                string directory = Path.Combine(RepositoryPaths.Root, "artifacts", "media-information-review");
+                string directory = Path.Combine(RepositoryPaths.ArtifactsDirectory, "media-information-review");
                 Directory.CreateDirectory(directory);
                 foreach (int width in new[] { 1280, 480 })
                 {

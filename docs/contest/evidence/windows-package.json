@@ -1,0 +1,147 @@
+{
+  "schemaVersion": 1,
+  "completedUtc": "2026-09-12T08:24:41.3173279Z",
+  "productBase": "839404d35fef65692c841b3fe8f4338099848eb2",
+  "productWorkingTreeWasModified": true,
+  "frameworkCommit": "09b46d50848cc0abe3c236e7a25e43679ee13c02",
+  "actualSdk": "10.0.303",
+  "pinnedSdk": "10.0.102",
+  "archive": "VLC-Avalonia-0.1.0-preview.1-win-x64.zip",
+  "archiveSha256": "01eb36da6237554eb298c0591ced407a99221415389ffa08f1738c9281de0922",
+  "mediaSha256": "1970cdcaeadf496c3ad6b5f1458a8b609212c06c1d686ba5c053930338cd3c35",
+  "os": "Microsoft Windows NT 10.0.19045.0",
+  "architecture": "X64",
+  "gpu": "Intel Iris Xe",
+  "decoder": "D3D11VA",
+  "managedTests": {
+    "Release": 229,
+    "Debug": 229
+  },
+  "nativeAotPublish": "passed",
+  "cases": [
+    {
+      "name": "hardware",
+      "result": "passed",
+      "exitCode": 0,
+      "seconds": 1.4267186,
+      "arguments": [
+        "--smoke",
+        "--expect-path=hardware-opaque-gpu"
+      ]
+    },
+    {
+      "name": "software-upload",
+      "result": "passed",
+      "exitCode": 0,
+      "seconds": 1.1974004,
+      "arguments": [
+        "--smoke",
+        "--expect-path=software-bgra-gpu-upload"
+      ]
+    },
+    {
+      "name": "cpu-bitmap",
+      "result": "passed",
+      "exitCode": 0,
+      "seconds": 0.8049632,
+      "arguments": [
+        "--smoke",
+        "--expect-path=cpu-bitmap"
+      ]
+    },
+    {
+      "name": "engine",
+      "result": "passed",
+      "exitCode": 0,
+      "seconds": 16.9135527,
+      "arguments": [
+        "--engine-smoke",
+        "--cycles=25"
+      ]
+    },
+    {
+      "name": "queue",
+      "result": "passed",
+      "exitCode": 0,
+      "seconds": 1.8416886,
+      "arguments": [
+        "--queue-smoke"
+      ]
+    },
+    {
+      "name": "compositor",
+      "result": "passed",
+      "exitCode": 0,
+      "seconds": 4.3646292,
+      "arguments": [
+        "--ui-smoke"
+      ]
+    },
+    {
+      "name": "home-session",
+      "result": "passed",
+      "exitCode": 0,
+      "seconds": 5.6510484,
+      "arguments": [
+        "--home-session-smoke"
+      ]
+    },
+    {
+      "name": "pip",
+      "result": "passed",
+      "exitCode": 0,
+      "seconds": 5.4158345,
+      "arguments": [
+        "--pip-smoke"
+      ]
+    },
+    {
+      "name": "settings",
+      "result": "passed",
+      "exitCode": 0,
+      "seconds": 5.796397,
+      "arguments": [
+        "--settings-smoke"
+      ]
+    },
+    {
+      "name": "video-adjustments",
+      "result": "passed",
+      "exitCode": 0,
+      "seconds": 7.1109475,
+      "arguments": [
+        "--video-smoke"
+      ]
+    },
+    {
+      "name": "missing-runtime",
+      "result": "passed",
+      "exitCode": 2,
+      "seconds": 0.1151039,
+      "arguments": [
+        "--smoke",
+        "--expect-path=hardware-opaque-gpu"
+      ]
+    },
+    {
+      "name": "missing-plugin",
+      "result": "passed",
+      "exitCode": 2,
+      "seconds": 0.0927155,
+      "arguments": [
+        "--smoke",
+        "--expect-path=hardware-opaque-gpu"
+      ]
+    }
+  ],
+  "nativeLifecycleEvidence": [
+    "[engine-smoke] PASS stress-cycle=25/25",
+    "[composition-pool] opaque-pictures=83 cpu-pictures=0 pool-generations=28 opaque-pool-generations=28 cpu-pool-generations=0 opaque-allocations=1120 opaque-releases=1120 release-balance=0 cpu-uploads=0",
+    "[engine-smoke] PASS lifecycle cycles=25 adapter-luid=00000000:00019883"
+  ],
+  "limits": [
+    "Local developer machine only; not a clean OS or non-admin/read-only install.",
+    "No subtitle/HEVC/other GPU/physical monitor/sleep/soak qualification on this package.",
+    "Local SDK differs from CI pin; local package is not approved for public distribution."
+  ]
+}

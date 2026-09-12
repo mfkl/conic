@@ -72,7 +72,7 @@ public partial class MainWindow
                 }
 
                 await Task.Delay(350);
-                string directory = Path.Combine(RepositoryPaths.Root, "artifacts", "accessibility-review");
+                string directory = Path.Combine(RepositoryPaths.ArtifactsDirectory, "accessibility-review");
                 Directory.CreateDirectory(directory);
                 int audited = 0;
                 void Audit(Control root)

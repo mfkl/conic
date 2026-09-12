@@ -111,7 +111,7 @@ public partial class MainWindow
                 Require(!_presentation.IsPictureInPicture && UrlPanel.IsVisible, "Open URL restores main layout");
                 CloseUrlPanel();
                 TogglePictureInPicture();
-                _presentation.OpenSource(Path.Combine(RepositoryPaths.Root, "artifacts", "missing-pip-test.mp4"), Player.Application.MediaSourceKind.File);
+                _presentation.OpenSource(Path.Combine(RepositoryPaths.ArtifactsDirectory, "missing-pip-test.mp4"), Player.Application.MediaSourceKind.File);
                 Require(!_presentation.IsPictureInPicture && _presentation.HasOpenError, "invalid media opens error in full layout");
                 Require(ReferenceEquals(engine, VideoSurface.Player) && engine.State.Generation == generation, "all window transitions preserve the same native session");
                 before = presented;
@@ -134,7 +134,7 @@ public partial class MainWindow
 
     private void CapturePictureInPicture(string name)
     {
-        string directory = Path.Combine(RepositoryPaths.Root, "artifacts", "pip-review");
+        string directory = Path.Combine(RepositoryPaths.ArtifactsDirectory, "pip-review");
         Directory.CreateDirectory(directory);
         using RenderTargetBitmap bitmap = new(new PixelSize((int)ClientSize.Width, (int)ClientSize.Height));
         bitmap.Render(VideoArea);

@@ -21,6 +21,12 @@ public partial class App : Application
                 base.OnFrameworkInitializationCompleted();
                 return;
             }
+            if (Program.StartupFailure is { } failure)
+            {
+                desktop.MainWindow = new Views.StartupFailureWindow(failure);
+                base.OnFrameworkInitializationCompleted();
+                return;
+            }
             MainWindow window = new();
             desktop.MainWindow = window;
             if (desktop.Args?.Contains("--video-smoke", StringComparer.OrdinalIgnoreCase) == true)

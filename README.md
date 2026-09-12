@@ -1,5 +1,49 @@
 # VLC Avalonia
 
+## Migration in brief
+
+This project rebuilds VLC desktop playback workflows in C# and Avalonia while
+retaining the VLC 3 engine through VLCLR. VLC 3.0.23 (December 2025) is the
+pre-contest source baseline; later VLC 4 UI references guide the appearance.
+This is a UI rewrite, with a deliberately smaller scope than the complete VLC
+application.
+
+The main technical challenge was presenting hardware-decoded video with
+ordinary Avalonia controls layered over it. On Windows, a C# Native AOT VLC
+output plugin converts decoded D3D11 surfaces into a shared texture imported
+by Avalonia. Recorded Intel Iris Xe checks show hardware decoding with no CPU
+video-frame uploads on that path. Queue, tracks, history/resume, preferences
+and PiP use shared commands and state; native resources stay behind the
+playback/backend boundary.
+
+The most useful lesson so far: proving a native frame renders is only the
+start. Surface ownership, stale callbacks, stop/reopen and package discovery
+need explicit checks. The repository includes managed tests and native
+smokes, now runnable against a self-contained Windows package outside the
+source tree. Windows has implemented playback; Linux/macOS native playback
+and subtitle rendering qualification remain unfinished.
+
+AI-assisted implementation and validation were used. Total human effort has
+not yet been measured. [Current evidence and remaining work](docs/contest/STATUS.md)
+separate completed checks from release requirements.
+[Before/after captures](docs/contest/COMPARISON.md) show the current Windows
+result. Public downloads and final release qualification are still pending.
+
+## Windows review package
+
+Build a local portable ZIP with PowerShell 7 and the pinned VLCLR/VLC inputs:
+
+```powershell
+./eng/package.ps1 -FrameworkRoot ../vlclr-vlc3-portability -VlcDirectory artifacts/dependencies/vlc-3.0.24-beta1
+./eng/test-package.ps1 -Archive <path-to-zip> -Media <path-to-h264-fixture> -Cycles 25
+```
+
+Each build creates a new folder under `artifacts/packages` with the ZIP,
+checksums, manifest and logs. Package tests extract outside the repository and
+run the included executable with isolated profiles and no development runtime
+override. [Quick start](docs/WINDOWS_QUICK_START.md) ·
+[Dependency/distribution status](docs/contest/DEPENDENCIES.md)
+
 An early modern Avalonia desktop UI for VLC 3. The Windows video path uses a
 pure-C# Native AOT VLC `vout display` plugin and a keyed-mutex D3D11 shared
 texture, allowing video and Avalonia controls to live in the same composition
@@ -147,9 +191,9 @@ The fifteen-job GitHub Actions matrix runs on pushes and pull requests:
 - Native ABI: compile and execute VLCLR's layout probe against the pinned VLC
   source headers using the native Windows, Linux and macOS compilers; exercise
   the VLC 3 typed control bridge against native variadic-call fixtures.
-- Desktop app: build the app and run 149 managed UI tests per configuration on
+- Desktop app: build the app and run 157 managed UI tests per configuration on
   Ubuntu and macOS, using the pinned sibling VLCLR checkout.
-- Full Windows: all 221 managed tests per configuration, plus the Release
+- Full Windows: all 229 managed tests per configuration, plus the Release
   Windows x64 Native AOT plugin publish.
 
 All eight jobs passed for commit `f709051` in

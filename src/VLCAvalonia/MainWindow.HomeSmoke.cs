@@ -88,7 +88,7 @@ public partial class MainWindow
     }
     private void CaptureHome(string name)
     {
-        string directory = Path.Combine(RepositoryPaths.Root, "artifacts", "home-review");
+        string directory = Path.Combine(RepositoryPaths.ArtifactsDirectory, "home-review");
         Directory.CreateDirectory(directory);
         using RenderTargetBitmap bitmap = new(new PixelSize((int)ClientSize.Width, (int)ClientSize.Height));
         bitmap.Render(VideoArea);

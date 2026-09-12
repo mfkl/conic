@@ -13,7 +13,9 @@ internal static class WindowsVlcRuntime
     {
         NativePlaybackSupport.RequireAvailable();
         string directory = RepositoryPaths.VLCDirectory;
-        SetDllDirectoryW(directory);
+        _ = RepositoryPaths.PluginPath;
+        if (!SetDllDirectoryW(directory))
+            throw new IOException("Windows could not configure the VLC playback directory.");
         NativeLibrary.Load(RepositoryPaths.CoreLibraryPath);
         NativeLibrary.Load(RepositoryPaths.PublicLibraryPath);
     }

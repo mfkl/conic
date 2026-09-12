@@ -202,7 +202,7 @@ public partial class MainWindow
 
     private void SavePlaybackCapture(string name)
     {
-        string directory = Path.Combine(RepositoryPaths.Root, "artifacts", "playback-review");
+        string directory = Path.Combine(RepositoryPaths.ArtifactsDirectory, "playback-review");
         Directory.CreateDirectory(directory);
         using RenderTargetBitmap bitmap = new(new PixelSize((int)ClientSize.Width, (int)ClientSize.Height));
         bitmap.Render(VideoArea);

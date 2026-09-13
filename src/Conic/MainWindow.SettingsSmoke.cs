@@ -85,7 +85,7 @@ public partial class MainWindow
 
     private void CaptureSettings(string name)
     {
-        string directory = Path.Combine(RepositoryPaths.Root, "artifacts", "settings-review");
+        string directory = Path.Combine(RepositoryPaths.ArtifactsDirectory, "settings-review");
         Directory.CreateDirectory(directory);
         using RenderTargetBitmap bitmap = new(new PixelSize((int)ClientSize.Width, (int)ClientSize.Height));
         bitmap.Render(VideoArea);

@@ -145,7 +145,8 @@ The fifteen-job GitHub Actions matrix runs on pushes and pull requests:
 - Hosted graphics diagnostics in Release jobs: launch the compositor probe and
   retain capability reports. Linux uses Xvfb; this does not qualify hardware playback.
 - Native ABI: compile and execute VLCLR's layout probe against the pinned VLC
-  source headers using the native Windows, Linux and macOS compilers.
+  source headers using the native Windows, Linux and macOS compilers; exercise
+  the VLC 3 typed control bridge against native variadic-call fixtures.
 - Desktop app: build the app and run 149 managed UI tests per configuration on
   Ubuntu and macOS, using the pinned sibling VLCLR checkout.
 - Full Windows: all 221 managed tests per configuration, plus the Release

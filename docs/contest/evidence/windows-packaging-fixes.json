@@ -1,0 +1,154 @@
+{
+  "schemaVersion": 1,
+  "completedUtc": "2026-09-13T10:57:16.4744301Z",
+  "productBase": "243e2d92117a9649a0c68af33f2ef80489c2df15",
+  "productWorkingTreeWasModified": true,
+  "archiveSha256": "285bbf1fdbc742e440e6af8a5b45f805cb3417268811385d48385036178c529b",
+  "frameworkCommit": "09b46d50848cc0abe3c236e7a25e43679ee13c02",
+  "sdkCaller": "10.0.112",
+  "sdkRecorded": "10.0.303",
+  "timezoneOffsetsHours": [
+    0,
+    -7
+  ],
+  "cases": [
+    {
+      "name": "hardware",
+      "result": "passed",
+      "exitCode": 0,
+      "seconds": 2.4732179,
+      "arguments": [
+        "--smoke",
+        "--expect-path=hardware-opaque-gpu"
+      ]
+    },
+    {
+      "name": "software-upload",
+      "result": "passed",
+      "exitCode": 0,
+      "seconds": 2.187549,
+      "arguments": [
+        "--smoke",
+        "--expect-path=software-bgra-gpu-upload"
+      ]
+    },
+    {
+      "name": "cpu-bitmap",
+      "result": "passed",
+      "exitCode": 0,
+      "seconds": 1.4253587,
+      "arguments": [
+        "--smoke",
+        "--expect-path=cpu-bitmap"
+      ]
+    },
+    {
+      "name": "engine",
+      "result": "passed",
+      "exitCode": 0,
+      "seconds": 31.4805498,
+      "arguments": [
+        "--engine-smoke",
+        "--cycles=25"
+      ]
+    },
+    {
+      "name": "queue",
+      "result": "passed",
+      "exitCode": 0,
+      "seconds": 4.2586469,
+      "arguments": [
+        "--queue-smoke"
+      ]
+    },
+    {
+      "name": "compositor",
+      "result": "passed",
+      "exitCode": 0,
+      "seconds": 9.9059765,
+      "arguments": [
+        "--ui-smoke"
+      ]
+    },
+    {
+      "name": "home-session",
+      "result": "passed",
+      "exitCode": 0,
+      "seconds": 10.133286,
+      "arguments": [
+        "--home-session-smoke"
+      ]
+    },
+    {
+      "name": "pip",
+      "result": "passed",
+      "exitCode": 0,
+      "seconds": 9.4950947,
+      "arguments": [
+        "--pip-smoke"
+      ]
+    },
+    {
+      "name": "settings",
+      "result": "passed",
+      "exitCode": 0,
+      "seconds": 9.6849829,
+      "arguments": [
+        "--settings-smoke"
+      ]
+    },
+    {
+      "name": "video-adjustments",
+      "result": "passed",
+      "exitCode": 0,
+      "seconds": 10.7947527,
+      "arguments": [
+        "--video-smoke"
+      ]
+    },
+    {
+      "name": "timezone-0",
+      "result": "passed",
+      "exitCode": 0,
+      "seconds": 2.3301606,
+      "arguments": [
+        "--smoke",
+        "--expect-path=cpu-bitmap"
+      ]
+    },
+    {
+      "name": "timezone--7",
+      "result": "passed",
+      "exitCode": 0,
+      "seconds": 1.8603537,
+      "arguments": [
+        "--smoke",
+        "--expect-path=cpu-bitmap"
+      ]
+    },
+    {
+      "name": "missing-runtime",
+      "result": "passed",
+      "exitCode": 2,
+      "seconds": 0.5881174,
+      "arguments": [
+        "--smoke",
+        "--expect-path=hardware-opaque-gpu"
+      ]
+    },
+    {
+      "name": "missing-plugin",
+      "result": "passed",
+      "exitCode": 2,
+      "seconds": 0.5054771,
+      "arguments": [
+        "--smoke",
+        "--expect-path=hardware-opaque-gpu"
+      ]
+    }
+  ],
+  "limits": [
+    "Existing developer machine, not a fresh OS installation.",
+    "No subtitle, physical monitor/sleep, other GPU or 60-minute soak qualification."
+  ]
+}

@@ -7,6 +7,8 @@ namespace VLCAvalonia;
 
 internal static class Program
 {
+    internal static PlaybackStartupFailure? StartupFailure { get; private set; }
+
     [STAThread]
     public static int Main(string[] args)
     {
@@ -18,7 +20,16 @@ internal static class Program
             Console.Error.WriteLine(NativePlaybackSupport.CurrentUnavailableReason);
             return 2;
         }
-        VideoBackendFactory.InitializeRuntime();
+        StartupFailure = PlaybackStartup.TryInitialize(VideoBackendFactory.InitializeRuntime);
+        if (StartupFailure is { } failure)
+        {
+            Console.Error.WriteLine($"[startup] {failure.Message}\n{failure.Detail}");
+            // Diagnostics must fail promptly instead of waiting for someone to close a dialog.
+            if (args.Any(arg => arg.EndsWith("-smoke", StringComparison.OrdinalIgnoreCase) || arg.Equals("--smoke", StringComparison.OrdinalIgnoreCase)))
+                return 2;
+            BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+            return 2;
+        }
         int cycles = ParseCycles(args);
         if (args.Contains("--engine-smoke", StringComparer.OrdinalIgnoreCase))
             return CompositionSmoke.RunEngine(cycles);

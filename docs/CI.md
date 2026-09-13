@@ -16,7 +16,7 @@ Core checks do not build the UI or native plugin, and do not qualify playback.
 
 ## Linux/macOS app coverage
 
-Four Desktop jobs build the real Avalonia app and run all 149 managed UI tests
+Four Desktop jobs build the real Avalonia app and run all 157 managed UI tests
 on Ubuntu 24.04 and macOS 15, in Debug and Release. They use the same pinned
 sibling VLCLR checkout and dependency-access settings as the Windows jobs.
 The `Desktop` script scope builds the UI test project and its app references;
@@ -65,7 +65,7 @@ bridge is not yet selected by the app's Windows playback implementation. See
 
 ## Full Windows coverage
 
-The Windows matrix builds the complete solution and runs all 221
+The Windows matrix builds the complete solution and runs all 229
 managed tests in Debug and Release. Release also publishes the Windows x64
 Native AOT plugin. It verifies the dependency HEAD against `eng/versions.json`
 and rejects modified tracked dependency files. Test results and native outputs

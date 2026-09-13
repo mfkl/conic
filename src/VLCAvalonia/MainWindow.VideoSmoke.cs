@@ -28,7 +28,7 @@ public partial class MainWindow
                     while (!condition() && DateTime.UtcNow < deadline) await Task.Delay(50);
                     Require(condition(), message);
                 }
-                string folder = Path.Combine(RepositoryPaths.Root, "artifacts", "video-review", cpu ? "cpu" : "gpu");
+                string folder = Path.Combine(RepositoryPaths.ArtifactsDirectory, "video-review", cpu ? "cpu" : "gpu");
                 Directory.CreateDirectory(folder);
                 async Task Capture(string name)
                 {

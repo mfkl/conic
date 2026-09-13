@@ -12,6 +12,8 @@ internal static class RepositoryPaths
     public static string CoreLibraryPath => Locator.CoreLibraryPath;
     public static string PublicLibraryPath => Locator.PublicLibraryPath;
     public static string PluginPath => Locator.PluginPath;
+    public static string ArtifactsDirectory => Environment.GetEnvironmentVariable("VLC_AVALONIA_ARTIFACTS") is { Length: > 0 } directory
+        ? Path.GetFullPath(directory) : Path.Combine(Root, "artifacts");
     public static string TestMediaPath => Environment.GetEnvironmentVariable("VLC_AVALONIA_TEST_MEDIA") is { Length: > 0 } configured
         ? Path.GetFullPath(configured) : Path.Combine(VLCLRRoot, "test_01.mkv");
 }

@@ -43,11 +43,11 @@ The normal startup-error window was also opened and visually inspected;
 [capture](images/startup-failure.png). Actual Home and playback windows were
 captured from the extracted application, including visible native GPU video.
 
-Initial extraction exposed stale VLC plugin-cache entries caused by timestamp
-rounding. Packaging now normalizes plugin timestamps to ZIP-representable
-precision before cache generation. The final runner rejects stale-cache
-warnings; all final cases passed that check. Extraction in another time zone
-has not been qualified.
+The September 12 package normalized plugin timestamps to ZIP-representable
+precision. September 13 review reproduced 363 stale-cache warnings when the
+same ZIP timestamps were interpreted in UTC. Packaging now omits the generated
+cache from the ZIP and lets VLC discover the bundled plugins at startup. The
+runner rejects stale-cache warnings and adds UTC and UTC−07 extraction checks.
 
 ## Reproduction and retained evidence
 
@@ -66,6 +66,22 @@ These ignored local artifacts are not public downloads. The committed
 [evidence summary](evidence/windows-package.json) records the final case results
 and key native counters. The release build was clean of compiler errors;
 framework/AOT builds retain the four existing VLCLR CA1420 marshalling warnings.
+
+## September 13 packaging fixes
+
+All 14 checks passed on the rebuilt ZIP, including UTC and UTC−07 extraction
+emulation, with no stale-cache warnings. Building from a caller directory pinned
+to SDK 10.0.112 correctly recorded the publishing SDK, 10.0.303. The app and
+Native AOT plugin were republished; managed application sources were unchanged.
+See the [fix evidence](evidence/windows-packaging-fixes.json).
+
+Archive SHA-256: `285bbf1fdbc742e440e6af8a5b45f805cb3417268811385d48385036178c529b`.
+Local build: `artifacts/packages/20260913-125143-8e870861`; qualification logs:
+`artifacts/package-tests/7aab4babf50f4816bf251f88b55a0a49`.
+This artifact includes working-tree fixes on base `243e2d9`.
+An extra run of the old ZIP crashed in the queue smoke while the build was
+running. The rebuilt ZIP passed that check and three further isolated queue
+runs; the old-package crash remains unexplained.
 
 Outstanding: subtitle composition, HEVC/P010 checks on this exact package,
 other GPUs, clean OS/non-admin/read-only installation, physical monitor and

@@ -95,6 +95,23 @@ try {
     Invoke-PackageCase 'pip' @('--pip-smoke')
     Invoke-PackageCase 'settings' @('--settings-smoke')
     Invoke-PackageCase 'video-adjustments' @('--video-smoke')
+    # Emulate ZIP extraction in two destination time zones without changing the
+    # host clock. Only timestamps change; the verified file contents stay intact.
+    $zip = [IO.Compression.ZipFile]::OpenRead($archivePath)
+    try {
+        foreach ($offsetHours in @(0, -7)) {
+            foreach ($entry in $zip.Entries) {
+                if ($entry.FullName -notmatch '/vlc/plugins/.*\.dll$') { continue }
+                $target = [IO.Path]::GetFullPath((Join-Path $installation $entry.FullName))
+                if (-not $target.StartsWith($appDirectory + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) { throw 'ZIP path escapes package.' }
+                $wallTime = [DateTime]::SpecifyKind($entry.LastWriteTime.DateTime, [DateTimeKind]::Unspecified)
+                $receiverTime = [DateTimeOffset]::new($wallTime, [TimeSpan]::FromHours($offsetHours))
+                [IO.File]::SetLastWriteTimeUtc($target, $receiverTime.UtcDateTime)
+            }
+            Invoke-PackageCase "timezone-$offsetHours" @('--smoke', '--expect-path=cpu-bitmap')
+        }
+    }
+    finally { $zip.Dispose() }
     Invoke-PackageCase 'missing-runtime' @('--smoke', '--expect-path=hardware-opaque-gpu') 2 $true
     # Only rename a known file inside this invocation's new temporary installation.
     $plugin = [IO.Path]::GetFullPath((Join-Path $appDirectory 'vlc/plugins/video_output/libvlc_avalonia_plugin.dll'))

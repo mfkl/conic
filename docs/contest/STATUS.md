@@ -12,9 +12,9 @@ human effort figures: maintainer. No public release or contest entry has been ma
 | W01 status tracker | Passed | This document; external capacity/hardware not assumed |
 | W02 source/dependency inventory | Partial | [Dependencies](DEPENDENCIES.md); full GPL v2 text added to repository LICENSE |
 | W02 public source/distribution route | Blocked | VLCLR remains private and has no root license at the reviewed pin; maintainer must resolve source access/terms before public distribution |
-| W03 portable Windows build | Implemented | [package.ps1](../../eng/package.ps1): self-contained app, native plugin, VLC, cache, manifest, hashes and ZIP |
+| W03 portable Windows build | Implemented | [package.ps1](../../eng/package.ps1): self-contained app, native plugin, VLC, plugin validation, manifest, hashes and ZIP |
 | W03 launch instructions | Passed | [Quick start](../WINDOWS_QUICK_START.md) |
-| W03 installed-package verification | Passed locally | All 12 [package checks](QUALIFICATION.md), outside checkout with spaces/Unicode and isolated profiles; fresh OS/non-admin/read-only installation still untested |
+| W03 installed-package verification | Passed locally | All 14 [package checks](QUALIFICATION.md), including two emulated extraction time zones, outside checkout with spaces/Unicode and isolated profiles; fresh OS/non-admin/read-only installation still untested |
 | W04 subtitles | Outstanding | Existing track/delay controls do not establish visual rendering; native code still does not compose GPU subpictures |
 | W05–W07 portable controls/backends | Deferred | No Linux/macOS implementation in this pass |
 | W08 broken installation handling | Implemented and unit-tested | Missing/inaccessible/incompatible playback files show an actionable startup window; smoke commands exit 2 with diagnostics |
@@ -46,8 +46,8 @@ separate input from the pinned beta runtime used by this app.
 
 - September 12: ran the current Windows baseline; implemented portable packaging,
   startup failure recovery, external capture paths and package qualification.
-- Extracted-ZIP checks exposed stale plugin-cache timestamps. Packaging now
-  normalizes plugin times to ZIP-representable precision before cache generation.
+- September 13 review: omit the timestamp-dependent plugin cache from the ZIP;
+  resolve the recorded SDK in the same working directory as publishing.
 - Added a concise README narrative and release-input inventory. Publication,
   source licensing, subtitle rendering and broader physical qualification remain
   separate unfinished work. No total human-hours estimate is inferred from commits.

@@ -15,8 +15,10 @@ establish that every bundled dependency is ready for public redistribution.
 `package-manifest.json` records product/framework revisions, working-tree
 changes, actual SDK and pinned SDK, runtime pins, and hashes for the staged
 files. It excludes its own hash; `SHA256SUMS.txt` covers the final ZIP. Packaging
-validates x64 PE headers, runtime version and the framework pin, then regenerates
-the staged VLC plugin cache. Version/header checks alone do not prove the
+validates x64 PE headers, runtime version and the framework pin, then generates
+the staged VLC plugin cache for validation and omits it from the ZIP. VLC scans
+the bundled plugins at startup, avoiding cache invalidation when ZIP timestamps
+are interpreted in another time zone. Version/header checks alone do not prove the
 runtime was built from the recorded source commit.
 
 The opt-in portable native control helper is not used by the current Windows

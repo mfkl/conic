@@ -93,15 +93,17 @@ with filesystem fixtures; they must not be presented as Linux/macOS execution.
 
 ## Windows validation
 
-Use the framework commit in `eng/versions.json`; the currently available sibling
-checkout targets different work. The compatible local checkout is
-`artifacts/dependencies/vlclr-codec-info` at
-`50d849200c3dfb2b047e20a174ae66b56a19adcd`.
+Use the framework commit in `eng/versions.json` in a clean sibling checkout.
+For the current portability work this is `../vlclr-vlc3-portability`; the
+ordinary `../vlclr` working directory may be on the VLC 4 line.
 
 ```powershell
-$env:VLCLR_ROOT = (Resolve-Path artifacts/dependencies/vlclr-codec-info).Path
-dotnet test conic.slnx -c Release --no-restore -p:UsedAvaloniaProducts=
+./eng/test.ps1 -Scope Windows -Configuration Release -FrameworkRoot ../vlclr-vlc3-portability
 ```
+
+The results below record the original portability validation against framework
+commit `50d849200c3dfb2b047e20a174ae66b56a19adcd`. For subsequent native-control
+calling-convention coverage, see [TARGET_QUALIFICATION.md](TARGET_QUALIFICATION.md).
 
 The empty `UsedAvaloniaProducts` property skips build telemetry, whose user-profile
 log location is not writable in the restricted workspace. It does not skip compilation

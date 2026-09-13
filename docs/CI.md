@@ -51,9 +51,17 @@ the source headers. These jobs share the dependency-access settings; the
 `native_abi` manual input can request them independently. Their artifacts include
 JSON provenance and compiler/probe logs, even on failure.
 
-This checks the existing probe's static size/offset assertions and module ABI
-constants. It does not qualify native VLC calls, variadic arguments, decoder
-surfaces or playback. See [target qualification](TARGET_QUALIFICATION.md).
+These jobs also compile VLCLR's opt-in VLC 3 control bridge and a native test
+fixture, then run managed calls through the bridge. The target compiler creates
+and consumes real variadic arguments, covering double/int values, full-width
+pointers, output arrays, native error propagation and playlist lock flags.
+Evidence is retained under `native-abi-*/control-bridge/`.
+
+The layout probe checks static size/offset assertions and module ABI constants.
+The control fixture checks managed/native calling conventions without loading
+VLC. Neither qualifies actual runtime calls, decoder surfaces or playback. The
+bridge is not yet selected by the app's Windows playback implementation. See
+[target qualification](TARGET_QUALIFICATION.md).
 
 ## Full Windows coverage
 

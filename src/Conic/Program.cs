@@ -7,16 +7,6 @@ namespace Conic;
 
 internal static class Program
 {
-    private static readonly string[] SmokeFlags =
-    [
-        "--engine-smoke",
-        "--queue-smoke",
-        "--media-capabilities-smoke",
-        "--player-capabilities-smoke",
-        "--opaque-smoke",
-        "--smoke",
-    ];
-
     internal static PlaybackStartupFailure? StartupFailure { get; private set; }
 
     [STAThread]
@@ -54,6 +44,16 @@ internal static class Program
     }
 
 #if SMOKE
+    private static readonly string[] SmokeFlags =
+    [
+        "--engine-smoke",
+        "--queue-smoke",
+        "--media-capabilities-smoke",
+        "--player-capabilities-smoke",
+        "--opaque-smoke",
+        "--smoke",
+    ];
+
     private static bool IsSmokeRequested(string[] args) =>
         args.Any(arg =>
             SmokeFlags.Contains(arg, StringComparer.OrdinalIgnoreCase) ||

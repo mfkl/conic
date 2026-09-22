@@ -44,6 +44,26 @@ public partial class MainWindow
         if (_presentation.IsPlaying && !_settings.Current.ReduceMotion) _autoHideTimer.Start();
     }
 
+    // With the client area extended over the decorations, the top chrome is
+    // the caption: drag it to move the window, double-click to maximize.
+    private void OnCaptionPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (e.Source is Border or TextBlock && e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+        {
+            if (e.ClickCount == 2 && WindowState != WindowState.FullScreen)
+            {
+                WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
+                e.Handled = true;
+                return;
+            }
+            if (WindowState != WindowState.FullScreen)
+            {
+                BeginMoveDrag(e);
+                e.Handled = true;
+            }
+        }
+    }
+
     private void ToggleFullscreen()
     {
         ExitPictureInPicture();

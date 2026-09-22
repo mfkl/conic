@@ -8,6 +8,9 @@
     <SolidColorBrush x:Key="PlayerAmplified" Color="#FFB366" />
     <SolidColorBrush x:Key="PlayerCanvas" Color="Black" />
     <SolidColorBrush x:Key="PlayerSurface" Color="#F5212121" />
+    <SolidColorBrush x:Key="PlayerCard" Color="#F5292929" />
+    <SolidColorBrush x:Key="PlayerCardArtwork" Color="#F5303030" />
+    <SolidColorBrush x:Key="PlayerWell" Color="#F5181818" />
     <SolidColorBrush x:Key="PlayerText" Color="#F5F5F5" />
     <SolidColorBrush x:Key="PlayerSecondaryText" Color="#B3B3B3" />
     <SolidColorBrush x:Key="PlayerBorder" Color="#30FFFFFF" />
@@ -15,4 +18,5 @@
     <SolidColorBrush x:Key="PlayerPressed" Color="#30FFFFFF" />
     <SolidColorBrush x:Key="PlayerTrack" Color="#40FFFFFF" />
     <SolidColorBrush x:Key="PlayerSelection" Color="#24FF8800" />
+    <SolidColorBrush x:Key="PlayerDanger" Color="#E81123" />
 </ResourceDictionary>

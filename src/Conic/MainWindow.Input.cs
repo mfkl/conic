@@ -1,0 +1,131 @@
+using System;
+using System.Linq;
+using Avalonia.Input;
+using Avalonia.Platform.Storage;
+using Avalonia.Controls;
+using Player.Application;
+using Conic.ViewModels;
+
+namespace Conic;
+
+// Keyboard shortcuts, drag-and-drop, and queue list interaction.
+public partial class MainWindow
+{
+    private void OnPlayerKeyDown(object? sender, KeyEventArgs e)
+    {
+        WakeChrome();
+        if (e.Key == Key.Escape && UrlPanel.IsVisible)
+        {
+            CloseUrlPanel();
+            e.Handled = true;
+            return;
+        }
+        if (e.Key == Key.Escape && QueueDrawer.IsVisible)
+        {
+            _presentation.IsQueueOpen = false;
+            RestoreRouteFocus(QueueButton);
+            e.Handled = true;
+            return;
+        }
+        if (e.Key == Key.Escape && LibraryPanel.IsVisible)
+        {
+            CloseLibrary();
+            e.Handled = true;
+            return;
+        }
+        if (_presentation.HasPendingResume)
+        {
+            if (e.Key == Key.Enter) _presentation.Registry.Execute(PlayerCommandId.AcceptResume);
+            else if (e.Key == Key.Escape) _presentation.Registry.Execute(PlayerCommandId.DeclineResume);
+            else return;
+            e.Handled = true;
+            return;
+        }
+        if (e.Key == Key.Escape && OpenMenu.IsVisible)
+        {
+            CloseOpenMenu();
+            e.Handled = true;
+            return;
+        }
+        if (e.Key == Key.Escape && SettingsPanel.IsVisible)
+        {
+            CloseSettings();
+            e.Handled = true;
+            return;
+        }
+        if (e.Key == Key.Escape && _presentation.IsPictureInPicture)
+        {
+            ExitPictureInPicture();
+            e.Handled = true;
+            return;
+        }
+        if (SettingsPanel.IsVisible || ShortcutFocusPolicy.Suppresses(e.Source)) return;
+        string key = e.Key == Key.OemComma ? "," : e.Key.ToString();
+        string modifiers = (e.KeyModifiers.HasFlag(KeyModifiers.Control) ? "Ctrl+" : "") +
+            (e.KeyModifiers.HasFlag(KeyModifiers.Alt) ? "Alt+" : "") +
+            (e.KeyModifiers.HasFlag(KeyModifiers.Shift) ? "Shift+" : "") +
+            (e.KeyModifiers.HasFlag(KeyModifiers.Meta) ? "Meta+" : "");
+        string gesture = PlayerShortcutPolicy.Normalize(modifiers + key);
+        IReadOnlyDictionary<PlayerCommandId, string> active =
+            PlayerShortcutPolicy.Effective(_presentation.Registry, _settings.Current.ShortcutOverrides);
+        e.Handled = PlayerShortcutPolicy.TryDispatch(_presentation.Registry, active, gesture);
+    }
+
+    private void OnMediaDragOver(object? sender, DragEventArgs e)
+    {
+        IStorageItem[]? items = e.DataTransfer.TryGetFiles();
+        bool local = items is { Length: > 0 } && items.All(item => item.Path.IsFile);
+        e.DragEffects = local ? DragDropEffects.Copy : DragDropEffects.None;
+        e.Handled = true;
+    }
+
+    private void OnMediaDrop(object? sender, DragEventArgs e)
+    {
+        IStorageItem[]? items = e.DataTransfer.TryGetFiles();
+        string[] localSources = items is { Length: > 0 } && items.All(item => item.Path.IsFile)
+            ? items.Select(item => item.Path.LocalPath).ToArray()
+            : [];
+        _presentation.OpenDroppedSources(localSources);
+        UpdateOpenErrorSurface();
+        e.Handled = true;
+    }
+
+    private void OnQueueDrawerLayoutUpdated(object? sender, EventArgs e)
+    {
+        if (_focusQueueOnLayout && QueueDrawer.IsEffectivelyVisible && CloseQueueButton.Focus())
+            _focusQueueOnLayout = false;
+    }
+
+    private void OnDrawerTabsKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Source is not Button current || e.KeyModifiers != KeyModifiers.None) return;
+        Button[] tabs = DrawerTabs.Children.OfType<Button>().ToArray();
+        int index = Array.IndexOf(tabs, current);
+        if (index < 0) return;
+        int next = e.Key switch
+        {
+            Key.Left => (index + tabs.Length - 1) % tabs.Length,
+            Key.Right => (index + 1) % tabs.Length,
+            Key.Home => 0,
+            Key.End => tabs.Length - 1,
+            _ => -1
+        };
+        if (next < 0) return;
+        Button target = tabs[next];
+        target.Focus(NavigationMethod.Directional);
+        if (target.Command?.CanExecute(target.CommandParameter) == true) target.Command.Execute(target.CommandParameter);
+        e.Handled = true;
+    }
+
+    private void OnMoveQueueItemUp(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (sender is Button { DataContext: QueueItem item } && item.Index > 0)
+            _presentation.Registry.Execute(PlayerCommandId.QueueMove, new QueueMove(item.Token, item.Index - 1));
+    }
+
+    private void OnMoveQueueItemDown(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (sender is Button { DataContext: QueueItem item } && item.Index + 1 < _presentation.QueueItems.Count)
+            _presentation.Registry.Execute(PlayerCommandId.QueueMove, new QueueMove(item.Token, item.Index + 1));
+    }
+}

@@ -1,3 +1,4 @@
+#if SMOKE
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -209,3 +210,4 @@ public partial class MainWindow
         bitmap.Save(Path.Combine(directory, name), PngBitmapEncoderOptions.Default);
     }
 }
+#endif // SMOKE

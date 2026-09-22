@@ -1,3 +1,4 @@
+#if SMOKE
 using Avalonia;
 using Avalonia.Automation.Peers;
 using Avalonia.Automation.Provider;
@@ -137,3 +138,4 @@ public partial class MainWindow
         };
     }
 }
+#endif // SMOKE

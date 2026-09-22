@@ -1,3 +1,4 @@
+#if SMOKE
 using Conic.Interop.Windows;
 using Avalonia;
 using Avalonia.Controls;
@@ -104,3 +105,4 @@ public partial class MainWindow
         };
     }
 }
+#endif // SMOKE

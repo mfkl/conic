@@ -1,3 +1,4 @@
+#if SMOKE
 using System.Diagnostics;
 using System.Runtime.Versioning;
 using Player.Contracts;
@@ -783,3 +784,4 @@ internal static class CompositionSmoke
             $"canSeek={last.CanSeek}, error={last.Error ?? "<none>"}.");
     }
 }
+#endif // SMOKE

@@ -29,64 +29,66 @@ public partial class App : Application
             }
             MainWindow window = new();
             desktop.MainWindow = window;
-            if (desktop.Args?.Contains("--video-smoke", StringComparer.OrdinalIgnoreCase) == true)
-                window.EnableVideoSmoke(desktop, false);
-            else if (desktop.Args?.Contains("--video-cpu-smoke", StringComparer.OrdinalIgnoreCase) == true)
-                window.EnableVideoSmoke(desktop, true);
-            else if (desktop.Args?.Contains("--accessibility-smoke", StringComparer.OrdinalIgnoreCase) == true)
-                window.EnableAccessibilitySmoke(desktop, true);
-            else if (desktop.Args?.Contains("--scale-smoke", StringComparer.OrdinalIgnoreCase) == true)
-                window.EnableAccessibilitySmoke(desktop, false);
-            else if (desktop.Args?.Contains("--drawer-smoke", StringComparer.OrdinalIgnoreCase) == true)
-                window.EnableDrawerSmoke(desktop, false);
-            else if (desktop.Args?.Contains("--drawer-native-smoke", StringComparer.OrdinalIgnoreCase) == true)
-                window.EnableDrawerSmoke(desktop, true);
-            else if (desktop.Args?.Contains("--stop-smoke", StringComparer.OrdinalIgnoreCase) == true)
-                window.EnableStopSmoke(desktop);
-            else if (desktop.Args?.Contains("--thumbnail-smoke", StringComparer.OrdinalIgnoreCase) == true)
-                window.EnableThumbnailSmoke(desktop, false);
-            else if (desktop.Args?.Contains("--thumbnail-review", StringComparer.OrdinalIgnoreCase) == true)
-                window.EnableThumbnailSmoke(desktop, true);
-            else if (desktop.Args?.Contains("--media-information-smoke", StringComparer.OrdinalIgnoreCase) == true)
-                window.EnableMediaInformationSmoke(desktop);
-            else if (desktop.Args?.Contains("--settings-smoke", StringComparer.OrdinalIgnoreCase) == true)
-                window.EnableSettingsSmoke(desktop);
-            else if (desktop.Args?.Contains("--settings-review", StringComparer.OrdinalIgnoreCase) == true)
-                window.EnableSettingsReview();
-            else if (desktop.Args?.Contains("--pip-smoke", StringComparer.OrdinalIgnoreCase) == true)
-                window.EnablePictureInPictureSmoke(desktop);
-            else if (desktop.Args?.Contains("--pip-review", StringComparer.OrdinalIgnoreCase) == true)
-                window.EnablePictureInPictureReview();
-            else if (desktop.Args?.Contains("--home-smoke", StringComparer.OrdinalIgnoreCase) == true)
-                window.EnableHomeSmoke(desktop, false);
-            else if (desktop.Args?.Contains("--home-session-smoke", StringComparer.OrdinalIgnoreCase) == true)
-                window.EnableHomeSmoke(desktop, true);
-            else if (desktop.Args?.Contains(
-                    "--adapter-mismatch-smoke",
-                    StringComparer.OrdinalIgnoreCase) == true)
-            {
-                window.EnableAdapterMismatchSmoke(desktop);
-            }
-            else if (desktop.Args?.Contains(
-                    "--ui-smoke",
-                    StringComparer.OrdinalIgnoreCase) == true)
-            {
-                window.EnableGPUCompositionSmoke(desktop);
-            }
-            else if (desktop.Args?.Contains("--playback-controls-smoke", StringComparer.OrdinalIgnoreCase) == true)
-            {
-                window.EnablePlaybackControlsSmoke(desktop);
-            }
-            else if (desktop.Args?.Contains("--layout-smoke", StringComparer.OrdinalIgnoreCase) == true)
-            {
-                window.EnableLayoutSmoke(desktop);
-            }
-            else if (desktop.Args?.Contains("--playback-review", StringComparer.OrdinalIgnoreCase) == true)
-            {
-                window.EnablePlaybackReview();
-            }
+#if SMOKE
+            EnableSmokeMode(window, desktop.Args);
+#endif
         }
 
         base.OnFrameworkInitializationCompleted();
     }
+
+#if SMOKE
+    // Every interactive smoke mode drives the real styled window; the first
+    // matching flag wins, and no flag means the window runs as the product.
+    private static void EnableSmokeMode(
+        MainWindow window, string[]? args)
+    {
+        if (args is null) return;
+        if (args.Contains("--video-smoke", StringComparer.OrdinalIgnoreCase))
+            window.EnableVideoSmoke(desktopArg(), false);
+        else if (args.Contains("--video-cpu-smoke", StringComparer.OrdinalIgnoreCase))
+            window.EnableVideoSmoke(desktopArg(), true);
+        else if (args.Contains("--accessibility-smoke", StringComparer.OrdinalIgnoreCase))
+            window.EnableAccessibilitySmoke(desktopArg(), true);
+        else if (args.Contains("--scale-smoke", StringComparer.OrdinalIgnoreCase))
+            window.EnableAccessibilitySmoke(desktopArg(), false);
+        else if (args.Contains("--drawer-smoke", StringComparer.OrdinalIgnoreCase))
+            window.EnableDrawerSmoke(desktopArg(), false);
+        else if (args.Contains("--drawer-native-smoke", StringComparer.OrdinalIgnoreCase))
+            window.EnableDrawerSmoke(desktopArg(), true);
+        else if (args.Contains("--stop-smoke", StringComparer.OrdinalIgnoreCase))
+            window.EnableStopSmoke(desktopArg());
+        else if (args.Contains("--thumbnail-smoke", StringComparer.OrdinalIgnoreCase))
+            window.EnableThumbnailSmoke(desktopArg(), false);
+        else if (args.Contains("--thumbnail-review", StringComparer.OrdinalIgnoreCase))
+            window.EnableThumbnailSmoke(desktopArg(), true);
+        else if (args.Contains("--media-information-smoke", StringComparer.OrdinalIgnoreCase))
+            window.EnableMediaInformationSmoke(desktopArg());
+        else if (args.Contains("--settings-smoke", StringComparer.OrdinalIgnoreCase))
+            window.EnableSettingsSmoke(desktopArg());
+        else if (args.Contains("--settings-review", StringComparer.OrdinalIgnoreCase))
+            window.EnableSettingsReview();
+        else if (args.Contains("--pip-smoke", StringComparer.OrdinalIgnoreCase))
+            window.EnablePictureInPictureSmoke(desktopArg());
+        else if (args.Contains("--pip-review", StringComparer.OrdinalIgnoreCase))
+            window.EnablePictureInPictureReview();
+        else if (args.Contains("--home-smoke", StringComparer.OrdinalIgnoreCase))
+            window.EnableHomeSmoke(desktopArg(), false);
+        else if (args.Contains("--home-session-smoke", StringComparer.OrdinalIgnoreCase))
+            window.EnableHomeSmoke(desktopArg(), true);
+        else if (args.Contains("--adapter-mismatch-smoke", StringComparer.OrdinalIgnoreCase))
+            window.EnableAdapterMismatchSmoke(desktopArg());
+        else if (args.Contains("--ui-smoke", StringComparer.OrdinalIgnoreCase))
+            window.EnableGPUCompositionSmoke(desktopArg());
+        else if (args.Contains("--playback-controls-smoke", StringComparer.OrdinalIgnoreCase))
+            window.EnablePlaybackControlsSmoke(desktopArg());
+        else if (args.Contains("--layout-smoke", StringComparer.OrdinalIgnoreCase))
+            window.EnableLayoutSmoke(desktopArg());
+        else if (args.Contains("--playback-review", StringComparer.OrdinalIgnoreCase))
+            window.EnablePlaybackReview();
+
+        IClassicDesktopStyleApplicationLifetime desktopArg() =>
+            (IClassicDesktopStyleApplicationLifetime)Application.Current!.ApplicationLifetime!;
+    }
+#endif
 }

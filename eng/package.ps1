@@ -6,7 +6,10 @@ param(
     [Parameter(Mandatory)][string] $FrameworkRoot,
     [Parameter(Mandatory)][string] $VlcDirectory,
     [ValidatePattern('^\d+\.\d+\.\d+(-[A-Za-z0-9.-]+)?$')][string] $Version = '0.1.0-preview.1',
-    [string] $OutputDirectory = 'artifacts/packages'
+    [string] $OutputDirectory = 'artifacts/packages',
+    # Include the interactive smoke harness (--*-smoke flags) so the package can
+    # be qualified with eng/test-package.ps1. Product packages omit it.
+    [switch] $Smoke
 )
 
 $ErrorActionPreference = 'Stop'
@@ -90,9 +93,11 @@ $previousFramework = $env:VLCLR_ROOT
 try {
     $env:VLCLR_ROOT = $framework
     Write-Output "Publishing app to $stage"
-    Invoke-Checked 'dotnet' @('publish', 'src/VLCAvalonia/VLCAvalonia.csproj', '-c', $Configuration, '-r', $RuntimeIdentifier,
+    $appPublishArguments = @('publish', 'src/VLCAvalonia/VLCAvalonia.csproj', '-c', $Configuration, '-r', $RuntimeIdentifier,
         '--self-contained', 'true', '-p:PublishSingleFile=false', '-p:PublishTrimmed=false', '-p:UsedAvaloniaProducts=',
-        "-p:Version=$Version", '-o', $stage) (Join-Path $logs 'app-publish.log')
+        "-p:Version=$Version", '-o', $stage)
+    if ($Smoke) { $appPublishArguments += '-p:Smoke=true' }
+    Invoke-Checked 'dotnet' $appPublishArguments (Join-Path $logs 'app-publish.log')
     $nativeOutput = Join-Path $runRoot 'native'
     Invoke-Checked 'dotnet' @('publish', 'src/VLCAvalonia.Vout/VLCAvalonia.Vout.csproj', '-c', $Configuration, '-r', $RuntimeIdentifier,
         "-p:Version=$Version", '-o', $nativeOutput) (Join-Path $logs 'vout-publish.log')

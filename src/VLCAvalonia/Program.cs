@@ -7,6 +7,16 @@ namespace VLCAvalonia;
 
 internal static class Program
 {
+    private static readonly string[] SmokeFlags =
+    [
+        "--engine-smoke",
+        "--queue-smoke",
+        "--media-capabilities-smoke",
+        "--player-capabilities-smoke",
+        "--opaque-smoke",
+        "--smoke",
+    ];
+
     internal static PlaybackStartupFailure? StartupFailure { get; private set; }
 
     [STAThread]
@@ -14,22 +24,43 @@ internal static class Program
     {
         if (args.Contains("--graphics-probe", StringComparer.OrdinalIgnoreCase))
             return BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
-        bool runsWindowsSmoke = args.Any(arg => arg.Equals("--engine-smoke", StringComparison.OrdinalIgnoreCase) || arg.Equals("--queue-smoke", StringComparison.OrdinalIgnoreCase) || arg.Equals("--media-capabilities-smoke", StringComparison.OrdinalIgnoreCase) || arg.Equals("--player-capabilities-smoke", StringComparison.OrdinalIgnoreCase) || arg.Equals("--opaque-smoke", StringComparison.OrdinalIgnoreCase) || arg.Equals("--smoke", StringComparison.OrdinalIgnoreCase));
-        if (runsWindowsSmoke && !NativePlaybackSupport.IsAvailable)
+#if SMOKE
+        if (IsSmokeRequested(args))
         {
-            Console.Error.WriteLine(NativePlaybackSupport.CurrentUnavailableReason);
-            return 2;
+            // Diagnostics must fail promptly instead of waiting for someone to
+            // close a dialog, so smoke runs never reach the failure window.
+            if (!NativePlaybackSupport.IsAvailable)
+            {
+                Console.Error.WriteLine(NativePlaybackSupport.CurrentUnavailableReason);
+                return 2;
+            }
+            StartupFailure = PlaybackStartup.TryInitialize(VideoBackendFactory.InitializeRuntime);
+            if (StartupFailure is { } startupFailure)
+            {
+                Console.Error.WriteLine($"[startup] {startupFailure.Message}\n{startupFailure.Detail}");
+                return 2;
+            }
+            return RunSmoke(args);
         }
+#endif
         StartupFailure = PlaybackStartup.TryInitialize(VideoBackendFactory.InitializeRuntime);
         if (StartupFailure is { } failure)
         {
             Console.Error.WriteLine($"[startup] {failure.Message}\n{failure.Detail}");
-            // Diagnostics must fail promptly instead of waiting for someone to close a dialog.
-            if (args.Any(arg => arg.EndsWith("-smoke", StringComparison.OrdinalIgnoreCase) || arg.Equals("--smoke", StringComparison.OrdinalIgnoreCase)))
-                return 2;
             BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
             return 2;
         }
+        return BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+    }
+
+#if SMOKE
+    private static bool IsSmokeRequested(string[] args) =>
+        args.Any(arg =>
+            SmokeFlags.Contains(arg, StringComparer.OrdinalIgnoreCase) ||
+            arg.EndsWith("-smoke", StringComparison.OrdinalIgnoreCase));
+
+    private static int RunSmoke(string[] args)
+    {
         int cycles = ParseCycles(args);
         if (args.Contains("--engine-smoke", StringComparer.OrdinalIgnoreCase))
             return CompositionSmoke.RunEngine(cycles);
@@ -42,10 +73,7 @@ internal static class Program
             return CompositionSmoke.RunPlayerCapabilities();
         if (args.Contains("--opaque-smoke", StringComparer.OrdinalIgnoreCase))
             return CompositionSmoke.RunOpaque();
-        if (args.Contains("--smoke", StringComparer.OrdinalIgnoreCase))
-            return CompositionSmoke.Run(ParseExpectedPath(args));
-
-        return BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+        return CompositionSmoke.Run(ParseExpectedPath(args));
     }
 
     private static string? ParseExpectedPath(string[] args)
@@ -73,6 +101,7 @@ internal static class Program
         }
         return cycles;
     }
+#endif
 
     public static AppBuilder BuildAvaloniaApp()
         => AppBuilder.Configure<App>()

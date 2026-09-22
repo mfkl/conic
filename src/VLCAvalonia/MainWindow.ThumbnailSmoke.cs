@@ -1,3 +1,4 @@
+#if SMOKE
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.VisualTree;
@@ -54,3 +55,4 @@ public partial class MainWindow
         };
     }
 }
+#endif // SMOKE

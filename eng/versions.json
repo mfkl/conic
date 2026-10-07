@@ -3,9 +3,13 @@
   "avalonia": "12.1.1",
   "vlc": {
     "repository": "videolan/vlc",
-    "version": "3.0.24-beta1",
-    "sourceCommit": "5fbc6904a2e4a96e9956a5d8503ac4db4ebaf702",
-    "moduleAbi": "3_0_0f"
+    "version": "3.0.24",
+    "sourceCommit": "6de05adcbaf2e8b85fe86aad4169393098628119",
+    "moduleAbi": "3_0_0f",
+    "windows": {
+      "url": "https://download.videolan.org/pub/videolan/vlc/3.0.24/win64/vlc-3.0.24-win64.zip",
+      "sha256": "fcf30850371ad10c9373cc4f0f4501e7dee49e3e9ae9f20c72fb2661a1ca6323"
+    }
   },
   "vlclr": {
     "commit": "09b46d50848cc0abe3c236e7a25e43679ee13c02",

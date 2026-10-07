@@ -177,10 +177,12 @@ public partial class MainWindow
             UpdateOpenErrorSurface();
             SetChromeVisibility(true);
             _autoHideTimer.Stop();
+            StartResumeCountdown();
             Dispatcher.UIThread.Post(() => ResumeAction.Focus());
         }
         else
         {
+            _resumeTimer?.Stop();
             Dispatcher.UIThread.Post(() => OpenOptionsButton.Focus());
             UpdateOpenErrorSurface();
             if (_presentation.IsPlaying) { _autoHideTimer.Stop(); _autoHideTimer.Start(); }
@@ -198,6 +200,34 @@ public partial class MainWindow
     private void OnAcceptResume(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => _presentation.Registry.Execute(PlayerCommandId.AcceptResume);
 
     private void OnDeclineResume(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => _presentation.Registry.Execute(PlayerCommandId.DeclineResume);
+
+    private void OnDismissResume(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => _presentation.Registry.Execute(PlayerCommandId.DismissResume);
+
+    private const int ResumePromptSeconds = 8;
+    private DispatcherTimer? _resumeTimer;
+    private int _resumeSecondsLeft;
+
+    // The prompt closes itself as if cancelled; the countdown holds while the pointer is on it.
+    private void StartResumeCountdown()
+    {
+        if (_resumeTimer is null)
+        {
+            _resumeTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+            _resumeTimer.Tick += (_, _) =>
+            {
+                if (ResumePanel.IsPointerOver) return;
+                if (--_resumeSecondsLeft > 0) { UpdateResumeCountdown(); return; }
+                _resumeTimer.Stop();
+                _presentation.Registry.Execute(PlayerCommandId.DismissResume);
+            };
+        }
+        _resumeSecondsLeft = ResumePromptSeconds;
+        UpdateResumeCountdown();
+        _resumeTimer.Stop();
+        _resumeTimer.Start();
+    }
+
+    private void UpdateResumeCountdown() => ResumeCountdown.Text = $"Closes in {_resumeSecondsLeft} s. The saved position is kept.";
 
     private void CloseSettings()
     {

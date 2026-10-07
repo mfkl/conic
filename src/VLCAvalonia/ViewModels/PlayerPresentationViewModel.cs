@@ -114,6 +114,7 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
         registry.Register(new(PlayerCommandId.OpenRecent, "Open recent media", "Media"), parameter => OpenSource(parameter as string, MediaSourceKind.Recent));
         registry.Register(new(PlayerCommandId.AcceptResume, "Resume playback", "Media"), _ => ApplyResume(), _ => _pendingResume is not null && _resumeReady);
         registry.Register(new(PlayerCommandId.DeclineResume, "Start from beginning", "Media"), _ => DeclineResume(), _ => _pendingResume is not null && _resumeReady);
+        registry.Register(new(PlayerCommandId.DismissResume, "Dismiss resume prompt", "Media"), _ => DismissResume(), _ => _pendingResume is not null && _resumeReady);
         registry.Register(new(PlayerCommandId.OpenTestMedia, "Open test video", "Media"), _ => _openTestMedia());
         registry.Register(new(PlayerCommandId.TogglePause, "Play or pause", "Playback", "Space"), _ => TogglePlayback(), _ => CanTogglePlayback);
         registry.Register(new(PlayerCommandId.Stop, "Stop", "Playback"), _ =>
@@ -825,6 +826,8 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
         bool ok = true; if (_pendingResume is { } resume) TryHistory(() => _history?.RemoveResume(resume.Source), () => ok = false); if (!ok) return;
         _pendingResume = null; _resumeReady = false; NotifyPendingResume(); NotifyLibrary();
     }
+    // Closes the prompt without touching history: the saved position survives until playback passes the resume minimum.
+    private void DismissResume() { _pendingResume = null; _resumeReady = false; NotifyPendingResume(); }
 
     private ResumeEntry? TryFindResume(MediaSource source)
     {

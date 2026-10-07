@@ -292,6 +292,17 @@ public sealed class PlayerPresentationViewModelTests
         vm.Registry.Execute(PlayerCommandId.DeclineResume); Assert.Empty(transport.Seeks); Assert.Null(history.FindResume(new("a.mp4", MediaSourceKind.File, "a")));
     }
 
+    [Fact]
+    public void DismissClosesTheResumePromptAndKeepsTheSavedPosition()
+    {
+        RecordingTransport transport = new(); MediaHistoryService history = SeedHistory(); PlayerPresentationViewModel vm = CreateOpeningViewModel(transport, history);
+        vm.OpenSource("a.mp4", MediaSourceKind.File);
+        vm.ApplyEngineState(State(.2, PlaybackStatus.Playing, true) with { Generation = 1, Source = "a.mp4" }); Assert.True(vm.HasPendingResume);
+        vm.Registry.Execute(PlayerCommandId.DismissResume);
+        Assert.False(vm.HasPendingResume); Assert.False(vm.Registry.CanExecute(PlayerCommandId.DismissResume)); Assert.Empty(transport.Seeks);
+        Assert.NotNull(history.FindResume(new("a.mp4", MediaSourceKind.File, "a")));
+    }
+
     [Theory]
     [InlineData(false, true, 40, 100, false)]
     [InlineData(true, false, 40, 100, false)]

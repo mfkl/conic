@@ -36,7 +36,7 @@ public partial class MainWindow
         if (_presentation.HasPendingResume)
         {
             if (e.Key == Key.Enter) _presentation.Registry.Execute(PlayerCommandId.AcceptResume);
-            else if (e.Key == Key.Escape) _presentation.Registry.Execute(PlayerCommandId.DeclineResume);
+            else if (e.Key == Key.Escape) _presentation.Registry.Execute(PlayerCommandId.DismissResume);
             else return;
             e.Handled = true;
             return;

@@ -84,7 +84,7 @@ Decision (October 7): VLCLR is included as source in this repository (`src/VLCLR
 - [ ] Inventory the exact managed/native source and binaries needed to reproduce a release, including VLCLR, VLC runtime, vout, control helper, fonts/icons and sample media.
 - [x] Choose a distributable dependency arrangement: VLCLR included as source (decision above).
 - [x] Build the app and Native AOT vout from the included VLCLR; drop `VLCLR_ROOT` from the build, the `-FrameworkRoot` script parameters, the CI deploy key and the `VLCLR_CI_ENABLED` gate.
-- [ ] Decide the license covering the repository, including the included VLCLR source (maintainer decision).
+- [x] Decide the license covering the repository, including the included VLCLR source: GPL-2.0-or-later (October 7).
 - [ ] Verify actual dependency licenses and redistribution/source obligations before release; include required license texts, notices and corresponding source/build instructions.
 - [ ] Give every native input a reproducible source/build or download procedure and hash. Explain the VLC beta runtime pin and ABI compatibility; changing that pin requires new qualification. The VLC 3.0.24-beta1 runtime and smoke media currently come from the maintainer's VLCLR checkout and need a public route.
 - [ ] Verify a fresh checkout can build using the published instructions without the maintainer's sibling workspace or CI deploy key.

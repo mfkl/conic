@@ -5,8 +5,8 @@ establish that every bundled dependency is ready for public redistribution.
 
 | Input | Current source / evidence | Distribution work |
 |---|---|---|
-| VLC Avalonia | GPL-2.0-or-later, repository `LICENSE` includes complete GPL v2 text | Include matching source/build instructions in a public release |
-| VLCLR | Included as source in `src/VLCLR` and `src/VLCLR.Generators`, with the VLC 3 import library in `lib/libvlccore.lib`; upstream commit in `eng/versions.json` | Maintainer to decide the license covering the included VLCLR source before public release |
+| VLC Avalonia | GPL-2.0-or-later, repository `LICENSE` contains the complete GPL v2 text; the notice is in the README | Include matching source/build instructions in a public release |
+| VLCLR | Included as source in `src/VLCLR` and `src/VLCLR.Generators`, GPL-2.0-or-later with the rest of the repository; VLC 3 import library in `lib/libvlccore.lib`; upstream commit in `eng/versions.json` | Covered by the repository source; nothing separate to publish |
 | VLC runtime/plugins | VLC 3.0.24-beta1; source commit recorded in `eng/versions.json`; runtime carries `COPYING.txt`, authors and notices | Record the exact binary source/build provenance and collect applicable component notices/source before distributing |
 | Managed/native NuGet dependencies | Exact resolved inventory in the app's `.deps.json`; `project.assets.json` retained beside the ZIP | Collect license texts and notices from resolved packages, including Avalonia, Inter font, TerraFX and .NET native assets |
 | Product icons/layout | VLC-inspired UI and repository assets | Record upstream provenance/attribution and any applicable asset/font terms |

@@ -320,6 +320,20 @@ public sealed class PlayerPresentationViewModelTests
         vm.Registry.Execute(PlayerCommandId.Stop); Assert.True(transport.Stopped); vm.OnClosing();
     }
 
+    [Fact]
+    public void CheckpointReplacesOnlyTheChangedHomeCard()
+    {
+        DateTimeOffset now = DateTimeOffset.UnixEpoch; MediaHistoryService history = new(new HistoryStorage());
+        history.RecordOpened(new MediaSource("b.mp4", MediaSourceKind.File, "b"), true);
+        PlayerPresentationViewModel vm = new(new RecordingTransport(), new EmptyPicker(), () => { }, sourceValidator: new MediaSourceValidator(new ExistingFiles()), history: history, clock: () => now);
+        vm.OpenSource("a.mp4", MediaSourceKind.File); vm.ApplyEngineState(State(.4, PlaybackStatus.Playing, true) with { Generation = 1, Source = "a.mp4" });
+        IReadOnlyList<HomeMediaItem> cards = vm.HomeItems; HomeMediaItem other = Assert.Single(cards, x => x.Source.EndsWith("b.mp4", StringComparison.Ordinal));
+        now += TimeSpan.FromSeconds(10); vm.ApplyEngineState(State(.5, PlaybackStatus.Playing, true) with { Generation = 1, Source = "a.mp4" });
+        Assert.Same(cards, vm.HomeItems);
+        Assert.Same(other, Assert.Single(vm.HomeItems, x => x.Source.EndsWith("b.mp4", StringComparison.Ordinal)));
+        Assert.Equal(.5, Assert.Single(vm.HomeItems, x => x.HasProgress).Progress);
+    }
+
     [Theory]
     [InlineData(PlaybackStatus.Opening, true)]
     [InlineData(PlaybackStatus.Stopped, true)]

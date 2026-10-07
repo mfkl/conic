@@ -37,6 +37,13 @@ public static unsafe class CompositionVoutPlugin
     private static nint s_playlistCallbackOpaque;
     private static nint s_telemetryCallback;
     private static nint s_telemetryCallbackOpaque;
+    private static nint s_subtitleCallback;
+    private static nint s_subtitleCallbackOpaque;
+
+    // Zero-terminated chroma list VLC reads for the display's lifetime; the
+    // module is never unloaded. Accepting RGBA subpictures makes VLC hand us
+    // rendered subtitles instead of blending them into the (often GPU) frame.
+    private static readonly nint SubpictureChromas = CreateSubpictureChromas();
     private static bool s_adapterConfigured;
     private static bool s_forceCPUOutput;
     private static uint s_adapterLowPart;
@@ -65,6 +72,20 @@ public static unsafe class CompositionVoutPlugin
         public D3D11AdapterFailure FallbackReason;
         public int NativeResult;
         public object PoolGate { get; } = new();
+        public SubtitleRegion[] SubtitleRegions = new SubtitleRegion[16];
+        public byte[] SubtitleScratch = [];
+        public byte[] SubtitlePublished = [];
+        public SubtitleBounds SubtitleBounds;
+        public int SubtitleCanvasWidth;
+        public int SubtitleCanvasHeight;
+    }
+
+    private static nint CreateSubpictureChromas()
+    {
+        uint* chromas = (uint*)NativeMemory.Alloc(2, sizeof(uint));
+        chromas[0] = VLCFourCC.RGBA;
+        chromas[1] = 0;
+        return (nint)chromas;
     }
 
     [UnmanagedCallersOnly(
@@ -183,6 +204,24 @@ public static unsafe class CompositionVoutPlugin
         {
             s_telemetryCallback = callback;
             s_telemetryCallbackOpaque = opaque;
+        }
+    }
+
+    /// <summary>
+    /// Registers the consumer of the subtitle overlay: straight-alpha RGBA rows
+    /// (width * 4 bytes) placed at x/y on a canvas covering the visible video.
+    /// Invoked synchronously while the pixels are valid, only when the overlay
+    /// changes; width or height 0 clears it. Passing zero disconnects.
+    /// </summary>
+    [UnmanagedCallersOnly(
+        EntryPoint = "vlc_avalonia_set_subtitle_callback",
+        CallConvs = [typeof(CallConvCdecl)])]
+    public static void SetSubtitleCallback(nint callback, nint opaque)
+    {
+        lock (CallbackGate)
+        {
+            s_subtitleCallback = callback;
+            s_subtitleCallbackOpaque = opaque;
         }
     }
 
@@ -369,7 +408,7 @@ public static unsafe class CompositionVoutPlugin
                 HasDoubleClick = 0,
                 NeedsHideMouse = 0,
                 HasPicturesInvalid = 0,
-                SubpictureChromas = 0,
+                SubpictureChromas = SubpictureChromas,
             };
 
             display->Pool = (nint)(delegate* unmanaged[Cdecl]<nint, uint, nint>)&GetPool;
@@ -412,6 +451,7 @@ public static unsafe class CompositionVoutPlugin
         {
             if (stateHandle.Target is DisplayState state)
             {
+                PublishSubtitle(state, 0);
                 if (state.Pool != 0)
                 {
                     VLCCore.PicturePoolRelease(state.Pool);
@@ -624,8 +664,77 @@ public static unsafe class CompositionVoutPlugin
         {
             if (picturePtr != 0)
                 PictureRelease(picturePtr);
+            if (displayPtr != 0)
+                PublishSubtitle(GetState((VLCVoutDisplay*)displayPtr), subpicturePtr);
             if (subpicturePtr != 0)
                 VLCCore.SubpictureDelete(subpicturePtr);
+        }
+    }
+
+    /// <summary>
+    /// Flattens the RGBA regions VLC rendered for this frame and publishes the
+    /// overlay when it differs from the last one. A null subpicture clears it.
+    /// </summary>
+    private static void PublishSubtitle(DisplayState? state, nint subpicturePtr)
+    {
+        if (state is null)
+            return;
+        try
+        {
+            int count = 0, canvasWidth = 0, canvasHeight = 0;
+            if (subpicturePtr != 0)
+            {
+                VLCSubpicture* subpicture = (VLCSubpicture*)subpicturePtr;
+                canvasWidth = subpicture->OriginalPictureWidth;
+                canvasHeight = subpicture->OriginalPictureHeight;
+                for (nint next = subpicture->Region; next != 0 && count < state.SubtitleRegions.Length; next = ((VLCSubpictureRegion*)next)->Next)
+                {
+                    VLCSubpictureRegion* region = (VLCSubpictureRegion*)next;
+                    if (region->Picture == 0 || region->Format.Chroma != VLCFourCC.RGBA)
+                        continue;
+                    VLCPlane plane = ((VLCPicture*)region->Picture)->Plane0;
+                    if (plane.Pixels == 0)
+                        continue;
+                    state.SubtitleRegions[count++] = new SubtitleRegion(
+                        region->X, region->Y,
+                        (int)region->Format.VisibleWidth, (int)region->Format.VisibleHeight,
+                        plane.Pitch,
+                        plane.Pixels + (nint)region->Format.YOffset * plane.Pitch + (nint)region->Format.XOffset * 4,
+                        region->Alpha);
+                }
+            }
+
+            Span<SubtitleRegion> regions = state.SubtitleRegions.AsSpan(0, SubtitleComposer.Clip(state.SubtitleRegions.AsSpan(0, count), canvasWidth, canvasHeight));
+            SubtitleBounds bounds = SubtitleComposer.Bounds(regions);
+            if (state.SubtitleScratch.Length != bounds.ByteCount)
+                state.SubtitleScratch = new byte[bounds.ByteCount];
+            SubtitleComposer.Compose(regions, bounds, state.SubtitleScratch);
+            if (bounds.IsEmpty)
+                canvasWidth = canvasHeight = 0;
+            if (bounds == state.SubtitleBounds && canvasWidth == state.SubtitleCanvasWidth && canvasHeight == state.SubtitleCanvasHeight &&
+                state.SubtitleScratch.AsSpan().SequenceEqual(state.SubtitlePublished))
+                return;
+
+            (state.SubtitlePublished, state.SubtitleScratch) = (state.SubtitleScratch, state.SubtitlePublished);
+            state.SubtitleBounds = bounds;
+            state.SubtitleCanvasWidth = canvasWidth;
+            state.SubtitleCanvasHeight = canvasHeight;
+            InvokeSubtitleCallback(canvasWidth, canvasHeight, bounds, state.SubtitlePublished);
+        }
+        catch
+        {
+        }
+    }
+
+    private static void InvokeSubtitleCallback(int canvasWidth, int canvasHeight, SubtitleBounds bounds, byte[] pixels)
+    {
+        lock (CallbackGate)
+        {
+            if (s_subtitleCallback == 0)
+                return;
+            var callback = (delegate* unmanaged[Cdecl]<nint, int, int, int, int, int, int, nint, void>)s_subtitleCallback;
+            fixed (byte* data = pixels)
+                callback(s_subtitleCallbackOpaque, canvasWidth, canvasHeight, bounds.X, bounds.Y, bounds.Width, bounds.Height, (nint)data);
         }
     }
 

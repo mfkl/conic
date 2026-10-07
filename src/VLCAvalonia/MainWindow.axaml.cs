@@ -78,6 +78,7 @@ public partial class MainWindow : Window
             }
         };
         VideoSurface.EngineStateChanged += OnEngineStateChanged;
+        SubtitleLayer.Surface = VideoSurface;
         Closed += (_, _) => { SaveWindowGeometry(); _presentation.OnClosing(); _autoHideTimer.Stop(); };
         SizeChanged += (_, _) => { ApplyResponsiveChrome(); ApplyResponsiveSettings(); };
         Activated += (_, _) => WakeChrome();

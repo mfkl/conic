@@ -68,6 +68,7 @@
         </Grid.ContextMenu>
 
         <controls:CompositionVideoSurface x:Name="VideoSurface" />
+        <controls:SubtitleOverlay x:Name="SubtitleLayer" />
 
         <views:HomeView x:Name="HomeScreen"
                         ZIndex="1"

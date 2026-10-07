@@ -175,7 +175,7 @@
                             </Border>
                             <Border Classes="settingsCard" IsVisible="{Binding IsSubtitles}">
                                 <StackPanel Spacing="14">
-                                    <TextBlock Text="Choose tracks and adjust timing during playback. Subtitle rendering on this video path still needs further validation." Classes="settingHint" TextWrapping="Wrap" />
+                                    <TextBlock Text="Choose tracks and adjust timing during playback." Classes="settingHint" TextWrapping="Wrap" />
                                     <Button Content="Subtitle tracks and timing" Command="{Binding OpenSubtitleControlsCommand}" CommandParameter="Subtitles" HorizontalAlignment="Left" />
                                 </StackPanel>
                             </Border>

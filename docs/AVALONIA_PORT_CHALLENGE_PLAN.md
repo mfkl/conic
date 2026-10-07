@@ -27,7 +27,7 @@ State the exact scope: VLC 3 supplies the engine; VLC desktop behavior is the mi
 | Engineering | Boundaries, pinned inputs, fifteen-job CI definition, recorded managed/native checks | Current-revision evidence, durable artifacts, accessible dependencies |
 | Submission | Technical README and detailed development reports | Release downloads, curated comparison images, migration narrative and entry form |
 
-Source of truth for inputs is [eng/versions.json](../eng/versions.json): .NET 10.0.102, Avalonia 12.1.1, VLC 3.0.24-beta1, VLCLR `09b46d50848cc0abe3c236e7a25e43679ee13c02`. Older reports describe earlier pins and test totals. Preserve them as historical records; do not treat their results as qualification of a new release.
+Source of truth for inputs is [eng/versions.json](../eng/versions.json): .NET 10.0.102, Avalonia 12.1.1, VLC 3.0.24, VLCLR `09b46d50848cc0abe3c236e7a25e43679ee13c02`. Older reports describe earlier pins and test totals. Preserve them as historical records; do not treat their results as qualification of a new release.
 
 Relevant existing documents:
 
@@ -86,7 +86,9 @@ Decision (October 7): VLCLR is included as source in this repository (`src/VLCLR
 - [x] Build the app and Native AOT vout from the included VLCLR; drop `VLCLR_ROOT` from the build, the `-FrameworkRoot` script parameters, the CI deploy key and the `VLCLR_CI_ENABLED` gate.
 - [x] Decide the license covering the repository, including the included VLCLR source: GPL-2.0-or-later (October 7).
 - [ ] Verify actual dependency licenses and redistribution/source obligations before release; include required license texts, notices and corresponding source/build instructions.
-- [ ] Give every native input a reproducible source/build or download procedure and hash. Explain the VLC beta runtime pin and ABI compatibility; changing that pin requires new qualification. The VLC 3.0.24-beta1 runtime and smoke media currently come from the maintainer's VLCLR checkout and need a public route.
+- [x] Give the VLC runtime a reproducible download procedure and hash: `eng/get-vlc.ps1` fetches the official VLC 3.0.24 Windows x64 build and checks the SHA-256 in `eng/versions.json` (October 7). Same module ABI `3_0_0f` as the earlier 3.0.24-beta1 pin; the only SDK header change is a removed playlist sort enum value VLCLR does not use.
+- [ ] Requalify on hardware with the 3.0.24 runtime (smokes and the 25-cycle package test); earlier evidence used 3.0.24-beta1.
+- [ ] Give the smoke media a public route; it still comes from the maintainer's VLCLR checkout.
 - [ ] Verify a fresh checkout can build using the published instructions without the maintainer's sibling workspace or CI deploy key.
 
 Acceptance: another developer can obtain the release's inputs and reproduce the build through the documented route. Runtime users need no source checkout or development credentials.

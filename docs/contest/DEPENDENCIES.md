@@ -7,7 +7,8 @@ establish that every bundled dependency is ready for public redistribution.
 |---|---|---|
 | Conic | GPL-2.0-or-later, repository `LICENSE` contains the complete GPL v2 text; the notice is in the README | Include matching source/build instructions in a public release |
 | VLCLR | Included as source in `src/VLCLR` and `src/VLCLR.Generators`, GPL-2.0-or-later with the rest of the repository; VLC 3 import library in `lib/libvlccore.lib`; upstream commit in `eng/versions.json` | Covered by the repository source; nothing separate to publish |
-| VLC runtime/plugins | VLC 3.0.24-beta1; source commit recorded in `eng/versions.json`; runtime carries `COPYING.txt`, authors and notices | Record the exact binary source/build provenance and collect applicable component notices/source before distributing |
+| VLC runtime/plugins | Official VideoLAN VLC 3.0.24 Windows x64 build, downloaded by `eng/get-vlc.ps1` and verified against the SHA-256 in `eng/versions.json`; source tag commit recorded there; runtime carries `COPYING.txt`, authors and notices | Collect applicable component notices; point to VideoLAN's corresponding source (`vlc-3.0.24.tar.xz`) in the release notes |
+| VLC import library | `lib/libvlccore.lib` from the official VLC 3.0.24 win64 SDK (`vlc-3.0.24-win64.7z`) | None beyond the VLC runtime notices |
 | Managed/native NuGet dependencies | Exact resolved inventory in the app's `.deps.json`; `project.assets.json` retained beside the ZIP | Collect license texts and notices from resolved packages, including Avalonia, Inter font, TerraFX and .NET native assets |
 | Product icons/layout | VLC-inspired UI and repository assets | Record upstream provenance/attribution and any applicable asset/font terms |
 | Test media | Existing generated H.264 test pattern for local checks | Record generation command/hash; package excludes test media and personal reference PNGs |

@@ -21,6 +21,13 @@ public sealed record PlaybackQueueState(
     public static PlaybackQueueState Initial { get; } = new(0, 0, QueueLoadState.Unavailable, [], -1, QueueRepeatMode.None, QueueOrder.Normal);
     public bool CanPrevious => Items.Count > 1 && CurrentIndex >= 0 && (Order == QueueOrder.Random || CurrentIndex > 0 || Repeat == QueueRepeatMode.All);
     public bool CanNext => Items.Count > 1 && CurrentIndex >= 0 && (Order == QueueOrder.Random || CurrentIndex < Items.Count - 1 || Repeat == QueueRepeatMode.All);
+
+    // Items compare by content: each poll builds a new array, and an unchanged poll must not rebuild the queue view.
+    public bool Equals(PlaybackQueueState? other) =>
+        other is not null && Generation == other.Generation && Version == other.Version && Status == other.Status &&
+        Items.SequenceEqual(other.Items) && CurrentIndex == other.CurrentIndex && Repeat == other.Repeat && Order == other.Order && Error == other.Error;
+
+    public override int GetHashCode() => HashCode.Combine(Generation, Version, Status, Items.Count, CurrentIndex, Repeat, Order);
 }
 
 /// <summary>Optional queue capability for transports that have a live native playlist.</summary>

@@ -30,7 +30,8 @@ internal static class Program
                 Console.Error.WriteLine($"[startup] {startupFailure.Message}\n{startupFailure.Detail}");
                 return 2;
             }
-            return RunSmoke(args);
+            // Window smokes (--ui-smoke, --pip-smoke, ...) run inside the app.
+            return IsHeadlessSmoke(args) ? RunSmoke(args) : BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
         }
 #endif
         StartupFailure = PlaybackStartup.TryInitialize(VideoBackendFactory.InitializeRuntime);
@@ -58,6 +59,9 @@ internal static class Program
         args.Any(arg =>
             SmokeFlags.Contains(arg, StringComparer.OrdinalIgnoreCase) ||
             arg.EndsWith("-smoke", StringComparison.OrdinalIgnoreCase));
+
+    private static bool IsHeadlessSmoke(string[] args) =>
+        args.Any(arg => SmokeFlags.Contains(arg, StringComparer.OrdinalIgnoreCase));
 
     private static int RunSmoke(string[] args)
     {

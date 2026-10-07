@@ -31,17 +31,20 @@ result. Public downloads and final release qualification are still pending.
 
 ## Windows review package
 
-Build a local portable ZIP with PowerShell 7 and the pinned VLC runtime:
+Build a local portable ZIP with PowerShell 7 and the pinned official VLC 3.0.24
+runtime, which `eng/get-vlc.ps1` downloads from VideoLAN and verifies against
+the SHA-256 in `eng/versions.json`:
 
 ```powershell
-./eng/package.ps1 -VlcDirectory artifacts/dependencies/vlc-3.0.24-beta1
+./eng/package.ps1 -VlcDirectory (./eng/get-vlc.ps1)
 ./eng/test-package.ps1 -Archive <path-to-zip> -Media <path-to-h264-fixture> -Cycles 25
 ```
 
 Each build creates a new folder under `artifacts/packages` with the ZIP,
 checksums, manifest and logs. Package tests extract outside the repository and
 run the included executable with isolated profiles and no development runtime
-override. [Quick start](docs/WINDOWS_QUICK_START.md) ·
+override. CI builds the same ZIP on pushes to `main` and attaches it to a draft
+GitHub release for `v*` tags. [Quick start](docs/WINDOWS_QUICK_START.md) ·
 [Dependency/distribution status](docs/contest/DEPENDENCIES.md)
 
 An early modern Avalonia desktop UI for VLC 3. The Windows video path uses a
@@ -111,20 +114,20 @@ in `lib/libvlccore.lib`. The upstream revision it was taken from is recorded in
 
 Windows x64 playback development requires PowerShell 7, .NET 10 (CI pins SDK
 10.0.102), the Visual Studio C++ build tools and Windows SDK for Native AOT, and
-the VLC 3 runtime matching `eng/versions.json`. The following commands assume
-that runtime is available at `../vlclr/vlc-3.0.24-beta1`; it must be supplied
-separately from the managed build.
+the VLC 3 runtime pinned in `eng/versions.json`. `eng/get-vlc.ps1` downloads it
+to `artifacts/dependencies/vlc-3.0.24`, where development runs find it.
 
 ```powershell
+./eng/get-vlc.ps1
 dotnet publish src/VLCAvalonia.Vout -c Release -r win-x64
 
 Copy-Item `
   src/VLCAvalonia.Vout/bin/Release/net10.0/win-x64/native/libvlc_avalonia_plugin.dll `
-  ../vlclr/vlc-3.0.24-beta1/plugins/video_output/ `
+  artifacts/dependencies/vlc-3.0.24/plugins/video_output/ `
   -Force
 
-../vlclr/vlc-3.0.24-beta1/vlc-cache-gen.exe `
-  ../vlclr/vlc-3.0.24-beta1/plugins
+artifacts/dependencies/vlc-3.0.24/vlc-cache-gen.exe `
+  artifacts/dependencies/vlc-3.0.24/plugins
 
 dotnet run --project src/VLCAvalonia
 ```
@@ -153,9 +156,8 @@ their native hardware playback backends are still unimplemented. Hardware
 decoding and GPU presentation are required on all three desktop platforms.
 See [the cross-platform status and qualification plan](docs/CROSS_PLATFORM.md).
 
-`VLCLR_ROOT` only points development runs at a directory containing the VLC
-runtime (`vlc-3.0.24-beta1`) and the default smoke media; it no longer affects
-the build. The app targets the VLC 3 internal ABI. The earlier VLC 4 migration
+`VLCLR_ROOT` only points development runs at a directory containing the default
+smoke media (`test_01.mkv`); it no longer affects the build or the runtime. The app targets the VLC 3 internal ABI. The earlier VLC 4 migration
 experiment is preserved in [the compatibility record](docs/VLCLR_MAIN_MIGRATION.md).
 
 See [docs/D3D11_COMPOSITION.md](docs/D3D11_COMPOSITION.md) for the validated

@@ -26,6 +26,8 @@ internal sealed class D3D11VideoBackend : IVideoBackend
     private CompositionSurfaceVisual? _surfaceVisual;
     private CompositionContainerVisual? _videoClip;
     private VideoGeometry _geometry;
+    private VideoSubtitle? _subtitle;
+    private VideoSurfaceLayout _notifiedLayout;
     internal VideoSurfaceLayout CurrentVideoLayout => VideoSurfaceLayout.Calculate(_host.Bounds.Size, new Size(_videoWidth, _videoHeight), _geometry, TopLevel.GetTopLevel(_host)?.RenderScaling ?? 1);
     private ulong _importedGeneration;
     private D3D11PluginBridge.AdapterLuid? _compositorAdapter;
@@ -51,7 +53,9 @@ internal sealed class D3D11VideoBackend : IVideoBackend
 
     public event Action<string>? StatusChanged;
     public event Action<ulong, ulong, string>? GpuFramePresented;
+    public event Action? PresentationChanged;
     public VideoGeometry Geometry => _geometry;
+    public VideoSubtitle? Subtitle => _subtitle;
     public Size VideoSize => new(_videoWidth, _videoHeight);
     public bool HasCpuFrame => _reportedFirstCPUFrame;
     public bool HasGpuFrame => _reportedFirstGPUFrame;
@@ -155,6 +159,36 @@ internal sealed class D3D11VideoBackend : IVideoBackend
     public async Task PresentLatestFrameAsync()
     {
         if (_disposed) return;
+        bool subtitleChanged = ProcessLatestSubtitle();
+        await PresentLatestVideoFrameAsync();
+        VideoSurfaceLayout layout = CurrentVideoLayout;
+        if (_disposed || (!subtitleChanged && layout == _notifiedLayout)) return;
+        _notifiedLayout = layout;
+        PresentationChanged?.Invoke();
+    }
+
+    private unsafe bool ProcessLatestSubtitle()
+    {
+        if (_bridge?.TryTakeLatestSubtitle(out D3D11PluginBridge.Subtitle? subtitle) != true || subtitle is null)
+            return false;
+        VideoSubtitle? previous = _subtitle;
+        _subtitle = null;
+        if (subtitle.Pixels.Length != 0)
+        {
+            fixed (byte* pixels = subtitle.Pixels)
+            {
+                // The Bitmap copies the pixels.
+                Bitmap image = new(PixelFormat.Rgba8888, AlphaFormat.Unpremul, (nint)pixels,
+                    new PixelSize(subtitle.Bounds.Width, subtitle.Bounds.Height), new Vector(96, 96), subtitle.Bounds.Width * 4);
+                _subtitle = new VideoSubtitle(image, subtitle.Bounds, subtitle.CanvasWidth, subtitle.CanvasHeight);
+            }
+        }
+        previous?.Image.Dispose();
+        return true;
+    }
+
+    private async Task PresentLatestVideoFrameAsync()
+    {
         ProcessLatestTelemetry();
         UpdateLayout();
         if (_bridge is not null)
@@ -407,5 +441,7 @@ internal sealed class D3D11VideoBackend : IVideoBackend
         _reportedFirstCPUFrame = false;
         _bitmap?.Dispose();
         _bitmap = null;
+        _subtitle?.Image.Dispose();
+        _subtitle = null;
     }
 }

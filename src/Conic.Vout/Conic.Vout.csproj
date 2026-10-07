@@ -17,6 +17,7 @@
 
   <ItemGroup>
     <Compile Include="..\Shared\VideoGeometry.cs" Link="Interop\VideoGeometry.cs" />
+    <Compile Include="..\Shared\SubtitleComposer.cs" Link="Interop\SubtitleComposer.cs" />
     <PackageReference Include="TerraFX.Interop.Windows" Version="10.0.20348-beta1" />
     <ProjectReference Include="..\VLCLR\VLCLR.csproj" />
   </ItemGroup>

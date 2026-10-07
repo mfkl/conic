@@ -25,6 +25,9 @@ public sealed class CompositionVideoSurface : Control, IDisposable
     internal VideoGeometry GeometryForSmoke => Backend?.Geometry ?? default;
     internal bool HasCpuFrameForSmoke => Backend?.HasCpuFrame == true;
     internal bool HasGpuFrameForSmoke => Backend?.HasGpuFrame == true;
+    internal VideoSubtitle? Subtitle => Backend?.Geometry.Active != 0 ? Backend?.Subtitle : null;
+    /// <summary>Raised when the subtitle overlay or the video placement changes.</summary>
+    internal event Action? PresentationChanged;
     internal VideoSurfaceLayout CurrentVideoLayout => VideoSurfaceLayout.Calculate(
         Bounds.Size, Backend?.VideoSize ?? default, GeometryForSmoke,
         TopLevel.GetTopLevel(this)?.RenderScaling ?? 1);
@@ -92,6 +95,7 @@ public sealed class CompositionVideoSurface : Control, IDisposable
                 ForceUnavailableAdapterForSmoke, ProbeSharedTextureForSmoke)));
             _session.Backend.StatusChanged += ReportStatus;
             _session.Backend.GpuFramePresented += OnGpuFramePresented;
+            _session.Backend.PresentationChanged += OnPresentationChanged;
             _ = InitializeBackendAsync(_session);
             _frameTimer.Start();
         }
@@ -205,6 +209,8 @@ public sealed class CompositionVideoSurface : Control, IDisposable
     private Task PresentLatestFrameAsync() =>
         Backend?.PresentLatestFrameAsync() ?? Task.CompletedTask;
 
+    private void OnPresentationChanged() => PresentationChanged?.Invoke();
+
     private void OnGpuFramePresented(ulong deviceGeneration, ulong resourceGeneration, string device) =>
         GPUFramePresentedForSmoke?.Invoke(deviceGeneration, resourceGeneration, device);
 
@@ -280,7 +286,9 @@ public sealed class CompositionVideoSurface : Control, IDisposable
             _session = null;
             session.Backend.StatusChanged -= ReportStatus;
             session.Backend.GpuFramePresented -= OnGpuFramePresented;
+            session.Backend.PresentationChanged -= OnPresentationChanged;
             session.Dispose();
+            PresentationChanged?.Invoke();
         }
     }
 

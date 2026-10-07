@@ -8,9 +8,8 @@
     "moduleAbi": "3_0_0f"
   },
   "vlclr": {
-    "repository": "mfkl/vlclr-private",
-    "branch": "feature/vlc3-portable-controls",
     "commit": "09b46d50848cc0abe3c236e7a25e43679ee13c02",
-    "consumption": "sibling-project-reference"
+    "consumption": "vendored",
+    "path": "src/VLCLR"
   }
 }

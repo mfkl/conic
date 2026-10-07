@@ -997,9 +997,6 @@
                                        Text="No subtitle tracks are available."
                                        Classes="settingHint"
                                        TextWrapping="Wrap" />
-                            <TextBlock Text="Track selection is available; visual subtitle presentation is not yet qualified on this custom video path."
-                                       Classes="settingHint"
-                                       TextWrapping="Wrap" />
                             <ItemsControl ItemsSource="{Binding SubtitleTracks}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate x:DataType="application:MediaTrack">

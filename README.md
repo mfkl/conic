@@ -21,7 +21,7 @@ start. Surface ownership, stale callbacks, stop/reopen and package discovery
 need explicit checks. The repository includes managed tests and native
 smokes, now runnable against a self-contained Windows package outside the
 source tree. Windows has implemented playback; Linux/macOS native playback
-and subtitle rendering qualification remain unfinished.
+remains unfinished.
 
 AI-assisted implementation and validation were used. Total human effort has
 not yet been measured. [Current evidence and remaining work](docs/contest/STATUS.md)
@@ -232,9 +232,10 @@ UI layout is exercised at 1280 and 480 logical pixels, plus deterministic
 smokes verify fullscreen, reopen, clean shutdown, and safe forced
 adapter-mismatch CPU fallback. Physical multi-monitor/multi-GPU switching,
 OS suspend/resume, and arbitrary display scaling cannot be simulated here and
-remain unqualified. Subtitle/subpicture rendering is also unqualified: track
-selection and delay do not claim visual subtitle presentation on this custom
-video path.
+remain unqualified. Subtitles are rendered by VLC and drawn as an overlay above
+the video, so they also show with hardware decoding. Text subtitles were
+checked by hand on Windows; styled ASS and image subtitles are not yet
+qualified.
 
 ## License
 

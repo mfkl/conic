@@ -6,7 +6,7 @@ establish that every bundled dependency is ready for public redistribution.
 | Input | Current source / evidence | Distribution work |
 |---|---|---|
 | Conic | GPL-2.0-or-later, repository `LICENSE` includes complete GPL v2 text | Include matching source/build instructions in a public release |
-| VLCLR | Private `mfkl/vlclr-private`, commit in `eng/versions.json`; no root LICENSE found at the reviewed pin | Maintainer must establish applicable license and an accessible corresponding-source route; no private source is published by the packaging script |
+| VLCLR | Included as source in `src/VLCLR` and `src/VLCLR.Generators`, with the VLC 3 import library in `lib/libvlccore.lib`; upstream commit in `eng/versions.json` | Maintainer to decide the license covering the included VLCLR source before public release |
 | VLC runtime/plugins | VLC 3.0.24-beta1; source commit recorded in `eng/versions.json`; runtime carries `COPYING.txt`, authors and notices | Record the exact binary source/build provenance and collect applicable component notices/source before distributing |
 | Managed/native NuGet dependencies | Exact resolved inventory in the app's `.deps.json`; `project.assets.json` retained beside the ZIP | Collect license texts and notices from resolved packages, including Avalonia, Inter font, TerraFX and .NET native assets |
 | Product icons/layout | VLC-inspired UI and repository assets | Record upstream provenance/attribution and any applicable asset/font terms |
@@ -15,7 +15,7 @@ establish that every bundled dependency is ready for public redistribution.
 `package-manifest.json` records product/framework revisions, working-tree
 changes, actual SDK and pinned SDK, runtime pins, and hashes for the staged
 files. It excludes its own hash; `SHA256SUMS.txt` covers the final ZIP. Packaging
-validates x64 PE headers, runtime version and the framework pin, then generates
+validates x64 PE headers and the runtime version, then generates
 the staged VLC plugin cache for validation and omits it from the ZIP. VLC scans
 the bundled plugins at startup, avoiding cache invalidation when ZIP timestamps
 are interpreted in another time zone. Version/header checks alone do not prove the

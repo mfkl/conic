@@ -23,7 +23,7 @@ State the exact scope: VLC 3 supplies the engine; VLC desktop behavior is the mi
 | Windows video | D3D11 backend and Native AOT vout; recorded Intel Iris Xe hardware/compositor smokes | Broader hardware, subtitles, end-user package and fresh release qualification |
 | Linux/macOS | Managed builds/tests, native layout/control fixtures, runtime discovery and graphics probes | Real runtime integration, decoder surfaces, compositor presentation and packaging |
 | Everyday controls | Queue, history/resume, settings, PiP, tracks, timing, video geometry and information | Verify end-to-end; close daily-use failures and platform differences |
-| Subtitles | Track selection/delay exist; GPU path does not compose subpictures | Actual VLC-rendered text/styled/image subtitle presentation |
+| Subtitles | Track selection/delay; VLC-rendered subtitles overlaid above the video on GPU and CPU paths, text checked by hand on Windows | Styled ASS and image subtitle checks; live external subtitle attachment |
 | Engineering | Boundaries, pinned inputs, fifteen-job CI definition, recorded managed/native checks | Current-revision evidence, durable artifacts, accessible dependencies |
 | Submission | Technical README and detailed development reports | Release downloads, curated comparison images, migration narrative and entry form |
 

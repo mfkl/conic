@@ -81,7 +81,8 @@ internal sealed class VlcRuntimeLocator(
             if (platform == VlcRuntimePlatform.MacOS)
                 candidates.Add(Path.GetFullPath(Path.Combine(baseDirectory, "..", "Frameworks", "vlc")));
             if (candidates.FirstOrDefault(HasLibraries) is { } bundled) return Path.GetFullPath(bundled);
-            if (FrameworkCandidate is { } framework) candidates.Add(Path.Combine(framework, "vlc-3.0.24-beta1"));
+            // Development fallback: the pinned runtime downloaded by eng/get-vlc.ps1.
+            if (RepositoryRoot is { } repository) candidates.Add(Path.Combine(repository, "artifacts", "dependencies", "vlc-3.0.24"));
             return candidates.FirstOrDefault(HasLibraries) is { } found ? Path.GetFullPath(found)
                 : throw new DirectoryNotFoundException($"Set VLC_DIRECTORY or bundle VLC 3 in the application's vlc directory for {RuntimeIdentifier}.");
         }

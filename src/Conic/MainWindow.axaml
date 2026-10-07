@@ -709,7 +709,7 @@
                            FontSize="17"
                            FontWeight="SemiBold" />
                 <TextBlock Text="{Binding PendingResumeText}" FontSize="16" />
-                <TextBlock Text="The saved position is available for this media."
+                <TextBlock x:Name="ResumeCountdown"
                            Classes="settingHint"
                            TextWrapping="Wrap" />
                 <TextBlock IsVisible="{Binding HasHistoryError}"
@@ -718,6 +718,11 @@
                            TextWrapping="Wrap"
                            AutomationProperties.Name="Resume history error" />
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+                    <Button x:Name="CancelResumeAction"
+                            Content="Cancel"
+                            Click="OnDismissResume"
+                            ToolTip.Tip="Close and keep the saved position (Esc)"
+                            AutomationProperties.Name="Dismiss resume prompt" />
                     <Button x:Name="DeclineResumeAction"
                             Content="Start over"
                             Click="OnDeclineResume"

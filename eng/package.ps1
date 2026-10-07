@@ -3,7 +3,6 @@
 param(
     [ValidateSet('Release', 'Debug')][string] $Configuration = 'Release',
     [ValidateSet('win-x64')][string] $RuntimeIdentifier = 'win-x64',
-    [Parameter(Mandatory)][string] $FrameworkRoot,
     [Parameter(Mandatory)][string] $VlcDirectory,
     [ValidatePattern('^\d+\.\d+\.\d+(-[A-Za-z0-9.-]+)?$')][string] $Version = '0.1.0-preview.1',
     [string] $OutputDirectory = 'artifacts/packages',
@@ -15,7 +14,6 @@ param(
 $ErrorActionPreference = 'Stop'
 if (-not $IsWindows) { throw 'This packaging script requires Windows and the Windows x64 Native AOT toolchain.' }
 $productRoot = Split-Path $PSScriptRoot -Parent
-$framework = (Resolve-Path -LiteralPath $FrameworkRoot).Path
 $runtime = (Resolve-Path -LiteralPath $VlcDirectory).Path
 $outputRoot = [IO.Path]::GetFullPath($OutputDirectory)
 $pins = Get-Content (Join-Path $PSScriptRoot 'versions.json') -Raw | ConvertFrom-Json
@@ -63,10 +61,8 @@ function Assert-X64([string] $Path) {
     finally { $reader.Dispose() }
 }
 
-$frameworkCommit = & git -C $framework rev-parse HEAD
-if ($LASTEXITCODE -ne 0 -or $frameworkCommit -ne $pins.vlclr.commit) { throw "VLCLR must be at $($pins.vlclr.commit)." }
-$frameworkDirty = & git -C $framework status --porcelain --untracked-files=no
-if ($LASTEXITCODE -ne 0 -or $frameworkDirty) { throw 'VLCLR must have clean tracked sources.' }
+# VLCLR is vendored under src/VLCLR; record the upstream revision it was taken from.
+$frameworkCommit = $pins.vlclr.commit
 foreach ($name in @('libvlc.dll', 'libvlccore.dll', 'vlc-cache-gen.exe', 'COPYING.txt')) {
     if (-not (Test-Path -LiteralPath (Join-Path $runtime $name) -PathType Leaf)) { throw "Missing VLC runtime file: $name" }
 }
@@ -89,65 +85,60 @@ New-Item -ItemType Directory -Path $stage, $logs | Out-Null
 # SDK resolution must use the publishing directory, regardless of the caller's global.json.
 $sdk = Invoke-Checked 'dotnet' @('--version') (Join-Path $logs 'sdk-version.log') -PassThru
 if ($sdk -ne $pins.dotnetSdk) { Write-Warning "Local SDK $sdk differs from CI pin $($pins.dotnetSdk); recorded in manifest." }
-$previousFramework = $env:VLCLR_ROOT
-try {
-    $env:VLCLR_ROOT = $framework
-    Write-Output "Publishing app to $stage"
-    $appPublishArguments = @('publish', 'src/Conic/Conic.csproj', '-c', $Configuration, '-r', $RuntimeIdentifier,
-        '--self-contained', 'true', '-p:PublishSingleFile=false', '-p:PublishTrimmed=false', '-p:UsedAvaloniaProducts=',
-        "-p:Version=$Version", '-o', $stage)
-    if ($Smoke) { $appPublishArguments += '-p:Smoke=true' }
-    Invoke-Checked 'dotnet' $appPublishArguments (Join-Path $logs 'app-publish.log')
-    $nativeOutput = Join-Path $runRoot 'native'
-    Invoke-Checked 'dotnet' @('publish', 'src/Conic.Vout/Conic.Vout.csproj', '-c', $Configuration, '-r', $RuntimeIdentifier,
-        "-p:Version=$Version", '-o', $nativeOutput) (Join-Path $logs 'vout-publish.log')
-    $vlcStage = Join-Path $stage 'vlc'
-    New-Item -ItemType Directory -Path $vlcStage | Out-Null
-    foreach ($file in Get-ChildItem -LiteralPath $runtime -File) {
-        if ($file.Extension -eq '.dll' -or $file.Name -in @('vlc-cache-gen.exe', 'COPYING.txt', 'AUTHORS.txt', 'THANKS.txt', 'README.txt')) {
-            Copy-Item -LiteralPath $file.FullName -Destination $vlcStage
-        }
+Write-Output "Publishing app to $stage"
+$appPublishArguments = @('publish', 'src/Conic/Conic.csproj', '-c', $Configuration, '-r', $RuntimeIdentifier,
+    '--self-contained', 'true', '-p:PublishSingleFile=false', '-p:PublishTrimmed=false', '-p:UsedAvaloniaProducts=',
+    "-p:Version=$Version", '-o', $stage)
+if ($Smoke) { $appPublishArguments += '-p:Smoke=true' }
+Invoke-Checked 'dotnet' $appPublishArguments (Join-Path $logs 'app-publish.log')
+$nativeOutput = Join-Path $runRoot 'native'
+Invoke-Checked 'dotnet' @('publish', 'src/Conic.Vout/Conic.Vout.csproj', '-c', $Configuration, '-r', $RuntimeIdentifier,
+    "-p:Version=$Version", '-o', $nativeOutput) (Join-Path $logs 'vout-publish.log')
+$vlcStage = Join-Path $stage 'vlc'
+New-Item -ItemType Directory -Path $vlcStage | Out-Null
+foreach ($file in Get-ChildItem -LiteralPath $runtime -File) {
+    if ($file.Extension -eq '.dll' -or $file.Name -in @('vlc-cache-gen.exe', 'COPYING.txt', 'AUTHORS.txt', 'THANKS.txt', 'README.txt')) {
+        Copy-Item -LiteralPath $file.FullName -Destination $vlcStage
     }
-    foreach ($directory in @('plugins', 'lua', 'locale', 'hrtfs')) {
-        $source = Join-Path $runtime $directory
-        if (Test-Path -LiteralPath $source) { Copy-Item -LiteralPath $source -Destination $vlcStage -Recurse }
-    }
-    $plugin = Join-Path $nativeOutput 'libvlc_avalonia_plugin.dll'
-    Assert-X64 $plugin
-    Copy-Item -LiteralPath $plugin -Destination (Join-Path $vlcStage 'plugins/video_output/libvlc_avalonia_plugin.dll') -Force
-    # Validate plugin discovery, then omit the cache: ZIP timestamps are local
-    # wall-clock values, so a prebuilt cache becomes stale in other time zones.
-    # VLC discovers the bundled plugins at startup without an on-disk cache.
-    Invoke-Checked (Join-Path $vlcStage 'vlc-cache-gen.exe') @((Join-Path $vlcStage 'plugins')) (Join-Path $logs 'plugin-cache.log')
-    $cache = [IO.Path]::GetFullPath((Join-Path $vlcStage 'plugins/plugins.dat'))
-    if (-not $cache.StartsWith($stage + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) { throw 'Plugin cache is outside staging.' }
-    if (-not (Test-Path -LiteralPath $cache -PathType Leaf)) { throw 'VLC plugin cache was not generated.' }
-    Remove-Item -LiteralPath $cache
-    foreach ($file in @('LICENSE', 'docs/WINDOWS_QUICK_START.md', 'docs/contest/DEPENDENCIES.md')) {
-        Copy-Item -LiteralPath (Join-Path $productRoot $file) -Destination $stage
-    }
-    Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'versions.json') -Destination $stage
-    # Keep NuGet's exact runtime/native dependency inventory beside the package notices.
-    Copy-Item -LiteralPath (Join-Path $productRoot 'src/Conic/obj/project.assets.json') -Destination (Join-Path $runRoot 'project.assets.json')
-    $manifest = [ordered]@{
-        schemaVersion = 1; name = $packageName; version = $Version; configuration = $Configuration; rid = $RuntimeIdentifier
-        createdUtc = [DateTime]::UtcNow.ToString('o'); productCommit = $productCommit; workingTreeChanges = $productChanges
-        frameworkCommit = $frameworkCommit; sdk = $sdk; pinnedSdk = $pins.dotnetSdk; pins = $pins
-        source = 'https://github.com/mfkl/conic'; selfContained = $true
-        distributionStatus = 'local-review'; distributionBlockers = @('VLCLR license/source delivery must be resolved before public distribution; see DEPENDENCIES.md.')
-        hardwarePlaybackQualified = $false
-        files = @(Get-ChildItem -LiteralPath $stage -Recurse -File | Sort-Object FullName | ForEach-Object {
-            [ordered]@{ path = [IO.Path]::GetRelativePath($stage, $_.FullName).Replace('\', '/'); bytes = $_.Length; sha256 = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant() }
-        })
-    }
-    $manifest | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath (Join-Path $stage 'package-manifest.json')
-    $zip = Join-Path $runRoot "$packageName.zip"
-    [IO.Compression.ZipFile]::CreateFromDirectory($stage, $zip, [IO.Compression.CompressionLevel]::Optimal, $true)
-    $hash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
-    "$hash  $([IO.Path]::GetFileName($zip))" | Set-Content -LiteralPath (Join-Path $runRoot 'SHA256SUMS.txt')
-    [ordered]@{ packageDirectory = $stage; archive = $zip; sha256 = $hash; manifest = (Join-Path $stage 'package-manifest.json') } |
-        ConvertTo-Json | Set-Content -LiteralPath (Join-Path $runRoot 'result.json')
-    Write-Output "Local review package: $zip"
-    Write-Output "SHA-256: $hash"
 }
-finally { $env:VLCLR_ROOT = $previousFramework }
+foreach ($directory in @('plugins', 'lua', 'locale', 'hrtfs')) {
+    $source = Join-Path $runtime $directory
+    if (Test-Path -LiteralPath $source) { Copy-Item -LiteralPath $source -Destination $vlcStage -Recurse }
+}
+$plugin = Join-Path $nativeOutput 'libvlc_avalonia_plugin.dll'
+Assert-X64 $plugin
+Copy-Item -LiteralPath $plugin -Destination (Join-Path $vlcStage 'plugins/video_output/libvlc_avalonia_plugin.dll') -Force
+# Validate plugin discovery, then omit the cache: ZIP timestamps are local
+# wall-clock values, so a prebuilt cache becomes stale in other time zones.
+# VLC discovers the bundled plugins at startup without an on-disk cache.
+Invoke-Checked (Join-Path $vlcStage 'vlc-cache-gen.exe') @((Join-Path $vlcStage 'plugins')) (Join-Path $logs 'plugin-cache.log')
+$cache = [IO.Path]::GetFullPath((Join-Path $vlcStage 'plugins/plugins.dat'))
+if (-not $cache.StartsWith($stage + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) { throw 'Plugin cache is outside staging.' }
+if (-not (Test-Path -LiteralPath $cache -PathType Leaf)) { throw 'VLC plugin cache was not generated.' }
+Remove-Item -LiteralPath $cache
+foreach ($file in @('LICENSE', 'docs/WINDOWS_QUICK_START.md', 'docs/contest/DEPENDENCIES.md')) {
+    Copy-Item -LiteralPath (Join-Path $productRoot $file) -Destination $stage
+}
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'versions.json') -Destination $stage
+# Keep NuGet's exact runtime/native dependency inventory beside the package notices.
+Copy-Item -LiteralPath (Join-Path $productRoot 'src/Conic/obj/project.assets.json') -Destination (Join-Path $runRoot 'project.assets.json')
+$manifest = [ordered]@{
+    schemaVersion = 1; name = $packageName; version = $Version; configuration = $Configuration; rid = $RuntimeIdentifier
+    createdUtc = [DateTime]::UtcNow.ToString('o'); productCommit = $productCommit; workingTreeChanges = $productChanges
+    frameworkCommit = $frameworkCommit; sdk = $sdk; pinnedSdk = $pins.dotnetSdk; pins = $pins
+    source = 'https://github.com/mfkl/conic'; selfContained = $true
+    distributionStatus = 'local-review'; distributionBlockers = @('Public release not yet approved by the maintainer; see DEPENDENCIES.md.')
+    hardwarePlaybackQualified = $false
+    files = @(Get-ChildItem -LiteralPath $stage -Recurse -File | Sort-Object FullName | ForEach-Object {
+        [ordered]@{ path = [IO.Path]::GetRelativePath($stage, $_.FullName).Replace('\', '/'); bytes = $_.Length; sha256 = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant() }
+    })
+}
+$manifest | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath (Join-Path $stage 'package-manifest.json')
+$zip = Join-Path $runRoot "$packageName.zip"
+[IO.Compression.ZipFile]::CreateFromDirectory($stage, $zip, [IO.Compression.CompressionLevel]::Optimal, $true)
+$hash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+"$hash  $([IO.Path]::GetFileName($zip))" | Set-Content -LiteralPath (Join-Path $runRoot 'SHA256SUMS.txt')
+[ordered]@{ packageDirectory = $stage; archive = $zip; sha256 = $hash; manifest = (Join-Path $stage 'package-manifest.json') } |
+    ConvertTo-Json | Set-Content -LiteralPath (Join-Path $runRoot 'result.json')
+Write-Output "Local review package: $zip"
+Write-Output "SHA-256: $hash"

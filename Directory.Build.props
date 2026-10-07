@@ -1,6 +1,0 @@
-<Project>
-  <PropertyGroup>
-    <!-- Match the runtime override; allow validation against an isolated pinned checkout. -->
-    <VLCLR_ROOT Condition="'$(VLCLR_ROOT)' == ''">$(MSBuildThisFileDirectory)..\vlclr</VLCLR_ROOT>
-  </PropertyGroup>
-</Project>

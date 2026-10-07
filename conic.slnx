@@ -5,6 +5,8 @@
     <Project Path="src/Player.Application/Player.Application.csproj" />
     <Project Path="src/Conic/Conic.csproj" />
     <Project Path="src/Conic.Vout/Conic.Vout.csproj" />
+    <Project Path="src/VLCLR/VLCLR.csproj" />
+    <Project Path="src/VLCLR.Generators/VLCLR.Generators.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Player.Engine.ContractTests/Player.Engine.ContractTests.csproj" />

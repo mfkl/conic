@@ -31,10 +31,10 @@ result. Public downloads and final release qualification are still pending.
 
 ## Windows review package
 
-Build a local portable ZIP with PowerShell 7 and the pinned VLCLR/VLC inputs:
+Build a local portable ZIP with PowerShell 7 and the pinned VLC runtime:
 
 ```powershell
-./eng/package.ps1 -FrameworkRoot ../vlclr-vlc3-portability -VlcDirectory artifacts/dependencies/vlc-3.0.24-beta1
+./eng/package.ps1 -VlcDirectory artifacts/dependencies/vlc-3.0.24-beta1
 ./eng/test-package.ps1 -Archive <path-to-zip> -Media <path-to-h264-fixture> -Cycles 25
 ```
 
@@ -54,7 +54,7 @@ The authoritative architecture boundary is recorded in
 pinned native/framework inputs are recorded in [`eng/versions.json`](eng/versions.json).
 The [CI workflow](https://github.com/mfkl/conic/actions/workflows/ci.yml)
 runs Core tests across all three desktop OSes and full Windows build/test/AOT jobs.
-The [CI guide](docs/CI.md) documents coverage and private dependency access.
+The [CI guide](docs/CI.md) documents coverage.
 The dispatch-ready Windows work packages, validation gates, and commit
 boundaries are in [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md).
 
@@ -80,7 +80,8 @@ Runtime discovery and managed portability groundwork are implemented; passing
 Core tests does not mean native playback is available on those platforms.
 
 - Pure C#; no native C shim.
-- VLC 3 internal-core playback through the sibling VLCLR repository.
+- VLC 3 internal-core playback through VLCLR, a C# VLC plugin framework included
+  in `src/VLCLR`.
 - D3D11 shared-texture transport from the managed vout to Avalonia.
 - Public Avalonia `ICompositionGpuInterop` import and
   `CompositionSurfaceVisual` presentation.
@@ -100,29 +101,11 @@ the composition document for measured evidence and explicit coverage limits.
 
 ## Repository layout
 
-The application uses a project reference to a separate, pinned VLCLR checkout:
-
-```text
-videolabs/
-  vlclr/
-  conic/
-```
-
-VLCLR is not vendored into this repository or published to NuGet. CI checks out
-`mfkl/vlclr-private` alongside the product using a read-only deploy key.
-Local full builds require access to that private repository too.
-
-From the product directory, create a new sibling checkout at the reviewed pin:
-
-```powershell
-$pins = Get-Content eng/versions.json -Raw | ConvertFrom-Json
-git clone --branch $pins.vlclr.branch "https://github.com/$($pins.vlclr.repository).git" ../vlclr
-git -C ../vlclr checkout --detach $pins.vlclr.commit
-```
-
-If `../vlclr` already contains unrelated work, use a separate compatible checkout
-and set `VLCLR_ROOT` to its absolute path. Current VLCLR main targets VLC 4 and
-is incompatible with this application's VLC 3 internal ABI.
+Everything needed to build is in this repository. VLCLR, the C# framework for
+VLC plugins that the app and the Native AOT vout are built on, is included as
+source in `src/VLCLR` and `src/VLCLR.Generators`, with the VLC 3 import library
+in `lib/libvlccore.lib`. The upstream revision it was taken from is recorded in
+[`eng/versions.json`](eng/versions.json).
 
 ## Build and run
 
@@ -170,13 +153,10 @@ their native hardware playback backends are still unimplemented. Hardware
 decoding and GPU presentation are required on all three desktop platforms.
 See [the cross-platform status and qualification plan](docs/CROSS_PLATFORM.md).
 
-`VLCLR_ROOT` also selects the VLCLR project and native import library at build
-time; use an absolute path when selecting a separate checkout. Use the VLC 3
-framework/runtime pins in `eng/versions.json`; if the sibling checkout is on
-unrelated work, select an isolated compatible checkout. VLC 4-targeting VLCLR
-main is incompatible with this product. The earlier migration experiment is
-preserved in [the compatibility record](docs/VLCLR_MAIN_MIGRATION.md); the active
-UI plan keeps VLC 3 and requires fresh qualification of the selected inputs.
+`VLCLR_ROOT` only points development runs at a directory containing the VLC
+runtime (`vlc-3.0.24-beta1`) and the default smoke media; it no longer affects
+the build. The app targets the VLC 3 internal ABI. The earlier VLC 4 migration
+experiment is preserved in [the compatibility record](docs/VLCLR_MAIN_MIGRATION.md).
 
 See [docs/D3D11_COMPOSITION.md](docs/D3D11_COMPOSITION.md) for the validated
 implementation, qualification commands, measured counters, and remaining work.
@@ -189,10 +169,9 @@ The fifteen-job GitHub Actions matrix runs on pushes and pull requests:
 - Hosted graphics diagnostics in Release jobs: launch the compositor probe and
   retain capability reports. Linux uses Xvfb; this does not qualify hardware playback.
 - Native ABI: compile and execute VLCLR's layout probe against the pinned VLC
-  source headers using the native Windows, Linux and macOS compilers; exercise
-  the VLC 3 typed control bridge against native variadic-call fixtures.
+  source headers using the native Windows, Linux and macOS compilers.
 - Desktop app: build the app and run 157 managed UI tests per configuration on
-  Ubuntu and macOS, using the pinned sibling VLCLR checkout.
+  Ubuntu and macOS.
 - Full Windows: all 229 managed tests per configuration, plus the Release
   Windows x64 Native AOT plugin publish.
 
@@ -202,13 +181,12 @@ Run the same checks locally with PowerShell 7:
 
 ```powershell
 ./eng/test.ps1 -Scope Core -Configuration Release
-./eng/test.ps1 -Scope Desktop -Configuration Release -FrameworkRoot ../vlclr
-./eng/test.ps1 -Scope Windows -Configuration Debug -FrameworkRoot ../vlclr
-./eng/test.ps1 -Scope Windows -Configuration Release -FrameworkRoot ../vlclr
+./eng/test.ps1 -Scope Desktop -Configuration Release
+./eng/test.ps1 -Scope Windows -Configuration Debug
+./eng/test.ps1 -Scope Windows -Configuration Release
 ```
 
-Core tests need neither VLCLR nor native VLC. Desktop and full Windows checks
-require the exact VLCLR pin with clean tracked files. Desktop tests do not load
+Core tests need neither VLCLR nor native VLC. Desktop tests do not load
 native VLC or open a graphical session. Hosted runners do not qualify hardware
 decoding or compositor behavior; those checks run separately on GPU machines.
 See [CI setup](docs/CI.md) and [platform qualification](docs/CROSS_PLATFORM.md).

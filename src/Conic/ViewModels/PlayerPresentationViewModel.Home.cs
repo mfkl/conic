@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using System.Windows.Input;
 using Player.Application;
 using Conic.Commands;
@@ -14,6 +15,7 @@ internal sealed partial class PlayerPresentationViewModel
     private string _homeSection = "Home";
     private string _homeSearch = string.Empty;
     private long _homeMediaGeneration = -1;
+    private readonly ObservableCollection<HomeMediaItem> _homeItems = [];
     public ICommand ShowHomeCommand { get; private set; } = null!;
     public ICommand ShowPlayerCommand { get; private set; } = null!;
     public ICommand SelectHomeSectionCommand { get; private set; } = null!;
@@ -48,6 +50,7 @@ internal sealed partial class PlayerPresentationViewModel
         RemoveHomeItemCommand = new RegistryCommand(registry, PlayerCommandId.RemoveHomeItem);
         EnqueueHomeItemCommand = new RegistryCommand(registry, PlayerCommandId.Enqueue);
         ToggleHomeLayoutCommand = new RegistryCommand(registry, PlayerCommandId.ToggleHomeLayout);
+        SyncHomeItems();
     }
 
     public bool IsHomeOpen
@@ -80,22 +83,29 @@ internal sealed partial class PlayerPresentationViewModel
     public bool HomeHasItems => HomeItems.Count != 0;
     public bool ShowHomeWelcome => !HasLibraryItems && IsHomeSection && string.IsNullOrWhiteSpace(HomeSearch);
     public bool ShowHomeEmpty => !HomeHasItems && !ShowHomeWelcome;
-    public IReadOnlyList<HomeMediaItem> HomeItems
+    /// <summary>Updated in place, so a playback checkpoint replaces only the cards that changed instead of recreating every card and thumbnail.</summary>
+    public IReadOnlyList<HomeMediaItem> HomeItems => _homeItems;
+    private void SyncHomeItems()
     {
-        get
+        IEnumerable<HomeMediaItem> items = HomeSection switch
         {
-            IEnumerable<HomeMediaItem> items = HomeSection switch
-            {
-                "Favorites" => FavoriteItems.Select(x => new HomeMediaItem(x.Source, x.DisplayName, "Favorite", 0, false, PlayerCommandId.RemoveFavorite)),
-                "Continue watching" => ResumeItems.Select(ResumeCard),
-                "Recent" => RecentItems.Select(RecentCard),
-                _ => ResumeItems.Select(ResumeCard).Concat(RecentItems.Select(RecentCard))
-                    .Concat(FavoriteItems.Select(x => new HomeMediaItem(x.Source, x.DisplayName, "Favorite", 0, false, PlayerCommandId.RemoveFavorite)))
-                    .DistinctBy(x => MediaHistoryService.KeyFromCanonicalSource(x.Source))
-            };
-            string query = HomeSearch.Trim();
-            return items.Where(x => query.Length == 0 || x.Title.Contains(query, StringComparison.OrdinalIgnoreCase)).ToArray();
+            "Favorites" => FavoriteItems.Select(x => new HomeMediaItem(x.Source, x.DisplayName, "Favorite", 0, false, PlayerCommandId.RemoveFavorite)),
+            "Continue watching" => ResumeItems.Select(ResumeCard),
+            "Recent" => RecentItems.Select(RecentCard),
+            _ => ResumeItems.Select(ResumeCard).Concat(RecentItems.Select(RecentCard))
+                .Concat(FavoriteItems.Select(x => new HomeMediaItem(x.Source, x.DisplayName, "Favorite", 0, false, PlayerCommandId.RemoveFavorite)))
+                .DistinctBy(x => MediaHistoryService.KeyFromCanonicalSource(x.Source))
+        };
+        string query = HomeSearch.Trim();
+        HomeMediaItem[] next = items.Where(x => query.Length == 0 || x.Title.Contains(query, StringComparison.OrdinalIgnoreCase)).ToArray();
+        if (next.Length == _homeItems.Count && next.Select(x => x.Source).SequenceEqual(_homeItems.Select(x => x.Source)))
+        {
+            for (int i = 0; i < next.Length; i++)
+                if (next[i] != _homeItems[i]) _homeItems[i] = next[i];
+            return;
         }
+        _homeItems.Clear();
+        foreach (HomeMediaItem item in next) _homeItems.Add(item);
     }
     private static HomeMediaItem RecentCard(RecentMediaEntry entry) => new(entry.Source, entry.DisplayName, "Recently played", 0, false, PlayerCommandId.RemoveRecent);
     private HomeMediaItem ResumeCard(ResumeEntry entry)
@@ -107,6 +117,7 @@ internal sealed partial class PlayerPresentationViewModel
     }
     private void NotifyHome()
     {
-        foreach (string property in new[] { nameof(HomeItems), nameof(HomeHasItems), nameof(HomeEmptyMessage), nameof(ShowHomeWelcome), nameof(ShowHomeEmpty), nameof(HomeHistoryPrivate), nameof(IsHomeSection), nameof(IsRecentSection), nameof(IsFavoritesSection), nameof(IsContinueSection) }) OnPropertyChanged(property);
+        SyncHomeItems();
+        foreach (string property in new[] { nameof(HomeHasItems), nameof(HomeEmptyMessage), nameof(ShowHomeWelcome), nameof(ShowHomeEmpty), nameof(HomeHistoryPrivate), nameof(IsHomeSection), nameof(IsRecentSection), nameof(IsFavoritesSection), nameof(IsContinueSection) }) OnPropertyChanged(property);
     }
 }

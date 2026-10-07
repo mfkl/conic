@@ -22,6 +22,14 @@ public sealed record MediaCapabilitiesState(
     string? Error = null)
 {
     public static MediaCapabilitiesState Initial { get; } = new(0, 0, MediaCapabilityLoadState.Unavailable, [], [], [], [], new(0, 0));
+
+    // Lists compare by content: each poll builds new arrays, and an unchanged poll must not rebuild the views.
+    public bool Equals(MediaCapabilitiesState? other) =>
+        other is not null && QueueGeneration == other.QueueGeneration && MediaGeneration == other.MediaGeneration && Status == other.Status &&
+        AudioTracks.SequenceEqual(other.AudioTracks) && SubtitleTracks.SequenceEqual(other.SubtitleTracks) &&
+        Titles.SequenceEqual(other.Titles) && Chapters.SequenceEqual(other.Chapters) && Delays == other.Delays && Error == other.Error;
+
+    public override int GetHashCode() => HashCode.Combine(QueueGeneration, MediaGeneration, Status, AudioTracks.Count, SubtitleTracks.Count, Titles.Count, Chapters.Count, Delays);
 }
 
 /// <summary>Result for external tracks. An accepted attachment is pending until a subsequent open; it is never a live-track claim.</summary>

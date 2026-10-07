@@ -25,6 +25,23 @@ public sealed class PlaybackQueueTests
     }
 
     [Fact]
+    public void PolledStatesWithEqualListsAreEqual()
+    {
+        static QueueItem[] Items() => [new("a", "A", "a", 0, true), new("b", "B", "b", 1, false)];
+        PlaybackQueueState queue = new(2, 1, QueueLoadState.Ready, Items(), 0, QueueRepeatMode.None, QueueOrder.Normal);
+        Assert.Equal(queue, queue with { Items = Items() });
+        Assert.Equal(queue.GetHashCode(), (queue with { Items = Items() }).GetHashCode());
+        Assert.NotEqual(queue, queue with { Items = [Items()[0] with { IsCurrent = false }, Items()[1]] });
+
+        static MediaTrack[] Tracks() => [new("-1", "Disable", true, false), new("2", "English", false, true)];
+        MediaCapabilitiesState capabilities = new(2, 1, MediaCapabilityLoadState.Ready, Tracks(), Tracks(), [new("0", "Title", true)], [], new(0, 0));
+        Assert.Equal(capabilities, capabilities with { AudioTracks = Tracks(), SubtitleTracks = Tracks(), Titles = [new("0", "Title", true)], Chapters = [] });
+        Assert.Equal(capabilities.GetHashCode(), (capabilities with { SubtitleTracks = Tracks() }).GetHashCode());
+        Assert.NotEqual(capabilities, capabilities with { SubtitleTracks = [new("-1", "Disable", true, true), new("2", "English", false, false)] });
+        Assert.NotEqual(capabilities, capabilities with { Delays = new(0, 100) });
+    }
+
+    [Fact]
     public void M3uParsingRejectsInvalidAndBoundedContent()
     {
         Assert.Equal(["first.mp4", "https://example.test/second.mp4"], M3uPlaylistDocument.Parse("#EXTM3U\n#EXTINF:1,title\nfirst.mp4\nhttps://example.test/second.mp4\n"));

@@ -119,7 +119,9 @@ public sealed class VideoBackendSessionTests
         public IReadOnlyList<string> AudioArguments { get; private set; } = [];
         public event Action<string>? StatusChanged { add { } remove { } }
         public event Action<ulong, ulong, string>? GpuFramePresented { add { } remove { } }
+        public event Action? PresentationChanged { add { } remove { } }
         public VideoGeometry Geometry => default;
+        public VideoSubtitle? Subtitle => null;
         public Size VideoSize => default;
         public bool HasCpuFrame => false;
         public bool HasGpuFrame => false;

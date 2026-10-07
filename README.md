@@ -233,3 +233,13 @@ OS suspend/resume, and arbitrary display scaling cannot be simulated here and
 remain unqualified. Subtitle/subpicture rendering is also unqualified: track
 selection and delay do not claim visual subtitle presentation on this custom
 video path.
+
+## License
+
+VLC Avalonia, including the VLCLR source in `src/VLCLR` and
+`src/VLCLR.Generators`, is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by the Free
+Software Foundation, either version 2 of the License, or (at your option) any
+later version. It is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+FITNESS FOR A PARTICULAR PURPOSE. See [LICENSE](LICENSE) for the full text.

@@ -1,6 +1,5 @@
 [CmdletBinding()]
 param(
-    [string] $FrameworkRoot = $env:VLCLR_ROOT,
     [string] $VlcSourceRoot = '../vlc',
     [string] $OutputDirectory = 'artifacts/native-abi',
     [string] $Compiler
@@ -38,9 +37,8 @@ function Assert-PinnedRepository([string] $Path, [string] $Commit, [string] $Lab
 }
 
 try {
-    $framework = Assert-PinnedRepository $FrameworkRoot $pins.vlclr.commit 'VLCLR'
     $vlcSource = Assert-PinnedRepository $VlcSourceRoot $pins.vlc.sourceCommit 'VLC source'
-    $probe = Join-Path $framework 'tests/AbiValidation/vlclr_abi.cpp'
+    $probe = Join-Path $productRoot 'tests/AbiValidation/vlclr_abi.cpp'
     $include = Join-Path $vlcSource 'include'
     if (-not (Test-Path -LiteralPath $probe) -or -not (Test-Path -LiteralPath (Join-Path $include 'vlc_common.h'))) {
         throw 'The pinned ABI probe or VLC source headers are missing.'

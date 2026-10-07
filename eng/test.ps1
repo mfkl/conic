@@ -4,7 +4,6 @@ param(
     [string] $Scope = 'Core',
     [ValidateSet('Debug', 'Release')]
     [string] $Configuration = 'Release',
-    [string] $FrameworkRoot = $env:VLCLR_ROOT,
     [switch] $NoRestore
 )
 
@@ -18,14 +17,13 @@ function Invoke-Dotnet {
 }
 
 Push-Location $productRoot
-$previousFrameworkRoot = $env:VLCLR_ROOT
 try {
     New-Item -ItemType Directory -Path $results -Force | Out-Null
     $restoreArguments = @()
     if ($NoRestore) { $restoreArguments = @('--no-restore') }
 
     if ($Scope -eq 'Core') {
-        # These projects have no dependency on VLCLR, VLC or a graphical session.
+        # These projects have no dependency on VLC or a graphical session.
         foreach ($project in @('Player.Application.Tests', 'Player.Engine.ContractTests')) {
             Invoke-Dotnet test "tests/$project/$project.csproj" -c $Configuration @restoreArguments `
                 --logger "trx;LogFileName=$project.trx" --results-directory $results --verbosity minimal
@@ -33,16 +31,6 @@ try {
     }
     else {
         if ($Scope -eq 'Windows' -and -not $IsWindows) { throw 'The full Windows job requires a Windows runner.' }
-        if ([string]::IsNullOrWhiteSpace($FrameworkRoot)) { throw 'Set VLCLR_ROOT to the pinned VLCLR checkout.' }
-        $env:VLCLR_ROOT = (Resolve-Path -LiteralPath $FrameworkRoot).Path
-        $pins = Get-Content eng/versions.json -Raw | ConvertFrom-Json
-        $actual = & git -C $env:VLCLR_ROOT rev-parse HEAD
-        if ($LASTEXITCODE -ne 0 -or $actual -ne $pins.vlclr.commit) {
-            throw "VLCLR must be at $($pins.vlclr.commit); found '$actual'."
-        }
-        $dirty = & git -C $env:VLCLR_ROOT status --porcelain --untracked-files=no
-        if ($LASTEXITCODE -ne 0 -or $dirty) { throw 'The pinned VLCLR checkout must have no modified tracked files.' }
-
         # Desktop builds the real app through its test project, without building
         # the Windows-only Native AOT vout or loading any native VLC library.
         $buildTarget = if ($Scope -eq 'Desktop') { 'tests/VLCAvalonia.UITests/VLCAvalonia.UITests.csproj' } else { 'vlc-avalonia.slnx' }
@@ -58,6 +46,5 @@ try {
     }
 }
 finally {
-    $env:VLCLR_ROOT = $previousFrameworkRoot
     Pop-Location
 }

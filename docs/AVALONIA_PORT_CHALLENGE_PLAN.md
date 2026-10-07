@@ -79,12 +79,15 @@ Acceptance: a fresh baseline report, named target machines, actual capacity and 
 
 ### W02 — Make the source and dependency story usable
 
+Decision (October 7): VLCLR is included as source in this repository (`src/VLCLR`, `src/VLCLR.Generators`, `lib/libvlccore.lib`), taken from framework commit `09b46d5`. No separate checkout, package or deploy key is needed to build.
+
 - [ ] Inventory the exact managed/native source and binaries needed to reproduce a release, including VLCLR, VLC runtime, vout, control helper, fonts/icons and sample media.
-- [ ] Choose a distributable dependency arrangement: public pinned VLCLR source is preferred for reproducibility; a complete versioned source distribution is another candidate. Do not make an unrelated private repository public as a side effect.
-- [ ] Verify actual dependency licenses and redistribution/source obligations before release; include required license texts, notices and corresponding source/build instructions. This task resolves distribution details rather than assuming the current top-level SPDX notice covers every component.
-- [ ] Replace reviewer reliance on `mfkl/vlclr-private` access with documented source/dependency access for the submitted revision. If access remains restricted, record precisely what is unavailable and resolve the entry implications before finalizing the submission.
-- [ ] Give every native input a reproducible source/build or download procedure and hash. Explain the VLC beta runtime pin and ABI compatibility; changing that pin requires new qualification.
-- [ ] Verify a fresh checkout/source archive can build using the published instructions without the maintainer's sibling workspace or CI deploy key.
+- [x] Choose a distributable dependency arrangement: VLCLR included as source (decision above).
+- [x] Build the app and Native AOT vout from the included VLCLR; drop `VLCLR_ROOT` from the build, the `-FrameworkRoot` script parameters, the CI deploy key and the `VLCLR_CI_ENABLED` gate.
+- [ ] Decide the license covering the repository, including the included VLCLR source (maintainer decision).
+- [ ] Verify actual dependency licenses and redistribution/source obligations before release; include required license texts, notices and corresponding source/build instructions.
+- [ ] Give every native input a reproducible source/build or download procedure and hash. Explain the VLC beta runtime pin and ABI compatibility; changing that pin requires new qualification. The VLC 3.0.24-beta1 runtime and smoke media currently come from the maintainer's VLCLR checkout and need a public route.
+- [ ] Verify a fresh checkout can build using the published instructions without the maintainer's sibling workspace or CI deploy key.
 
 Acceptance: another developer can obtain the release's inputs and reproduce the build through the documented route. Runtime users need no source checkout or development credentials.
 

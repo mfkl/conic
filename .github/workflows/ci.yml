@@ -4,20 +4,6 @@ on:
   push:
   pull_request:
   workflow_dispatch:
-    inputs:
-      full_windows:
-        description: 'Also build/test the full Windows app and AOT plugin (requires pushed VLCLR pin and VLCLR_SSH_KEY)'
-        type: boolean
-        default: false
-
-      desktop_app:
-        description: 'Also build the app and run managed UI tests on Linux/macOS (requires VLCLR_SSH_KEY)'
-        type: boolean
-        default: false
-      native_abi:
-        description: 'Also compile and run pinned VLC header layout probes on all three OSes (requires VLCLR_SSH_KEY)'
-        type: boolean
-        default: false
 
 permissions:
   contents: read
@@ -72,7 +58,6 @@ jobs:
 
   native_abi:
     name: Native ABI / ${{ matrix.os }}
-    if: vars.VLCLR_CI_ENABLED == 'true' || (github.event_name == 'workflow_dispatch' && inputs.native_abi)
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     strategy:
@@ -88,30 +73,15 @@ jobs:
         with:
           path: conic
           persist-credentials: false
-      - name: Read native pins and check dependency access
+      - name: Read native pins
         id: pins
-        env:
-          VLCLR_SSH_KEY: ${{ secrets.VLCLR_SSH_KEY }}
         run: |
-          if ([string]::IsNullOrWhiteSpace($env:VLCLR_SSH_KEY)) {
-            throw 'Configure VLCLR_SSH_KEY with the read-only dependency deploy key. See docs/CI.md.'
-          }
           $pins = Get-Content eng/versions.json -Raw | ConvertFrom-Json
-          "framework_repository=$($pins.vlclr.repository)" >> $env:GITHUB_OUTPUT
-          "framework_commit=$($pins.vlclr.commit)" >> $env:GITHUB_OUTPUT
           "vlc_repository=$($pins.vlc.repository)" >> $env:GITHUB_OUTPUT
           "vlc_commit=$($pins.vlc.sourceCommit)" >> $env:GITHUB_OUTPUT
           "sdk=$($pins.dotnetSdk)" >> $env:GITHUB_OUTPUT
           @{ sdk = @{ version = $pins.dotnetSdk; rollForward = 'disable' } } |
             ConvertTo-Json -Depth 3 | Set-Content global.json
-      - name: Checkout pinned VLCLR probe
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          repository: ${{ steps.pins.outputs.framework_repository }}
-          ref: ${{ steps.pins.outputs.framework_commit }}
-          path: vlclr
-          ssh-key: ${{ secrets.VLCLR_SSH_KEY }}
-          persist-credentials: false
       - name: Checkout pinned VLC headers
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -120,12 +90,7 @@ jobs:
           path: vlc
           persist-credentials: false
       - name: Compile and execute native layout probe
-        run: ./eng/verify-native-abi.ps1 -FrameworkRoot ../vlclr -VlcSourceRoot ../vlc
-      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
-        with:
-          dotnet-version: ${{ steps.pins.outputs.sdk }}
-      - name: Exercise typed VLC 3 native control calls
-        run: ../vlclr/eng/test-control-bridge.ps1 -VlcIncludeDirectory ../vlc/include -OutputDirectory artifacts/native-abi/control-bridge
+        run: ./eng/verify-native-abi.ps1 -VlcSourceRoot ../vlc
       - name: Upload native ABI evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -137,8 +102,6 @@ jobs:
 
   windows:
     name: Full Windows / ${{ matrix.configuration }}
-    # Automatic full builds can be enabled after the private dependency is ready.
-    if: vars.VLCLR_CI_ENABLED == 'true' || (github.event_name == 'workflow_dispatch' && inputs.full_windows)
     runs-on: windows-2022
     timeout-minutes: 30
     strategy:
@@ -154,33 +117,18 @@ jobs:
         with:
           path: conic
           persist-credentials: false
-      - name: Read pins and check dependency access
+      - name: Read SDK pin
         id: pins
-        env:
-          VLCLR_SSH_KEY: ${{ secrets.VLCLR_SSH_KEY }}
         run: |
-          if ([string]::IsNullOrWhiteSpace($env:VLCLR_SSH_KEY)) {
-            throw 'Configure VLCLR_SSH_KEY with a read-only deploy key for the pinned private VLCLR repository. See docs/CI.md.'
-          }
           $pins = Get-Content eng/versions.json -Raw | ConvertFrom-Json
           "sdk=$($pins.dotnetSdk)" >> $env:GITHUB_OUTPUT
-          "repository=$($pins.vlclr.repository)" >> $env:GITHUB_OUTPUT
-          "commit=$($pins.vlclr.commit)" >> $env:GITHUB_OUTPUT
           @{ sdk = @{ version = $pins.dotnetSdk; rollForward = 'disable' } } |
             ConvertTo-Json -Depth 3 | Set-Content global.json
-      - name: Checkout pinned VLCLR
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          repository: ${{ steps.pins.outputs.repository }}
-          ref: ${{ steps.pins.outputs.commit }}
-          path: vlclr
-          ssh-key: ${{ secrets.VLCLR_SSH_KEY }}
-          persist-credentials: false
       - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
         with:
           dotnet-version: ${{ steps.pins.outputs.sdk }}
       - name: Build, test and publish native plugin
-        run: ./eng/test.ps1 -Scope Windows -Configuration '${{ matrix.configuration }}' -FrameworkRoot ../vlclr
+        run: ./eng/test.ps1 -Scope Windows -Configuration '${{ matrix.configuration }}'
       - name: Exercise graphics diagnostic on hosted Windows
         if: matrix.configuration == 'Release'
         run: ./eng/test-graphics.ps1 -AllowUnavailable
@@ -203,8 +151,6 @@ jobs:
 
   desktop:
     name: App / ${{ matrix.os }} / ${{ matrix.configuration }}
-    # Uses the same pinned sibling dependency as the full Windows jobs.
-    if: vars.VLCLR_CI_ENABLED == 'true' || (github.event_name == 'workflow_dispatch' && inputs.desktop_app)
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     strategy:
@@ -221,33 +167,18 @@ jobs:
         with:
           path: conic
           persist-credentials: false
-      - name: Read pins and check dependency access
+      - name: Read SDK pin
         id: pins
-        env:
-          VLCLR_SSH_KEY: ${{ secrets.VLCLR_SSH_KEY }}
         run: |
-          if ([string]::IsNullOrWhiteSpace($env:VLCLR_SSH_KEY)) {
-            throw 'Configure VLCLR_SSH_KEY with a read-only deploy key for the pinned private VLCLR repository. See docs/CI.md.'
-          }
           $pins = Get-Content eng/versions.json -Raw | ConvertFrom-Json
           "sdk=$($pins.dotnetSdk)" >> $env:GITHUB_OUTPUT
-          "repository=$($pins.vlclr.repository)" >> $env:GITHUB_OUTPUT
-          "commit=$($pins.vlclr.commit)" >> $env:GITHUB_OUTPUT
           @{ sdk = @{ version = $pins.dotnetSdk; rollForward = 'disable' } } |
             ConvertTo-Json -Depth 3 | Set-Content global.json
-      - name: Checkout pinned VLCLR
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          repository: ${{ steps.pins.outputs.repository }}
-          ref: ${{ steps.pins.outputs.commit }}
-          path: vlclr
-          ssh-key: ${{ secrets.VLCLR_SSH_KEY }}
-          persist-credentials: false
       - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
         with:
           dotnet-version: ${{ steps.pins.outputs.sdk }}
       - name: Build app and run managed UI tests
-        run: ./eng/test.ps1 -Scope Desktop -Configuration '${{ matrix.configuration }}' -FrameworkRoot ../vlclr
+        run: ./eng/test.ps1 -Scope Desktop -Configuration '${{ matrix.configuration }}'
       - name: Install Linux virtual display tools
         if: matrix.os == 'ubuntu-24.04' && matrix.configuration == 'Release'
         shell: bash

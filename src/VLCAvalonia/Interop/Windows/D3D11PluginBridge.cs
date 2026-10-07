@@ -56,6 +56,12 @@ internal sealed unsafe class D3D11PluginBridge : IDisposable
         }
     }
 
+    /// <summary>Straight-alpha RGBA overlay at Bounds on a canvas covering the visible video. Empty Pixels clears it.</summary>
+    internal sealed record Subtitle(int CanvasWidth, int CanvasHeight, SubtitleBounds Bounds, byte[] Pixels)
+    {
+        public static Subtitle None { get; } = new(0, 0, default, []);
+    }
+
     internal sealed record Frame(
         int Width,
         int Height,
@@ -111,6 +117,8 @@ internal sealed unsafe class D3D11PluginBridge : IDisposable
     private readonly delegate* unmanaged[Cdecl]<int, void> _setForceCPUOutput;
     private readonly delegate* unmanaged[Cdecl]<nint, nint, void>
         _setTelemetryCallback;
+    private readonly delegate* unmanaged[Cdecl]<nint, nint, void>
+        _setSubtitleCallback;
     private readonly delegate* unmanaged[Cdecl]<
         long*, long*, long*, long*, long*, long*, long*, long*, void>
         _getPoolTelemetry;
@@ -120,11 +128,13 @@ internal sealed unsafe class D3D11PluginBridge : IDisposable
     private Frame? _latestFrame;
     private GPUFrame? _latestGPUFrame;
     private DeviceTelemetry? _latestTelemetry;
+    private Subtitle? _latestSubtitle;
     private nint _playlist;
     private bool _frameConnected;
     private bool _GPUConnected;
     private bool _playlistConnected;
     private bool _telemetryConnected;
+    private bool _subtitleConnected;
     private bool _ownsAdapterSelection;
     private bool _ownsCPUOutputSelection;
     private int _disposed;
@@ -168,6 +178,9 @@ internal sealed unsafe class D3D11PluginBridge : IDisposable
             "vlc_avalonia_set_device_telemetry_callback");
         _setTelemetryCallback =
             (delegate* unmanaged[Cdecl]<nint, nint, void>)telemetrySetter;
+        _setSubtitleCallback = (delegate* unmanaged[Cdecl]<nint, nint, void>)NativeLibrary.GetExport(
+            _library,
+            "vlc_avalonia_set_subtitle_callback");
         nint poolTelemetryGetter = NativeLibrary.GetExport(
             _library,
             "vlc_avalonia_get_pool_telemetry");
@@ -190,10 +203,20 @@ internal sealed unsafe class D3D11PluginBridge : IDisposable
                     (nint)(delegate* unmanaged[Cdecl]<nint, uint, int, uint, int, int, ulong, uint, int, int, int, void>)&OnDeviceTelemetry,
                     _opaque);
                 _telemetryConnected = true;
+
+                _setSubtitleCallback(
+                    (nint)(delegate* unmanaged[Cdecl]<nint, int, int, int, int, int, int, nint, void>)&OnSubtitle,
+                    _opaque);
+                _subtitleConnected = true;
             }
         }
         catch
         {
+            if (_subtitleConnected)
+            {
+                _setSubtitleCallback(0, 0);
+                _subtitleConnected = false;
+            }
             if (_telemetryConnected)
             {
                 _setTelemetryCallback(0, 0);
@@ -347,6 +370,12 @@ internal sealed unsafe class D3D11PluginBridge : IDisposable
         return frame is not null;
     }
 
+    public bool TryTakeLatestSubtitle(out Subtitle? subtitle)
+    {
+        subtitle = Interlocked.Exchange(ref _latestSubtitle, null);
+        return subtitle is not null;
+    }
+
     public bool TryTakeLatestTelemetry(out DeviceTelemetry? telemetry)
     {
         telemetry = Interlocked.Exchange(ref _latestTelemetry, null);
@@ -442,6 +471,38 @@ internal sealed unsafe class D3D11PluginBridge : IDisposable
                     rowBytes,
                     destination,
                     presentationTimestamp));
+        }
+        catch
+        {
+        }
+    }
+
+    [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
+    private static void OnSubtitle(
+        nint opaque,
+        int canvasWidth,
+        int canvasHeight,
+        int x,
+        int y,
+        int width,
+        int height,
+        nint pixels)
+    {
+        try
+        {
+            D3D11PluginBridge? bridge = GetBridge(opaque);
+            if (bridge is null || bridge.IsDisposed)
+                return;
+            SubtitleBounds bounds = new(x, y, width, height);
+            Subtitle subtitle = Subtitle.None;
+            if (!bounds.IsEmpty && pixels != 0 &&
+                canvasWidth is > 0 and <= SubtitleComposer.MaximumCanvas && canvasHeight is > 0 and <= SubtitleComposer.MaximumCanvas &&
+                x >= 0 && y >= 0 && (long)x + width <= canvasWidth && (long)y + height <= canvasHeight)
+            {
+                subtitle = new Subtitle(canvasWidth, canvasHeight, bounds,
+                    new ReadOnlySpan<byte>((void*)pixels, bounds.ByteCount).ToArray());
+            }
+            Interlocked.Exchange(ref bridge._latestSubtitle, subtitle);
         }
         catch
         {
@@ -576,6 +637,11 @@ internal sealed unsafe class D3D11PluginBridge : IDisposable
                 _setTelemetryCallback(0, 0);
                 _telemetryConnected = false;
             }
+            if (_subtitleConnected)
+            {
+                _setSubtitleCallback(0, 0);
+                _subtitleConnected = false;
+            }
             if (_frameConnected)
             {
                 _setCallback(0, 0);
@@ -583,6 +649,7 @@ internal sealed unsafe class D3D11PluginBridge : IDisposable
             }
 
             Volatile.Write(ref _playlist, 0);
+            Interlocked.Exchange(ref _latestSubtitle, null);
             Interlocked.Exchange(ref _latestFrame, null);
             Interlocked.Exchange(ref _latestGPUFrame, null);
             Interlocked.Exchange(ref _latestTelemetry, null);

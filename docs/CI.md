@@ -43,7 +43,7 @@ Linux coverage here is X11 through Xvfb, not a Wayland session.
 ## Native ABI coverage
 
 Three Native ABI jobs compile and execute the VLCLR layout probe
-(`tests/AbiValidation/vlclr_abi.cpp`) against the exact VLC source revision in
+(`external/vlclr/tests/AbiValidation/vlclr_abi.cpp`) against the exact VLC source revision in
 `eng/versions.json`, using MSVC x64 on Windows and the host C++ compiler on
 Linux/macOS. A sibling checkout of VLC, `vlc`, supplies the source headers.
 Their artifacts include JSON provenance and compiler/probe logs, even on failure.
@@ -71,9 +71,9 @@ The Windows matrix builds the complete solution and runs all 229
 managed tests in Debug and Release. Release also publishes the Windows x64
 Native AOT plugin. Test results and native outputs are retained for 14 days.
 
-VLCLR is built from `src/VLCLR` in the product checkout, so the workflow needs
-no dependency checkout, secret or repository variable, and pull requests from
-forks run every job. Artifact upload paths are relative to the runner workspace
+VLCLR is the public `external/vlclr` submodule, checked out with
+`submodules: true`, so the workflow needs no secret or repository variable, and
+pull requests from forks run every job. Artifact upload paths are relative to the runner workspace
 and point into `vlc-avalonia/artifacts/ci`. Do not use `pull_request_target` to
 execute untrusted PR code.
 

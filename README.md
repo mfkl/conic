@@ -83,8 +83,8 @@ On Linux the engine is native, but the app still reports playback as
 unavailable until the GPU video output exists.
 
 - Pure C#; no native C shim.
-- VLC 3 internal-core playback through VLCLR, a C# VLC plugin framework included
-  in `src/VLCLR`.
+- VLC 3 internal-core playback through [VLCLR](https://github.com/mfkl/vlclr/tree/3.x),
+  a C# VLC plugin framework, included as a git submodule.
 - D3D11 shared-texture transport from the managed vout to Avalonia.
 - Public Avalonia `ICompositionGpuInterop` import and
   `CompositionSurfaceVisual` presentation.
@@ -104,11 +104,19 @@ the composition document for measured evidence and explicit coverage limits.
 
 ## Repository layout
 
-Everything needed to build is in this repository. VLCLR, the C# framework for
-VLC plugins that the app and the Native AOT vout are built on, is included as
-source in `src/VLCLR` and `src/VLCLR.Generators`, with the VLC 3 import library
-in `lib/libvlccore.lib`. The upstream revision it was taken from is recorded in
-[`eng/versions.json`](eng/versions.json).
+VLCLR, the C# framework for VLC plugins that the app and the Native AOT vout
+are built on, is a git submodule at `external/vlclr`, tracking the `3.x` branch
+of [mfkl/vlclr](https://github.com/mfkl/vlclr/tree/3.x). That branch also holds
+the VLC 3 import library and the native layout probe. The pinned commit is
+recorded in [`eng/versions.json`](eng/versions.json). Clone with submodules:
+
+```
+git clone --recursive https://github.com/mfkl/vlc-avalonia.git
+# or, in an existing clone:
+git submodule update --init
+```
+
+GitHub's "Download ZIP" leaves the submodule out; clone instead.
 
 ## Build and run
 
@@ -242,8 +250,7 @@ qualified.
 
 ## License
 
-VLC Avalonia, including the VLCLR source in `src/VLCLR` and
-`src/VLCLR.Generators`, is free software: you can redistribute it and/or modify
+VLC Avalonia is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by the Free
 Software Foundation, either version 2 of the License, or (at your option) any
 later version. It is distributed in the hope that it will be useful, but

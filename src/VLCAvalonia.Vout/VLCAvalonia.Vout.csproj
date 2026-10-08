@@ -18,7 +18,7 @@
   <ItemGroup>
     <Compile Include="..\Shared\VideoGeometry.cs" Link="Interop\VideoGeometry.cs" />
     <Compile Include="..\Shared\SubtitleComposer.cs" Link="Interop\SubtitleComposer.cs" />
-    <ProjectReference Include="..\VLCLR\VLCLR.csproj" />
+    <ProjectReference Include="..\..\external\vlclr\src\VLCLR\VLCLR.csproj" />
   </ItemGroup>
 
   <!-- Windows: the D3D11 video output plus the playlist control interface. -->
@@ -28,7 +28,7 @@
   <ItemGroup Condition="'$(RuntimeIdentifier)' == 'win-x64'">
     <PackageReference Include="TerraFX.Interop.Windows" Version="10.0.20348-beta1" />
     <DirectPInvoke Include="libvlccore" />
-    <NativeLibrary Include="..\..\lib\libvlccore.lib" />
+    <NativeLibrary Include="..\..\external\vlclr\lib\libvlccore.lib" />
   </ItemGroup>
 
   <!-- Linux: the playlist control interface only. The GPU video output is not

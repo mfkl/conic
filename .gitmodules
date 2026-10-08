@@ -1,0 +1,4 @@
+[submodule "external/vlclr"]
+	path = external/vlclr
+	url = https://github.com/mfkl/vlclr.git
+	branch = 3.x

@@ -38,7 +38,7 @@ function Assert-PinnedRepository([string] $Path, [string] $Commit, [string] $Lab
 
 try {
     $vlcSource = Assert-PinnedRepository $VlcSourceRoot $pins.vlc.sourceCommit 'VLC source'
-    $probe = Join-Path $productRoot 'tests/AbiValidation/vlclr_abi.cpp'
+    $probe = Join-Path $productRoot 'external/vlclr/tests/AbiValidation/vlclr_abi.cpp'
     $include = Join-Path $vlcSource 'include'
     if (-not (Test-Path -LiteralPath $probe) -or -not (Test-Path -LiteralPath (Join-Path $include 'vlc_common.h'))) {
         throw 'The pinned ABI probe or VLC source headers are missing.'

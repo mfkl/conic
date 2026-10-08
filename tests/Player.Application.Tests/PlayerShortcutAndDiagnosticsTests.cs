@@ -29,6 +29,24 @@ public sealed class PlayerShortcutAndDiagnosticsTests
         Assert.Contains("already assigned", error);
     }
 
+    [Theory]
+    [InlineData("Ctrl+O", false, "Ctrl+O")]
+    [InlineData("Ctrl+O", true, "Meta+O")]
+    [InlineData("Ctrl+Shift+P", true, "Shift+Meta+P")]
+    [InlineData("Ctrl+,", true, "Meta+,")]
+    [InlineData("Alt+Home", true, "Alt+Home")]
+    [InlineData("Space", true, "Space")]
+    public void MacOSDefaultsUseCommandInsteadOfControl(string gesture, bool commandKey, string expected) =>
+        Assert.Equal(expected, PlayerShortcutPolicy.PlatformDefault(gesture, commandKey));
+
+    [Fact]
+    public void CommandIsShownAsCmdAndReadBackAsCommand()
+    {
+        Assert.Equal("Shift+Cmd+P", PlayerShortcutPolicy.Display("Shift+Meta+P", commandKey: true));
+        Assert.Equal("Shift+Meta+P", PlayerShortcutPolicy.Display("Shift+Meta+P", commandKey: false));
+        Assert.Equal("Shift+Meta+P", PlayerShortcutPolicy.Normalize("Shift+Cmd+P"));
+    }
+
     [Fact]
     public void DiagnosticsNeverIncludesUriOrCodecGuesses()
     {

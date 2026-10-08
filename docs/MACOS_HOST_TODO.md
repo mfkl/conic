@@ -110,17 +110,30 @@ xattr -dr com.apple.quarantine "VLC Avalonia.app"
 - [ ] Without `-VlcDirectory`, the bundle uses `/Applications/VLC.app`.
 - [ ] Home thumbnails appear for MP4/MOV files (Quick Look through `qlmanage`; MKV has no Quick Look thumbnail).
 
-## 6. Decisions for you
+## 6. Decisions made (October 8)
 
-- **Window chrome.** The window keeps the Windows-style caption buttons on the
-  right (`WindowDecorations="BorderOnly"`), so macOS shows no traffic lights.
-  Options: keep it, or use macOS's traffic lights on the left and hide the custom buttons on macOS.
-- **Shortcuts.** Defaults use Ctrl. macOS users expect Cmd (Meta), and the app has no menu bar items yet.
-- **Bundle identity.** `eng/package-macos.ps1` uses `io.videolabs.vlc-avalonia`
-  (parameter `-BundleIdentifier`); there is no `.icns` icon yet.
-- **Distribution.** A public macOS download needs a Developer ID signature and
-  notarization, which re-signs the bundled VLC libraries.
+- **Window chrome: macOS traffic lights.** On macOS the window keeps its
+  system decorations (`WindowDecorations.Full`) with the client area extended
+  under them; the in-app caption buttons are hidden and the top chrome and
+  Home header start 78 px from the left, clear of the traffic lights
+  (`Controls/PlatformChrome.cs`). PiP stays borderless, without traffic lights.
+- **Shortcuts: Cmd.** Defaults written with Ctrl use Cmd on macOS
+  (`PlayerShortcutPolicy.PlatformDefault`); Settings shows `Cmd` and accepts
+  `Cmd`, `Command` or `Meta`.
+- **Bundle identity:** `io.videolabs.vlc-avalonia`; no `.icns` icon yet.
+- **Distribution:** ad hoc signing is fine for now; no notarization.
 - **Minimum macOS version.** `Info.plist` sets none; .NET 10 and Avalonia 12 decide.
+
+To check on the Mac:
+
+- [ ] Traffic lights sit in the top chrome without overlapping the back button
+  or the Home header, are vertically centered on the 44 px caption row, and
+  close, minimize and zoom the window; dragging the top chrome moves it.
+- [ ] Fullscreen (green button and the app's toggle) hides and restores the chrome.
+- [ ] Entering and leaving PiP switches between borderless and decorated
+  correctly (watch the PiP window size bug below).
+- [ ] Cmd+O, Cmd+Shift+O, Cmd+L, Cmd+I, Cmd+J, Cmd+, and Cmd+Shift+P work and
+  show as `Cmd+…` in Settings; Cmd+Q and Cmd+W behave as expected.
 
 ## 7. Known limits
 

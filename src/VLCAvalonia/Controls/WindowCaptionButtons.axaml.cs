@@ -8,6 +8,7 @@ namespace VLCAvalonia.Controls;
 
 // In-app window caption buttons. With ExtendClientAreaToDecorationsHint the
 // platform draws a light caption over the dark chrome; these replace it.
+// macOS keeps its own traffic lights instead (PlatformChrome).
 public partial class WindowCaptionButtons : UserControl
 {
     private Window? _window;
@@ -16,6 +17,7 @@ public partial class WindowCaptionButtons : UserControl
     public WindowCaptionButtons()
     {
         InitializeComponent();
+        IsVisible = !PlatformChrome.UsesSystemCaptionButtons;
         AttachedToVisualTree += (_, _) => Connect();
     }
 
@@ -30,7 +32,7 @@ public partial class WindowCaptionButtons : UserControl
         {
             if (e.Property.Name != nameof(Window.WindowState)) return;
             bool fullscreen = window.WindowState == WindowState.FullScreen;
-            IsVisible = !fullscreen;
+            IsVisible = !fullscreen && !PlatformChrome.UsesSystemCaptionButtons;
             UpdateMaximizeIcon(window.WindowState);
         };
     }

@@ -36,8 +36,9 @@ the checks that need a real Mac.
   `MTLSharedEvent` timelines before returning the buffer. CPU BGRA frames are
   the fallback when import is unavailable. Subtitle, CPU-frame and geometry
   exports now live in `VoutHost`, shared with the D3D11 output.
-- **App.** Home thumbnails come from Quick Look (`qlmanage`). The window keeps
-  its Windows-style chrome and Ctrl shortcuts for now (decisions listed in the TODO).
+- **App.** Home thumbnails come from Quick Look (`qlmanage`). The window uses
+  the macOS traffic lights instead of the in-app caption buttons, and default
+  shortcuts use Cmd instead of Ctrl.
 
 The software-decoding pass uploads frames into pixel buffers on the CPU; it
 checks the transport, not the hardware requirement above, which needs

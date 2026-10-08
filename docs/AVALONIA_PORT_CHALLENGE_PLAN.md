@@ -22,7 +22,7 @@ State the exact scope: VLC 3 supplies the engine; VLC desktop behavior is the mi
 |---|---|---|
 | Windows video | D3D11 backend and Native AOT vout; 14-case package qualification on VLC 3.0.24 (October 8), Intel Iris Xe | Additional GPU vendor, clean machine, soak |
 | Linux | Engine (queue, transport, tracks, delays, media information, lifecycle) runs against real VLC 3 on branch `feature/linux-port`; CI job added | GPU video output (VA-API, DMA-BUF import), X11/Wayland qualification, runtime choice and packaging |
-| macOS | Engine, IOSurface video output (VideoToolbox, Metal shared events), app bundle script and CI smokes on arm64/x64 runners, on branch `feature/macos-port` | Real-Mac qualification, chrome/shortcut decisions, signing/notarization |
+| macOS | Engine, IOSurface video output (VideoToolbox, Metal shared events), app bundle script and CI smokes on arm64/x64 runners, on branch `feature/macos-port` | Real-Mac qualification; Developer ID signing and notarization deferred (ad hoc for now) |
 | Everyday controls | Queue, history/resume, settings, PiP, tracks, timing, video geometry and information | Verify end-to-end; close daily-use failures and platform differences |
 | Subtitles | Track selection/delay; VLC-rendered subtitles overlaid above the video on GPU and CPU paths, text checked by hand on Windows | Styled ASS and image subtitle checks; live external subtitle attachment |
 | Engineering | Boundaries, pinned inputs, fifteen-job CI definition, recorded managed/native checks | Current-revision evidence, durable artifacts, accessible dependencies |
@@ -149,7 +149,7 @@ Acceptance: actual audio/video and subtitle workflows pass in the promised sessi
 - [x] Define native surface retention, conversion, synchronization, thread affinity and plugin/runtime loading. Resolve required framework bindings before product integration. (Branch `feature/macos-port`; see [CROSS_PLATFORM.md](CROSS_PLATFORM.md#macos-port-october-8).)
 - [x] Implement a macOS backend with the shared command/session boundary, GPU presentation, subtitle regions, disposal and failure recovery. (Same branch; CI smokes pass on arm64 and x64 runners, real-Mac qualification pending.)
 - [ ] Qualify H.264 and HEVC 10-bit where supported, audio, seeks, queue/tracks, fullscreen, PiP and window transitions. Record native architecture and avoid treating Rosetta behavior as ARM64 qualification.
-- [ ] Apply macOS command-key defaults and labels; test menus, file dialogs, focus, window close/quit, display scaling and sleep/wake.
+- [ ] Apply macOS command-key defaults and labels (done: Cmd defaults, `Cmd` in Settings; traffic lights replace the in-app caption buttons). Still to test: menus, file dialogs, focus, window close/quit, display scaling and sleep/wake.
 
 Acceptance: a native Apple Silicon app presents hardware-decoded video and subtitles through Avalonia with correct lifetime/synchronization, zero decoded-video CPU transfers on the qualified route, and usable desktop interactions.
 

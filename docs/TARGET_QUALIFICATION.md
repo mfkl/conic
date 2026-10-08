@@ -18,7 +18,7 @@ An existing checkout at another revision should be retained; create a separate
 worktree or sibling checkout for the pinned source.
 
 The script compiles and executes VLCLR's existing
-`tests/AbiValidation/vlclr_abi.cpp` against the pinned source's `include`
+`external/vlclr/tests/AbiValidation/vlclr_abi.cpp` against the pinned source's `include`
 directory. It introduces no copied native layouts or modified framework pin.
 Windows uses MSVC x64 (automatically locating the Visual Studio developer shell);
 Linux/macOS use `c++`, or a compiler executable supplied with `-Compiler`.

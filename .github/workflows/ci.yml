@@ -34,6 +34,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           path: conic
+          submodules: true
           persist-credentials: false
       - name: Read SDK pin
         id: pins
@@ -72,6 +73,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           path: conic
+          submodules: true
           persist-credentials: false
       - name: Read native pins
         id: pins
@@ -116,6 +118,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           path: conic
+          submodules: true
           persist-credentials: false
       - name: Read SDK pin
         id: pins
@@ -166,6 +169,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           path: conic
+          submodules: true
           persist-credentials: false
       - name: Read SDK pin
         id: pins
@@ -220,6 +224,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           path: conic
+          submodules: true
           persist-credentials: false
       - name: Read SDK pin
         id: pins
@@ -268,6 +273,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           path: conic
+          submodules: true
           persist-credentials: false
       - name: Read SDK pin
         id: pins

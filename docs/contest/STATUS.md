@@ -10,7 +10,7 @@ end.
 | Task | State | Evidence / next action |
 |---|---|---|
 | W01 baseline and scope | Passed | VLC 3.0.23 pre-contest baseline; Windows-first scope, Linux engine added October 8 |
-| W02 source and license | Passed | VLCLR included in `src/VLCLR`; repository GPL-2.0-or-later (October 7) |
+| W02 source and license | Passed | VLCLR is the public `external/vlclr` submodule (mfkl/vlclr `3.x`); both GPL-2.0-or-later (October 8) |
 | W02 VLC runtime | Passed | `eng/get-vlc.ps1` fetches official VLC 3.0.24 win64 with a pinned SHA-256 |
 | W02 requalification on 3.0.24 | Passed locally | 14/14 package cases, 25 engine cycles, zero CPU uploads on Intel Iris Xe (October 8); rerun on `feature/linux-port` also 14/14 |
 | W02 public smoke media | Outstanding | `test_01.mkv` still comes from the maintainer's VLCLR checkout; Linux CI now generates its clip with ffmpeg, Windows could too |

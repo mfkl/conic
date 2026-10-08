@@ -87,6 +87,10 @@ public partial class MainWindow
                 if (lightsWithHiddenChrome) failures.Add("traffic lights hide with the chrome");
                 await Click(HomeButton, "player back arrow while playing", () => _presentation.IsHomeOpen);
                 if (!_presentation.IsHomeOpen) _presentation.IsHomeOpen = true;
+                // Playback continues under Home, which must cover the video.
+                bool opaque = HomeScreen.Background is Avalonia.Media.ISolidColorBrush { Color.A: 255, Opacity: 1 };
+                Console.WriteLine($"[caption-click-smoke] {(opaque ? "PASS" : "FAIL")} Home covers the playing video");
+                if (!opaque) failures.Add("Home covers the playing video");
                 await Task.Delay(300);
                 Button homeBack = HomeScreen.GetVisualDescendants().OfType<Button>()
                     .First(b => AutomationProperties.GetName(b) == "Return to player" && b.IsEffectivelyVisible);

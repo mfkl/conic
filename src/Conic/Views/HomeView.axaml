@@ -4,6 +4,7 @@
              xmlns:controls="clr-namespace:Conic.Controls"
              x:Class="Conic.Views.HomeView"
              x:Name="HomeRoot"
+             Background="{DynamicResource PlayerCanvas}"
              x:DataType="vm:PlayerPresentationViewModel"
              Classes.list="{Binding HomeListLayout}">
     <UserControl.Styles>

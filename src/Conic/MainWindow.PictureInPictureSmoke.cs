@@ -62,7 +62,10 @@ public partial class MainWindow
                 OnPlayerKeyDown(this, escape);
                 await Task.Delay(250);
                 Require(escape.Handled && !_presentation.IsPictureInPicture && !Topmost, "Escape returns and restores topmost=false");
-                Require(Math.Abs(ClientSize.Width - 1280) < 2 && Math.Abs(ClientSize.Height - 720) < 2 && Position == position, "normal bounds restored");
+                // Window frame changes complete asynchronously on macOS.
+                bool BoundsRestored() => Math.Abs(ClientSize.Width - 1280) < 2 && Math.Abs(ClientSize.Height - 720) < 2 && Position == position;
+                for (DateTime settle = DateTime.UtcNow.AddSeconds(3); !BoundsRestored() && DateTime.UtcNow < settle;) await Task.Delay(50);
+                Require(BoundsRestored(), $"normal bounds restored (expected 1280x720 at {position}, got {ClientSize.Width}x{ClientSize.Height} at {Position})");
                 Require(engine.State.Status == PlaybackStatus.Paused && Math.Abs(engine.State.Position - .25) < .04, "paused seek survives return");
                 _presentation.TogglePauseCommand.Execute(null);
                 await Until(() => engine.State.Status == PlaybackStatus.Playing);
@@ -122,7 +125,13 @@ public partial class MainWindow
                 // Exercise the actual close path and normal desktop lifetime shutdown.
                 OnPictureInPictureClose(null, new Avalonia.Interactivity.RoutedEventArgs());
             }
-            catch (Exception error) { Console.Error.WriteLine($"[pip-smoke] FAIL {error}"); desktop.Shutdown(1); }
+            catch (Exception error)
+            {
+                Console.Error.WriteLine($"[pip-smoke] FAIL {error}");
+                Console.Error.WriteLine($"[pip-smoke] state={VideoSurface.Player?.State.Status} position={VideoSurface.Player?.State.Position:0.000} " +
+                    $"gpu-frames={presented} pip={_presentation.IsPictureInPicture} window={WindowState} {ClientSize.Width}x{ClientSize.Height} at {Position}");
+                desktop.Shutdown(1);
+            }
         };
 
         static async Task Until(Func<bool> predicate)

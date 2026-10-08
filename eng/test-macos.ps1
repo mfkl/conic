@@ -55,16 +55,34 @@ function Invoke-Case([string] $Name, [string[]] $Arguments) {
     foreach ($entry in $environment.GetEnumerator()) { $start.Environment[$entry.Key] = $entry.Value }
     $watch = [Diagnostics.Stopwatch]::StartNew()
     $process = [Diagnostics.Process]::Start($start)
-    $stdout = $process.StandardOutput.ReadToEndAsync()
     $stderr = $process.StandardError.ReadToEndAsync()
-    $outcome = if (-not $process.WaitForExit($CaseTimeoutSeconds * 1000)) {
+    $lines = [Collections.Generic.List[string]]::new()
+    $deadline = [DateTime]::UtcNow.AddSeconds($CaseTimeoutSeconds)
+    $timedOut = $false
+    $next = $process.StandardOutput.ReadLineAsync()
+    while ($true) {
+        $remaining = ($deadline - [DateTime]::UtcNow).TotalMilliseconds
+        if ($remaining -le 0) { $timedOut = $true; break }
+        if (-not $next.Wait([int][Math]::Min(1000, $remaining))) { continue }
+        $line = $next.Result
+        if ($null -eq $line) { break }
+        $lines.Add($line)
+        # --video-capture pauses after each "[video-capture] <name>" line. A
+        # screen capture shows what the compositor presented, including
+        # imported IOSurfaces, which an in-app RenderTargetBitmap does not.
+        if ($line -match '^\[video-capture\] ([\w-]+)') {
+            & screencapture -x (Join-Path $output "screen-$Name-$($Matches[1]).png")
+        }
+        $next = $process.StandardOutput.ReadLineAsync()
+    }
+    $outcome = if ($timedOut -or -not $process.WaitForExit([int][Math]::Max(1000, ($deadline - [DateTime]::UtcNow).TotalMilliseconds))) {
         $process.Kill($true)
         $process.WaitForExit()
         'timed out'
     }
     elseif ($process.ExitCode -eq 0) { 'passed' }
     else { "failed with exit $($process.ExitCode)" }
-    @($stdout.GetAwaiter().GetResult(), $stderr.GetAwaiter().GetResult()) | Set-Content -LiteralPath $log
+    @($lines -join [Environment]::NewLine, $stderr.GetAwaiter().GetResult()) | Set-Content -LiteralPath $log
     Write-Host ('{0} {1} ({2:0.0} s)' -f $Name, $outcome, $watch.Elapsed.TotalSeconds)
     return $outcome -eq 'passed'
 }
@@ -77,14 +95,22 @@ $cases = [ordered]@{
     'engine' = @('--engine-smoke', "--cycles=$Cycles")
 }
 if ($Window) {
-    $cases['video-gpu'] = @('--video-smoke')
-    $cases['video-cpu'] = @('--video-cpu-smoke')
+    $cases['video-gpu'] = @('--video-smoke', '--video-capture')
+    $cases['video-cpu'] = @('--video-cpu-smoke', '--video-capture')
     $cases['compositor'] = @('--ui-smoke')
     $cases['pip'] = @('--pip-smoke')
 }
 $failed = [Collections.Generic.List[string]]::new()
 foreach ($case in $cases.GetEnumerator()) {
     if (-not (Invoke-Case $case.Key $case.Value)) { $failed.Add($case.Key) }
+}
+# The hardware pass logs VLC's module selection. Without a VideoToolbox
+# hardware decoder for the clip, VLC falls back to avcodec.
+$iosurfaceLog = Join-Path $output 'iosurface.log'
+if (Test-Path -LiteralPath $iosurfaceLog) {
+    $decoder = Select-String -LiteralPath $iosurfaceLog -Pattern 'using video decoder module "([^"]+)"' |
+        Select-Object -First 1 | ForEach-Object { $_.Matches[0].Groups[1].Value }
+    Write-Output "Hardware-decoding pass used the '$($decoder ?? 'unknown')' decoder."
 }
 Write-Output "Logs: $output"
 if ($failed.Count -ne 0) { throw "Failed: $($failed -join ', ')." }

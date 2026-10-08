@@ -120,8 +120,15 @@ internal static class Program
 #endif
 
     public static AppBuilder BuildAvaloniaApp()
-        => AppBuilder.Configure<App>()
+    {
+        AppBuilder builder = AppBuilder.Configure<App>()
             .UsePlatformDetect()
             .WithInterFont()
             .LogToTrace();
+        // Diagnostics: pick the X11 rendering backend (glx, egl, vulkan, software)
+        // so --graphics-probe can report each one's GPU interop on Linux.
+        if (Enum.TryParse(Environment.GetEnvironmentVariable("VLC_AVALONIA_X11_RENDERING"), ignoreCase: true, out X11RenderingMode mode))
+            builder = builder.With(new X11PlatformOptions { RenderingMode = [mode] });
+        return builder;
+    }
 }

@@ -80,12 +80,12 @@ Acceptance: a fresh baseline report, named target machines, actual capacity and 
 
 ### W02 — Make the source and dependency story usable
 
-Decision (October 7): VLCLR is included as source in this repository (`src/VLCLR`, `src/VLCLR.Generators`, `lib/libvlccore.lib`), taken from framework commit `09b46d5`. No separate checkout, package or deploy key is needed to build.
+Decision (October 7, revised October 8): VLCLR is a git submodule at `external/vlclr`, tracking the `3.x` branch of the public [mfkl/vlclr](https://github.com/mfkl/vlclr/tree/3.x) repository (VLCLR `main` follows VLC 4). The branch was started from the framework tree this repository had vendored, without the private history, and carries its own GPL-2.0-or-later `LICENSE`. No deploy key or private checkout is needed to build; clone with `--recursive`.
 
 - [ ] Inventory the exact managed/native source and binaries needed to reproduce a release, including VLCLR, VLC runtime, vout, control helper, fonts/icons and sample media.
-- [x] Choose a distributable dependency arrangement: VLCLR included as source (decision above).
-- [x] Build the app and Native AOT vout from the included VLCLR; drop `VLCLR_ROOT` from the build, the `-FrameworkRoot` script parameters, the CI deploy key and the `VLCLR_CI_ENABLED` gate.
-- [x] Decide the license covering the repository, including the included VLCLR source: GPL-2.0-or-later (October 7).
+- [x] Choose a distributable dependency arrangement: VLCLR as a public submodule (decision above).
+- [x] Build the app and Native AOT vout from the VLCLR submodule; drop `VLCLR_ROOT` from the build, the `-FrameworkRoot` script parameters, the CI deploy key and the `VLCLR_CI_ENABLED` gate.
+- [x] Decide the license covering the repository and VLCLR's `3.x` branch: GPL-2.0-or-later (October 7 and 8).
 - [ ] Verify actual dependency licenses and redistribution/source obligations before release; include required license texts, notices and corresponding source/build instructions.
 - [x] Give the VLC runtime a reproducible download procedure and hash: `eng/get-vlc.ps1` fetches the official VLC 3.0.24 Windows x64 build and checks the SHA-256 in `eng/versions.json` (October 7). Same module ABI `3_0_0f` as the earlier 3.0.24-beta1 pin; the only SDK header change is a removed playlist sort enum value VLCLR does not use.
 - [x] Requalify on hardware with the 3.0.24 runtime (smokes and the 25-cycle package test): 14/14 on October 8.

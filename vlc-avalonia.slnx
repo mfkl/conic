@@ -5,8 +5,10 @@
     <Project Path="src/Player.Application/Player.Application.csproj" />
     <Project Path="src/VLCAvalonia/VLCAvalonia.csproj" />
     <Project Path="src/VLCAvalonia.Vout/VLCAvalonia.Vout.csproj" />
-    <Project Path="src/VLCLR/VLCLR.csproj" />
-    <Project Path="src/VLCLR.Generators/VLCLR.Generators.csproj" />
+  </Folder>
+  <Folder Name="/external/">
+    <Project Path="external/vlclr/src/VLCLR/VLCLR.csproj" />
+    <Project Path="external/vlclr/src/VLCLR.Generators/VLCLR.Generators.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Player.Engine.ContractTests/Player.Engine.ContractTests.csproj" />

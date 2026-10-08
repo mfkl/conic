@@ -42,7 +42,7 @@
     <ProjectReference Include="..\Player.Contracts\Player.Contracts.csproj" />
     <ProjectReference Include="..\Player.Domain\Player.Domain.csproj" />
     <ProjectReference Include="..\Player.Application\Player.Application.csproj" />
-    <ProjectReference Include="..\VLCLR\VLCLR.csproj" />
+    <ProjectReference Include="..\..\external\vlclr\src\VLCLR\VLCLR.csproj" />
   </ItemGroup>
 
 </Project>

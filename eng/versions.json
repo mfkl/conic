@@ -12,8 +12,10 @@
     }
   },
   "vlclr": {
-    "commit": "09b46d50848cc0abe3c236e7a25e43679ee13c02",
-    "consumption": "vendored",
-    "path": "src/VLCLR"
+    "repository": "mfkl/vlclr",
+    "branch": "3.x",
+    "commit": "8d88157ccb1cfbf337b739b2ef5708c6322d0fda",
+    "consumption": "submodule",
+    "path": "external/vlclr"
   }
 }

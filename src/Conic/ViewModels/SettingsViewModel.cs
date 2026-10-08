@@ -12,17 +12,17 @@ internal sealed class ShortcutRow : INotifyPropertyChanged
     private string _pendingGesture;
     public ShortcutRow(EditablePlayerShortcut value, Action<ShortcutRow> save, Action<ShortcutRow> reset)
     {
-        _value = value; _pendingGesture = value.Gesture;
+        _value = value; _pendingGesture = PlayerShortcutPolicy.Display(value.Gesture);
         SaveCommand = new RelayCommand(_ => save(this)); ResetCommand = new RelayCommand(_ => reset(this));
     }
     public PlayerCommandId Command => _value.Command;
     public string Name => _value.Name;
     public string Category => _value.Category;
-    public string DefaultGesture => _value.DefaultGesture;
+    public string DefaultGesture => PlayerShortcutPolicy.Display(_value.DefaultGesture);
     public string PendingGesture { get => _pendingGesture; set { if (_pendingGesture == value) return; _pendingGesture = value; Notify(nameof(PendingGesture)); } }
     public ICommand SaveCommand { get; }
     public ICommand ResetCommand { get; }
-    public void Refresh(EditablePlayerShortcut value) { _value = value; _pendingGesture = value.Gesture; Notify(nameof(PendingGesture)); Notify(nameof(DefaultGesture)); }
+    public void Refresh(EditablePlayerShortcut value) { _value = value; _pendingGesture = PlayerShortcutPolicy.Display(value.Gesture); Notify(nameof(PendingGesture)); Notify(nameof(DefaultGesture)); }
     public event PropertyChangedEventHandler? PropertyChanged;
     private void Notify(string name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 }

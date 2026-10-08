@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Conic.Controls;
 
 namespace Conic.Views;
 
@@ -14,6 +15,7 @@ public partial class HomeView : UserControl
     public HomeView()
     {
         InitializeComponent();
+        HomeHeader.Margin = PlatformChrome.ClearOfCaptionButtons(HomeHeader.Margin);
         SizeChanged += (_, _) =>
         {
             bool compact = Bounds.Width < 720;

@@ -20,8 +20,9 @@ The most useful lesson so far: proving a native frame renders is only the
 start. Surface ownership, stale callbacks, stop/reopen and package discovery
 need explicit checks. The repository includes managed tests and native
 smokes, now runnable against a self-contained Windows package outside the
-source tree. Windows has implemented playback; Linux/macOS native playback
-remains unfinished.
+source tree. Windows has implemented playback; macOS playback is implemented
+and checked on CI's macOS runners, pending qualification on a real Mac; Linux
+native playback remains unfinished.
 
 AI-assisted implementation and validation were used. Total human effort has
 not yet been measured. [Current evidence and remaining work](docs/contest/STATUS.md)
@@ -76,7 +77,7 @@ the latest implementation, validation results, captures and review launcher.
 | --- | --- | --- |
 | Windows x64 | D3D11 hardware decoding and GPU presentation implemented | Full solution tests in Debug/Release; Release Native AOT publish |
 | Linux x64 | Engine runs on the distribution's VLC 3 (queue, transport, tracks, lifecycle); GPU video output still to be implemented | App build, managed UI tests, Core tests, and engine smokes against Ubuntu's VLC |
-| macOS | Hardware backend still to be implemented | App build, managed UI tests and Core tests in Debug/Release |
+| macOS arm64/x64 | VideoToolbox decoding and IOSurface presentation implemented; real-Mac qualification pending ([TODO](docs/MACOS_HOST_TODO.md)) | App build, managed UI tests, Core tests; engine, IOSurface and window smokes against VLC 3.0.24 on arm64 and x64 runners |
 
 Hardware decoding and GPU presentation are required for the Linux/macOS ports.
 On Linux the engine is native, but the app still reports playback as
@@ -162,7 +163,12 @@ directory containing the native VLC libraries. The default plugin location is
 On Linux x64, `eng/test-linux-engine.ps1 -Media <clip>` builds the plugin and
 app and runs the engine smokes against the installed VLC 3 packages
 (`libvlccore9`, `libvlc5`, `vlc-plugin-base`). The GPU video output, and so
-playback in the app, is still unimplemented on Linux and macOS. See
+playback in the app, is still unimplemented on Linux.
+
+On macOS, `eng/get-vlc.ps1` downloads the pinned VLC 3.0.24 DMG (an installed
+`/Applications/VLC.app` also works), `eng/test-macos.ps1 -Media <clip> [-Window]`
+runs the engine, IOSurface and window smokes, and `eng/package-macos.ps1`
+builds an ad hoc signed `VLC Avalonia.app`. See
 [the cross-platform status and qualification plan](docs/CROSS_PLATFORM.md).
 
 `VLCLR_ROOT` only points development runs at a directory containing the default
@@ -174,7 +180,7 @@ implementation, qualification commands, measured counters, and remaining work.
 
 ## Tests and CI
 
-The sixteen-job GitHub Actions matrix runs on pushes and pull requests:
+The eighteen-job GitHub Actions matrix runs on pushes and pull requests:
 
 - Core: 72 tests per configuration on Windows, Ubuntu and macOS.
 - Hosted graphics diagnostics in Release jobs: launch the compositor probe and
@@ -187,6 +193,8 @@ The sixteen-job GitHub Actions matrix runs on pushes and pull requests:
   Windows x64 Native AOT plugin publish.
 - Linux engine: queue, capability and 25-cycle lifecycle smokes against
   Ubuntu's VLC 3 with a generated clip (dummy video output, software decoding).
+- macOS arm64 and x64: engine, IOSurface video output and window smokes
+  against the pinned VLC 3.0.24 with a generated clip.
 
 All eight jobs passed for commit `f709051` in
 [the initial successful hosted run](https://github.com/mfkl/vlc-avalonia/actions/runs/34602849422).

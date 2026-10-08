@@ -5,6 +5,44 @@ macOS. CPU decoding, GPU upload of software-decoded frames, and CPU bitmap
 presentation do not qualify a platform. Enabling `--avcodec-hw=any` alone is not
 evidence that hardware decoding occurred.
 
+## macOS port, October 8
+
+Branch `feature/macos-port` runs VLC Avalonia on macOS arm64 and x64 with a
+GPU video path. CI runs it on GitHub's `macos-15` (arm64) and
+`macos-15-intel` (x64) runners; [MACOS_HOST_TODO.md](MACOS_HOST_TODO.md) lists
+the checks that need a real Mac.
+
+- **ABI.** Apple arm64 passes every variadic argument on the stack in its own
+  8-byte slot. `vlc_set` (module registration), `vlc_Log` and
+  `playlist_Control` therefore go through `VLCVariadic`, which pads the
+  fixed-signature call up to x7; a `va_list` is a plain pointer to the slots,
+  as on Win64. macOS x64 follows System V like Linux. VLC 3's
+  `vout_display_cfg_t` has a leading `is_fullscreen` flag and its display
+  control enumeration two extra queries on Windows only;
+  `VLCVoutDisplayControls` reads both layouts, and the ABI probe now checks
+  `vout_display_t`, those offsets and values, and `cvpxpic_ctx`.
+- **Runtime.** The pinned VLC 3.0.24 DMG for the architecture
+  (`eng/get-vlc.ps1`), a bundle's `Contents/Frameworks/vlc`, or an installed
+  `/Applications/VLC.app`. VLC 3 derives its plugin directory from libvlccore
+  only inside VLC.app's own executable (`src/darwin/dirs.c`), so the app sets
+  `VLC_PLUGIN_PATH` and `VLC_DATA_PATH`. VLCLR binds to the loaded libraries
+  with `VLCCore.UseLibraries`; the plugin binds to the core that loaded it
+  with `VLCCore.UseLibraryContaining(vlc_set)`.
+- **Video.** The plugin's macOS output asks for BGRA CoreVideo pixel buffers
+  (`CVPB`): VideoToolbox output converted by VLC's `cvpx` module
+  (`VTPixelTransferSession`), or software decoding uploaded by it. It lends
+  each frame's IOSurface to the app, which imports it through Avalonia's
+  `ICompositionGpuInterop` (`IOSurfaceRef`) and synchronizes with two
+  `MTLSharedEvent` timelines before returning the buffer. CPU BGRA frames are
+  the fallback when import is unavailable. Subtitle, CPU-frame and geometry
+  exports now live in `VoutHost`, shared with the D3D11 output.
+- **App.** Home thumbnails come from Quick Look (`qlmanage`). The window keeps
+  its Windows-style chrome and Ctrl shortcuts for now (decisions listed in the TODO).
+
+The software-decoding pass uploads frames into pixel buffers on the CPU; it
+checks the transport, not the hardware requirement above, which needs
+VideoToolbox on a real Mac.
+
 ## Linux engine port, October 8
 
 Branch `feature/linux-port` runs the VLC 3 engine natively on Linux x64. It was
@@ -111,7 +149,7 @@ hardware requirement above.
 | --- | --- |
 | Windows x64 | Existing D3D11VA opaque picture pool, GPU video-processor conversion and keyed-mutex import. Retest lifecycle whenever shared integration changes. |
 | Linux | Qualify VLC 3 hardware decoding on the selected GPU/driver, starting with VA-API. Implement ownership and GPU import of those decoded surfaces into the active Avalonia backend. Cover X11 and Wayland separately. Other GPU/decoder combinations require their own coverage. |
-| macOS | Qualify VideoToolbox hardware sessions and decoded surfaces on Apple Silicon, plus Intel if supported. Implement GPU conversion/import and surface synchronization with the active Avalonia compositor. |
+| macOS | Implemented on `feature/macos-port` (VideoToolbox, `cvpx` conversion, IOSurface import with Metal shared events). Qualify on real Apple Silicon and Intel Macs: [MACOS_HOST_TODO.md](MACOS_HOST_TODO.md). |
 
 VLC 3 includes [VideoToolbox and VA-API decoding](https://images.videolan.org/vlc/releases/3.0.7.html).
 Avalonia describes [external GPU resource import](https://docs.avaloniaui.net/docs/graphics-animation/custom-rendering),

@@ -78,13 +78,19 @@ public sealed class VlcRuntimeLocatorTests : IDisposable
 
     [Theory]
     [InlineData("Linux", Architecture.X64)]
-    [InlineData("MacOS", Architecture.Arm64)]
+    [InlineData("Linux", Architecture.Arm64)]
     [InlineData("Windows", Architecture.Arm64)]
     public void LibraryDiscoveryDoesNotEnableAnUnimplementedHardwareBackend(string platform, Architecture architecture)
     {
         Assert.NotNull(NativePlaybackSupport.UnavailableReason(Enum.Parse<VlcRuntimePlatform>(platform), architecture));
         Assert.Null(NativePlaybackSupport.UnavailableReason(VlcRuntimePlatform.Windows, Architecture.X64));
     }
+
+    [Theory]
+    [InlineData(Architecture.Arm64)]
+    [InlineData(Architecture.X64)]
+    public void MacOSHasTheIOSurfaceBackend(Architecture architecture) =>
+        Assert.Null(NativePlaybackSupport.UnavailableReason(VlcRuntimePlatform.MacOS, architecture));
 
     [Fact]
     public void LinuxFallsBackToTheDistributionRuntimeAfterBundledOnes()
@@ -115,10 +121,45 @@ public sealed class VlcRuntimeLocatorTests : IDisposable
     [InlineData("Windows", Architecture.X64, true)]
     [InlineData("Linux", Architecture.X64, true)]
     [InlineData("Linux", Architecture.Arm64, false)]
-    [InlineData("MacOS", Architecture.Arm64, false)]
+    [InlineData("MacOS", Architecture.Arm64, true)]
+    [InlineData("MacOS", Architecture.X64, true)]
+    [InlineData("Windows", Architecture.Arm64, false)]
     public void TheEngineRunsWhereItsNativeCallsAreImplemented(string platform, Architecture architecture, bool available)
     {
         Assert.Equal(available, NativeEngineSupport.UnavailableReason(Enum.Parse<VlcRuntimePlatform>(platform), architecture) is null);
+    }
+
+    [Fact]
+    public void MacOSFallsBackToAnInstalledVlcAppAndShipsThePluginBesideTheApp()
+    {
+        string contents = Path.Combine(_root, "Applications", "VLC.app", "Contents", "MacOS");
+        string library = Path.Combine(contents, "lib");
+        Touch(library, "libvlccore.dylib"); Touch(library, "libvlc.dylib");
+        Touch(Path.Combine(contents, "plugins"), "libavcodec_plugin.dylib");
+        Directory.CreateDirectory(Path.Combine(contents, "share", "lua"));
+        string app = Path.Combine(_root, "app");
+        VlcRuntimeLocator locator = new(app, VlcRuntimePlatform.MacOS, "arm64", systemDirectories: [library]);
+        Assert.Equal(library, locator.RuntimeDirectory);
+        Assert.Equal(Path.Combine(contents, "plugins"), locator.ModuleDirectory);
+        Assert.Equal(Path.Combine(contents, "share"), locator.DataDirectory);
+        Assert.Throws<FileNotFoundException>(() => locator.PluginPath);
+        string plugin = Touch(Path.Combine(app, "plugins"), "libvlc_avalonia_plugin.dylib");
+        Assert.Equal(plugin, locator.PluginPath);
+    }
+
+    [Fact]
+    public void MacOSBundlesMayMirrorVlcAppInsideFrameworks()
+    {
+        string executableDirectory = Path.Combine(_root, "Player.app", "Contents", "MacOS");
+        string vlc = Path.Combine(_root, "Player.app", "Contents", "Frameworks", "vlc");
+        string library = Path.Combine(vlc, "lib");
+        Touch(library, "libvlccore.9.dylib"); Touch(library, "libvlc.5.dylib");
+        string plugin = Touch(Path.Combine(vlc, "plugins", "video_output"), "libvlc_avalonia_plugin.dylib");
+        VlcRuntimeLocator locator = new(executableDirectory, VlcRuntimePlatform.MacOS, "arm64", systemDirectories: []);
+        Assert.Equal(library, locator.RuntimeDirectory);
+        Assert.Equal(Path.Combine(vlc, "plugins"), locator.ModuleDirectory);
+        Assert.Null(locator.DataDirectory);
+        Assert.Equal(plugin, locator.PluginPath);
     }
 
     private static string Touch(string directory, string name)

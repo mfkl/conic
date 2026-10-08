@@ -30,17 +30,31 @@
     <DirectPInvoke Include="libvlccore" />
     <NativeLibrary Include="..\..\external\vlclr\lib\libvlccore.lib" />
   </ItemGroup>
+  <ItemGroup Condition="'$(RuntimeIdentifier)' != 'win-x64'">
+    <Compile Remove="CompositionVoutPlugin.cs;D3D11*.cs" />
+  </ItemGroup>
+
+  <!-- macOS: the IOSurface video output plus the playlist control interface.
+       libvlccore is bound at load time to the core that loaded the plugin. -->
+  <PropertyGroup Condition="$(RuntimeIdentifier.StartsWith('osx-'))">
+    <DefineConstants>$(DefineConstants);VLC_AVALONIA_IOSURFACE</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup Condition="$(RuntimeIdentifier.StartsWith('osx-'))">
+    <Compile Include="..\Shared\MacOS\CoreVideo.cs" Link="MacOS\CoreVideo.cs" />
+  </ItemGroup>
+  <ItemGroup Condition="!$(RuntimeIdentifier.StartsWith('osx-'))">
+    <Compile Remove="IOSurfaceVoutPlugin.cs" />
+  </ItemGroup>
 
   <!-- Linux: the playlist control interface only. The GPU video output is not
        implemented yet, so VLC must be started with another video output. -->
-  <ItemGroup Condition="'$(RuntimeIdentifier)' != 'win-x64'">
-    <Compile Remove="CompositionVoutPlugin.cs;D3D11*.cs" />
+  <ItemGroup Condition="'$(RuntimeIdentifier)' == 'linux-x64'">
     <Compile Include="..\Shared\Linux\VaApi.cs" Link="Linux\VaApi.cs" />
   </ItemGroup>
 
   <Target Name="RequireImplementedPluginTarget" BeforeTargets="PrepareForBuild"
-          Condition="'$(RuntimeIdentifier)' != 'win-x64' and '$(RuntimeIdentifier)' != 'linux-x64'">
-    <Error Text="VLCAvalonia.Vout targets win-x64 and linux-x64. The VLC ABI for $(RuntimeIdentifier) has not been validated." />
+          Condition="'$(RuntimeIdentifier)' != 'win-x64' and '$(RuntimeIdentifier)' != 'linux-x64' and '$(RuntimeIdentifier)' != 'osx-arm64' and '$(RuntimeIdentifier)' != 'osx-x64'">
+    <Error Text="VLCAvalonia.Vout targets win-x64, linux-x64, osx-arm64 and osx-x64. The VLC ABI for $(RuntimeIdentifier) has not been validated." />
   </Target>
 
 </Project>

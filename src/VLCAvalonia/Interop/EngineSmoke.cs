@@ -47,6 +47,7 @@ internal sealed class NoEngineSmokeVideo : IEngineSmokeVideo
 /// <summary>Headless engine checks shared by every target.</summary>
 [SupportedOSPlatform("windows")]
 [SupportedOSPlatform("linux")]
+[SupportedOSPlatform("macos")]
 internal static class EngineSmoke
 {
     internal static readonly TimeSpan PlaybackStageTimeout =

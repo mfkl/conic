@@ -1,4 +1,4 @@
-using VLCAvalonia.Interop.Linux;
+using VLCAvalonia.Interop.Unix;
 using VLCAvalonia.Interop.Windows;
 
 namespace VLCAvalonia.Interop;
@@ -10,6 +10,6 @@ internal static class VlcRuntime
     {
         NativeEngineSupport.RequireAvailable();
         if (OperatingSystem.IsWindows()) WindowsVlcRuntime.Initialize();
-        else if (OperatingSystem.IsLinux()) LinuxVlcRuntime.Initialize();
+        else if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS()) UnixVlcRuntime.Initialize();
     }
 }

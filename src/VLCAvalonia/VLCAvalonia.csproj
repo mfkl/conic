@@ -34,6 +34,7 @@
 
   <ItemGroup>
     <AvaloniaResource Include="Assets\vlc-avalonia.ico" />
+    <AvaloniaResource Include="Assets\vlc-avalonia-macos.png" />
   </ItemGroup>
 
   <ItemGroup>

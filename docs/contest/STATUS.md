@@ -1,31 +1,32 @@
 # Contest delivery status
 
-Updated September 12, 2026. Execution scope: Windows and local submission work,
-per the maintainer. macOS/Linux implementation is deferred for this pass.
-Owner of the implementation work below: Codex; release/source decisions and
-human effort figures: maintainer. No public release or contest entry has been made.
+Updated October 8, 2026. Deadline October 23, 23:59 UTC; internal target
+October 22. Windows is the shipping target. Linux has a native engine port on
+branch `feature/linux-port`; its GPU video output will be built and tested by
+the maintainer on native Linux. macOS is not started. No public release or
+contest entry has been made; the maintainer makes the repository public at the
+end.
 
 | Task | State | Evidence / next action |
 |---|---|---|
-| W01 current Windows baseline | Passed locally | 221 existing tests and AOT publish; source pin `09b46d5`, actual SDK 10.0.303; hosted CI at this branch revision not checked |
-| W01 migration baseline | Passed | VLC tag `3.0.23`, commit `578d28f6c9f2379164516e689418f92ac74a3445`, dated 2025-12-19; installed reference executable reports 3.0.23 |
-| W01 status tracker | Passed | This document; external capacity/hardware not assumed |
-| W02 source/dependency inventory | Partial | [Dependencies](DEPENDENCIES.md); full GPL v2 text added to repository LICENSE |
-| W02 public source/distribution route | Blocked | VLCLR remains private and has no root license at the reviewed pin; maintainer must resolve source access/terms before public distribution |
-| W03 portable Windows build | Implemented | [package.ps1](../../eng/package.ps1): self-contained app, native plugin, VLC, plugin validation, manifest, hashes and ZIP |
-| W03 launch instructions | Passed | [Quick start](../WINDOWS_QUICK_START.md) |
-| W03 installed-package verification | Passed locally | All 14 [package checks](QUALIFICATION.md), including two emulated extraction time zones, outside checkout with spaces/Unicode and isolated profiles; fresh OS/non-admin/read-only installation still untested |
-| W04 subtitles | Outstanding | Existing track/delay controls do not establish visual rendering; native code still does not compose GPU subpictures |
-| W05–W07 portable controls/backends | Deferred | No Linux/macOS implementation in this pass |
-| W08 broken installation handling | Implemented and unit-tested | Missing/inaccessible/incompatible playback files show an actionable startup window; smoke commands exit 2 with diagnostics |
-| W08 packaged UI smoke paths | Implemented | `VLC_AVALONIA_ARTIFACTS` lets existing UI captures run without a repository checkout |
-| W09 other desktop packages | Deferred | Windows package only |
-| W10 current managed tests | Passed locally | 229 tests in each of Debug and Release, including 8 startup recovery tests; AOT publish passed |
-| W10 native package matrix | Passed locally | [Exact package and evidence](QUALIFICATION.md); 25 lifecycle cycles, 1,120 balanced native allocations/releases, zero CPU video uploads on hardware path |
-| W10 physical hardware/soak/beta | Not tested | Additional GPU, clean OS, screen reader, sleep/monitor transitions, 60-minute soak and external testers remain |
-| W11 concise migration narrative | Drafted | README; actual human effort is still unmeasured |
-| W11 comparison images/demo | Partial | [Native Home/playback pairs](COMPARISON.md) captured and inspected; other comparisons and final demo remain outstanding |
-| W12 publication/submission | Outstanding | Depends on runnable final package, source delivery, qualification and final materials |
+| W01 baseline and scope | Passed | VLC 3.0.23 pre-contest baseline; Windows-first scope, Linux engine added October 8 |
+| W02 source and license | Passed | VLCLR included in `src/VLCLR`; repository GPL-2.0-or-later (October 7) |
+| W02 VLC runtime | Passed | `eng/get-vlc.ps1` fetches official VLC 3.0.24 win64 with a pinned SHA-256 |
+| W02 requalification on 3.0.24 | Passed locally | 14/14 package cases, 25 engine cycles, zero CPU uploads on Intel Iris Xe (October 8); rerun on `feature/linux-port` also 14/14 |
+| W02 public smoke media | Outstanding | `test_01.mkv` still comes from the maintainer's VLCLR checkout; Linux CI now generates its clip with ffmpeg, Windows could too |
+| W02 fresh-clone build | Not tested | Build from a fresh clone using only the README |
+| W03 Windows package | Passed locally | CI builds the portable ZIP on `main` and tags; draft release still holds the stale preview.1 ZIP |
+| W03 paths with spaces/Unicode | Passed locally | Package test installs to `%TEMP%\VLC Avalonia é <guid>` outside the checkout |
+| W04 subtitles | Partial | VLC-rendered subtitles overlaid on hardware and CPU paths; text subtitles checked by hand. Styled ASS, image subtitles and live external attachment not qualified |
+| W05 portable native controls | Passed for Linux x64 (branch) | Managed `va_list` for System V; real VLC 3.0.20 in WSL2 passes queue, capabilities and 25 engine cycles |
+| W06 Linux engine | Passed in WSL2 (branch) | See [CROSS_PLATFORM.md](../CROSS_PLATFORM.md#linux-engine-port-october-8); new CI job runs it against Ubuntu's VLC |
+| W06 Linux GPU video output | Not started | VA-API to DMA-BUF to Avalonia import; needs native Linux with a GPU (maintainer) |
+| W07 macOS | Not started | |
+| W08 daily-use polish | In progress | Fixed: blinking track buttons, Home cards recreated every poll, resume prompt now has Cancel and closes after 8 s. Known: no Home thumbnail for HEVC without Microsoft's HEVC extension |
+| W09 other desktop packages | Not started | Depends on the Linux GPU backend |
+| W10 Windows qualification | Passed locally | [Package matrix](QUALIFICATION.md); additional GPU, clean OS, soak and external testers not done |
+| W11 write-up and demo | Partial | README narrative drafted; demo video and release notes outstanding (cross-platform items) |
+| W12 publication/submission | Outstanding | Maintainer publishes the repository and release |
 
 ## Scope of the migration
 
@@ -35,23 +36,24 @@ human effort figures: maintainer. No public release or contest entry has been ma
 | Manage playback | Queue navigation/reorder, repeat/shuffle, track/timing controls and media information |
 | Return to media | Recent/favorites/resume with explicit local storage and privacy controls |
 | Configure and multitask | Searchable settings, keyboard shortcuts and same-window PiP |
-| Full VLC feature set | Not claimed: no complete indexing, conversion/capture, device administration or subtitle rendering parity |
+| Full VLC feature set | Not claimed: no complete indexing, conversion/capture, device administration, styled/image subtitle parity |
 
 VLC 4 references inform the UI appearance; the engine remains pinned VLC 3.
-The selected original tag predates the contest; the local checkout was inspected
-with `git show`, without modifying it. The installed reference executable is a
-separate input from the pinned beta runtime used by this app.
 
 ## Short work journal
 
-- September 12: ran the current Windows baseline; implemented portable packaging,
-  startup failure recovery, external capture paths and package qualification.
-- September 13 review: omit the timestamp-dependent plugin cache from the ZIP;
-  resolve the recorded SDK in the same working directory as publishing.
-- Added a concise README narrative and release-input inventory. Publication,
-  source licensing, subtitle rendering and broader physical qualification remain
-  separate unfinished work. No total human-hours estimate is inferred from commits.
+- September 12: Windows baseline; portable packaging, startup failure recovery,
+  external capture paths and package qualification.
+- September 22: smoke harness kept out of product builds; integrated dark
+  title bar, app icon and unified vector icons.
+- October 7: VLCLR moved into the repository; GPL-2.0-or-later; official
+  VLC 3.0.24 runtime; CI-built Windows ZIP and draft release; fixed polled-state
+  churn (track buttons, Home cards); subtitles over hardware-decoded video;
+  resume prompt Cancel and auto-close; smoke routing fix.
+- October 8: full 3.0.24 hardware requalification.
+- October 8: Linux engine port on `feature/linux-port`, verified in WSL2.
 
-Next decision: resolve the VLCLR distribution route before preparing a public
-download. Next engineering milestone after package qualification: actual subtitle
-composition and its visual/native fixture matrix (W04).
+Next decisions: tag a new Windows preview so the draft release matches `main`;
+merge the Linux engine branch; choose whether the Linux GPU backend can be
+qualified in time for a three-platform entry or whether the entry ships Windows
+with a documented Linux engine port.

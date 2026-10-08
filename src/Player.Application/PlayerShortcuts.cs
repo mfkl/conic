@@ -8,7 +8,7 @@ public sealed class PlayerShortcutEditor
 {
     private readonly PlayerSettingsService _settings; private readonly IPlayerCommandRegistry _registry;
     public PlayerShortcutEditor(PlayerSettingsService settings, IPlayerCommandRegistry registry) => (_settings, _registry) = (settings, registry);
-    public IReadOnlyList<EditablePlayerShortcut> Items(string? search = null) => _registry.Commands.Where(x => string.IsNullOrWhiteSpace(search) || (x.DisplayName + " " + x.Category).Contains(search, StringComparison.OrdinalIgnoreCase)).Select(x => new EditablePlayerShortcut(x.Id, x.DisplayName, x.Category, PlayerShortcutPolicy.Normalize(x.DefaultShortcut), PlayerShortcutPolicy.Effective(_registry, _settings.Current.ShortcutOverrides).GetValueOrDefault(x.Id, ""))).ToArray();
+    public IReadOnlyList<EditablePlayerShortcut> Items(string? search = null) => _registry.Commands.Where(x => string.IsNullOrWhiteSpace(search) || (x.DisplayName + " " + x.Category).Contains(search, StringComparison.OrdinalIgnoreCase)).Select(x => new EditablePlayerShortcut(x.Id, x.DisplayName, x.Category, PlayerShortcutPolicy.DefaultGesture(x), PlayerShortcutPolicy.Effective(_registry, _settings.Current.ShortcutOverrides).GetValueOrDefault(x.Id, ""))).ToArray();
     public bool TrySave(IEnumerable<PlayerShortcut> changes, out string? error)
     {
         var effective = PlayerShortcutPolicy.Effective(_registry, _settings.Current.ShortcutOverrides).ToDictionary(x => x.Key, x => x.Value);
@@ -18,7 +18,7 @@ public sealed class PlayerShortcutEditor
             effective[change.Command] = PlayerShortcutPolicy.Normalize(change.Gesture);
         }
         if (!PlayerShortcutPolicy.TryValidate(effective.Select(x => new PlayerShortcut(x.Key, x.Value)), out error)) return false;
-        var overrides = effective.Where(x => PlayerShortcutPolicy.Normalize(_registry.Commands.First(c => c.Id == x.Key).DefaultShortcut) != x.Value).ToDictionary(x => x.Key.ToString(), x => x.Value);
+        var overrides = effective.Where(x => PlayerShortcutPolicy.DefaultGesture(_registry.Commands.First(c => c.Id == x.Key)) != x.Value).ToDictionary(x => x.Key.ToString(), x => x.Value);
         _settings.Update(s => s with { ShortcutOverrides = overrides }); return true;
     }
     public void Reset(PlayerCommandId id) => _settings.Update(s => s with { ShortcutOverrides = s.ShortcutOverrides?.Where(x => x.Key != id.ToString()).ToDictionary(x => x.Key, x => x.Value) ?? new Dictionary<string,string>() });
@@ -79,7 +79,40 @@ public static class PlayerShortcutPolicy
 
     public static IReadOnlyList<PlayerShortcut> Defaults(IPlayerCommandRegistry registry) => registry.Commands
         .Where(x => !string.IsNullOrWhiteSpace(x.DefaultShortcut))
-        .Select(x => new PlayerShortcut(x.Id, Normalize(x.DefaultShortcut))).ToArray();
+        .Select(x => new PlayerShortcut(x.Id, DefaultGesture(x))).ToArray();
+
+    /// <summary>
+    /// True where Command is the primary shortcut modifier (macOS). Defaults are
+    /// written with Ctrl and use Command (<c>Meta</c>) there instead.
+    /// </summary>
+    public static bool UsesCommandKey => OperatingSystem.IsMacOS();
+
+    /// <summary>A command's default gesture on this platform.</summary>
+    public static string DefaultGesture(PlayerCommandDefinition command) => PlatformDefault(command.DefaultShortcut, UsesCommandKey);
+
+    /// <summary>A default gesture written with Ctrl, with Ctrl replaced by Command when <paramref name="commandKey"/> is set.</summary>
+    public static string PlatformDefault(string? gesture, bool commandKey)
+    {
+        string normalized = Normalize(gesture);
+        if (!commandKey || normalized.Length == 0) return normalized;
+        string[] parts = normalized.Split('+');
+        // The key is always last; only the modifiers before it are renamed.
+        for (int index = 0; index < parts.Length - 1; index++)
+            if (parts[index] == "Ctrl") parts[index] = "Meta";
+        return Normalize(string.Join('+', parts));
+    }
+
+    /// <summary>How a normalized gesture is shown: Command is spelled Cmd on macOS.</summary>
+    public static string Display(string gesture) => Display(gesture, UsesCommandKey);
+
+    public static string Display(string gesture, bool commandKey)
+    {
+        if (!commandKey || string.IsNullOrEmpty(gesture)) return gesture;
+        string[] parts = gesture.Split('+');
+        for (int index = 0; index < parts.Length - 1; index++)
+            if (parts[index] == "Meta") parts[index] = "Cmd";
+        return string.Join('+', parts);
+    }
 
     internal static bool IsDefinedRegisteredCommand(IPlayerCommandRegistry registry, PlayerCommandId id) =>
         Enum.IsDefined(id) && registry.Commands.Any(x => x.Id == id);

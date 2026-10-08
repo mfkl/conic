@@ -215,7 +215,8 @@
 
         <!-- The top chrome doubles as the caption: with the client area
              extended over the decorations, dragging it moves the window and
-             the in-app buttons replace the light system caption. -->
+             the in-app buttons replace the light system caption (macOS keeps
+             its traffic lights; see PlatformChrome). -->
         <Border x:Name="TopChrome"
                 Height="124"
                 VerticalAlignment="Top"

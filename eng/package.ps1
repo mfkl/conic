@@ -61,8 +61,11 @@ function Assert-X64([string] $Path) {
     finally { $reader.Dispose() }
 }
 
-# VLCLR is vendored under src/VLCLR; record the upstream revision it was taken from.
-$frameworkCommit = $pins.vlclr.commit
+# VLCLR is the external/vlclr submodule; record the commit the package was built from.
+$frameworkCommit = & git -C (Join-Path $productRoot 'external/vlclr') rev-parse HEAD
+if ($LASTEXITCODE -ne 0 -or $frameworkCommit -ne $pins.vlclr.commit) {
+    throw "external/vlclr must be at $($pins.vlclr.commit); run git submodule update --init."
+}
 foreach ($name in @('libvlc.dll', 'libvlccore.dll', 'vlc-cache-gen.exe', 'COPYING.txt')) {
     if (-not (Test-Path -LiteralPath (Join-Path $runtime $name) -PathType Leaf)) { throw "Missing VLC runtime file: $name" }
 }

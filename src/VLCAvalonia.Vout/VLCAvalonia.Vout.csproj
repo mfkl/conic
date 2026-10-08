@@ -35,6 +35,7 @@
        implemented yet, so VLC must be started with another video output. -->
   <ItemGroup Condition="'$(RuntimeIdentifier)' != 'win-x64'">
     <Compile Remove="CompositionVoutPlugin.cs;D3D11*.cs" />
+    <Compile Include="..\Shared\Linux\VaApi.cs" Link="Linux\VaApi.cs" />
   </ItemGroup>
 
   <Target Name="RequireImplementedPluginTarget" BeforeTargets="PrepareForBuild"

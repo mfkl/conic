@@ -18,7 +18,8 @@ public sealed class VlcRuntimeLocatorTests : IDisposable
     {
         string runtime = Path.Combine(_root, "vlc");
         Touch(runtime, core); Touch(runtime, library);
-        string pluginPath = Touch(Path.Combine(runtime, "plugins", "video_output"), plugin);
+        string plugins = platform == "Linux" ? Path.Combine(runtime, "vlc", "plugins") : Path.Combine(runtime, "plugins");
+        string pluginPath = Touch(Path.Combine(plugins, "video_output"), plugin);
         VlcRuntimeLocator locator = new(_root, Enum.Parse<VlcRuntimePlatform>(platform), architecture,
             configuredFramework: "unused\0invalid-checkout");
         Assert.Null(locator.RepositoryRoot);
@@ -69,7 +70,7 @@ public sealed class VlcRuntimeLocatorTests : IDisposable
     {
         string runtime = Path.Combine(_root, "external-runtime");
         Touch(runtime, "libvlccore.so.9"); Touch(runtime, "libvlc.so.5");
-        string plugin = Touch(Path.Combine(runtime, "plugins", "video_output"), "libvlc_avalonia_plugin.so");
+        string plugin = Touch(Path.Combine(runtime, "vlc", "plugins", "video_output"), "libvlc_avalonia_plugin.so");
         VlcRuntimeLocator locator = new(Path.Combine(_root, "app"), VlcRuntimePlatform.Linux, "x64", runtime, "unused\0invalid-checkout");
         Assert.Equal(plugin, locator.PluginPath);
         Assert.Equal(runtime, locator.RuntimeDirectory);
@@ -96,6 +97,18 @@ public sealed class VlcRuntimeLocatorTests : IDisposable
         string bundled = Path.Combine(app, "vlc");
         Touch(bundled, "libvlccore.so.9"); Touch(bundled, "libvlc.so.5");
         Assert.Equal(bundled, new VlcRuntimeLocator(app, VlcRuntimePlatform.Linux, "x64", systemDirectories: [system]).RuntimeDirectory);
+    }
+
+    [Fact]
+    public void LinuxPackagesUsingTheDistributionRuntimeShipThePluginBesideTheApp()
+    {
+        string system = Path.Combine(_root, "usr", "lib", "x86_64-linux-gnu");
+        Touch(system, "libvlccore.so.9"); Touch(system, "libvlc.so.5");
+        string app = Path.Combine(_root, "app");
+        VlcRuntimeLocator locator = new(app, VlcRuntimePlatform.Linux, "x64", systemDirectories: [system]);
+        Assert.Throws<FileNotFoundException>(() => locator.PluginPath);
+        string plugin = Touch(Path.Combine(app, "plugins"), "libvlc_avalonia_plugin.so");
+        Assert.Equal(plugin, locator.PluginPath);
     }
 
     [Theory]

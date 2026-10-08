@@ -14,7 +14,7 @@
   "vlclr": {
     "repository": "mfkl/vlclr",
     "branch": "3.x",
-    "commit": "8d88157ccb1cfbf337b739b2ef5708c6322d0fda",
+    "commit": "07a5ba16165c9c6fb70f0f82303fe25e4c0a21aa",
     "consumption": "submodule",
     "path": "external/vlclr"
   }

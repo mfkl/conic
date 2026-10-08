@@ -330,9 +330,10 @@ jobs:
 
   package_macos:
     name: Package / macOS ${{ matrix.architecture }}
-    # Not attached to releases until the bundle is qualified on a real Mac.
+    # Not attached to releases until the bundle is qualified on a real Mac
+    # (docs/MACOS_HOST_TODO.md), so it only needs the managed app tests.
     if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
-    needs: macos
+    needs: desktop
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     strategy:

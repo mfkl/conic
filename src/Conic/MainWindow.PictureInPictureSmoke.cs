@@ -42,6 +42,8 @@ public partial class MainWindow
                 IMediaEngine engine = VideoSurface.Player!;
                 long generation = engine.State.Generation;
                 PixelPoint position = Position;
+                // The OS may clamp the requested 1280x720 to a smaller screen.
+                Size normalSize = ClientSize;
                 _presentation.IsAlwaysOnTop = false;
                 await Task.Delay(100);
                 int before = presented;
@@ -64,9 +66,9 @@ public partial class MainWindow
                 await Task.Delay(250);
                 Require(escape.Handled && !_presentation.IsPictureInPicture && !Topmost, "Escape returns and restores topmost=false");
                 // Window frame changes complete asynchronously on macOS.
-                bool BoundsRestored() => Math.Abs(ClientSize.Width - 1280) < 2 && Math.Abs(ClientSize.Height - 720) < 2 && Position == position;
+                bool BoundsRestored() => Math.Abs(ClientSize.Width - normalSize.Width) < 2 && Math.Abs(ClientSize.Height - normalSize.Height) < 2 && Position == position;
                 for (DateTime settle = DateTime.UtcNow.AddSeconds(3); !BoundsRestored() && DateTime.UtcNow < settle;) await Task.Delay(50);
-                Require(BoundsRestored(), $"normal bounds restored (expected 1280x720 at {position}, got {ClientSize.Width}x{ClientSize.Height} at {Position})");
+                Require(BoundsRestored(), $"normal bounds restored (expected {normalSize.Width}x{normalSize.Height} at {position}, got {ClientSize.Width}x{ClientSize.Height} at {Position})");
                 Require(engine.State.Status == PlaybackStatus.Paused && Math.Abs(engine.State.Position - .25) < .04, "paused seek survives return");
                 _presentation.TogglePauseCommand.Execute(null);
                 await Until(() => engine.State.Status == PlaybackStatus.Playing);

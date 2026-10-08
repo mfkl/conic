@@ -10,7 +10,8 @@ internal sealed class VlcRuntimeLocator(
     VlcRuntimePlatform platform,
     string architecture,
     string? configuredRuntime = null,
-    string? configuredFramework = null)
+    string? configuredFramework = null,
+    IReadOnlyList<string>? systemDirectories = null)
 {
     public static VlcRuntimePlatform CurrentPlatform => OperatingSystem.IsWindows() ? VlcRuntimePlatform.Windows
         : OperatingSystem.IsLinux() ? VlcRuntimePlatform.Linux
@@ -83,10 +84,19 @@ internal sealed class VlcRuntimeLocator(
             if (candidates.FirstOrDefault(HasLibraries) is { } bundled) return Path.GetFullPath(bundled);
             // Development fallback: the pinned runtime downloaded by eng/get-vlc.ps1.
             if (RepositoryRoot is { } repository) candidates.Add(Path.Combine(repository, "artifacts", "dependencies", "vlc-3.0.24"));
+            // Linux: the distribution's VLC 3 packages, after any bundled or development runtime.
+            candidates.AddRange(systemDirectories ?? SystemDirectories);
             return candidates.FirstOrDefault(HasLibraries) is { } found ? Path.GetFullPath(found)
                 : throw new DirectoryNotFoundException($"Set VLC_DIRECTORY or bundle VLC 3 in the application's vlc directory for {RuntimeIdentifier}.");
         }
     }
+
+    private string[] SystemDirectories => (platform, architecture) switch
+    {
+        (VlcRuntimePlatform.Linux, "x64") => ["/usr/lib/x86_64-linux-gnu", "/usr/lib64", "/usr/lib"],
+        (VlcRuntimePlatform.Linux, "arm64") => ["/usr/lib/aarch64-linux-gnu", "/usr/lib64", "/usr/lib"],
+        _ => [],
+    };
 
     private bool HasLibraries(string directory) => FindLibrary(directory, true) is not null && FindLibrary(directory, false) is not null;
     public string CoreLibraryPath => FindLibrary(RuntimeDirectory, true)!;

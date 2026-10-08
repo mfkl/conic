@@ -35,6 +35,7 @@ public sealed record VLCMediaSmokeOptions(int MaxPolls = 20)
 /// while capabilities exposed by a fixture receive positive readback assertions.
 /// </summary>
 [SupportedOSPlatform("windows")]
+[SupportedOSPlatform("linux")]
 public static class VLCMediaCapabilitiesSmoke
 {
     public static async ValueTask<VLCMediaSmokeReport> RunAsync(

@@ -69,10 +69,10 @@
               ColumnDefinitions="Auto,Auto,*,Auto,Auto,Auto"
               Margin="12,0"
               PointerPressed="OnHeaderPointerPressed">
-            <!-- Only shown when there is a player to return to. -->
+            <!-- Shown with the mini player, while something is playing or paused. -->
             <Button Classes="iconChrome"
                     Command="{Binding ShowPlayerCommand}"
-                    IsVisible="{Binding HasPlayableMedia}"
+                    IsVisible="{Binding ShowMiniPlayer}"
                     ToolTip.Tip="Return to player"
                     AutomationProperties.Name="Return to player">
                 <PathIcon Width="20" Height="20"

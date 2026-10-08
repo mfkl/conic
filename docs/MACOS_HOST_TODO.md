@@ -71,6 +71,11 @@ Clips: CI's `testsrc2` H.264/AAC MKV and a 720p H.264/AAC MP4.
 - VLC's own translations leak into the Video drawer: on a French system the
   default aspect ratio and crop read "Prédéfini(e)".
 
+Later the same day: a real click on the player's back arrow did nothing,
+because the enlarged title bar container spanned the whole window; it now
+spans the traffic lights only. The menu bar, app name, Dock icon and
+auto-hiding traffic lights were added (section 6).
+
 Next on this Mac: the hand checks in section 6 (traffic light clicks, drag,
 live resize, green-button fullscreen, Cmd shortcuts), the real-media list in
 section 4, packaging (section 5) and the ABI check against a VLC checkout.
@@ -151,13 +156,38 @@ xattr -dr com.apple.quarantine "Conic.app"
   `Interop/MacOS/MacWindowButtons.cs` resizes the title bar container and
   centers them on the visible caption row (30 pt down on the player, 26 pt on
   Home), 20 pt from the left, after every resize, state, activation and Home
-  change. PiP stays borderless, without traffic lights.
+  change. The container only spans the three buttons: the window server
+  drags the window from anywhere in it, so a full-width container swallowed
+  real clicks on the back arrow (events the app posts to itself skip that
+  check). Its `_NSTitlebarDecorationView` is hidden, since its top-edge
+  highlight would end in a notch. The traffic lights hide and show with the
+  player's auto-hiding chrome and stay on Home. PiP stays borderless, without
+  traffic lights.
+- **Menu bar.** The app menu is named "Conic" (`Application.Name`) and
+  holds Settings… (Cmd+,); File, Playback, View and Window menus run the same
+  registry commands as the in-app chrome (`MainWindow.MacMenu.cs`). Only
+  shortcuts that use Command become key equivalents: AppKit runs those before
+  the window sees the key, so Space, M or Alt+arrows there would bypass the
+  editor focus rules. View also has Enter Full Screen (Ctrl+Cmd+F); Window
+  has Minimize (Cmd+M), Zoom and Close Window (Cmd+W).
+- **Home back arrow** ("Return to player") is hidden while there is nothing
+  to return to, instead of showing disabled next to the traffic lights.
 - **Shortcuts: Cmd.** Defaults written with Ctrl use Cmd on macOS
   (`PlayerShortcutPolicy.PlatformDefault`); Settings shows `Cmd` and accepts
   `Cmd`, `Command` or `Meta`.
-- **Bundle identity:** `io.videolabs.conic`; no `.icns` icon yet.
+- **Bundle identity:** `io.videolabs.conic`. The icon is the cone on a
+  dark rounded square in Apple's icon grid: `eng/macos/AppIcon.svg`, rendered
+  with AppKit into `eng/macos/AppIcon.icns` (bundle) and
+  `Assets/conic-macos.png` (Dock icon when run from source).
 - **Distribution:** ad hoc signing is fine for now; no notarization.
 - **Minimum macOS version.** `Info.plist` sets none; .NET 10 and Avalonia 12 decide.
+
+`pwsh ./eng/test-macos.ps1 -Window` includes `--caption-click-smoke`: it
+posts AppKit clicks to both back arrows and the options button after the
+playing chrome hides, checks the traffic lights hide and return with it, and
+that Cmd+J (menu key equivalent and window shortcut) opens the queue once.
+It cannot reproduce the window server's title bar drag, so real clicks on the
+caption row stay a manual check.
 
 To check on the Mac:
 

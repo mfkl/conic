@@ -135,9 +135,12 @@ next to `ControlInterface`, compiled only for `linux-x64`:
   fd, DRM fourcc, modifier, offset, pitch, size, generation and timestamp to
   the app through a new callback export (the Linux counterpart of
   `vlc_avalonia_set_gpu_frame_callback`).
-- [ ] Subtitles: reuse `PublishSubtitle` / `SubtitleComposer` (move the shared
-  part out of `CompositionVoutPlugin`), so the existing overlay control works.
-- [ ] Geometry and control queries: reuse the D3D11 output's `PublishGeometry` logic.
+- [ ] Subtitles, CPU frames, geometry and control queries: use `VoutHost`
+  (shared by the D3D11 and macOS outputs since the macOS port), so the existing
+  overlay control works. `VoutHost.Control` already reads VLC 3's non-Windows
+  control numbering and `vout_display_cfg_t` layout.
+- [ ] Bind libvlccore with `VLCCore.UseLibraryContaining(vlcSet)` in
+  `PluginEntry`, as the macOS output does, before the display calls VLC.
 - [ ] Close: release surfaces, contexts, the config, exported fds, and the instance reference.
 - [ ] Telemetry: count VA pictures received, CPU pictures (must stay 0), pool generations, releases.
 
@@ -146,10 +149,9 @@ next to `ControlInterface`, compiled only for `linux-x64`:
 - [ ] `Video/Linux/VaapiVideoBackend` implementing `IVideoBackend`, created by
   `VideoBackendFactory` on Linux; import frames through the route from step 5,
   present with `CompositionSurfaceVisual`, handle resize, device loss and detach.
-- [ ] Raise the same status and frame events as the D3D11 backend. The window
-  smokes currently match D3D11 wording (`"D3D11 presentation failed"`,
-  `"D3D11 frame presented by Avalonia compositor"` in `MainWindow.Smoke.cs`,
-  and `MainWindow.VideoSmoke.cs` throws outside Windows); make them backend-neutral.
+- [ ] Raise the same status and frame events as the D3D11 and IOSurface
+  backends. `--ui-smoke` fails on any status containing `using CPU BGRA
+  fallback`; `--adapter-mismatch-smoke` still matches D3D11 wording.
 - [ ] Enable Linux in `NativePlaybackSupport`.
 
 ## 8. Qualification

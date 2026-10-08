@@ -85,6 +85,29 @@ public sealed class VlcRuntimeLocatorTests : IDisposable
         Assert.Null(NativePlaybackSupport.UnavailableReason(VlcRuntimePlatform.Windows, Architecture.X64));
     }
 
+    [Fact]
+    public void LinuxFallsBackToTheDistributionRuntimeAfterBundledOnes()
+    {
+        string system = Path.Combine(_root, "usr", "lib", "x86_64-linux-gnu");
+        Touch(system, "libvlccore.so.9"); Touch(system, "libvlc.so.5");
+        string app = Path.Combine(_root, "app");
+        Assert.Equal(system, new VlcRuntimeLocator(app, VlcRuntimePlatform.Linux, "x64", systemDirectories: [system]).RuntimeDirectory);
+
+        string bundled = Path.Combine(app, "vlc");
+        Touch(bundled, "libvlccore.so.9"); Touch(bundled, "libvlc.so.5");
+        Assert.Equal(bundled, new VlcRuntimeLocator(app, VlcRuntimePlatform.Linux, "x64", systemDirectories: [system]).RuntimeDirectory);
+    }
+
+    [Theory]
+    [InlineData("Windows", Architecture.X64, true)]
+    [InlineData("Linux", Architecture.X64, true)]
+    [InlineData("Linux", Architecture.Arm64, false)]
+    [InlineData("MacOS", Architecture.Arm64, false)]
+    public void TheEngineRunsWhereItsNativeCallsAreImplemented(string platform, Architecture architecture, bool available)
+    {
+        Assert.Equal(available, NativeEngineSupport.UnavailableReason(Enum.Parse<VlcRuntimePlatform>(platform), architecture) is null);
+    }
+
     private static string Touch(string directory, string name)
     {
         Directory.CreateDirectory(directory);

@@ -49,6 +49,7 @@ public sealed record VLCExternalTrackAttachmentResult(
 /// does not make any claim about subtitle/subpicture rendering.
 /// </summary>
 [SupportedOSPlatform("windows")]
+[SupportedOSPlatform("linux")]
 public sealed class VLCMediaCapabilities : IVLCMediaCapabilitySmokeAdapter
 {
     /// <summary>Managed safety bound for delay writes. VLC accepts signed 64-bit microseconds; this API limits daily-use requests to one day.</summary>
@@ -247,7 +248,7 @@ internal interface IVLCMediaNative
 
 internal sealed unsafe class VLCMediaNative : IVLCMediaNative
 {
-    public bool IsSupported => OperatingSystem.IsWindows() && RuntimeInformation.ProcessArchitecture == Architecture.X64;
+    public bool IsSupported => VLCPlatform.IsSupported;
     public nint CurrentInput(nint playlist) => VLCCore.PlaylistCurrentInput(playlist);
     public void ReleaseInput(nint input) => VLCCore.ObjectRelease(input);
     public nint InputGetItem(nint input) => VLCCore.InputGetItem(input);

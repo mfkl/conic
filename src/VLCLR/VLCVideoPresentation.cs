@@ -11,17 +11,15 @@ public sealed record VLCVideoAdjustments(VLCInputGeneration Generation, ulong Ou
     IReadOnlyList<VLCVideoChoice> Aspects, IReadOnlyList<VLCVideoChoice> Crops,
     IReadOnlyList<VLCVideoChoice> Zooms, string Aspect, string Crop, float Zoom, bool AutoScale);
 
-/// <summary>VLC 3 Windows x64 input_Control(INPUT_GET_VOUTS) and checked vout variables.
+/// <summary>VLC 3 input_Control(INPUT_GET_VOUTS) and checked vout variables.
 /// Call on the input owner's dispatcher. Every operation holds input/output references and
 /// releases both the output array and references before returning owned values.</summary>
 [SupportedOSPlatform("windows")]
+[SupportedOSPlatform("linux")]
 public sealed unsafe class VLCVideoPresentation(Func<VLCCurrentInputLease?> leaseProvider)
 {
-    private static readonly nint Library = NativeLibrary.Load("libvlccore.dll");
-    // VLC 3 vlc_input.h input_query_e = 43. The two variadic arguments are pointers;
-    // their Windows x64 ABI matches this fixed signature (no floating varargs).
-    private static readonly delegate* unmanaged[Cdecl]<nint, int, nint*, nuint*, int> GetVouts =
-        (delegate* unmanaged[Cdecl]<nint, int, nint*, nuint*, int>)NativeLibrary.GetExport(Library, "input_Control");
+    // VLC 3 vlc_input.h input_query_e INPUT_GET_VOUTS; takes vout_thread_t*** and size_t*.
+    private const int InputGetVouts = 43;
 
     public VLCVideoAdjustments? Read(out VLCPlayerCapabilityResult result)
     {
@@ -65,7 +63,7 @@ public sealed unsafe class VLCVideoPresentation(Func<VLCCurrentInputLease?> leas
 
     private VLCPlayerCapabilityResult WithOutput(VLCVideoAdjustments? expected, Func<nint, VLCInputGeneration, VLCPlayerCapabilityResult> action)
     {
-        if (!OperatingSystem.IsWindows() || RuntimeInformation.ProcessArchitecture != Architecture.X64)
+        if (!VLCPlatform.IsSupported)
             return new(VLCPlayerCapabilityResultCode.UnsupportedPlatform);
         if (leaseProvider() is not { IsValid: true } lease) return new(VLCPlayerCapabilityResultCode.InputUnavailable);
         if (expected is not null && expected.Generation != lease.Generation) return new(VLCPlayerCapabilityResultCode.StaleSnapshot);
@@ -75,7 +73,7 @@ public sealed unsafe class VLCVideoPresentation(Func<VLCCurrentInputLease?> leas
         nuint count = 0;
         try
         {
-            int error = GetVouts(input, 43, &outputs, &count);
+            int error = VLCCore.InputControl(input, InputGetVouts, (long)&outputs, (long)&count);
             if (error != 0) return new(VLCPlayerCapabilityResultCode.InputUnavailable, NativeError: error);
             // The product presents a single video surface. Do not silently change only one
             // output for inputs with multiple simultaneous video outputs.

@@ -8,6 +8,10 @@ namespace Conic.UITests;
 
 public sealed class SettingsViewModelTests
 {
+    // Defaults are written with Ctrl and shown with Cmd on macOS.
+    private static string DisplayedDefault(string gesture) =>
+        PlayerShortcutPolicy.Display(PlayerShortcutPolicy.PlatformDefault(gesture, PlayerShortcutPolicy.UsesCommandKey));
+
     [Fact]
     public void ShortcutWriteFailuresKeepPendingEditsAndShowAnInlineError()
     {
@@ -25,7 +29,7 @@ public sealed class SettingsViewModelTests
         Assert.Equal("Ctrl+M", row.PendingGesture);
         viewModel.ResetAllShortcuts();
         Assert.True(viewModel.HasError);
-        Assert.Equal("Ctrl+O", PlayerShortcutPolicy.Effective(registry, service.Current.ShortcutOverrides)[PlayerCommandId.OpenMedia]);
+        Assert.Equal(PlayerShortcutPolicy.PlatformDefault("Ctrl+O", PlayerShortcutPolicy.UsesCommandKey), PlayerShortcutPolicy.Effective(registry, service.Current.ShortcutOverrides)[PlayerCommandId.OpenMedia]);
     }
 
     [Fact]
@@ -54,7 +58,7 @@ public sealed class SettingsViewModelTests
         viewModel.ResetAllCommand.Execute(null);
         Assert.Equal("Ctrl+M", row.PendingGesture);
         viewModel.ResetAllCommand.Execute(null);
-        Assert.Equal("Ctrl+O", row.PendingGesture);
+        Assert.Equal(DisplayedDefault("Ctrl+O"), row.PendingGesture);
         Assert.False(viewModel.ConfirmReset);
         viewModel.ShortcutSearch = "missing";
         Assert.False(viewModel.HasShortcutResults);
@@ -128,7 +132,7 @@ public sealed class SettingsViewModelTests
         Assert.True(viewModel.SaveShortcut(row));
         Assert.Equal("Ctrl+M", Assert.Single(viewModel.EditableShortcutRows).PendingGesture);
         viewModel.ResetShortcut(PlayerCommandId.OpenMedia);
-        Assert.Equal("Ctrl+O", Assert.Single(viewModel.EditableShortcutRows).PendingGesture);
+        Assert.Equal(DisplayedDefault("Ctrl+O"), Assert.Single(viewModel.EditableShortcutRows).PendingGesture);
     }
 
     [Fact]

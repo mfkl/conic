@@ -6,6 +6,7 @@ namespace Conic.Interop;
 /// <summary>The product's fixed-signature VLC 3 interface startup export.</summary>
 [SupportedOSPlatform("windows")]
 [SupportedOSPlatform("linux")]
+[SupportedOSPlatform("macos")]
 internal static unsafe class VlcCoreApi
 {
     public static int AddInterface(nint core, string name)

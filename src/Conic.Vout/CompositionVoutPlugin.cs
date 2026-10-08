@@ -18,25 +18,13 @@ public static unsafe class CompositionVoutPlugin
     private const uint I42010LittleEndian = 0x4C413049; // "I0AL"
     private const uint P010 = 0x30313050; // "P010"
 
-    // Registration and invocation share this gate. A disconnect therefore
-    // waits for an in-flight callback to return before the host frees its
-    // callback userdata.
-    private static readonly object CallbackGate = new();
-    private static VideoGeometry s_geometry;
-    private static nint s_geometryOwner;
-    private static nint s_frameCallback;
-    private static nint s_frameCallbackOpaque;
+    // Shared with the exports in VoutHost: a disconnect waits for an in-flight
+    // callback to return before the host frees its callback userdata.
+    private static readonly object CallbackGate = VoutHost.CallbackGate;
     private static nint s_GPUFrameCallback;
     private static nint s_GPUFrameCallbackOpaque;
     private static nint s_telemetryCallback;
     private static nint s_telemetryCallbackOpaque;
-    private static nint s_subtitleCallback;
-    private static nint s_subtitleCallbackOpaque;
-
-    // Zero-terminated chroma list VLC reads for the display's lifetime; the
-    // module is never unloaded. Accepting RGBA subpictures makes VLC hand us
-    // rendered subtitles instead of blending them into the (often GPU) frame.
-    private static readonly nint SubpictureChromas = CreateSubpictureChromas();
     private static bool s_adapterConfigured;
     private static bool s_forceCPUOutput;
     private static uint s_adapterLowPart;
@@ -65,20 +53,7 @@ public static unsafe class CompositionVoutPlugin
         public D3D11AdapterFailure FallbackReason;
         public int NativeResult;
         public object PoolGate { get; } = new();
-        public SubtitleRegion[] SubtitleRegions = new SubtitleRegion[16];
-        public byte[] SubtitleScratch = [];
-        public byte[] SubtitlePublished = [];
-        public SubtitleBounds SubtitleBounds;
-        public int SubtitleCanvasWidth;
-        public int SubtitleCanvasHeight;
-    }
-
-    private static nint CreateSubpictureChromas()
-    {
-        uint* chromas = (uint*)NativeMemory.Alloc(2, sizeof(uint));
-        chromas[0] = VLCFourCC.RGBA;
-        chromas[1] = 0;
-        return (nint)chromas;
+        public VoutHost.SubtitleState Subtitle { get; } = new();
     }
 
     internal static int Register(nint VLCSetPtr, nint opaque) =>
@@ -93,22 +68,6 @@ public static unsafe class CompositionVoutPlugin
             .WithCloseCallback(&Close, "CompositionVoutClose")
             .WithNoUnload()
             .Register();
-
-    /// <summary>
-    /// Registers the consumer invoked synchronously while a VLC picture is
-    /// valid. Passing zero disconnects the consumer.
-    /// </summary>
-    [UnmanagedCallersOnly(
-        EntryPoint = "vlc_avalonia_set_frame_callback",
-        CallConvs = [typeof(CallConvCdecl)])]
-    public static void SetFrameCallback(nint callback, nint opaque)
-    {
-        lock (CallbackGate)
-        {
-            s_frameCallback = callback;
-            s_frameCallbackOpaque = opaque;
-        }
-    }
 
     /// <summary>
     /// Registers a callback receiving a non-owning D3D11 global shared handle,
@@ -169,67 +128,6 @@ public static unsafe class CompositionVoutPlugin
         {
             s_telemetryCallback = callback;
             s_telemetryCallbackOpaque = opaque;
-        }
-    }
-
-    /// <summary>
-    /// Registers the consumer of the subtitle overlay: straight-alpha RGBA rows
-    /// (width * 4 bytes) placed at x/y on a canvas covering the visible video.
-    /// Invoked synchronously while the pixels are valid, only when the overlay
-    /// changes; width or height 0 clears it. Passing zero disconnects.
-    /// </summary>
-    [UnmanagedCallersOnly(
-        EntryPoint = "vlc_avalonia_set_subtitle_callback",
-        CallConvs = [typeof(CallConvCdecl)])]
-    public static void SetSubtitleCallback(nint callback, nint opaque)
-    {
-        lock (CallbackGate)
-        {
-            s_subtitleCallback = callback;
-            s_subtitleCallbackOpaque = opaque;
-        }
-    }
-
-    /// <summary>
-    /// Copies process-wide picture-pool counters into caller-owned storage.
-    /// No raw pointer or handle is retained by the plugin.
-    /// </summary>
-    [UnmanagedCallersOnly(
-        EntryPoint = "vlc_avalonia_get_pool_telemetry",
-        CallConvs = [typeof(CallConvCdecl)])]
-    public static void GetPoolTelemetry(
-        long* opaquePicturesReceived,
-        long* cpuPicturesReceived,
-        long* poolGenerations,
-        long* opaquePoolGenerations,
-        long* cpuPoolGenerations,
-        long* opaquePicturesAllocated,
-        long* opaquePicturesReleased,
-        long* cpuUploads)
-    {
-        try
-        {
-            PicturePoolTelemetrySnapshot snapshot =
-                PicturePoolTelemetry.Snapshot();
-            if (opaquePicturesReceived is not null)
-                *opaquePicturesReceived = snapshot.OpaquePicturesReceived;
-            if (cpuPicturesReceived is not null)
-                *cpuPicturesReceived = snapshot.CpuPicturesReceived;
-            if (poolGenerations is not null)
-                *poolGenerations = snapshot.PoolGenerations;
-            if (opaquePoolGenerations is not null)
-                *opaquePoolGenerations = snapshot.OpaquePoolGenerations;
-            if (cpuPoolGenerations is not null)
-                *cpuPoolGenerations = snapshot.CpuPoolGenerations;
-            if (opaquePicturesAllocated is not null)
-                *opaquePicturesAllocated = snapshot.OpaquePicturesAllocated;
-            if (opaquePicturesReleased is not null)
-                *opaquePicturesReleased = snapshot.OpaquePicturesReleased;
-            if (cpuUploads is not null)
-                *cpuUploads = snapshot.CpuUploads;
-        }
-        catch
-        {
         }
     }
 
@@ -320,7 +218,7 @@ public static unsafe class CompositionVoutPlugin
                 HasDoubleClick = 0,
                 NeedsHideMouse = 0,
                 HasPicturesInvalid = 0,
-                SubpictureChromas = SubpictureChromas,
+                SubpictureChromas = VoutHost.SubpictureChromas,
             };
 
             display->Pool = (nint)(delegate* unmanaged[Cdecl]<nint, uint, nint>)&GetPool;
@@ -329,7 +227,7 @@ public static unsafe class CompositionVoutPlugin
             display->Control = (nint)(delegate* unmanaged[Cdecl]<nint, int, nint, int>)&Control;
             display->Manage = 0;
             display->Sys = GCHandle.ToIntPtr(stateHandle);
-            PublishGeometry(display, (DisplayConfiguration*)display->Configuration);
+            VoutHost.PublishGeometry(display, state.OriginalSource, display->Configuration);
             PublishTelemetry(state);
             return Success;
         }
@@ -345,10 +243,7 @@ public static unsafe class CompositionVoutPlugin
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
     private static void Close(nint displayPtr)
     {
-        lock (CallbackGate)
-        {
-            if (s_geometryOwner == displayPtr) { s_geometry = default; s_geometryOwner = 0; }
-        }
+        VoutHost.ClearGeometry(displayPtr);
         if (displayPtr == 0)
             return;
 
@@ -363,7 +258,7 @@ public static unsafe class CompositionVoutPlugin
         {
             if (stateHandle.Target is DisplayState state)
             {
-                PublishSubtitle(state, 0);
+                VoutHost.PublishSubtitle(state.Subtitle, 0);
                 if (state.Pool != 0)
                 {
                     VLCCore.PicturePoolRelease(state.Pool);
@@ -549,7 +444,7 @@ public static unsafe class CompositionVoutPlugin
                             state.FallbackReason = exception.Failure;
                             state.NativeResult = exception.NativeResult;
                             PublishTelemetry(state);
-                            PublishFrame(
+                            VoutHost.PublishFrame(
                                 width,
                                 height,
                                 plane.Pitch,
@@ -559,7 +454,7 @@ public static unsafe class CompositionVoutPlugin
                     }
                     else
                     {
-                        PublishFrame(
+                        VoutHost.PublishFrame(
                             width,
                             height,
                             plane.Pitch,
@@ -577,76 +472,9 @@ public static unsafe class CompositionVoutPlugin
             if (picturePtr != 0)
                 PictureRelease(picturePtr);
             if (displayPtr != 0)
-                PublishSubtitle(GetState((VLCVoutDisplay*)displayPtr), subpicturePtr);
+                VoutHost.PublishSubtitle(GetState((VLCVoutDisplay*)displayPtr)?.Subtitle, subpicturePtr);
             if (subpicturePtr != 0)
                 VLCCore.SubpictureDelete(subpicturePtr);
-        }
-    }
-
-    /// <summary>
-    /// Flattens the RGBA regions VLC rendered for this frame and publishes the
-    /// overlay when it differs from the last one. A null subpicture clears it.
-    /// </summary>
-    private static void PublishSubtitle(DisplayState? state, nint subpicturePtr)
-    {
-        if (state is null)
-            return;
-        try
-        {
-            int count = 0, canvasWidth = 0, canvasHeight = 0;
-            if (subpicturePtr != 0)
-            {
-                VLCSubpicture* subpicture = (VLCSubpicture*)subpicturePtr;
-                canvasWidth = subpicture->OriginalPictureWidth;
-                canvasHeight = subpicture->OriginalPictureHeight;
-                for (nint next = subpicture->Region; next != 0 && count < state.SubtitleRegions.Length; next = ((VLCSubpictureRegion*)next)->Next)
-                {
-                    VLCSubpictureRegion* region = (VLCSubpictureRegion*)next;
-                    if (region->Picture == 0 || region->Format.Chroma != VLCFourCC.RGBA)
-                        continue;
-                    VLCPlane plane = ((VLCPicture*)region->Picture)->Plane0;
-                    if (plane.Pixels == 0)
-                        continue;
-                    state.SubtitleRegions[count++] = new SubtitleRegion(
-                        region->X, region->Y,
-                        (int)region->Format.VisibleWidth, (int)region->Format.VisibleHeight,
-                        plane.Pitch,
-                        plane.Pixels + (nint)region->Format.YOffset * plane.Pitch + (nint)region->Format.XOffset * 4,
-                        region->Alpha);
-                }
-            }
-
-            Span<SubtitleRegion> regions = state.SubtitleRegions.AsSpan(0, SubtitleComposer.Clip(state.SubtitleRegions.AsSpan(0, count), canvasWidth, canvasHeight));
-            SubtitleBounds bounds = SubtitleComposer.Bounds(regions);
-            if (state.SubtitleScratch.Length != bounds.ByteCount)
-                state.SubtitleScratch = new byte[bounds.ByteCount];
-            SubtitleComposer.Compose(regions, bounds, state.SubtitleScratch);
-            if (bounds.IsEmpty)
-                canvasWidth = canvasHeight = 0;
-            if (bounds == state.SubtitleBounds && canvasWidth == state.SubtitleCanvasWidth && canvasHeight == state.SubtitleCanvasHeight &&
-                state.SubtitleScratch.AsSpan().SequenceEqual(state.SubtitlePublished))
-                return;
-
-            (state.SubtitlePublished, state.SubtitleScratch) = (state.SubtitleScratch, state.SubtitlePublished);
-            state.SubtitleBounds = bounds;
-            state.SubtitleCanvasWidth = canvasWidth;
-            state.SubtitleCanvasHeight = canvasHeight;
-            InvokeSubtitleCallback(canvasWidth, canvasHeight, bounds, state.SubtitlePublished);
-        }
-        catch
-        {
-        }
-    }
-
-    private static void InvokeSubtitleCallback(int canvasWidth, int canvasHeight, SubtitleBounds bounds, byte[] pixels)
-    {
-        lock (CallbackGate)
-        {
-            if (s_subtitleCallback == 0)
-                return;
-            var callback = (delegate* unmanaged[Cdecl]<nint, int, int, int, int, int, int, nint, void>)s_subtitleCallback;
-            fixed (byte* data = pixels)
-                callback(s_subtitleCallbackOpaque, canvasWidth, canvasHeight, bounds.X, bounds.Y, bounds.Width, bounds.Height, (nint)data);
         }
     }
 
@@ -654,60 +482,9 @@ public static unsafe class CompositionVoutPlugin
     private static int Control(nint displayPtr, int query, nint arguments)
     {
         var display = (VLCVoutDisplay*)displayPtr;
-        switch ((VLCVoutDisplayControl)query)
-        {
-            case VLCVoutDisplayControl.ChangeSourceAspect:
-            case VLCVoutDisplayControl.ChangeSourceCrop:
-                PublishGeometry(display, null);
-                break;
-            case VLCVoutDisplayControl.ChangeZoom:
-            case VLCVoutDisplayControl.ChangeDisplayFilled:
-            case VLCVoutDisplayControl.ChangeDisplaySize:
-                // Windows x64 va_list points to the first eight-byte argument slot.
-                if (arguments != 0) PublishGeometry(display, *(DisplayConfiguration**)arguments);
-                break;
-        }
-        return Success;
-    }
-
-    [StructLayout(LayoutKind.Explicit, Size = 72)]
-    private struct DisplayConfiguration
-    {
-        // VLC 3 Windows x64 vout_display_cfg_t, pinned SDK vlc_vout_display.h.
-        [FieldOffset(40)] public byte Filled;
-        [FieldOffset(44)] public int ZoomNumerator;
-        [FieldOffset(48)] public int ZoomDenominator;
-    }
-
-    private static void PublishGeometry(VLCVoutDisplay* display, DisplayConfiguration* config)
-    {
-        var state = GetState(display);
-        if (state is null) return;
-        var original = state.OriginalSource;
-        var source = display->Source;
-        if (original.VisibleWidth == 0 || original.VisibleHeight == 0) return;
-        lock (CallbackGate)
-        {
-            s_geometryOwner = (nint)display;
-            s_geometry.X = ((double)source.XOffset - original.XOffset) / original.VisibleWidth;
-            s_geometry.Y = ((double)source.YOffset - original.YOffset) / original.VisibleHeight;
-            s_geometry.Width = (double)source.VisibleWidth / original.VisibleWidth;
-            s_geometry.Height = (double)source.VisibleHeight / original.VisibleHeight;
-            s_geometry.SampleAspect = source.SarNum > 0 && source.SarDen > 0 ? (double)source.SarNum / source.SarDen : 1;
-            s_geometry.Active = 1;
-            if (config != null)
-            {
-                s_geometry.AutoScale = config->Filled;
-                s_geometry.Zoom = config->ZoomDenominator > 0 ? (double)config->ZoomNumerator / config->ZoomDenominator : 1;
-            }
-        }
-    }
-
-    [UnmanagedCallersOnly(EntryPoint = "vlc_avalonia_get_video_geometry_v1", CallConvs = [typeof(CallConvCdecl)])]
-    public static void GetVideoGeometry(void* destination)
-    {
-        if (destination == null) return;
-        lock (CallbackGate) *(VideoGeometry*)destination = s_geometry;
+        return GetState(display) is { } state
+            ? VoutHost.Control(display, state.OriginalSource, query, arguments)
+            : Success;
     }
 
     private static DisplayState? GetState(VLCVoutDisplay* display)
@@ -794,29 +571,6 @@ public static unsafe class CompositionVoutPlugin
                 state.SourceDXGIFormat,
                 (int)state.FallbackReason,
                 state.NativeResult);
-        }
-    }
-
-    private static void PublishFrame(
-        uint width,
-        uint height,
-        int stride,
-        nint pixels,
-        long presentationTimestamp)
-    {
-        lock (CallbackGate)
-        {
-            if (s_frameCallback == 0)
-                return;
-            var callback =
-                (delegate* unmanaged[Cdecl]<nint, uint, uint, int, nint, long, void>)s_frameCallback;
-            callback(
-                s_frameCallbackOpaque,
-                width,
-                height,
-                stride,
-                pixels,
-                presentationTimestamp);
         }
     }
 }

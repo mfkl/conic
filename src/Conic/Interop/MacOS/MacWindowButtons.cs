@@ -8,7 +8,7 @@ namespace Conic.Interop.MacOS;
 /// are centered on the app's own caption row instead of AppKit's 28 pt title
 /// bar. Avalonia 12 only uses its title bar height hint for its own views, so
 /// the window's title bar container is resized here, as Electron's and
-/// Tauri's <c>trafficLightPosition</c> do.
+/// Tauri's <c>trafficLightPosition</c> do, but narrowed to the buttons.
 /// </summary>
 /// <remarks>
 /// AppKit lays the buttons out again on resize, full screen and activation
@@ -33,6 +33,7 @@ internal static unsafe partial class MacWindowButtons
     private static readonly nint FrameSelector = sel_registerName("frame");
     private static readonly nint SetFrameSelector = sel_registerName("setFrame:");
     private static readonly nint SetFrameOriginSelector = sel_registerName("setFrameOrigin:");
+    private static readonly nint SetHiddenSelector = sel_registerName("setHidden:");
 
     // NSWindowButton values.
     private const nint CloseButton = 0;
@@ -64,12 +65,18 @@ internal static unsafe partial class MacWindowButtons
         double height = 2 * centerY;
 
         // The container sits in the window's unflipped frame view, so its
-        // origin is measured from the bottom of the window.
+        // origin is measured from the bottom of the window. It only spans the
+        // buttons: the window server treats the whole container as a title
+        // bar it can drag the window from, so a full-width container would
+        // swallow real clicks on the app's caption row.
         CGRect windowFrame = Frame(window);
         CGRect containerFrame = Frame(container);
+        containerFrame.X = 0;
+        containerFrame.Width = left + 2 * spacing + closeFrame.Width + left / 2;
         containerFrame.Height = height;
         containerFrame.Y = windowFrame.Height - height;
         ((delegate* unmanaged<nint, nint, CGRect, void>)MessageSend)(container, SetFrameSelector, containerFrame);
+        HideDecoration(container);
 
         nint[] buttons = [close, minimize, zoom];
         for (int index = 0; index < buttons.Length; index++)
@@ -80,6 +87,51 @@ internal static unsafe partial class MacWindowButtons
         }
         return true;
     }
+
+    /// <summary>Shows or hides the buttons, for example with the player's auto-hiding chrome.</summary>
+    /// <param name="handle">An <c>NSWindow</c> or one of its views.</param>
+    /// <param name="isView">Whether <paramref name="handle"/> is an <c>NSView</c>.</param>
+    public static void SetVisible(nint handle, bool isView, bool visible)
+    {
+        nint window = isView ? Send(handle, WindowSelector) : handle;
+        if (window == 0) return;
+        foreach (nint kind in new[] { CloseButton, MinimizeButton, ZoomButton })
+            if (SendButton(window, kind) is not 0 and nint button)
+                ((delegate* unmanaged<nint, nint, byte, void>)MessageSend)(button, SetHiddenSelector, visible ? (byte)0 : (byte)1);
+    }
+
+    /// <summary>Whether the close button is shown (see <see cref="SetVisible"/>).</summary>
+    public static bool IsVisible(nint handle, bool isView)
+    {
+        nint window = isView ? Send(handle, WindowSelector) : handle;
+        nint close = window == 0 ? 0 : SendButton(window, CloseButton);
+        return close != 0 && ((delegate* unmanaged<nint, nint, byte>)MessageSend)(close, sel_registerName("isHidden")) == 0;
+    }
+
+    /// <summary>
+    /// Hides the container's <c>_NSTitlebarDecorationView</c>, which draws a
+    /// rounded highlight along the top edge of the title bar. With the
+    /// container narrowed to the buttons, that highlight would end in a
+    /// visible notch; the app draws its own caption row instead.
+    /// </summary>
+    private static void HideDecoration(nint container)
+    {
+        nint subviews = Send(container, sel_registerName("subviews"));
+        nuint count = ((delegate* unmanaged<nint, nint, nuint>)MessageSend)(subviews, sel_registerName("count"));
+        for (nuint index = 0; index < count; index++)
+        {
+            nint view = ((delegate* unmanaged<nint, nint, nuint, nint>)MessageSend)(subviews, sel_registerName("objectAtIndex:"), index);
+            // Key-value observing subclasses the view, so match on the name.
+            if (Marshal.PtrToStringUTF8(class_getName(object_getClass(view)))?.Contains("TitlebarDecorationView", StringComparison.Ordinal) == true)
+                ((delegate* unmanaged<nint, nint, byte, void>)MessageSend)(view, SetHiddenSelector, 1);
+        }
+    }
+
+    [LibraryImport(ObjectiveCLibrary)]
+    private static partial nint object_getClass(nint value);
+
+    [LibraryImport(ObjectiveCLibrary)]
+    private static partial nint class_getName(nint value);
 
     private static nint Send(nint receiver, nint selector) =>
         ((delegate* unmanaged<nint, nint, nint>)MessageSend)(receiver, selector);

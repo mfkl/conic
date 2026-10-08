@@ -23,8 +23,8 @@ it excludes the Windows-only Native AOT vout project. It does not load native
 VLC or require a graphical session. These tests cover presentation models,
 storage, layout policies and backend lifecycle, not rendered UI or playback.
 
-The complete workflow has fifteen jobs, and all of them run on every push and
-pull request.
+The complete workflow has sixteen jobs, plus packaging and release jobs on
+`main`, tags and manual runs.
 
 ## Hosted graphics diagnostics
 
@@ -51,6 +51,19 @@ Their artifacts include JSON provenance and compiler/probe logs, even on failure
 The layout probe checks static size/offset assertions and module ABI constants.
 It does not qualify actual runtime calls, decoder surfaces or playback. See
 [target qualification](TARGET_QUALIFICATION.md).
+
+## Linux engine coverage
+
+The Linux engine job installs Ubuntu 24.04's VLC 3 packages (`libvlccore9`,
+`libvlc5`, `vlc-plugin-base`), generates a 30-second H.264/AAC clip with ffmpeg
+and runs `eng/test-linux-engine.ps1`. That script publishes the Linux Native AOT
+plugin (playlist control interface only), builds the app with the smoke harness
+and runs the queue, media-capabilities, player-capabilities and 25-cycle engine
+smokes against the real runtime. Logs are uploaded even on failure.
+
+VLC renders to its `dummy` video output and decodes in software, so this job
+qualifies queue, transport, tracks, delays, media information and lifecycle
+on Linux, not hardware decoding or GPU presentation.
 
 ## Full Windows coverage
 

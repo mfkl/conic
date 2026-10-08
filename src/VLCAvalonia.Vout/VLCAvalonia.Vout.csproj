@@ -18,18 +18,28 @@
   <ItemGroup>
     <Compile Include="..\Shared\VideoGeometry.cs" Link="Interop\VideoGeometry.cs" />
     <Compile Include="..\Shared\SubtitleComposer.cs" Link="Interop\SubtitleComposer.cs" />
-    <PackageReference Include="TerraFX.Interop.Windows" Version="10.0.20348-beta1" />
     <ProjectReference Include="..\VLCLR\VLCLR.csproj" />
   </ItemGroup>
 
+  <!-- Windows: the D3D11 video output plus the playlist control interface. -->
+  <PropertyGroup Condition="'$(RuntimeIdentifier)' == 'win-x64'">
+    <DefineConstants>$(DefineConstants);VLC_AVALONIA_D3D11</DefineConstants>
+  </PropertyGroup>
   <ItemGroup Condition="'$(RuntimeIdentifier)' == 'win-x64'">
+    <PackageReference Include="TerraFX.Interop.Windows" Version="10.0.20348-beta1" />
     <DirectPInvoke Include="libvlccore" />
     <NativeLibrary Include="..\..\lib\libvlccore.lib" />
   </ItemGroup>
 
-  <Target Name="RequireImplementedVideoBackend" BeforeTargets="PrepareForBuild"
-          Condition="'$(RuntimeIdentifier)' != 'win-x64'">
-    <Error Text="VLCAvalonia.Vout implements the Windows x64 D3D11 backend. Linux/macOS hardware backends and their VLC ABIs must be implemented before publishing for $(RuntimeIdentifier)." />
+  <!-- Linux: the playlist control interface only. The GPU video output is not
+       implemented yet, so VLC must be started with another video output. -->
+  <ItemGroup Condition="'$(RuntimeIdentifier)' != 'win-x64'">
+    <Compile Remove="CompositionVoutPlugin.cs;D3D11*.cs" />
+  </ItemGroup>
+
+  <Target Name="RequireImplementedPluginTarget" BeforeTargets="PrepareForBuild"
+          Condition="'$(RuntimeIdentifier)' != 'win-x64' and '$(RuntimeIdentifier)' != 'linux-x64'">
+    <Error Text="VLCAvalonia.Vout targets win-x64 and linux-x64. The VLC ABI for $(RuntimeIdentifier) has not been validated." />
   </Target>
 
 </Project>

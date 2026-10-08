@@ -180,17 +180,46 @@ public static partial class VLCCore
     internal static partial nint InputGetItem(nint input);
 
     /// <summary>
-    /// Invokes VLC's fixed-signature <c>input_vaControl</c> entry point. The
-    /// <paramref name="vaList"/> representation is platform ABI-specific; use
-    /// <see cref="VLCTransportControl"/> instead of calling this primitive.
+    /// Invokes VLC's fixed-signature <c>input_vaControl</c> entry point with a
+    /// <see cref="VLCVaList"/>. Prefer <see cref="InputControl"/>.
     /// </summary>
     /// <remarks>
     /// VLC's <c>input_Control</c> is variadic and deliberately has no managed
-    /// declaration. On the pinned Windows x64 VLC 3 ABI, <paramref name="vaList"/>
-    /// is a pointer into the caller-provided argument save area.
+    /// declaration.
     /// </remarks>
     [LibraryImport(LibraryName, EntryPoint = "input_vaControl")]
     internal static partial int InputVaControl(nint input, int query, nint vaList);
+
+    /// <summary>
+    /// Calls <c>input_Control(input, query, ...)</c> with each argument in one
+    /// 8-byte slot (see <see cref="VLCVaList"/>). The caller holds <paramref name="input"/>.
+    /// </summary>
+    internal static unsafe int InputControl(nint input, int query, params ReadOnlySpan<long> arguments)
+    {
+        long* slots = stackalloc long[Math.Max(arguments.Length, 1)];
+        arguments.CopyTo(new Span<long>(slots, arguments.Length));
+        VLCVaList.SystemVTag tag;
+        return InputVaControl(input, query, VLCVaList.Create(slots, &tag));
+    }
+
+    /// <summary>
+    /// The core library, for exports that need a custom function-pointer signature.
+    /// </summary>
+    internal static nint Library => LoadedLibrary.Handle;
+
+    private static class LoadedLibrary
+    {
+        internal static readonly nint Handle = Load();
+
+        private static nint Load()
+        {
+            if (NativeLibrary.TryLoad(LibraryName, typeof(VLCCore).Assembly, null, out nint handle))
+                return handle;
+            // Linux distributions ship only the versioned soname. dlopen matches
+            // it against the copy the host already loaded, wherever that lives.
+            return NativeLibrary.Load("libvlccore.so.9");
+        }
+    }
 
     #endregion
 
@@ -226,8 +255,19 @@ public static partial class VLCCore
 
     #region Memory Management
 
-    [LibraryImport("msvcrt", EntryPoint = "free")]
-    public static partial void Free(nint ptr);
+    /// <summary>
+    /// Frees memory VLC allocated with its C runtime's <c>malloc</c>: msvcrt for
+    /// the MinGW-built Windows runtime, the process C library on Linux.
+    /// </summary>
+    public static unsafe void Free(nint ptr) => CFree.Value(ptr);
+
+    private static unsafe class CFree
+    {
+        internal static readonly delegate* unmanaged[Cdecl]<nint, void> Value =
+            (delegate* unmanaged[Cdecl]<nint, void>)(OperatingSystem.IsWindows()
+                ? NativeLibrary.GetExport(NativeLibrary.Load("msvcrt.dll"), "free")
+                : NativeLibrary.GetExport(NativeLibrary.GetMainProgramHandle(), "free"));
+    }
 
     #endregion
 

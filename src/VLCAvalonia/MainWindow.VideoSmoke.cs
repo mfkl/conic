@@ -45,7 +45,7 @@ public partial class MainWindow
                 _presentation.OpenSource(RepositoryPaths.TestMediaPath, MediaSourceKind.File);
                 await WaitFor(() => _presentation.IsPlaying && _presentation.VideoAdjustments.Available && VideoSurface.GeometryForSmoke.Active != 0, "active video exposes controls and native geometry");
                 await WaitFor(() => cpu ? VideoSurface.HasCpuFrameForSmoke : VideoSurface.HasGpuFrameForSmoke, "requested rendering path presents a frame");
-                var player = (WindowsVlcCorePlayer)VideoSurface.Player!;
+                var player = (VlcCorePlayer)VideoSurface.Player!;
                 var original = player.ReadVideoForSmoke();
                 Require(player.SetVideoForSmoke(original, "crop", "invalid").Code == VLCPlayerCapabilityResultCode.InvalidArgument, "invalid ratio rejected");
                 Require(player.SetVideoForSmoke(original with { OutputToken = 0 }, "crop", "").Code == VLCPlayerCapabilityResultCode.StaleSnapshot, "stale output rejected");

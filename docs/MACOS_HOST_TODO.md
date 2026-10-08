@@ -47,12 +47,42 @@ The runner is a VM with a paravirtualized GPU. Smoothness, frame pacing,
 power use, real VideoToolbox hardware, display changes and multiple GPUs
 cannot be judged there.
 
+## Real Mac results (October 8)
+
+MacBook Pro, Apple M1 Pro (14-core GPU), macOS 14.5 (23F79), built-in
+Liquid Retina XDR display only. .NET SDK 10.0.201 (not the pinned 10.0.102),
+PowerShell 7.6.6, Xcode 15 tools, pinned VLC 3.0.24 from `get-vlc.ps1`.
+Clips: CI's `testsrc2` H.264/AAC MKV and a 720p H.264/AAC MP4.
+
+- Every headless and window case passes on both clips, with VideoToolbox
+  decoding and `compositor-device-match=true`. A first run made while the
+  machine was saturated (Homebrew compiling ffmpeg) timed out in the queue and
+  capability cases; they passed once it was idle.
+- Screen captures need Screen Recording permission for the terminal that runs
+  `test-macos.ps1`; without it they only show the wallpaper. With it, video
+  is upright, colors match the CPU path, and aspect and crop apply.
+- PiP passed 20 consecutive `--pip-smoke` runs, with no `setDrawableSize`
+  warning: the PiP window size bug has not reproduced on real hardware.
+- Fixed during the pass: four shortcut tests expected `Ctrl` defaults on
+  macOS; the traffic lights sat in AppKit's 28 pt title bar instead of the
+  caption row (see section 6); the player's "Ready to play" state showed
+  through Home's translucent panel; `openMedia` button labels were not
+  centered.
+- VLC's own translations leak into the Video drawer: on a French system the
+  default aspect ratio and crop read "Prédéfini(e)".
+
+Next on this Mac: the hand checks in section 6 (traffic light clicks, drag,
+live resize, green-button fullscreen, Cmd shortcuts), the real-media list in
+section 4, packaging (section 5) and the ABI check against a VLC checkout.
+CI should also run `dotnet test` on macOS, which would have caught the
+shortcut tests.
+
 ## 1. Record the machine
 
-- [ ] Model and chip (`sysctl -n machdep.cpu.brand_string`), macOS version (`sw_vers`).
-- [ ] GPUs (`system_profiler SPDisplaysDataType`): on Intel MacBook Pros, note both GPUs.
-- [ ] Displays: built-in Retina, external, refresh rates (ProMotion).
-- [ ] .NET SDK (`dotnet --version`, CI pins 10.0.102), PowerShell 7 (`pwsh --version`), Xcode command line tools (`xcode-select -p`).
+- [x] Model and chip (`sysctl -n machdep.cpu.brand_string`), macOS version (`sw_vers`).
+- [x] GPUs (`system_profiler SPDisplaysDataType`): on Intel MacBook Pros, note both GPUs.
+- [x] Displays: built-in Retina, external, refresh rates (ProMotion).
+- [x] .NET SDK (`dotnet --version`, CI pins 10.0.102), PowerShell 7 (`pwsh --version`), Xcode command line tools (`xcode-select -p`).
 
 ## 2. Get the code and VLC
 
@@ -67,10 +97,10 @@ An installed `/Applications/VLC.app` (3.0.x) is used when no other runtime is fo
 
 ## 3. Baseline
 
-- [ ] `dotnet test vlc-avalonia.slnx -c Debug` passes.
-- [ ] `pwsh ./eng/test-macos.ps1 -Media <clip>` passes (queue, capabilities, IOSurface, 10-cycle engine).
-- [ ] The summary line says the hardware pass used the `videotoolbox` decoder.
-- [ ] `pwsh ./eng/test-macos.ps1 -Media <clip> -Window` passes. PiP fails on the
+- [x] `dotnet test vlc-avalonia.slnx -c Debug` passes.
+- [x] `pwsh ./eng/test-macos.ps1 -Media <clip>` passes (queue, capabilities, IOSurface, 10-cycle engine).
+- [x] The summary line says the hardware pass used the `videotoolbox` decoder.
+- [x] `pwsh ./eng/test-macos.ps1 -Media <clip> -Window` passes. PiP fails on the
   runners (see "PiP window size" below); check whether it does here.
   Look at `artifacts/macos/screen-video-gpu-*.png`: the video must be visible,
   upright, with correct colors (red/blue not swapped), filling the expected area.
@@ -115,8 +145,13 @@ xattr -dr com.apple.quarantine "VLC Avalonia.app"
 - **Window chrome: macOS traffic lights.** On macOS the window keeps its
   system decorations (`WindowDecorations.Full`) with the client area extended
   under them; the in-app caption buttons are hidden and the top chrome and
-  Home header start 78 px from the left, clear of the traffic lights
-  (`Controls/PlatformChrome.cs`). PiP stays borderless, without traffic lights.
+  Home header start 92 px from the left, clear of the traffic lights
+  (`Controls/PlatformChrome.cs`). Avalonia 12 leaves the traffic lights in
+  AppKit's 28 pt title bar whatever the title bar height hint, so
+  `Interop/MacOS/MacWindowButtons.cs` resizes the title bar container and
+  centers them on the visible caption row (30 pt down on the player, 26 pt on
+  Home), 20 pt from the left, after every resize, state, activation and Home
+  change. PiP stays borderless, without traffic lights.
 - **Shortcuts: Cmd.** Defaults written with Ctrl use Cmd on macOS
   (`PlayerShortcutPolicy.PlatformDefault`); Settings shows `Cmd` and accepts
   `Cmd`, `Command` or `Meta`.
@@ -129,6 +164,8 @@ To check on the Mac:
 - [ ] Traffic lights sit in the top chrome without overlapping the back button
   or the Home header, are vertically centered on the 44 px caption row, and
   close, minimize and zoom the window; dragging the top chrome moves it.
+  Position checked in screen captures of the player and Home; clicking,
+  dragging and live resizing still to check by hand.
 - [ ] Fullscreen (green button and the app's toggle) hides and restores the chrome.
 - [ ] Entering and leaving PiP switches between borderless and decorated
   correctly (watch the PiP window size bug below).

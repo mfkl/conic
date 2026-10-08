@@ -22,7 +22,7 @@ public partial class MainWindow
         {
             try
             {
-                if (!OperatingSystem.IsWindows()) throw new PlatformNotSupportedException("Video native smoke requires Windows.");
+                if (!NativePlaybackSupport.IsAvailable) throw new PlatformNotSupportedException(NativePlaybackSupport.CurrentUnavailableReason);
                 async Task WaitFor(Func<bool> condition, string message)
                 {
                     DateTime deadline = DateTime.UtcNow.AddSeconds(12);

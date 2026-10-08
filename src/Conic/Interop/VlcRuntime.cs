@@ -1,4 +1,4 @@
-using Conic.Interop.Linux;
+using Conic.Interop.Unix;
 using Conic.Interop.Windows;
 
 namespace Conic.Interop;
@@ -10,6 +10,6 @@ internal static class VlcRuntime
     {
         NativeEngineSupport.RequireAvailable();
         if (OperatingSystem.IsWindows()) WindowsVlcRuntime.Initialize();
-        else if (OperatingSystem.IsLinux()) LinuxVlcRuntime.Initialize();
+        else if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS()) UnixVlcRuntime.Initialize();
     }
 }

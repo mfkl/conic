@@ -80,11 +80,21 @@ internal sealed class VlcRuntimeLocator(
             }
             List<string> candidates = [Path.Combine(baseDirectory, "vlc"), baseDirectory];
             if (platform == VlcRuntimePlatform.MacOS)
-                candidates.Add(Path.GetFullPath(Path.Combine(baseDirectory, "..", "Frameworks", "vlc")));
+            {
+                // Inside an app bundle, Contents/Frameworks/vlc. Either the
+                // libraries sit in that directory, or it mirrors VLC.app's
+                // Contents/MacOS: lib/ beside plugins/ and share/.
+                string frameworks = Path.GetFullPath(Path.Combine(baseDirectory, "..", "Frameworks", "vlc"));
+                candidates.AddRange([frameworks, Path.Combine(frameworks, "lib"), Path.Combine(baseDirectory, "vlc", "lib")]);
+            }
             if (candidates.FirstOrDefault(HasLibraries) is { } bundled) return Path.GetFullPath(bundled);
             // Development fallback: the pinned runtime downloaded by eng/get-vlc.ps1.
-            if (RepositoryRoot is { } repository) candidates.Add(Path.Combine(repository, "artifacts", "dependencies", "vlc-3.0.24"));
-            // Linux: the distribution's VLC 3 packages, after any bundled or development runtime.
+            if (RepositoryRoot is { } repository)
+                candidates.Add(platform == VlcRuntimePlatform.MacOS
+                    ? Path.Combine(repository, "artifacts", "dependencies", $"vlc-3.0.24-macos-{architecture}", "lib")
+                    : Path.Combine(repository, "artifacts", "dependencies", "vlc-3.0.24"));
+            // Linux: the distribution's VLC 3 packages; macOS: an installed VLC.app.
+            // Both come after any bundled or development runtime.
             candidates.AddRange(systemDirectories ?? SystemDirectories);
             return candidates.FirstOrDefault(HasLibraries) is { } found ? Path.GetFullPath(found)
                 : throw new DirectoryNotFoundException($"Set VLC_DIRECTORY or bundle VLC 3 in the application's vlc directory for {RuntimeIdentifier}.");
@@ -95,12 +105,49 @@ internal sealed class VlcRuntimeLocator(
     {
         (VlcRuntimePlatform.Linux, "x64") => ["/usr/lib/x86_64-linux-gnu", "/usr/lib64", "/usr/lib"],
         (VlcRuntimePlatform.Linux, "arm64") => ["/usr/lib/aarch64-linux-gnu", "/usr/lib64", "/usr/lib"],
+        (VlcRuntimePlatform.MacOS, _) =>
+        [
+            "/Applications/VLC.app/Contents/MacOS/lib",
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Applications", "VLC.app", "Contents", "MacOS", "lib"),
+        ],
         _ => [],
     };
 
     private bool HasLibraries(string directory) => FindLibrary(directory, true) is not null && FindLibrary(directory, false) is not null;
     public string CoreLibraryPath => FindLibrary(RuntimeDirectory, true)!;
     public string PublicLibraryPath => FindLibrary(RuntimeDirectory, false)!;
+
+    /// <summary>
+    /// macOS: the directory holding VLC's own modules, which the host passes to
+    /// VLC. VLC 3 derives it from libvlccore's location only inside VLC.app
+    /// itself (<c>src/darwin/dirs.c</c>); elsewhere it looks in
+    /// <c>&lt;libvlccore directory&gt;/vlc/plugins</c>, as on Linux.
+    /// </summary>
+    public string ModuleDirectory => FindModuleDirectory() ?? throw new DirectoryNotFoundException(
+        $"The VLC runtime in '{RuntimeDirectory}' has no plugins directory.");
+
+    private string? FindModuleDirectory()
+    {
+        string runtime = RuntimeDirectory;
+        string[] candidates = platform switch
+        {
+            VlcRuntimePlatform.Linux => [Path.Combine(runtime, "vlc", "plugins")],
+            VlcRuntimePlatform.MacOS =>
+            [
+                Path.Combine(runtime, "plugins"),
+                Path.GetFullPath(Path.Combine(runtime, "..", "plugins")),
+                Path.Combine(runtime, "vlc", "plugins"),
+            ],
+            _ => [Path.Combine(runtime, "plugins")],
+        };
+        return candidates.FirstOrDefault(Directory.Exists);
+    }
+
+    /// <summary>macOS: VLC's data directory (Lua scripts and other resources), when the runtime has one.</summary>
+    public string? DataDirectory => platform == VlcRuntimePlatform.MacOS
+        ? new[] { Path.Combine(RuntimeDirectory, "share"), Path.GetFullPath(Path.Combine(RuntimeDirectory, "..", "share")) }
+            .FirstOrDefault(Directory.Exists)
+        : null;
 
     public string PluginPath
     {
@@ -111,8 +158,12 @@ internal sealed class VlcRuntimeLocator(
                 ? Path.Combine(RuntimeDirectory, "vlc", "plugins")
                 : Path.Combine(RuntimeDirectory, "plugins");
             List<string> candidates = [Path.Combine(runtimePlugins, "video_output", PluginFileName)];
-            // Packages that use the distribution's VLC ship the plugin beside the app.
-            if (platform == VlcRuntimePlatform.Linux)
+            // macOS bundles that mirror VLC.app keep plugins/ beside lib/.
+            if (platform == VlcRuntimePlatform.MacOS && FindModuleDirectory() is { } modules)
+                candidates.Add(Path.Combine(modules, "video_output", PluginFileName));
+            // Packages that use the distribution's VLC or an installed VLC.app,
+            // which must not be modified, ship the plugin beside the app.
+            if (platform is VlcRuntimePlatform.Linux or VlcRuntimePlatform.MacOS)
                 candidates.Add(Path.Combine(baseDirectory, "plugins", PluginFileName));
             if (RepositoryRoot is { } root)
                 foreach (string configuration in new[] { "Release", "Debug" })

@@ -12,6 +12,7 @@ namespace Conic.Interop;
 
 [SupportedOSPlatform("windows")]
 [SupportedOSPlatform("linux")]
+[SupportedOSPlatform("macos")]
 internal sealed unsafe partial class VlcCorePlayer : IMediaEngine, IQueueTransport, IMediaCapabilitiesTransport, IMediaInformationTransport, IVideoAdjustmentTransport, IVLCPlaylistQueueSmokeAdapter, IVLCMediaCapabilitySmokeAdapter
 {
     /// <summary>The plugin's D3D11 composition video output.</summary>
@@ -50,7 +51,7 @@ internal sealed unsafe partial class VlcCorePlayer : IMediaEngine, IQueueTranspo
     private nint _lastObservedInputIdentity;
     private int _disposed;
 
-    /// <param name="videoOutput">VLC <c>--vout</c> module. Only Windows implements
+    /// <param name="videoOutput">VLC <c>--vout</c> module. Windows and macOS implement
     /// <see cref="DefaultVideoOutput"/>; headless engine checks pass <c>dummy</c>.</param>
     public VlcCorePlayer(bool hardwareDecoding = true, bool verboseLogging = false, IReadOnlyList<string>? audioStartupArguments = null, string videoOutput = DefaultVideoOutput)
     {
@@ -624,6 +625,8 @@ internal sealed unsafe partial class VlcCorePlayer : IMediaEngine, IQueueTranspo
             $"--vout={_videoOutput}",
             .. (_verboseLogging ? new[] { "-vvv" } : []),
             _hardwareDecoding ? "--avcodec-hw=any" : "--avcodec-hw=none",
+            // VideoToolbox is a separate decoder module on macOS, ahead of avcodec.
+            .. (!_hardwareDecoding && OperatingSystem.IsMacOS() ? new[] { "--no-videotoolbox" } : []),
             .. _audioStartupArguments,
             .. sources,
         ];

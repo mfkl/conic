@@ -1,4 +1,5 @@
 using Conic.Video;
+using Conic.Interop.MacOS;
 using Conic.Interop.Windows;
 using Avalonia;
 using Conic.Interop;
@@ -55,6 +56,7 @@ internal static class Program
         "--media-capabilities-smoke",
         "--player-capabilities-smoke",
         "--opaque-smoke",
+        "--iosurface-smoke",
         "--smoke",
     ];
 
@@ -72,8 +74,8 @@ internal static class Program
             return 2;
         int cycles = ParseCycles(args);
         if (args.Contains("--engine-smoke", StringComparer.OrdinalIgnoreCase))
-            return OperatingSystem.IsWindows()
-                ? CompositionSmoke.RunEngine(cycles)
+            return OperatingSystem.IsWindows() ? CompositionSmoke.RunEngine(cycles)
+                : OperatingSystem.IsMacOS() ? IOSurfaceSmoke.RunEngine(cycles)
                 : EngineSmoke.RunEngine(cycles, () => new NoEngineSmokeVideo());
         if (args.Contains("--queue-smoke", StringComparer.OrdinalIgnoreCase))
             return EngineSmoke.RunQueue(
@@ -82,6 +84,13 @@ internal static class Program
             return EngineSmoke.RunMediaCapabilities();
         if (args.Contains("--player-capabilities-smoke", StringComparer.OrdinalIgnoreCase))
             return EngineSmoke.RunPlayerCapabilities();
+        if (args.Contains("--iosurface-smoke", StringComparer.OrdinalIgnoreCase))
+        {
+            if (OperatingSystem.IsMacOS())
+                return IOSurfaceSmoke.Run();
+            Console.Error.WriteLine("This smoke checks the IOSurface video output, which only exists on macOS.");
+            return 2;
+        }
         if (!OperatingSystem.IsWindows())
         {
             Console.Error.WriteLine("This smoke checks the D3D11 video output, which only exists on Windows.");

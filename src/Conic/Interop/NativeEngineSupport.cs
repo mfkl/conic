@@ -13,14 +13,15 @@ internal static class NativeEngineSupport
 {
     [SupportedOSPlatformGuard("windows")]
     [SupportedOSPlatformGuard("linux")]
+    [SupportedOSPlatformGuard("macos")]
     public static bool IsAvailable => VLCPlatform.IsSupported;
 
     public static string? UnavailableReason(VlcRuntimePlatform platform, Architecture architecture) =>
         (platform, architecture) switch
         {
             (VlcRuntimePlatform.Windows or VlcRuntimePlatform.Linux, Architecture.X64) => null,
-            (VlcRuntimePlatform.MacOS, _) => "The VLC engine has not been ported to macOS yet.",
-            _ => "The VLC engine currently requires an x64 process.",
+            (VlcRuntimePlatform.MacOS, Architecture.X64 or Architecture.Arm64) => null,
+            _ => "The VLC engine currently requires an x64 process, or macOS on Apple silicon.",
         };
 
     public static string? CurrentUnavailableReason => UnavailableReason(

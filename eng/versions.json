@@ -9,12 +9,22 @@
     "windows": {
       "url": "https://download.videolan.org/pub/videolan/vlc/3.0.24/win64/vlc-3.0.24-win64.zip",
       "sha256": "fcf30850371ad10c9373cc4f0f4501e7dee49e3e9ae9f20c72fb2661a1ca6323"
+    },
+    "macos": {
+      "arm64": {
+        "url": "https://download.videolan.org/pub/videolan/vlc/3.0.24/macosx/vlc-3.0.24-arm64.dmg",
+        "sha256": "64a89d93cdd30b0e97131743e246373db82d6826ea882d265d46d74b136da2b7"
+      },
+      "x64": {
+        "url": "https://download.videolan.org/pub/videolan/vlc/3.0.24/macosx/vlc-3.0.24-intel64.dmg",
+        "sha256": "1ef6c903e2dc026d4e58ddf7b2a9ed0eb6f8caf80a9a9f46f96490340b962707"
+      }
     }
   },
   "vlclr": {
     "repository": "mfkl/vlclr",
     "branch": "3.x",
-    "commit": "07a5ba16165c9c6fb70f0f82303fe25e4c0a21aa",
+    "commit": "ac671472e4594f0261e7aa8538405e0de9668452",
     "consumption": "submodule",
     "path": "external/vlclr"
   }

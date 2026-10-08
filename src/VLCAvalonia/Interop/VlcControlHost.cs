@@ -12,6 +12,7 @@ namespace VLCAvalonia.Interop;
 /// </summary>
 [SupportedOSPlatform("windows")]
 [SupportedOSPlatform("linux")]
+[SupportedOSPlatform("macos")]
 internal sealed unsafe class VlcControlHost : IDisposable
 {
     private readonly object _lifecycleGate = new();

@@ -1,11 +1,13 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using VLCLR.Native;
 
 namespace VLCAvalonia.Vout;
 
 /// <summary>
 /// VLC 3 module entry points. The playlist control interface is registered on
-/// every target; the D3D11 video output only in the Windows build.
+/// every target; the D3D11 video output in the Windows build and the IOSurface
+/// video output in the macOS builds.
 /// </summary>
 /// <remarks>
 /// Debian and Ubuntu builds of VLC 3 look for the <c>3_0_0ft64</c> suffix
@@ -42,6 +44,22 @@ public static unsafe class PluginEntry
     {
 #if VLC_AVALONIA_D3D11
         int result = CompositionVoutPlugin.Register(vlcSet, opaque);
+        if (result != 0)
+            return result;
+#elif VLC_AVALONIA_IOSURFACE
+        // The display calls libvlccore, which VLC.app keeps outside every
+        // library search path: use the core that is loading this plugin.
+        if (!OperatingSystem.IsMacOS())
+            return -1;
+        try
+        {
+            VLCCore.UseLibraryContaining(vlcSet);
+        }
+        catch
+        {
+            return -1;
+        }
+        int result = IOSurfaceVoutPlugin.Register(vlcSet, opaque);
         if (result != 0)
             return result;
 #endif

@@ -11,7 +11,9 @@ internal sealed class MediaThumbnailCache(string directory, Func<string, Task<by
     private readonly object _gate = new();
     private readonly Dictionary<string, Task<byte[]?>> _pending = [];
     public static MediaThumbnailCache Shared { get; } = new(PlayerProfile.FilePath("thumbnails"),
-        OperatingSystem.IsWindows() ? WindowsMediaThumbnail.ReadAsync : FreedesktopThumbnail.ReadAsync);
+        OperatingSystem.IsWindows() ? WindowsMediaThumbnail.ReadAsync
+        : OperatingSystem.IsMacOS() ? QuickLookThumbnail.ReadAsync
+        : FreedesktopThumbnail.ReadAsync);
 
     public async Task<byte[]?> GetAsync(string source, CancellationToken cancellationToken = default)
     {

@@ -324,6 +324,7 @@ jobs:
           path: |
             vlc-avalonia/artifacts/macos-*/*.log
             vlc-avalonia/artifacts/macos-*/video-review/**
+            vlc-avalonia/artifacts/macos-*/*.png
           if-no-files-found: warn
           retention-days: 14
 

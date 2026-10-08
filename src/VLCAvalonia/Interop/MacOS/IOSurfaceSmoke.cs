@@ -34,7 +34,8 @@ internal static class IOSurfaceSmoke
                 IOSurfacePluginBridge.PoolTelemetry before = bridge.ReadPoolTelemetry();
                 HashSet<uint> surfaces = [];
                 int frames = 0;
-                using (VlcCorePlayer player = new(hardwareDecoding: hardwareDecoding))
+                // Verbose logging records which decoder VLC chose (VideoToolbox or avcodec).
+                using (VlcCorePlayer player = new(hardwareDecoding: hardwareDecoding, verboseLogging: hardwareDecoding))
                 {
                     OpenAndWait(player, mediaPath, $"{decoding}-open");
                     Stopwatch elapsed = Stopwatch.StartNew();

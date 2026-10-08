@@ -108,6 +108,7 @@ foreach ($file in @('LICENSE', 'docs/contest/DEPENDENCIES.md')) {
     Copy-Item -LiteralPath (Join-Path $productRoot $file) -Destination (Join-Path $contents 'Resources')
 }
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'versions.json') -Destination (Join-Path $contents 'Resources')
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'macos/AppIcon.icns') -Destination (Join-Path $contents 'Resources')
 
 $shortVersion = ($Version -split '-')[0]
 @"
@@ -118,6 +119,7 @@ $shortVersion = ($Version -split '-')[0]
   <key>CFBundleDevelopmentRegion</key><string>en</string>
   <key>CFBundleDisplayName</key><string>Conic</string>
   <key>CFBundleExecutable</key><string>Conic</string>
+  <key>CFBundleIconFile</key><string>AppIcon</string>
   <key>CFBundleIdentifier</key><string>$BundleIdentifier</string>
   <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
   <key>CFBundleName</key><string>Conic</string>

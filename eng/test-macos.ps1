@@ -82,7 +82,7 @@ function Invoke-Case([string] $Name, [string[]] $Arguments) {
     }
     elseif ($process.ExitCode -eq 0) { 'passed' }
     else { "failed with exit $($process.ExitCode)" }
-    @($lines -join [Environment]::NewLine, $stderr.GetAwaiter().GetResult()) | Set-Content -LiteralPath $log
+    @(($lines -join [Environment]::NewLine), $stderr.GetAwaiter().GetResult()) | Set-Content -LiteralPath $log
     Write-Host ('{0} {1} ({2:0.0} s)' -f $Name, $outcome, $watch.Elapsed.TotalSeconds)
     return $outcome -eq 'passed'
 }

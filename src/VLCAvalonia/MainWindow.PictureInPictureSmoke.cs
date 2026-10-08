@@ -32,6 +32,7 @@ public partial class MainWindow
         VideoSurface.ProbeSharedTextureForSmoke = true;
         int presented = 0;
         VideoSurface.GPUFramePresentedForSmoke += (_, _, _) => presented++;
+        VideoSurface.StatusChanged += status => Console.WriteLine($"[pip-smoke] status: {status}");
         Opened += async (_, _) =>
         {
             try

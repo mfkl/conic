@@ -7,6 +7,7 @@ using Avalonia.Interactivity;
 using Avalonia.Threading;
 using Player.Application;
 using Player.Contracts;
+using VLCAvalonia.Controls;
 using VLCAvalonia.Interop;
 using VLCAvalonia.Services;
 using VLCAvalonia.ViewModels;
@@ -31,6 +32,8 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        PlatformChrome.Apply(this);
+        TopChrome.Padding = PlatformChrome.ClearOfCaptionButtons(TopChrome.Padding);
         _windowGeometry = new WindowGeometryStore(PlayerProfile.FilePath("window.json"));
         RestoreWindowGeometry();
         AddHandler(PointerPressedEvent, OnPlayerPointerPressed, RoutingStrategies.Tunnel, true);

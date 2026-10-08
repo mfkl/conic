@@ -159,7 +159,7 @@
             </Border>
         </Grid>
 
-        <!-- Hidden under Home, whose translucent content panel would show it. -->
+        <!-- Hidden under Home, which covers the player. -->
         <StackPanel x:Name="NoMediaSurface"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center"

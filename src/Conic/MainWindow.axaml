@@ -159,11 +159,17 @@
             </Border>
         </Grid>
 
+        <!-- Hidden under Home, whose translucent content panel would show it. -->
         <StackPanel x:Name="NoMediaSurface"
-                    IsVisible="{Binding IsNoMedia}"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center"
                     Spacing="14">
+            <StackPanel.IsVisible>
+                <MultiBinding Converter="{x:Static BoolConverters.And}">
+                    <Binding Path="IsNoMedia" />
+                    <Binding Path="!IsHomeOpen" />
+                </MultiBinding>
+            </StackPanel.IsVisible>
             <Border Width="72"
                     Height="72"
                     CornerRadius="36"

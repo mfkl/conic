@@ -308,6 +308,9 @@
         <Setter Property="MinWidth" Value="148" />
         <Setter Property="Height" Value="48" />
         <Setter Property="CornerRadius" Value="12" />
+        <!-- Fixed height, so the label has to be centered in it. -->
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
         <Setter Property="Background" Value="{DynamicResource PlayerAccent}" />
         <Setter Property="Foreground" Value="#120B07" />
         <Setter Property="FontWeight" Value="SemiBold" />

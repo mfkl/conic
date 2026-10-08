@@ -23,7 +23,7 @@ it excludes the Windows-only Native AOT vout project. It does not load native
 VLC or require a graphical session. These tests cover presentation models,
 storage, layout policies and backend lifecycle, not rendered UI or playback.
 
-The complete workflow has sixteen jobs, plus packaging and release jobs on
+The complete workflow has eighteen jobs, plus packaging and release jobs on
 `main`, tags and manual runs.
 
 ## Hosted graphics diagnostics
@@ -64,6 +64,32 @@ smokes against the real runtime. Logs are uploaded even on failure.
 VLC renders to its `dummy` video output and decodes in software, so this job
 qualifies queue, transport, tracks, delays, media information and lifecycle
 on Linux, not hardware decoding or GPU presentation.
+
+## macOS engine and video coverage
+
+Two macOS jobs, arm64 on `macos-15` and x64 on `macos-15-intel`, download the
+pinned VLC 3.0.24 DMG for their architecture with `eng/get-vlc.ps1` (SHA-256
+from VideoLAN's published sums), generate the same clip with ffmpeg from
+Homebrew and run `eng/test-macos.ps1` twice:
+
+- headless: queue, media-capabilities and player-capabilities smokes, the
+  IOSurface smoke (BGRA surfaces with hardware then software decoding, every
+  lent pixel buffer returned, no CPU copies) and a 10-cycle engine smoke with
+  the IOSurface video output;
+- `-Window`, in the runner's desktop session: GPU and CPU-fallback video
+  smokes with screen captures, compositor reattachment and PiP.
+
+The runners are virtual machines with a paravirtualized GPU; on arm64 VLC
+selects VideoToolbox there. This qualifies the transport and lifecycle, not
+playback quality, frame pacing or real hardware, which
+[MACOS_HOST_TODO.md](MACOS_HOST_TODO.md) covers. Logs and captures are uploaded
+even on failure.
+
+`Package / macOS arm64` and `Package / macOS x64` run on `main`, tags and
+manual runs: `eng/package-macos.ps1` builds an ad hoc signed
+`Conic.app` with VLC bundled in `Contents/Frameworks/vlc` and uploads
+the ZIP. They are not attached to releases until the bundle is qualified on a
+real Mac.
 
 ## Full Windows coverage
 

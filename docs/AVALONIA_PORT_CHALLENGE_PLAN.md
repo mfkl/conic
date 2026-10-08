@@ -4,7 +4,7 @@ Prepared: 2026-09-12. Planning baseline: product `124bea99f53c4296e63ac8526703b8
 
 Objective: maximize the chance of a prize by shipping a dependable VLC desktop UI rewrite with demonstrable Avalonia engineering, useful migration lessons, and working desktop releases. Winning is uncertain; this plan defines deliverables we can control.
 
-Execution started on this branch on September 12, scoped by the maintainer to Windows and locally achievable submission work. **Status, October 8:** Windows is feature-complete for the entry and requalified on VLC 3.0.24; the Linux engine runs natively on branch `feature/linux-port` (verified in WSL2), and its GPU video output is next, built and tested by the maintainer on native Linux; macOS is not started. [Current task status](contest/STATUS.md) records evidence and remaining gates. Unchecked items are still outstanding, including partially completed tasks. Nothing has been published or submitted.
+Execution started on this branch on September 12, scoped by the maintainer to Windows and locally achievable submission work. **Status, October 8:** Windows is feature-complete for the entry and requalified on VLC 3.0.24; the Linux engine runs natively on branch `feature/linux-port` (verified in WSL2), and its GPU video output is next, built and tested by the maintainer on native Linux; macOS runs with VideoToolbox decoding and IOSurface presentation on branch `feature/macos-port`, checked on CI's arm64 and x64 macOS runners and awaiting qualification on a real Mac ([MACOS_HOST_TODO.md](MACOS_HOST_TODO.md)). [Current task status](contest/STATUS.md) records evidence and remaining gates. Unchecked items are still outstanding, including partially completed tasks. Nothing has been published or submitted.
 
 ## 1. Contest requirements and positioning
 
@@ -22,7 +22,7 @@ State the exact scope: VLC 3 supplies the engine; VLC desktop behavior is the mi
 |---|---|---|
 | Windows video | D3D11 backend and Native AOT vout; 14-case package qualification on VLC 3.0.24 (October 8), Intel Iris Xe | Additional GPU vendor, clean machine, soak |
 | Linux | Engine (queue, transport, tracks, delays, media information, lifecycle) runs against real VLC 3 on branch `feature/linux-port`; CI job added | GPU video output (VA-API, DMA-BUF import), X11/Wayland qualification, runtime choice and packaging |
-| macOS | Managed builds/tests, layout probe, graphics probe | Everything native |
+| macOS | Engine, IOSurface video output (VideoToolbox, Metal shared events), app bundle script and CI smokes on arm64/x64 runners, on branch `feature/macos-port` | Real-Mac qualification, chrome/shortcut decisions, signing/notarization |
 | Everyday controls | Queue, history/resume, settings, PiP, tracks, timing, video geometry and information | Verify end-to-end; close daily-use failures and platform differences |
 | Subtitles | Track selection/delay; VLC-rendered subtitles overlaid above the video on GPU and CPU paths, text checked by hand on Windows | Styled ASS and image subtitle checks; live external subtitle attachment |
 | Engineering | Boundaries, pinned inputs, fifteen-job CI definition, recorded managed/native checks | Current-revision evidence, durable artifacts, accessible dependencies |
@@ -146,8 +146,8 @@ Acceptance: actual audio/video and subtitle workflows pass in the promised sessi
 
 - [ ] Run ABI/control and graphics probes on native Apple Silicon. Identify actual Avalonia image-import/synchronization support and the pinned VLC VideoToolbox surface contract.
 - [ ] Conduct an early bounded spike: import/present a real hardware-decoded surface. Investigate IOSurface/CoreVideo and available compositor interop without assuming compatibility from advertised handle support.
-- [ ] Define native surface retention, conversion, synchronization, thread affinity and plugin/runtime loading. Resolve required framework bindings before product integration.
-- [ ] Implement a macOS backend with the shared command/session boundary, GPU presentation, subtitle regions, disposal and failure recovery.
+- [x] Define native surface retention, conversion, synchronization, thread affinity and plugin/runtime loading. Resolve required framework bindings before product integration. (Branch `feature/macos-port`; see [CROSS_PLATFORM.md](CROSS_PLATFORM.md#macos-port-october-8).)
+- [x] Implement a macOS backend with the shared command/session boundary, GPU presentation, subtitle regions, disposal and failure recovery. (Same branch; CI smokes pass on arm64 and x64 runners, real-Mac qualification pending.)
 - [ ] Qualify H.264 and HEVC 10-bit where supported, audio, seeks, queue/tracks, fullscreen, PiP and window transitions. Record native architecture and avoid treating Rosetta behavior as ARM64 qualification.
 - [ ] Apply macOS command-key defaults and labels; test menus, file dialogs, focus, window close/quit, display scaling and sleep/wake.
 

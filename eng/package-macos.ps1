@@ -39,7 +39,8 @@ function Invoke-Checked([string] $Executable, [string[]] $Arguments, [string] $L
 function Assert-MachO([string] $Path) {
     $bytes = [IO.File]::ReadAllBytes($Path)
     $expected = if ($architecture -eq 'arm64') { 0x0100000C } else { 0x01000007 }
-    if ($bytes.Length -lt 8 -or [BitConverter]::ToUInt32($bytes, 0) -ne 0xFEEDFACF -or [BitConverter]::ToUInt32($bytes, 4) -ne $expected) {
+    # PowerShell reads 0xFEEDFACF as a negative Int32, so compare signed values.
+    if ($bytes.Length -lt 8 -or [BitConverter]::ToInt32($bytes, 0) -ne 0xFEEDFACF -or [BitConverter]::ToInt32($bytes, 4) -ne $expected) {
         throw "The bundle requires $architecture Mach-O binaries: $Path"
     }
 }

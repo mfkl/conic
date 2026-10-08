@@ -39,6 +39,7 @@
   <ItemGroup>
     <Compile Include="..\Shared\VideoGeometry.cs" Link="Interop\VideoGeometry.cs" />
     <Compile Include="..\Shared\SubtitleComposer.cs" Link="Interop\SubtitleComposer.cs" />
+    <Compile Include="..\Shared\Linux\VaApi.cs" Link="Interop\Linux\VaApi.cs" />
     <ProjectReference Include="..\Player.Contracts\Player.Contracts.csproj" />
     <ProjectReference Include="..\Player.Domain\Player.Domain.csproj" />
     <ProjectReference Include="..\Player.Application\Player.Application.csproj" />

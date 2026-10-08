@@ -106,7 +106,14 @@ internal sealed class VlcRuntimeLocator(
     {
         get
         {
-            List<string> candidates = [Path.Combine(RuntimeDirectory, "plugins", "video_output", PluginFileName)];
+            // VLC 3 on Linux looks for plugins in <libvlccore directory>/vlc/plugins.
+            string runtimePlugins = platform == VlcRuntimePlatform.Linux
+                ? Path.Combine(RuntimeDirectory, "vlc", "plugins")
+                : Path.Combine(RuntimeDirectory, "plugins");
+            List<string> candidates = [Path.Combine(runtimePlugins, "video_output", PluginFileName)];
+            // Packages that use the distribution's VLC ship the plugin beside the app.
+            if (platform == VlcRuntimePlatform.Linux)
+                candidates.Add(Path.Combine(baseDirectory, "plugins", PluginFileName));
             if (RepositoryRoot is { } root)
                 foreach (string configuration in new[] { "Release", "Debug" })
                     candidates.Add(Path.Combine(root, "src", "Conic.Vout", "bin", configuration, "net10.0", RuntimeIdentifier, "native", PluginFileName));

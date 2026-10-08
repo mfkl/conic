@@ -4,7 +4,8 @@
 #  - IOSurface video output: BGRA pixel buffers lent and returned, with
 #    hardware (VideoToolbox) and software decoding;
 #  - with -Window, the styled window: GPU and CPU-fallback video, video
-#    adjustments, PiP and compositor reattachment.
+#    adjustments, PiP, compositor reattachment, and AppKit clicks and menu
+#    shortcuts on the caption row.
 # Window cases need a logged-in GUI session.
 [CmdletBinding()]
 param(
@@ -99,6 +100,7 @@ if ($Window) {
     $cases['video-cpu'] = @('--video-cpu-smoke', '--video-capture')
     $cases['compositor'] = @('--ui-smoke')
     $cases['pip'] = @('--pip-smoke')
+    $cases['caption-click'] = @('--caption-click-smoke')
 }
 $failed = [Collections.Generic.List[string]]::new()
 foreach ($case in $cases.GetEnumerator()) {

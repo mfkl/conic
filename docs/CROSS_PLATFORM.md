@@ -5,6 +5,70 @@ macOS. CPU decoding, GPU upload of software-decoded frames, and CPU bitmap
 presentation do not qualify a platform. Enabling `--avcodec-hw=any` alone is not
 evidence that hardware decoding occurred.
 
+## Linux engine port, October 8
+
+Branch `feature/linux-port` runs the VLC 3 engine natively on Linux x64. It was
+built and checked in WSL2 (Ubuntu 24.04, VLC 3.0.20 distribution packages, .NET
+10.0.112). WSL has no usable GPU without the D3D12 translation layer, so
+everything that needs GPU output was deliberately left out.
+
+What changed:
+
+- VLCLR accepts Windows x64 and Linux x64 (`VLCPlatform`). Variadic
+  `input_Control` queries go through `input_vaControl` with a `va_list` built in
+  managed code (`VLCVaList`): a pointer to 8-byte slots on Win64, a System V
+  `__va_list_tag` whose register areas are marked consumed on Linux. No native
+  helper library is needed. `playlist_Control` has no `va_list` export; its
+  integer and pointer arguments use the same registers either way.
+- `VLCCore.Free` uses the C runtime VLC allocated with: msvcrt on Windows,
+  the process C library on Linux.
+- The plugin is split. `ControlInterface` (the playlist host) builds for both
+  RIDs; the D3D11 video output builds only for `win-x64`. The Linux `.so`
+  exports both `vlc_entry__3_0_0f` and `vlc_entry__3_0_0ft64`, the suffix
+  Debian/Ubuntu use since their 64-bit `time_t` transition (identical ABI on
+  64-bit targets).
+- The app's core player (`VlcCorePlayer`) and runtime loading are portable.
+  On Linux the runtime locator falls back to the distribution's VLC
+  (`/usr/lib/x86_64-linux-gnu`), the loader binds VLCLR's `libvlccore`/`libvlc`
+  imports to the versioned sonames and adds the plugin directory to
+  `VLC_PLUGIN_PATH` through libc.
+- `NativeEngineSupport` (engine: Windows/Linux x64) is separate from
+  `NativePlaybackSupport` (video playback: Windows x64 only). The Linux app
+  still shows "Linux hardware playback is not implemented yet."
+- Headless smokes are split into `EngineSmoke` (portable) and the Windows-only
+  D3D11 checks. On Linux they use VLC's `dummy` video output and software
+  decoding. There is no software rendering path.
+
+Evidence, WSL2 on this machine:
+
+- Queue, media-capabilities, player-capabilities (including `INPUT_GET_VOUTS`
+  through the new `va_list`) and the 25-cycle engine lifecycle passed against
+  VLC 3.0.20. Seek (double argument), rate (int and int*) and position
+  (double*) all crossed the System V `va_list`.
+- 242 managed tests passed on Linux, including `VLCVaListTests`, which hands a
+  `VLCVaList` to glibc's own `vsnprintf`. The same test passes against msvcrt.
+- The layout probe passed with g++ 13.3 (x86_64-linux-gnu) against the pinned
+  VLC headers (`6de05adc`).
+- Windows did not regress: all managed tests and the 14-case package test
+  (hardware, software upload and CPU paths, 25 engine cycles with zero CPU
+  uploads, compositor, PiP, settings, time zones, broken installs) passed.
+
+Found on the way: with `--avcodec-hw=any`, the distribution VLC (even the
+stock `cvlc`) hangs at input teardown in WSL, where libva/VDPAU have no real
+GPU. Engine-only smokes therefore request software decoding; hardware decoding
+belongs to the GPU backend's qualification on real Linux hardware.
+
+Still to do, on native Linux with a GPU:
+
+1. A Linux `vout display` in the plugin: VA-API opaque surfaces, exported as
+   DMA-BUF (`vaExportSurfaceHandle`), imported into Avalonia's compositor
+   (`ICompositionGpuInterop`, Vulkan or EGL), with subtitles through the
+   existing `SubtitleComposer` and `subpicture_chromas` path.
+2. A `IVideoBackend` for it, then enable `NativePlaybackSupport` for Linux.
+3. Qualify X11 and Wayland separately (CI's Linux job runs X11 under Xvfb only).
+4. Decide the shipped runtime: the distribution's VLC 3 (what this branch uses)
+   or a bundled 3.0.24 build, and the package format.
+
 ## Implemented from Windows
 
 - The shared video control delegates native transport and rendering to an
@@ -87,8 +151,9 @@ installed layouts, macOS signing/notarization, and Linux distribution libraries.
 6. Run installed applications outside either source checkout. Confirm native
    libraries/plugins resolve and no development paths are required.
 
-Native smoke commands remain Windows-only until the corresponding hardware
-backend and smoke implementation exist. Filename-policy tests run on Windows
+The engine smokes (`--engine-smoke`, `--queue-smoke`, `--media-capabilities-smoke`,
+`--player-capabilities-smoke`) also run on Linux x64; video smokes stay
+Windows-only until a Linux GPU backend exists. Filename-policy tests run on Windows
 with filesystem fixtures; they must not be presented as Linux/macOS execution.
 
 ## Windows validation

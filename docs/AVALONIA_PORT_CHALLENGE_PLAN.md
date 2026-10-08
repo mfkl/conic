@@ -4,7 +4,7 @@ Prepared: 2026-09-12. Planning baseline: product `124bea99f53c4296e63ac8526703b8
 
 Objective: maximize the chance of a prize by shipping a dependable VLC desktop UI rewrite with demonstrable Avalonia engineering, useful migration lessons, and working desktop releases. Winning is uncertain; this plan defines deliverables we can control.
 
-Execution started on this branch on September 12, scoped by the maintainer to Windows and locally achievable submission work; macOS/Linux implementation is deferred for this pass. [Current task status](contest/STATUS.md) records evidence and remaining gates. Unchecked items are still outstanding, including partially completed tasks. Nothing has been published or submitted.
+Execution started on this branch on September 12, scoped by the maintainer to Windows and locally achievable submission work. **Status, October 8:** Windows is feature-complete for the entry and requalified on VLC 3.0.24; the Linux engine runs natively on branch `feature/linux-port` (verified in WSL2), and its GPU video output is next, built and tested by the maintainer on native Linux; macOS is not started. [Current task status](contest/STATUS.md) records evidence and remaining gates. Unchecked items are still outstanding, including partially completed tasks. Nothing has been published or submitted.
 
 ## 1. Contest requirements and positioning
 
@@ -20,12 +20,13 @@ State the exact scope: VLC 3 supplies the engine; VLC desktop behavior is the mi
 
 | Area | Evidence at this baseline | Work needed |
 |---|---|---|
-| Windows video | D3D11 backend and Native AOT vout; recorded Intel Iris Xe hardware/compositor smokes | Broader hardware, subtitles, end-user package and fresh release qualification |
-| Linux/macOS | Managed builds/tests, native layout/control fixtures, runtime discovery and graphics probes | Real runtime integration, decoder surfaces, compositor presentation and packaging |
+| Windows video | D3D11 backend and Native AOT vout; 14-case package qualification on VLC 3.0.24 (October 8), Intel Iris Xe | Additional GPU vendor, clean machine, soak |
+| Linux | Engine (queue, transport, tracks, delays, media information, lifecycle) runs against real VLC 3 on branch `feature/linux-port`; CI job added | GPU video output (VA-API, DMA-BUF import), X11/Wayland qualification, runtime choice and packaging |
+| macOS | Managed builds/tests, layout probe, graphics probe | Everything native |
 | Everyday controls | Queue, history/resume, settings, PiP, tracks, timing, video geometry and information | Verify end-to-end; close daily-use failures and platform differences |
 | Subtitles | Track selection/delay; VLC-rendered subtitles overlaid above the video on GPU and CPU paths, text checked by hand on Windows | Styled ASS and image subtitle checks; live external subtitle attachment |
 | Engineering | Boundaries, pinned inputs, fifteen-job CI definition, recorded managed/native checks | Current-revision evidence, durable artifacts, accessible dependencies |
-| Submission | Technical README and detailed development reports | Release downloads, curated comparison images, migration narrative and entry form |
+| Submission | Technical README, CI-built Windows ZIP, draft GitHub release (stale preview.1) | Fresh tagged release, comparison images, demo video, release notes, entry form |
 
 Source of truth for inputs is [eng/versions.json](../eng/versions.json): .NET 10.0.102, Avalonia 12.1.1, VLC 3.0.24, VLCLR `09b46d50848cc0abe3c236e7a25e43679ee13c02`. Older reports describe earlier pins and test totals. Preserve them as historical records; do not treat their results as qualification of a new release.
 
@@ -87,7 +88,7 @@ Decision (October 7): VLCLR is included as source in this repository (`src/VLCLR
 - [x] Decide the license covering the repository, including the included VLCLR source: GPL-2.0-or-later (October 7).
 - [ ] Verify actual dependency licenses and redistribution/source obligations before release; include required license texts, notices and corresponding source/build instructions.
 - [x] Give the VLC runtime a reproducible download procedure and hash: `eng/get-vlc.ps1` fetches the official VLC 3.0.24 Windows x64 build and checks the SHA-256 in `eng/versions.json` (October 7). Same module ABI `3_0_0f` as the earlier 3.0.24-beta1 pin; the only SDK header change is a removed playlist sort enum value VLCLR does not use.
-- [ ] Requalify on hardware with the 3.0.24 runtime (smokes and the 25-cycle package test); earlier evidence used 3.0.24-beta1.
+- [x] Requalify on hardware with the 3.0.24 runtime (smokes and the 25-cycle package test): 14/14 on October 8.
 - [ ] Give the smoke media a public route; it still comes from the maintainer's VLCLR checkout.
 - [ ] Verify a fresh checkout can build using the published instructions without the maintainer's sibling workspace or CI deploy key.
 
@@ -106,10 +107,10 @@ Acceptance: a fresh-machine user launches the package and reaches working video/
 
 ### W04 — Finish real subtitle presentation
 
-- [ ] Trace the pinned VLC vout subpicture contract and lifetime through prepare/display. Inspect current `CompositionVoutPlugin` handling, including deletion, before changing ownership.
-- [ ] Add any required checked subpicture/region access and ownership APIs in VLCLR, with ABI/lifetime validation. Do not duplicate native layouts in the UI project.
-- [ ] Design region composition preserving VLC-rendered pixels, alpha, placement, timing and styling. Handle multiple regions and release/reuse correctly across pause, seek, stop, new input and device recreation.
-- [ ] Implement composition on the Windows hardware path and verify the CPU compatibility path separately. Video frames must retain their hardware transport; account for subtitle-region uploads separately from decoded-video uploads.
+- [x] Trace the pinned VLC vout subpicture contract and lifetime through prepare/display. Inspect current `CompositionVoutPlugin` handling, including deletion, before changing ownership.
+- [x] Add any required checked subpicture/region access and ownership APIs in VLCLR, with ABI/lifetime validation. Do not duplicate native layouts in the UI project. (VLCLR's existing subpicture structs sufficed.)
+- [x] Design region composition preserving VLC-rendered pixels, alpha, placement, timing and styling. Handle multiple regions and release/reuse correctly across pause, seek, stop, new input and device recreation.
+- [x] Implement composition on the Windows hardware path and verify the CPU compatibility path separately. Video frames must retain their hardware transport; account for subtitle-region uploads separately from decoded-video uploads. (October 7: RGBA regions composed in the plugin and drawn by a sibling overlay control.)
 - [ ] Use controlled, redistributable embedded/external SRT, styled ASS and image-subtitle fixtures. Verify Unicode, overlapping regions, track off/switch, signed delay, paused redraw, aspect/crop, fullscreen and HiDPI.
 - [ ] Make attaching an external subtitle useful in the running session. Prefer safe live attachment if the reviewed engine supports it; otherwise provide an explicit user-invoked reopen/apply flow preserving the relevant playback position and queue, with clear failure handling.
 - [ ] Keep subtitle logic compatible with the Linux/macOS backend contract; qualify actual composition on each implemented backend before claiming support there.
@@ -119,15 +120,17 @@ Acceptance: the subtitle fixture matrix visibly passes, including styled and ima
 
 ### W05 — Integrate portable native controls against real VLC
 
-- [ ] Start from the existing pinned `VLC3ControlBridge`, native layout probe and CI fixtures. List remaining Win64 guards/offsets in framework and product integration.
+- [x] Start from the existing pinned `VLC3ControlBridge`, native layout probe and CI fixtures. List remaining Win64 guards/offsets in framework and product integration. (October 8: replaced by a managed `va_list` builder; no native helper needed.)
 - [ ] Verify library exports, target calling conventions, structure layouts and bridge loading on each selected OS/architecture using the actual pinned VLC runtime.
-- [ ] Implement reusable playlist/input control ownership behind the framework facade: open, play/pause, stop, seek/rate, queue changes, track/delay controls and cleanup.
-- [ ] Integrate the tested bridge into playback owners where required. Ensure the helper is built for each host architecture and included in packages.
+- [x] Implement reusable playlist/input control ownership behind the framework facade: open, play/pause, stop, seek/rate, queue changes, track/delay controls and cleanup. (Windows x64 and Linux x64.)
+- [x] Integrate the tested bridge into playback owners where required. Ensure the helper is built for each host architecture and included in packages. (No helper: the `va_list` is built in managed code.)
 - [ ] Exercise failure, callbacks during shutdown, pointer-width handling, stale input generations and repeated create/dispose against real playback. Preserve existing Windows behavior or qualify any changed path.
 
 Acceptance: native runtime controls work on each selected target with correct ownership and bounded shutdown. Native fixtures remain useful evidence but cannot substitute for this gate.
 
 ### W06 — Implement and qualify Linux GPU playback
+
+Status, October 8: the engine half is done on `feature/linux-port` and checked in WSL2 against Ubuntu's VLC 3.0.20 (queue, capabilities, 25 engine cycles, 242 managed tests, layout probe), with a CI job. WSL offers no GPU without D3D12 translation, so every item below that needs GPU output is open and moves to native Linux. Details: [CROSS_PLATFORM.md](CROSS_PLATFORM.md#linux-engine-port-october-8).
 
 - [ ] Run the existing ABI and graphics probes on the target Linux machine, separately in X11 and Wayland. Record GPU/driver, runtime, interop handles and supported synchronization.
 - [ ] Conduct an early bounded spike: prove hardware decoding on the chosen VLC 3 configuration and import/present an actual decoded surface in Avalonia. VA-API surface export/import is a candidate to investigate, not an assumed working route.
@@ -229,6 +232,8 @@ Acceptance: entry confirmation exists, every submitted link works, and the downl
 ## 5. Calendar and decision gates
 
 Dates below are targets. Update estimates from spike evidence and actual capacity; do not silently shift the final qualification/write-up window to absorb native research.
+
+**October 8 checkpoint.** The September milestones for Linux/macOS hardware playback were not met; the maintainer scoped the pass to Windows first. Windows met its gates. Fourteen days remain: the Linux GPU backend (W06) is the only path to a cross-platform entry, and the October 11 feature freeze below applies to it too unless the maintainer moves it. macOS has not started and is unlikely to fit; dropping it is the maintainer's decision.
 
 | Date | Required evidence or decision |
 |---|---|

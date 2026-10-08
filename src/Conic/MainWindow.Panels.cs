@@ -261,6 +261,7 @@ public partial class MainWindow
                 _presentation.IsFullscreen = false;
             }
             SetChromeVisibility(true);
+            PlaceCaptionButtons();
             Dispatcher.UIThread.Post(() =>
             {
                 if (_presentation.IsHomeOpen) HomeScreen.FocusPrimary(); else HomeButton.Focus();

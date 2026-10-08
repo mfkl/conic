@@ -83,8 +83,27 @@ public partial class MainWindow : Window
         VideoSurface.EngineStateChanged += OnEngineStateChanged;
         SubtitleLayer.Surface = VideoSurface;
         Closed += (_, _) => { SaveWindowGeometry(); _presentation.OnClosing(); _autoHideTimer.Stop(); };
-        SizeChanged += (_, _) => { ApplyResponsiveChrome(); ApplyResponsiveSettings(); };
-        Activated += (_, _) => WakeChrome();
+        SizeChanged += (_, _) => { ApplyResponsiveChrome(); ApplyResponsiveSettings(); PlaceCaptionButtons(); };
+        Activated += (_, _) => { WakeChrome(); PlaceCaptionButtons(); };
+        Deactivated += (_, _) => PlaceCaptionButtons();
+        Opened += (_, _) => PlaceCaptionButtons();
+        PropertyChanged += (_, e) =>
+        {
+            if (e.Property == WindowStateProperty || e.Property == WindowDecorationsProperty) PlaceCaptionButtons();
+        };
+    }
+
+    /// <summary>
+    /// Centers the macOS traffic lights on the visible caption row: Home's
+    /// 52 px header, or the player's 44 px row below the top chrome's padding.
+    /// Posted so it runs after AppKit's own title bar layout.
+    /// </summary>
+    private void PlaceCaptionButtons()
+    {
+        if (!PlatformChrome.UsesSystemCaptionButtons) return;
+        Dispatcher.UIThread.Post(() =>
+            PlatformChrome.PlaceCaptionButtons(this, _presentation.IsHomeOpen ? 26 : TopChrome.Padding.Top + 22),
+            DispatcherPriority.Background);
     }
 
     internal static IReadOnlyList<string> ToAudioArguments(PlayerSettings settings, bool? windows = null)

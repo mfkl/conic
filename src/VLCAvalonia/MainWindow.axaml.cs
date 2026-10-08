@@ -138,6 +138,10 @@ public partial class MainWindow : Window
         PlayerDock.IsVisible = visible && !_presentation.IsHomeOpen && !_presentation.IsPictureInPicture;
         TopChrome.IsVisible = visible && !_presentation.IsHomeOpen && !_presentation.IsPictureInPicture;
         PictureInPictureChrome.IsVisible = visible && _presentation.IsPictureInPicture;
+        // The traffic lights belong to the top chrome: they hide with it over
+        // playing video and stay on Home.
+        if (PlatformChrome.UsesSystemCaptionButtons)
+            PlatformChrome.SetCaptionButtonsVisible(this, visible || _presentation.IsHomeOpen);
     }
 
     private void OnEngineStateChanged(object? sender, MediaEngineState state) =>

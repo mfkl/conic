@@ -58,6 +58,8 @@ public partial class App : Application
             window.EnableDrawerSmoke(desktopArg(), true);
         else if (args.Contains("--stop-smoke", StringComparer.OrdinalIgnoreCase))
             window.EnableStopSmoke(desktopArg());
+        else if (args.Contains("--caption-click-smoke", StringComparer.OrdinalIgnoreCase))
+            window.EnableCaptionClickSmoke(desktopArg());
         else if (args.Contains("--thumbnail-smoke", StringComparer.OrdinalIgnoreCase))
             window.EnableThumbnailSmoke(desktopArg(), false);
         else if (args.Contains("--thumbnail-review", StringComparer.OrdinalIgnoreCase))

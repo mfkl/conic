@@ -75,7 +75,9 @@ public sealed class PlayerShortcutAndDiagnosticsTests
         PlayerCommandRegistry registry = Registry();
         PlayerShortcutEditor editor = new(settings, registry);
 
-        Assert.False(editor.TrySave([new(PlayerCommandId.OpenMedia, "Ctrl+,")], out string? error));
+        // Conflicts with the Settings default, which uses Command on macOS.
+        string settingsDefault = PlayerShortcutPolicy.PlatformDefault("Ctrl+,", PlayerShortcutPolicy.UsesCommandKey);
+        Assert.False(editor.TrySave([new(PlayerCommandId.OpenMedia, settingsDefault)], out string? error));
         Assert.Contains("already assigned", error);
         Assert.Null(storage.Content);
         Assert.Null(settings.Current.ShortcutOverrides);

@@ -75,12 +75,12 @@ the latest implementation, validation results, captures and review launcher.
 | Platform | Playback | Hosted CI |
 | --- | --- | --- |
 | Windows x64 | D3D11 hardware decoding and GPU presentation implemented | Full solution tests in Debug/Release; Release Native AOT publish |
-| Linux | Hardware backend still to be implemented | App build, managed UI tests and Core tests in Debug/Release |
+| Linux x64 | Engine runs on the distribution's VLC 3 (queue, transport, tracks, lifecycle); GPU video output still to be implemented | App build, managed UI tests, Core tests, and engine smokes against Ubuntu's VLC |
 | macOS | Hardware backend still to be implemented | App build, managed UI tests and Core tests in Debug/Release |
 
 Hardware decoding and GPU presentation are required for the Linux/macOS ports.
-Runtime discovery and managed portability groundwork are implemented; passing
-Core tests does not mean native playback is available on those platforms.
+On Linux the engine is native, but the app still reports playback as
+unavailable until the GPU video output exists.
 
 - Pure C#; no native C shim.
 - VLC 3 internal-core playback through VLCLR, a C# VLC plugin framework included
@@ -151,10 +151,11 @@ either source checkout. `VLC_DIRECTORY` takes precedence and must point to the
 directory containing the native VLC libraries. The default plugin location is
 `plugins/video_output` beneath that directory.
 
-Linux/macOS runtime discovery and managed portability fixes are in place;
-their native hardware playback backends are still unimplemented. Hardware
-decoding and GPU presentation are required on all three desktop platforms.
-See [the cross-platform status and qualification plan](docs/CROSS_PLATFORM.md).
+On Linux x64, `eng/test-linux-engine.ps1 -Media <clip>` builds the plugin and
+app and runs the engine smokes against the installed VLC 3 packages
+(`libvlccore9`, `libvlc5`, `vlc-plugin-base`). The GPU video output, and so
+playback in the app, is still unimplemented on Linux and macOS. See
+[the cross-platform status and qualification plan](docs/CROSS_PLATFORM.md).
 
 `VLCLR_ROOT` only points development runs at a directory containing the default
 smoke media (`test_01.mkv`); it no longer affects the build or the runtime. The app targets the VLC 3 internal ABI. The earlier VLC 4 migration
@@ -165,7 +166,7 @@ implementation, qualification commands, measured counters, and remaining work.
 
 ## Tests and CI
 
-The fifteen-job GitHub Actions matrix runs on pushes and pull requests:
+The sixteen-job GitHub Actions matrix runs on pushes and pull requests:
 
 - Core: 72 tests per configuration on Windows, Ubuntu and macOS.
 - Hosted graphics diagnostics in Release jobs: launch the compositor probe and
@@ -174,8 +175,10 @@ The fifteen-job GitHub Actions matrix runs on pushes and pull requests:
   source headers using the native Windows, Linux and macOS compilers.
 - Desktop app: build the app and run 157 managed UI tests per configuration on
   Ubuntu and macOS.
-- Full Windows: all 229 managed tests per configuration, plus the Release
+- Full Windows: all managed tests per configuration, plus the Release
   Windows x64 Native AOT plugin publish.
+- Linux engine: queue, capability and 25-cycle lifecycle smokes against
+  Ubuntu's VLC 3 with a generated clip (dummy video output, software decoding).
 
 All eight jobs passed for commit `f709051` in
 [the initial successful hosted run](https://github.com/mfkl/conic/actions/runs/34602849422).

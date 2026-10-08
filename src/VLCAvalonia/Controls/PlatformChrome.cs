@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
+using System.Runtime.Versioning;
 using Avalonia.Platform;
 using VLCAvalonia.Interop.MacOS;
 
@@ -13,6 +14,7 @@ namespace VLCAvalonia.Controls;
 /// </summary>
 internal static class PlatformChrome
 {
+    [SupportedOSPlatformGuard("macos")]
     public static bool UsesSystemCaptionButtons => OperatingSystem.IsMacOS();
 
     /// <summary>Where the first traffic light starts, as in AppKit's own tall title bars.</summary>

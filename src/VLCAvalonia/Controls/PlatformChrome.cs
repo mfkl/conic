@@ -42,6 +42,15 @@ internal static class PlatformChrome
         MacWindowButtons.Apply(handle.Handle, isView, SystemCaptionButtonsLeft, captionCenter);
     }
 
+    /// <summary>Shows or hides the traffic lights along with the app's own caption row.</summary>
+    public static void SetCaptionButtonsVisible(Window window, bool visible)
+    {
+        if (!OperatingSystem.IsMacOS() || window.TryGetPlatformHandle() is not { Handle: not 0 } handle) return;
+        bool isView = handle.HandleDescriptor == "NSView";
+        if (!isView && handle.HandleDescriptor != "NSWindow") return;
+        MacWindowButtons.SetVisible(handle.Handle, isView, visible);
+    }
+
     /// <summary>Moves caption-row content clear of the system caption buttons.</summary>
     public static Thickness ClearOfCaptionButtons(Thickness thickness) =>
         UsesSystemCaptionButtons

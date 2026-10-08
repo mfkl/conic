@@ -1,6 +1,5 @@
 using Avalonia.Controls;
 using Conic.Interop;
-using Conic.Interop.Windows;
 using Conic.Video.Windows;
 
 namespace Conic.Video;
@@ -9,7 +8,7 @@ internal static class VideoBackendFactory
 {
     public static void InitializeRuntime()
     {
-        if (NativePlaybackSupport.IsAvailable) WindowsVlcRuntime.Initialize();
+        if (NativePlaybackSupport.IsAvailable) VlcRuntime.Initialize();
     }
 
     public static IVideoBackend Create(Control host, VideoBackendOptions options)

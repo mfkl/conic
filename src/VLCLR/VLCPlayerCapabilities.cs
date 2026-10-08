@@ -46,6 +46,7 @@ public sealed record VLCAudioStartupOptions(string? OutputModule = null, float? 
 /// Deinterlace, snapshot and device-control qualification remain separate work.
 /// </summary>
 [SupportedOSPlatform("windows")]
+[SupportedOSPlatform("linux")]
 public sealed class VLCPlayerCapabilities
 {
     private readonly Func<VLCCurrentInputLease?> _leaseProvider;
@@ -99,6 +100,7 @@ public sealed class VLCPlayerCapabilities
 }
 /// <summary>Deterministic capability probe. Unsupported runtime features are reported as skipped, never passed.</summary>
 [SupportedOSPlatform("windows")]
+[SupportedOSPlatform("linux")]
 public static class VLCPlayerCapabilitiesSmoke
 {
     public static VLCPlayerSmokeReport Run(VLCPlayerCapabilities capabilities)
@@ -117,6 +119,7 @@ public static class VLCPlayerCapabilitiesSmoke
 }
 /// <summary>Optional public-libVLC controls for a host-owned media-player handle. This cannot be inferred from an internal input pointer.</summary>
 [SupportedOSPlatform("windows")]
+[SupportedOSPlatform("linux")]
 public sealed class VLCLibVLCVideoCapabilities
 {
     private static readonly HashSet<string> Modes = new(StringComparer.Ordinal) { "", "blend", "bob", "discard", "linear", "mean", "x", "yadif", "yadif2x", "phosphor", "ivtc" };
@@ -130,4 +133,4 @@ public sealed class VLCLibVLCVideoCapabilities
     { if (_player == nint.Zero || string.IsNullOrWhiteSpace(outputPath) || !Path.IsPathFullyQualified(outputPath)) return new(new VLCPlayerCapabilityResult(VLCPlayerCapabilityResultCode.InvalidArgument), null, false, "A full output path is required."); int error = VLCLibVLCVideo.TakeSnapshot(_player, 0, outputPath, width, height); return error == 0 ? new(new VLCPlayerCapabilityResult(VLCPlayerCapabilityResultCode.RequestDispatched, VLCApplyTiming.Live), outputPath, false, "Request accepted; no completion event or output observation is available.") : new(new VLCPlayerCapabilityResult(VLCPlayerCapabilityResultCode.NativeFailure, VLCApplyTiming.Live, error), outputPath, false, "No active vout or native dispatch failure."); }
 }
 internal interface IVLCPlayerNative { bool IsSupported { get; } nint CurrentInput(nint playlist); void ReleaseInput(nint input); nint InputGetItem(nint input); nint InputItemGetName(nint item); nint InputItemGetUri(nint item); nint InputItemGetMeta(nint item, int type); nint InputItemGetInfo(nint item, string category, string name); string Translate(string text); string? Utf8Owned(nint text); void Free(nint text); }
-internal sealed class VLCPlayerNative : IVLCPlayerNative { public bool IsSupported => OperatingSystem.IsWindows() && RuntimeInformation.ProcessArchitecture == Architecture.X64; public nint CurrentInput(nint p) => VLCCore.PlaylistCurrentInput(p); public void ReleaseInput(nint i) => VLCCore.ObjectRelease(i); public nint InputGetItem(nint i) => VLCCore.InputGetItem(i); public nint InputItemGetName(nint i) => VLCCore.InputItemGetName(i); public nint InputItemGetUri(nint i) => VLCCore.InputItemGetUri(i); public nint InputItemGetMeta(nint i, int t) => VLCCore.InputItemGetMeta(i, t); public nint InputItemGetInfo(nint i, string c, string n) => VLCCore.InputItemGetInfo(i, c, n); public unsafe string Translate(string text) { byte[] utf8 = System.Text.Encoding.UTF8.GetBytes(text + "\0"); fixed (byte* pointer = utf8) return Marshal.PtrToStringUTF8(VLCCore.GetText((nint)pointer)) ?? text; } public string? Utf8Owned(nint t) => t == nint.Zero ? null : Marshal.PtrToStringUTF8(t); public void Free(nint t) => VLCCore.Free(t); }
+internal sealed class VLCPlayerNative : IVLCPlayerNative { public bool IsSupported => VLCPlatform.IsSupported; public nint CurrentInput(nint p) => VLCCore.PlaylistCurrentInput(p); public void ReleaseInput(nint i) => VLCCore.ObjectRelease(i); public nint InputGetItem(nint i) => VLCCore.InputGetItem(i); public nint InputItemGetName(nint i) => VLCCore.InputItemGetName(i); public nint InputItemGetUri(nint i) => VLCCore.InputItemGetUri(i); public nint InputItemGetMeta(nint i, int t) => VLCCore.InputItemGetMeta(i, t); public nint InputItemGetInfo(nint i, string c, string n) => VLCCore.InputItemGetInfo(i, c, n); public unsafe string Translate(string text) { byte[] utf8 = System.Text.Encoding.UTF8.GetBytes(text + "\0"); fixed (byte* pointer = utf8) return Marshal.PtrToStringUTF8(VLCCore.GetText((nint)pointer)) ?? text; } public string? Utf8Owned(nint t) => t == nint.Zero ? null : Marshal.PtrToStringUTF8(t); public void Free(nint t) => VLCCore.Free(t); }

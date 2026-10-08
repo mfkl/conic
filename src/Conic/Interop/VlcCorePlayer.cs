@@ -8,11 +8,14 @@ using Player.Application;
 using VLCLR;
 using VLCLR.Native;
 
-namespace Conic.Interop.Windows;
+namespace Conic.Interop;
 
 [SupportedOSPlatform("windows")]
-internal sealed unsafe partial class WindowsVlcCorePlayer : IMediaEngine, IQueueTransport, IMediaCapabilitiesTransport, IMediaInformationTransport, IVideoAdjustmentTransport, IVLCPlaylistQueueSmokeAdapter, IVLCMediaCapabilitySmokeAdapter
+[SupportedOSPlatform("linux")]
+internal sealed unsafe partial class VlcCorePlayer : IMediaEngine, IQueueTransport, IMediaCapabilitiesTransport, IMediaInformationTransport, IVideoAdjustmentTransport, IVLCPlaylistQueueSmokeAdapter, IVLCMediaCapabilitySmokeAdapter
 {
+    /// <summary>The plugin's D3D11 composition video output.</summary>
+    public const string DefaultVideoOutput = "vlc_avalonia";
     private const int PlaylistStopped = 0;
     private const int PlaylistRunning = 1;
     private const int PlaylistPaused = 2;
@@ -22,8 +25,8 @@ internal sealed unsafe partial class WindowsVlcCorePlayer : IMediaEngine, IQueue
     private readonly object _gate = new();
     private readonly object _disposeGate = new();
     private readonly MediaEngineStateStore _states = new();
-    private readonly D3D11PluginBridge _playlistBridge;
-    private readonly bool _ownsPlaylistBridge;
+    private readonly VlcControlHost _controlHost;
+    private readonly string _videoOutput;
     private readonly bool _hardwareDecoding;
     private readonly bool _verboseLogging;
     private readonly IReadOnlyList<string> _audioStartupArguments;
@@ -47,16 +50,18 @@ internal sealed unsafe partial class WindowsVlcCorePlayer : IMediaEngine, IQueue
     private nint _lastObservedInputIdentity;
     private int _disposed;
 
-    public WindowsVlcCorePlayer(bool hardwareDecoding = true, bool verboseLogging = false, IReadOnlyList<string>? audioStartupArguments = null)
+    /// <param name="videoOutput">VLC <c>--vout</c> module. Only Windows implements
+    /// <see cref="DefaultVideoOutput"/>; headless engine checks pass <c>dummy</c>.</param>
+    public VlcCorePlayer(bool hardwareDecoding = true, bool verboseLogging = false, IReadOnlyList<string>? audioStartupArguments = null, string videoOutput = DefaultVideoOutput)
     {
-        NativePlaybackSupport.RequireAvailable();
+        NativeEngineSupport.RequireAvailable();
+        ArgumentException.ThrowIfNullOrWhiteSpace(videoOutput);
         _hardwareDecoding = hardwareDecoding;
         _verboseLogging = verboseLogging;
         _audioStartupArguments = audioStartupArguments?.ToArray() ?? [];
-        _playlistBridge = new D3D11PluginBridge(
-            registerFrameCallback: false);
-        _ownsPlaylistBridge = true;
-        _playlistBridge.ConnectPlaylist();
+        _videoOutput = videoOutput;
+        _controlHost = new VlcControlHost();
+        _controlHost.Connect();
         _mediaControls = new VLCMediaCapabilities(TryGetCurrentInputLease);
         _playerCapabilities = new VLCPlayerCapabilities(TryGetCurrentInputLease);
         _videoControls = new VLCVideoPresentation(TryGetCurrentInputLease);
@@ -323,7 +328,7 @@ internal sealed unsafe partial class WindowsVlcCorePlayer : IMediaEngine, IQueue
         var video = _videoControls.Read(out var result);
         return new VLCPlayerSmokeReport(report.Steps.Select(step => step.Phase == VLCPlayerSmokePhase.VideoPresentation
             ? new VLCPlayerSmokeStep(step.Phase, video is null ? VLCPlayerSmokeDisposition.Skipped : VLCPlayerSmokeDisposition.Passed, result,
-                video is null ? "No single active video output." : "Held VLC 3 output exposes aspect/crop/zoom choices and readback; rendering qualification uses --video-smoke.")
+                video is null ? $"No single active video output ({result.Code}, native error {result.NativeError})." : "Held VLC 3 output exposes aspect/crop/zoom choices and readback; rendering qualification uses --video-smoke.")
             : step).ToArray());
     });
 
@@ -616,7 +621,7 @@ internal sealed unsafe partial class WindowsVlcCorePlayer : IMediaEngine, IQueue
             "conic",
             "--intf=vlc_avalonia_control",
             "--no-video-title-show",
-            "--vout=vlc_avalonia",
+            $"--vout={_videoOutput}",
             .. (_verboseLogging ? new[] { "-vvv" } : []),
             _hardwareDecoding ? "--avcodec-hw=any" : "--avcodec-hw=none",
             .. _audioStartupArguments,
@@ -631,7 +636,7 @@ internal sealed unsafe partial class WindowsVlcCorePlayer : IMediaEngine, IQueue
         bool faulted = false;
         try
         {
-            _playlistBridge.ResetPlaylist();
+            _controlHost.Reset();
             for (int index = 0; index < arguments.Length; index++)
                 strings[index] = Marshal.StringToCoTaskMemUTF8(arguments[index]);
 
@@ -653,7 +658,7 @@ internal sealed unsafe partial class WindowsVlcCorePlayer : IMediaEngine, IQueue
                     $"libvlc_InternalInit failed with {result}.");
             initialized = true;
 
-            result = WindowsVlcCoreApi.AddInterface(
+            result = VlcCoreApi.AddInterface(
                 core,
                 "vlc_avalonia_control");
             if (result != 0)
@@ -661,7 +666,7 @@ internal sealed unsafe partial class WindowsVlcCorePlayer : IMediaEngine, IQueue
                     "libvlc_InternalAddIntf could not start interface " +
                     $"vlc_avalonia_control (result {result}).");
 
-            playlist = _playlistBridge.WaitForPlaylist(
+            playlist = _controlHost.WaitForPlaylist(
                 PlaylistTimeout,
                 stop);
 
@@ -715,7 +720,7 @@ internal sealed unsafe partial class WindowsVlcCorePlayer : IMediaEngine, IQueue
             // The interface callback lends the playlist for the interface/core
             // lifetime. It must be forgotten before core cleanup and is never
             // released independently.
-            _playlistBridge.ResetPlaylist();
+            _controlHost.Reset();
             playlist = 0;
             if (initialized)
             {
@@ -895,9 +900,7 @@ internal sealed unsafe partial class WindowsVlcCorePlayer : IMediaEngine, IQueue
             // the bridge alive and leave this instance retryable in that case;
             // a later Dispose can join the thread and complete native cleanup.
             Stop();
-            _playlistBridge.DisconnectPlaylist();
-            if (_ownsPlaylistBridge)
-                _playlistBridge.Dispose();
+            _controlHost.Dispose();
             Volatile.Write(ref _disposed, 1);
         }
     }

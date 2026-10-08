@@ -110,8 +110,6 @@ internal sealed unsafe class D3D11PluginBridge : IDisposable
     }
     private readonly delegate* unmanaged[Cdecl]<nint, nint, void> _setCallback;
     private readonly delegate* unmanaged[Cdecl]<nint, nint, void> _setGPUCallback;
-    private readonly delegate* unmanaged[Cdecl]<nint, nint, void>
-        _setPlaylistCallback;
     private readonly delegate* unmanaged[Cdecl]<uint, int, int, void>
         _setAdapterLuid;
     private readonly delegate* unmanaged[Cdecl]<int, void> _setForceCPUOutput;
@@ -122,17 +120,14 @@ internal sealed unsafe class D3D11PluginBridge : IDisposable
     private readonly delegate* unmanaged[Cdecl]<
         long*, long*, long*, long*, long*, long*, long*, long*, void>
         _getPoolTelemetry;
-    private readonly ManualResetEventSlim _playlistReady = new(false);
     private GCHandle _selfHandle;
     private nint _opaque;
     private Frame? _latestFrame;
     private GPUFrame? _latestGPUFrame;
     private DeviceTelemetry? _latestTelemetry;
     private Subtitle? _latestSubtitle;
-    private nint _playlist;
     private bool _frameConnected;
     private bool _GPUConnected;
-    private bool _playlistConnected;
     private bool _telemetryConnected;
     private bool _subtitleConnected;
     private bool _ownsAdapterSelection;
@@ -158,11 +153,6 @@ internal sealed unsafe class D3D11PluginBridge : IDisposable
             "vlc_avalonia_set_gpu_frame_callback");
         _setGPUCallback =
             (delegate* unmanaged[Cdecl]<nint, nint, void>)GPUSetter;
-        nint playlistSetter = NativeLibrary.GetExport(
-            _library,
-            "vlc_avalonia_set_playlist_callback");
-        _setPlaylistCallback =
-            (delegate* unmanaged[Cdecl]<nint, nint, void>)playlistSetter;
         nint adapterSetter = NativeLibrary.GetExport(
             _library,
             "vlc_avalonia_set_adapter_luid");
@@ -263,74 +253,6 @@ internal sealed unsafe class D3D11PluginBridge : IDisposable
         }
     }
 
-    public void ConnectPlaylist()
-    {
-        lock (_lifecycleGate)
-        {
-            ThrowIfDisposed();
-            if (_playlistConnected)
-                return;
-
-            Volatile.Write(ref _playlist, 0);
-            _playlistReady.Reset();
-            _setPlaylistCallback(
-                (nint)(delegate* unmanaged[Cdecl]<nint, nint, void>)&OnPlaylist,
-                _opaque);
-            _playlistConnected = true;
-        }
-    }
-
-    public void ResetPlaylist()
-    {
-        lock (_lifecycleGate)
-        {
-            ThrowIfDisposed();
-            Volatile.Write(ref _playlist, 0);
-            _playlistReady.Reset();
-        }
-    }
-
-    public nint WaitForPlaylist(
-        TimeSpan timeout,
-        ManualResetEventSlim stop)
-    {
-        ThrowIfDisposed();
-        Stopwatch elapsed = Stopwatch.StartNew();
-        while (elapsed.Elapsed < timeout)
-        {
-            if (stop.IsSet)
-                throw new OperationCanceledException(
-                    "Playback stopped while waiting for the VLC playlist.");
-
-            nint playlist = Volatile.Read(ref _playlist);
-            if (playlist != 0)
-                return playlist;
-
-            TimeSpan remaining = timeout - elapsed.Elapsed;
-            _playlistReady.Wait(
-                remaining < TimeSpan.FromMilliseconds(50)
-                    ? remaining
-                    : TimeSpan.FromMilliseconds(50));
-        }
-
-        throw new TimeoutException(
-            "VLC interface vlc_avalonia_control did not publish the main " +
-            $"playlist within {timeout.TotalSeconds:0.#} seconds.");
-    }
-
-    public void DisconnectPlaylist()
-    {
-        lock (_lifecycleGate)
-        {
-            if (!_playlistConnected)
-                return;
-            _setPlaylistCallback(0, 0);
-            _playlistConnected = false;
-            Volatile.Write(ref _playlist, 0);
-            _playlistReady.Reset();
-        }
-    }
-
     public void EnableGPUFrames()
     {
         lock (_lifecycleGate)
@@ -411,26 +333,6 @@ internal sealed unsafe class D3D11PluginBridge : IDisposable
             opaquePicturesAllocated,
             opaquePicturesReleased,
             cpuUploads);
-    }
-
-    [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
-    private static void OnPlaylist(nint opaque, nint playlist)
-    {
-        try
-        {
-            D3D11PluginBridge? bridge = GetBridge(opaque);
-            if (bridge is null || bridge.IsDisposed)
-                return;
-
-            Volatile.Write(ref bridge._playlist, playlist);
-            if (playlist == 0)
-                bridge._playlistReady.Reset();
-            else
-                bridge._playlistReady.Set();
-        }
-        catch
-        {
-        }
     }
 
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
@@ -622,11 +524,6 @@ internal sealed unsafe class D3D11PluginBridge : IDisposable
                 return;
             Volatile.Write(ref _disposed, 1);
 
-            if (_playlistConnected)
-            {
-                _setPlaylistCallback(0, 0);
-                _playlistConnected = false;
-            }
             if (_GPUConnected)
             {
                 _setGPUCallback(0, 0);
@@ -648,7 +545,6 @@ internal sealed unsafe class D3D11PluginBridge : IDisposable
                 _frameConnected = false;
             }
 
-            Volatile.Write(ref _playlist, 0);
             Interlocked.Exchange(ref _latestSubtitle, null);
             Interlocked.Exchange(ref _latestFrame, null);
             Interlocked.Exchange(ref _latestGPUFrame, null);
@@ -663,7 +559,6 @@ internal sealed unsafe class D3D11PluginBridge : IDisposable
                 _setForceCPUOutput(0);
                 _ownsCPUOutputSelection = false;
             }
-            _playlistReady.Dispose();
 
             // The native setters return only after in-flight callbacks have
             // completed, so callback userdata can now be released safely.

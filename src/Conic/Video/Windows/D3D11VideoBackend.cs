@@ -65,7 +65,7 @@ internal sealed class D3D11VideoBackend : IVideoBackend
         ObjectDisposedException.ThrowIf(_disposed, this);
         if (!NativePlaybackSupport.IsAvailable)
             throw new PlatformNotSupportedException(NativePlaybackSupport.CurrentUnavailableReason);
-        return new WindowsVlcCorePlayer(audioStartupArguments: audioStartupArguments);
+        return new VlcCorePlayer(audioStartupArguments: audioStartupArguments);
     }
 
     public async Task InitializeAsync()

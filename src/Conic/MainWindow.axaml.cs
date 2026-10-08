@@ -63,6 +63,7 @@ public partial class MainWindow : Window
         HomeScreen.MoreRequested += (_, _) => OnOpenOptions(null, new RoutedEventArgs());
         _presentation.PropertyChanged += OnPresentationPropertyChanged;
         InitializePictureInPicture();
+        InitializeMacMenu();
         UpdatePlaybackRateSelection();
         UpdateHistorySettingsControls();
         _settings.Changed += (_, settings) => ApplyLiveSettings(settings);

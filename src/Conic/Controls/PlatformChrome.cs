@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Platform;
 using Conic.Interop.MacOS;
 
 namespace Conic.Controls;
@@ -23,10 +24,20 @@ internal static class PlatformChrome
     /// </summary>
     public const double SystemCaptionButtonsWidth = 92;
 
-    /// <summary>Keeps the system caption buttons on macOS.</summary>
+    /// <summary>Keeps the system caption buttons and uses the macOS app icon on macOS.</summary>
     public static void Apply(Window window)
     {
-        if (UsesSystemCaptionButtons) window.WindowDecorations = WindowDecorations.Full;
+        if (!UsesSystemCaptionButtons) return;
+        window.WindowDecorations = WindowDecorations.Full;
+        // The bundle's Dock icon comes from AppIcon.icns; run from source,
+        // the Dock needs it set explicitly. Both are the rounded-square icon.
+        if (!AppContext.BaseDirectory.Contains(".app/Contents/", StringComparison.Ordinal))
+        {
+            using Stream icon = AssetLoader.Open(new Uri("avares://Conic/Assets/conic-macos.png"));
+            using MemoryStream bytes = new();
+            icon.CopyTo(bytes);
+            MacApplicationIcon.Set(bytes.ToArray());
+        }
     }
 
     /// <summary>

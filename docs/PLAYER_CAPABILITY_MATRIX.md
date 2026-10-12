@@ -11,8 +11,7 @@ and commit references below describe their respective historical checks.
 Historical UI-08 product qualification at `6a5fc39` (feature commit
 `1c3bebf`); pinned sibling VLCLR
 revision `e90b786de74c6ed440dea8bf65329907739b0c60`.
-This is the product contract for the work packages in
-[UI_IMPLEMENTATION_PLAN.md](UI_IMPLEMENTATION_PLAN.md). A `Missing` row is a
+This is the product contract for the UI work packages. A `Missing` row is a
 reason to keep its control absent or disabled with an explanatory capability
 state; it is never permission to ship a placeholder.
 

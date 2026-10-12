@@ -8,3 +8,11 @@ obj/
 *.nupkg
 *.snupkg
 artifacts/
+
+# Working plans stay local.
+docs/IMPLEMENTATION_PLAN.md
+docs/UI_IMPLEMENTATION_PLAN.md
+docs/VLC4_SCREEN_BY_SCREEN_PLAN.md
+docs/AVALONIA_PORT_CHALLENGE_PLAN.md
+docs/LINUX_HOST_TODO.md
+docs/MACOS_HOST_TODO.md

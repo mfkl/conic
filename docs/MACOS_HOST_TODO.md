@@ -68,8 +68,10 @@ Clips: CI's `testsrc2` H.264/AAC MKV and a 720p H.264/AAC MP4.
   caption row (see section 6); the player's "Ready to play" state showed
   through Home's translucent panel; `openMedia` button labels were not
   centered.
-- VLC's own translations leak into the Video drawer: on a French system the
-  default aspect ratio and crop read "Prédéfini(e)".
+- VLC's own translations leaked into the Video drawer: on a French system the
+  default aspect ratio and crop read "Prédéfini(e)". Fixed October 12: the app
+  is English only, so `UnixVlcRuntime` sets `LANGUAGE=en` for VLC's gettext,
+  and `--video-smoke` checks the default aspect reads "Default".
 
 Later the same day: a real click on the player's back arrow did nothing,
 because the enlarged title bar container spanned the whole window; it now
@@ -78,9 +80,9 @@ auto-hiding traffic lights were added (section 6).
 
 Next on this Mac: the hand checks in section 6 (traffic light clicks, drag,
 live resize, green-button fullscreen, Cmd shortcuts), the real-media list in
-section 4, packaging (section 5) and the ABI check against a VLC checkout.
-CI should also run `dotnet test` on macOS, which would have caught the
-shortcut tests.
+section 4 and packaging (section 5). The ABI check passed on October 12.
+(Correction: CI already runs `dotnet test` on `macos-15` in the Core and App
+jobs.)
 
 ## 1. Record the machine
 
@@ -109,7 +111,8 @@ An installed `/Applications/VLC.app` (3.0.x) is used when no other runtime is fo
   runners (see "PiP window size" below); check whether it does here.
   Look at `artifacts/macos/screen-video-gpu-*.png`: the video must be visible,
   upright, with correct colors (red/blue not swapped), filling the expected area.
-- [ ] `./eng/verify-native-abi.ps1 -VlcSourceRoot <vlc checkout at the pinned commit>` passes on this machine.
+- [x] `./eng/verify-native-abi.ps1 -VlcSourceRoot <vlc checkout at the pinned commit>` passes on this machine
+  (October 12, arm64, Apple clang 16; header layouts only, as on CI).
 
 ## 4. Play real media
 
@@ -179,7 +182,10 @@ xattr -dr com.apple.quarantine "VLC Avalonia.app"
   dark rounded square in Apple's icon grid: `eng/macos/AppIcon.svg`, rendered
   with AppKit into `eng/macos/AppIcon.icns` (bundle) and
   `Assets/vlc-avalonia-macos.png` (Dock icon when run from source).
-- **Distribution:** ad hoc signing is fine for now; no notarization.
+- **Distribution:** out of scope for the MVP. The bundle is signed ad hoc and
+  not notarized, so testers clear the quarantine flag (section 5). A Developer
+  ID certificate, hardened runtime and `notarytool` step are left for after
+  the MVP and are not tracked as a task here.
 - **Minimum macOS version.** `Info.plist` sets none; .NET 10 and Avalonia 12 decide.
 
 `pwsh ./eng/test-macos.ps1 -Window` includes `--caption-click-smoke`: it
@@ -210,7 +216,7 @@ To check on the Mac:
   the status line). Check it on a Mac with two GPUs.
 - Without IOSurface import the app falls back to CPU frames for the whole
   playback session; it does not switch back.
-- **PiP window size (open bug).** Entering PiP sometimes leaves the window
+- **PiP window size (mitigated, not reproduced on a real Mac).** Entering PiP sometimes leaves the window
   with an absurd size, intermittently and on both runners:
   - arm64: the first PiP entry aborted the app. AppKit logged `CAMetalLayer
     ignoring invalid setDrawableSize width=100480.000000 height=1044.000000`,
@@ -229,3 +235,11 @@ To check on the Mac:
   real Mac (enter PiP from a normal and from a fullscreen window), then decide
   whether to defer the size and position until the window reports its new
   state, or to report it to Avalonia.
+
+  October 12, M1 Pro: 30 `--pip-smoke` runs passed, now also checking the
+  window is 480x270 after entering from fullscreen and after the rapid
+  transitions. Not reproduced, so mitigated rather than root-caused: in PiP
+  the window's `MaxWidth`/`MaxHeight` are the screen's working area, so AppKit
+  clamps a bad frame, and a size beyond the screen puts the window back to
+  480x270 (logged as `[pip] window left at ...`). Watch the Intel CI runner
+  for that line; if it appears, report the race to Avalonia.

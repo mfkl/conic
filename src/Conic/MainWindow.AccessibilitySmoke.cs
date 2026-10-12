@@ -127,7 +127,7 @@ public partial class MainWindow
                             Require(rect.Left >= viewport.Left - 1 && rect.Right <= viewport.Right + 1, $"{page.Name} editor fits at scale={scale}, font={font}: {editor.GetType().Name}");
                         }
                         Audit(SettingsPanel);
-                        if (page.Name == "Hotkeys") Capture("hotkeys", scale, font);
+                        if (page.Name == "Controls") Capture("hotkeys", scale, font);
                     }
                     CloseSettings();
                 }

@@ -28,7 +28,8 @@ public partial class MainWindow
                 while (_presentation.HomeItems.Count == 0 && DateTime.UtcNow < deadline) await Task.Delay(50);
                 _presentation.ShowHomeCommand.Execute(null);
                 Require(_presentation.HomeItems.Count > 0, "opening media records a Home card");
-                bool HasArtwork() => HomeScreen.GetVisualDescendants().OfType<MediaThumbnail>().Any(t => t.IsEffectivelyVisible && t.HasThumbnail);
+                // Card artwork only: the mini player keeps showing the playing fixture's thumbnail.
+                bool HasArtwork() => HomeScreen.GetVisualDescendants().OfType<MediaThumbnail>().Any(t => t.IsEffectivelyVisible && t.HasThumbnail && t.Name != "MiniPlayerThumbnail");
                 while (!HasArtwork() && DateTime.UtcNow < deadline) await Task.Delay(100);
                 Require(HasArtwork(), "Home renders a real local video thumbnail");
                 CaptureHome("home-thumbnails-wide");

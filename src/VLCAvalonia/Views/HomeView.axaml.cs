@@ -16,6 +16,11 @@ public partial class HomeView : UserControl
     private const double RailWidth = 50;
     /// <summary>Rows of list items each Home section shows (grid sections show one row of cards).</summary>
     private const int ListSectionRows = 3;
+    /// <summary>The mini player's width in the design (970:3091) and in its one-row compact form.</summary>
+    private const double MiniPlayerWidth = 391;
+    private const double CompactMiniPlayerWidth = 420;
+    /// <summary>Below this height the mini player drops its preview, so it never covers most of the content.</summary>
+    private const double CompactMiniPlayerHeight = 540;
 
     private Window? _window;
     // The user's choice from the title bar toggle; kept for this session only.
@@ -31,6 +36,8 @@ public partial class HomeView : UserControl
         SizeChanged += (_, _) => ApplySidebarLayout();
         AttachedToVisualTree += (_, _) => _window = TopLevel.GetTopLevel(this) as Window;
         ContentPanel.SizeChanged += (_, _) => UpdateSectionCardLimit();
+        MiniPlayer.SizeChanged += (_, _) => ReserveMiniPlayerSpace();
+        MiniPlayer.PropertyChanged += (_, e) => { if (e.Property == IsVisibleProperty) ReserveMiniPlayerSpace(); };
         DataContextChanged += (_, _) =>
         {
             if (_viewModel is not null) _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
@@ -63,10 +70,27 @@ public partial class HomeView : UserControl
         bool rail = compact || _sidebarCollapsed;
         Classes.Set("compact", compact);
         Classes.Set("rail", rail);
-        HomeColumns.ColumnDefinitions[0].Width = new GridLength(rail ? RailWidth : SidebarWidth);
+        double sidebar = rail ? RailWidth : SidebarWidth;
+        HomeColumns.ColumnDefinitions[0].Width = new GridLength(sidebar);
+        bool compactPlayer = compact || Bounds.Height < CompactMiniPlayerHeight;
+        MiniPlayer.Classes.Set("compact", compactPlayer);
+        double room = Bounds.Width - sidebar - (compactPlayer ? 16 : 24);
+        MiniPlayer.Width = Math.Max(0, Math.Min(compactPlayer ? CompactMiniPlayerWidth : MiniPlayerWidth, room));
         string label = _sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar";
         ToolTip.SetTip(SidebarToggle, label);
         AutomationProperties.SetName(SidebarToggle, label);
+    }
+
+    // The mini player floats over the end of the content; the scrolled
+    // content ends its height lower, so nothing stays hidden under it.
+    private void ReserveMiniPlayerSpace() =>
+        HomeScrollContent.Margin = new Thickness(0, 0, 0, MiniPlayer.IsVisible ? MiniPlayer.Bounds.Height : 0);
+
+    private void OnMiniPlayerPreviewTapped(object? sender, TappedEventArgs e)
+    {
+        if (DataContext is PlayerPresentationViewModel viewModel && viewModel.ShowPlayerCommand.CanExecute(null))
+            viewModel.ShowPlayerCommand.Execute(null);
+        e.Handled = true;
     }
 
     private void OnToggleSidebar(object? sender, RoutedEventArgs e)

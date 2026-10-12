@@ -249,6 +249,201 @@
         <Style Selector=":is(UserControl).list Button.cardAction:pointerover /template/ ContentPresenter#PART_ContentPresenter">
             <Setter Property="Background" Value="{DynamicResource Vlc.Overlay.Hover}" />
         </Style>
+        <!-- Mini player card (design 970:3091): BG/A3 with the design's
+             "bg blur + shadow" effect approximated by its drop shadow. There
+             is no backdrop blur, so the surface is opaque (at the design's
+             0.95 the cards behind showed through). Radius 8, padding 10.
+             The surface and shadow sit on a childless Border behind the
+             content: offscreen captures (RenderTargetBitmap, smoke reviews)
+             misplace the children of a shadowed Border above 100 % scale. HomeView.axaml.cs sets the
+             width (391 as in the design, less when the content is narrower)
+             and the .compact class. -->
+        <Style Selector="Panel.miniPlayer">
+            <Setter Property="HorizontalAlignment" Value="Right" />
+            <Setter Property="VerticalAlignment" Value="Bottom" />
+            <Setter Property="Margin" Value="12" />
+        </Style>
+        <Style Selector="Border.miniSurface">
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Background" Value="{DynamicResource Vlc.Bg.A3}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource Vlc.Divider.Dim}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="BoxShadow" Value="0 8 15 0 #75000000" />
+        </Style>
+        <Style Selector="Grid#MiniPlayerLayout">
+            <Setter Property="Margin" Value="11" />
+        </Style>
+        <Style Selector="Border.miniArtwork">
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="ClipToBounds" Value="True" />
+            <Setter Property="Background" Value="{DynamicResource PlayerCardArtwork}" />
+        </Style>
+        <Style Selector="Border.miniScrim">
+            <Setter Property="Background" Value="{DynamicResource Vlc.Bg.B2Transparent}" />
+            <Setter Property="Opacity" Value="0" />
+        </Style>
+        <!-- Cells of the card's grid (columns Auto,*,Auto,Auto,Auto; rows
+             preview, progress, info) are set here, not on the elements, so
+             the compact styles below can move them. -->
+        <Style Selector="StackPanel#MiniPlayerTransport">
+            <Setter Property="Grid.ColumnSpan" Value="5" />
+        </Style>
+        <Style Selector="Button#MiniPlayerPipButton">
+            <Setter Property="Grid.Column" Value="4" />
+        </Style>
+        <Style Selector="StackPanel#MiniPlayerInfo">
+            <Setter Property="Grid.Row" Value="2" />
+            <Setter Property="Grid.ColumnSpan" Value="4" />
+        </Style>
+        <Style Selector="StackPanel#MiniPlayerActions">
+            <Setter Property="Grid.Row" Value="2" />
+            <Setter Property="Grid.Column" Value="4" />
+        </Style>
+        <Style Selector="StackPanel.miniTransport">
+            <Setter Property="Orientation" Value="Horizontal" />
+            <Setter Property="Spacing" Value="16" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Button.miniCorner">
+            <Setter Property="VerticalAlignment" Value="Top" />
+            <Setter Property="Margin" Value="6" />
+        </Style>
+        <!-- Over the preview the controls are light on a dark scrim; they
+             appear with the scrim on hover, keyboard focus or pause (opacity
+             only, so Tab still reaches them). -->
+        <Style Selector="Button.miniControl">
+            <Setter Property="Foreground" Value="{DynamicResource Vlc.Fg.1}" />
+        </Style>
+        <Style Selector="Button.miniPlay">
+            <Setter Property="Width" Value="40" />
+            <Setter Property="Height" Value="40" />
+            <Setter Property="Padding" Value="4" />
+        </Style>
+        <Style Selector="Button.miniPlay controls|VlcIcon">
+            <Setter Property="Width" Value="32" />
+            <Setter Property="Height" Value="32" />
+        </Style>
+        <Style Selector=":is(Control).miniOverlay">
+            <Setter Property="Opacity" Value="0" />
+        </Style>
+        <Style Selector="Panel.miniPlayer:pointerover :is(Control).miniOverlay, Panel.miniPlayer:focus-within :is(Control).miniOverlay, Panel.miniPlayer:not(.playing) :is(Control).miniOverlay">
+            <Setter Property="Opacity" Value="1" />
+        </Style>
+        <Style Selector="Panel.miniPlayer:pointerover Border.miniScrim, Panel.miniPlayer:focus-within Border.miniScrim, Panel.miniPlayer:not(.playing) Border.miniScrim">
+            <Setter Property="Opacity" Value="0.85" />
+        </Style>
+        <Style Selector="ProgressBar.miniProgress">
+            <Setter Property="Margin" Value="0,8,0,0" />
+            <Setter Property="MinWidth" Value="0" />
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="Height" Value="6" />
+            <Setter Property="CornerRadius" Value="3" />
+            <Setter Property="Background" Value="{DynamicResource Vlc.Bg.B2}" />
+            <Setter Property="Minimum" Value="0" />
+            <Setter Property="Maximum" Value="1" />
+        </Style>
+        <Style Selector="StackPanel.miniInfo">
+            <Setter Property="Margin" Value="0,10,8,0" />
+            <Setter Property="Spacing" Value="4" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="TextBlock.miniTitle">
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+            <Setter Property="Foreground" Value="{DynamicResource PlayerSecondaryText}" />
+        </Style>
+        <Style Selector="Panel.miniPlayer:pointerover TextBlock.miniTitle">
+            <Setter Property="Foreground" Value="{DynamicResource Vlc.Fg.1}" />
+        </Style>
+        <Style Selector="StackPanel.miniFolder">
+            <Setter Property="Orientation" Value="Horizontal" />
+            <Setter Property="Spacing" Value="4" />
+        </Style>
+        <Style Selector="StackPanel.miniFolder controls|VlcIcon">
+            <Setter Property="Foreground" Value="{DynamicResource Vlc.Fg.A3}" />
+        </Style>
+        <Style Selector="StackPanel.miniFolder TextBlock">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+            <Setter Property="Foreground" Value="{DynamicResource Vlc.Fg.A3}" />
+        </Style>
+        <Style Selector="StackPanel.miniActions">
+            <Setter Property="Orientation" Value="Horizontal" />
+            <Setter Property="Spacing" Value="4" />
+            <Setter Property="VerticalAlignment" Value="Bottom" />
+        </Style>
+        <!-- Compact card (narrow or short windows): one row, no preview:
+             transport, title and folder, stop, picture in picture, return,
+             queue; the progress line below. Controls stay visible. -->
+        <Style Selector="Panel.miniPlayer.compact">
+            <Setter Property="Margin" Value="8" />
+        </Style>
+        <Style Selector="Panel.miniPlayer.compact Grid#MiniPlayerLayout">
+            <Setter Property="Margin" Value="7,7,9,9" />
+        </Style>
+        <Style Selector="Panel.miniPlayer.compact controls|AspectRatioDecorator#MiniPlayerPreview">
+            <Setter Property="IsVisible" Value="False" />
+        </Style>
+        <Style Selector="Panel.miniPlayer.compact :is(Control).miniOverlay">
+            <Setter Property="Opacity" Value="1" />
+        </Style>
+        <Style Selector="Panel.miniPlayer.compact StackPanel#MiniPlayerTransport">
+            <Setter Property="Grid.ColumnSpan" Value="1" />
+            <Setter Property="Spacing" Value="0" />
+            <Setter Property="HorizontalAlignment" Value="Left" />
+        </Style>
+        <Style Selector="Panel.miniPlayer.compact Button.miniControl">
+            <Setter Property="Foreground" Value="{DynamicResource PlayerSecondaryText}" />
+        </Style>
+        <Style Selector="Panel.miniPlayer.compact Button.miniPlay">
+            <Setter Property="Width" Value="30" />
+            <Setter Property="Height" Value="32" />
+            <Setter Property="Padding" Value="3,4" />
+            <Setter Property="Foreground" Value="{DynamicResource Vlc.Fg.1}" />
+        </Style>
+        <Style Selector="Panel.miniPlayer.compact Button.miniPlay controls|VlcIcon">
+            <Setter Property="Width" Value="24" />
+            <Setter Property="Height" Value="24" />
+        </Style>
+        <Style Selector="Panel.miniPlayer.compact Button.miniCorner">
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Margin" Value="0" />
+        </Style>
+        <Style Selector="Panel.miniPlayer.compact Button#HomeStopButton">
+            <Setter Property="Grid.Column" Value="2" />
+        </Style>
+        <Style Selector="Panel.miniPlayer.compact Button#MiniPlayerPipButton">
+            <Setter Property="Grid.Column" Value="3" />
+        </Style>
+        <Style Selector="Panel.miniPlayer.compact StackPanel#MiniPlayerInfo">
+            <Setter Property="Grid.Row" Value="0" />
+            <Setter Property="Grid.Column" Value="1" />
+            <Setter Property="Grid.ColumnSpan" Value="1" />
+            <Setter Property="Margin" Value="6,0" />
+            <Setter Property="Spacing" Value="0" />
+        </Style>
+        <Style Selector="Panel.miniPlayer.compact TextBlock.miniTitle">
+            <Setter Property="FontSize" Value="13" />
+        </Style>
+        <Style Selector="Panel.miniPlayer.compact StackPanel.miniFolder controls|VlcIcon">
+            <Setter Property="Width" Value="16" />
+            <Setter Property="Height" Value="16" />
+        </Style>
+        <Style Selector="Panel.miniPlayer.compact StackPanel.miniFolder TextBlock">
+            <Setter Property="FontSize" Value="11" />
+        </Style>
+        <Style Selector="Panel.miniPlayer.compact StackPanel#MiniPlayerActions">
+            <Setter Property="Grid.Row" Value="0" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Spacing" Value="0" />
+        </Style>
+        <Style Selector="Panel.miniPlayer.compact ProgressBar.miniProgress">
+            <Setter Property="Margin" Value="2,6,0,0" />
+            <Setter Property="Height" Value="3" />
+            <Setter Property="CornerRadius" Value="2" />
+        </Style>
     </UserControl.Styles>
     <UserControl.Resources>
         <!-- One template for grid and list; the .list styles above rearrange it,
@@ -334,7 +529,7 @@
             </Panel>
         </DataTemplate>
     </UserControl.Resources>
-    <Grid RowDefinitions="40,*,Auto">
+    <Grid RowDefinitions="40,*">
         <!-- The design's title bar; it doubles as the window caption on Home. -->
         <Border x:Name="HomeHeader"
                 Classes="titleBar"
@@ -591,7 +786,8 @@
                     <ScrollViewer Grid.Row="1"
                                   IsVisible="{Binding HomeHasItems}"
                                   HorizontalScrollBarVisibility="Disabled">
-                        <Panel>
+                        <!-- Its bottom margin is the mini player's height while that shows, so the last row scrolls clear of it. -->
+                        <Panel x:Name="HomeScrollContent">
                             <!-- Home: one row per section (history-only library, D1);
                                  empty sections are hidden. -->
                             <StackPanel x:Name="HomeSections" IsVisible="{Binding ShowHomeSections}">
@@ -652,54 +848,109 @@
                     </ScrollViewer>
                 </Grid>
             </Border>
+            <!-- Floating mini player (design 970:3091), over the end of the
+                 content while something plays or is paused. The preview is
+                 the media's thumbnail (never the video surface); clicking it
+                 returns to the player. Transport, stop and picture in picture
+                 overlay the preview on hover or keyboard focus, and stay shown
+                 while paused. The .compact card (HomeView.axaml.cs: narrow or
+                 short windows) drops the preview and lines everything up in
+                 one row. Tab order: previous, play, next, stop, picture in
+                 picture, return to player, queue. -->
+            <Panel x:Name="MiniPlayer"
+                   Grid.Column="1"
+                   Classes="miniPlayer"
+                   Classes.playing="{Binding IsPlaying}"
+                   IsVisible="{Binding ShowMiniPlayer}">
+                <Border Classes="miniSurface" />
+                <Grid x:Name="MiniPlayerLayout" ColumnDefinitions="Auto,*,Auto,Auto,Auto" RowDefinitions="Auto,Auto,Auto">
+                    <controls:AspectRatioDecorator x:Name="MiniPlayerPreview" Grid.ColumnSpan="5">
+                        <Border Classes="miniArtwork"
+                                Cursor="Hand"
+                                Tapped="OnMiniPlayerPreviewTapped"
+                                ToolTip.Tip="Return to player">
+                            <Panel>
+                                <controls:MediaThumbnail x:Name="MiniPlayerThumbnail"
+                                                         Source="{Binding NowPlayingSource}" />
+                                <Border Classes="miniScrim" />
+                            </Panel>
+                        </Border>
+                    </controls:AspectRatioDecorator>
+                    <StackPanel x:Name="MiniPlayerTransport"
+                                Classes="miniOverlay miniTransport">
+                        <Button Classes="icon miniControl"
+                                IsVisible="{Binding HasQueueNavigation}"
+                                Command="{Binding PreviousCommand}"
+                                ToolTip.Tip="Previous queue item"
+                                AutomationProperties.Name="Previous queue item">
+                            <controls:VlcIcon Width="24" Height="24" Icon="{StaticResource Icon.Previous}" />
+                        </Button>
+                        <Button Classes="icon miniControl miniPlay"
+                                Command="{Binding TogglePauseCommand}"
+                                ToolTip.Tip="{Binding PlayPauseToolTip}"
+                                AutomationProperties.Name="{Binding PlayPauseName}">
+                            <Panel>
+                                <controls:VlcIcon IsVisible="{Binding !IsPlaying}" Icon="{StaticResource Icon.Play}" />
+                                <controls:VlcIcon IsVisible="{Binding IsPlaying}" Icon="{StaticResource Icon.Pause}" />
+                            </Panel>
+                        </Button>
+                        <Button Classes="icon miniControl"
+                                IsVisible="{Binding HasQueueNavigation}"
+                                Command="{Binding NextCommand}"
+                                ToolTip.Tip="Next queue item"
+                                AutomationProperties.Name="Next queue item">
+                            <controls:VlcIcon Width="24" Height="24" Icon="{StaticResource Icon.Next}" />
+                        </Button>
+                    </StackPanel>
+                    <Button x:Name="HomeStopButton"
+                            Classes="icon miniControl miniOverlay miniCorner"
+                            HorizontalAlignment="Left"
+                            Command="{Binding StopCommand}"
+                            ToolTip.Tip="Stop playback"
+                            AutomationProperties.Name="Stop playback">
+                        <controls:VlcIcon Width="24" Height="24" Icon="{StaticResource Icon.Stop}" />
+                    </Button>
+                    <Button x:Name="MiniPlayerPipButton"
+                            Classes="icon miniControl miniOverlay miniCorner"
+                            HorizontalAlignment="Right"
+                            Command="{Binding TogglePictureInPictureCommand}"
+                            ToolTip.Tip="Picture in picture"
+                            AutomationProperties.Name="Picture in picture">
+                        <controls:VlcIcon Width="24" Height="24" Icon="{StaticResource Icon.Pip}" />
+                    </Button>
+                    <ProgressBar x:Name="MiniPlayerProgress"
+                                 Grid.Row="1"
+                                 Grid.ColumnSpan="5"
+                                 Classes="miniProgress"
+                                 Value="{Binding Position}" />
+                    <StackPanel x:Name="MiniPlayerInfo"
+                                Classes="miniInfo">
+                        <TextBlock Classes="miniTitle"
+                                   Text="{Binding MediaTitle}"
+                                   ToolTip.Tip="{Binding MediaTitle}" />
+                        <StackPanel Classes="miniFolder" IsVisible="{Binding HasNowPlayingFolder}">
+                            <controls:VlcIcon Width="20" Height="20" Icon="{StaticResource Icon.Folder}" />
+                            <TextBlock Text="{Binding NowPlayingFolder}" />
+                        </StackPanel>
+                    </StackPanel>
+                    <StackPanel x:Name="MiniPlayerActions"
+                                Classes="miniActions">
+                        <Button Classes="icon"
+                                Command="{Binding ShowPlayerCommand}"
+                                ToolTip.Tip="Return to player"
+                                AutomationProperties.Name="Return to player">
+                            <controls:VlcIcon Width="24" Height="24" Icon="{StaticResource Icon.Open}" />
+                        </Button>
+                        <Button Classes="icon"
+                                Classes.active="{Binding IsQueuePanelOpen}"
+                                Command="{Binding ToggleQueueCommand}"
+                                ToolTip.Tip="Playback queue (Ctrl+J)"
+                                AutomationProperties.Name="Open playback queue">
+                            <controls:VlcIcon Width="24" Height="24" Icon="{StaticResource Icon.Lists}" />
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Panel>
         </Grid>
-        <Border Grid.Row="2"
-                IsVisible="{Binding ShowMiniPlayer}"
-                Background="{DynamicResource PlayerWell}"
-                BorderBrush="{DynamicResource PlayerBorder}"
-                BorderThickness="0,1,0,0"
-                Padding="12,8">
-            <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto" RowDefinitions="Auto,4" RowSpacing="8">
-                <Button Classes="menuAction" HorizontalContentAlignment="Stretch" Command="{Binding ShowPlayerCommand}">
-                    <TextBlock Text="{Binding MediaTitle}" TextTrimming="CharacterEllipsis" />
-                </Button>
-                <Button Grid.Column="1"
-                        Classes="playbackAction"
-                        Content="{Binding PlayPauseName}"
-                        Command="{Binding TogglePauseCommand}" />
-                <Button x:Name="HomeStopButton"
-                        Grid.Column="2"
-                        Classes="playbackAction"
-                        Command="{Binding StopCommand}"
-                        ToolTip.Tip="Stop playback"
-                        AutomationProperties.Name="Stop playback">
-                    <controls:VlcIcon Width="24" Height="24" Margin="-5"
-                                      Icon="{StaticResource Icon.Stop}" />
-                </Button>
-                <Button Grid.Column="3"
-                        Classes="playbackAction"
-                        Command="{Binding ShowPlayerCommand}"
-                        ToolTip.Tip="Return to player"
-                        AutomationProperties.Name="Return to player">
-                    <controls:VlcIcon Width="24" Height="24" Margin="-5"
-                                      Icon="{StaticResource Icon.Open}" />
-                </Button>
-                <Button Grid.Column="4"
-                        Classes="playbackAction"
-                        Command="{Binding TogglePictureInPictureCommand}"
-                        ToolTip.Tip="Picture in picture"
-                        AutomationProperties.Name="Picture in picture">
-                    <controls:VlcIcon Width="24" Height="24" Margin="-3"
-                                      Icon="{StaticResource Icon.Pip}" />
-                </Button>
-                <ProgressBar Grid.Row="1"
-                             Grid.ColumnSpan="5"
-                             Minimum="0"
-                             Maximum="1"
-                             Value="{Binding Position}"
-                             Foreground="{DynamicResource PlayerAccent}"
-                             Height="3" />
-            </Grid>
-        </Border>
     </Grid>
 </UserControl>

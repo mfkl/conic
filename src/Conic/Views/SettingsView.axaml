@@ -44,7 +44,7 @@
         </Style>
     </UserControl.Styles>
     <Grid RowDefinitions="52,*">
-        <Grid ColumnDefinitions="Auto,Auto,*,Auto" Margin="12,0">
+        <Grid x:Name="SettingsHeader" ColumnDefinitions="Auto,Auto,*,Auto" Margin="12,0">
             <Button Classes="iconChrome" Click="OnSettingsClose" AutomationProperties.Name="Close settings" ToolTip.Tip="Return (Escape)">
                 <controls:VlcIcon Width="24" Height="24" Margin="-2"
                                   Icon="{StaticResource Icon.ArrowLeft}" />

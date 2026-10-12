@@ -3,7 +3,9 @@
              xmlns:controls="clr-namespace:VLCAvalonia.Controls"
              x:Class="VLCAvalonia.Controls.WindowCaptionButtons">
     <!-- The design's 36x24 caption buttons, drawn in-app so the caption
-         matches the dark chrome instead of the light system one. -->
+         matches the dark chrome instead of the light system one. The design
+         puts fullscreen between maximize and close; a window that offers it
+         passes that button as the Accessory. -->
     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
         <Button x:Name="MinimizeButton" Classes="caption" Click="OnMinimize" AutomationProperties.Name="Minimize" ToolTip.Tip="Minimize">
             <controls:VlcIcon Width="24" Height="24"
@@ -14,6 +16,7 @@
                               x:Name="MaximizeIcon"
                               Icon="{StaticResource Icon.Maximize}" />
         </Button>
+        <ContentPresenter x:Name="AccessoryPresenter" VerticalAlignment="Center" />
         <Button x:Name="CloseButton" Classes="caption close" Click="OnClose" AutomationProperties.Name="Close" ToolTip.Tip="Close">
             <controls:VlcIcon Width="24" Height="24"
                               Icon="{StaticResource Icon.Close}" />

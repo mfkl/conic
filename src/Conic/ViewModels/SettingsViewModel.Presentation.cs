@@ -29,10 +29,10 @@ internal sealed partial class SettingsViewModel
 
     private void InitializeNavigationCommands()
     {
-        OpenAudioControlsCommand = Route(PlayerCommandId.ToggleMediaControls);
-        OpenSubtitleControlsCommand = Route(PlayerCommandId.ToggleMediaControls);
+        OpenAudioControlsCommand = Route(PlayerCommandId.ToggleMediaControls, "Audio");
+        OpenSubtitleControlsCommand = Route(PlayerCommandId.ToggleMediaControls, "Subtitles");
         OpenMediaInformationCommand = Route(PlayerCommandId.MediaInformation);
     }
 
-    private ICommand Route(PlayerCommandId command) => new RegistryCommand(_registry ?? new PlayerCommandRegistry(), command);
+    private ICommand Route(PlayerCommandId command, object? tab = null) => new RegistryCommand(_registry ?? new PlayerCommandRegistry(), command, tab);
 }

@@ -61,7 +61,7 @@ public partial class MainWindow
                     _presentation.TogglePictureInPictureCommand.Execute(null);
                     _presentation.DrawerTab = "Queue"; _presentation.IsQueueOpen = true;
                     await Task.Delay(150);
-                    var queueActions = QueueDrawer.GetVisualDescendants().OfType<Button>().Where(b => b.DataContext is QueueItem && b.Content is string).ToArray();
+                    var queueActions = QueueDrawer.GetVisualDescendants().OfType<Button>().Where(b => b.DataContext is QueueItem).ToArray();
                     Require(queueActions.Length >= 3 && queueActions.All(b => ControlAutomationPeer.CreatePeerForElement(b)!.GetName().Contains(((QueueItem)b.DataContext!).Name, StringComparison.Ordinal)), "queue action names identify their item");
                     _presentation.ShowHomeCommand.Execute(null);
                     await Task.Delay(150);
@@ -111,7 +111,7 @@ public partial class MainWindow
                     Audit(PlayerDock); Audit(TopChrome); Capture("playback", scale, font);
                     _presentation.DrawerTab = "Audio"; _presentation.IsQueueOpen = true;
                     await Task.Delay(100);
-                    Require(DrawerTabs.Children.OfType<Button>().All(IsContained), "drawer tabs fit with larger text");
+                    Require(DrawerTabs.Children.OfType<Button>().Where(tab => tab.IsVisible).All(IsContained), "drawer tabs fit with larger text");
                     Audit(QueueDrawer); Capture("drawer", scale, font);
                     _presentation.IsQueueOpen = false;
                     OpenSettings();

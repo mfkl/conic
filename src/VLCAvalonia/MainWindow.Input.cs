@@ -22,8 +22,7 @@ public partial class MainWindow
         }
         if (e.Key == Key.Escape && QueueDrawer.IsVisible)
         {
-            _presentation.IsQueueOpen = false;
-            RestoreRouteFocus(QueueButton);
+            CloseDrawer();
             e.Handled = true;
             return;
         }
@@ -99,7 +98,8 @@ public partial class MainWindow
     private void OnDrawerTabsKeyDown(object? sender, KeyEventArgs e)
     {
         if (e.Source is not Button current || e.KeyModifiers != KeyModifiers.None) return;
-        Button[] tabs = DrawerTabs.Children.OfType<Button>().ToArray();
+        // Only the open panel's tabs show; arrows wrap among those.
+        Button[] tabs = DrawerTabs.Children.OfType<Button>().Where(tab => tab.IsVisible).ToArray();
         int index = Array.IndexOf(tabs, current);
         if (index < 0) return;
         int next = e.Key switch

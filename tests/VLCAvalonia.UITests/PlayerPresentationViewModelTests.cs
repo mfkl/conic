@@ -113,6 +113,128 @@ public sealed class PlayerPresentationViewModelTests
         Assert.False(vm.IsInformationTab);
         Assert.Contains(nameof(vm.IsInformationTab), changed);
     }
+    [Theory]
+    [InlineData("Queue", "Queue,Chapters")]
+    [InlineData("Audio", "Audio,Subtitles")]
+    [InlineData("Subtitles", "Audio,Subtitles")]
+    [InlineData("Playback", "Playback,Video,Information")]
+    public void EachBarButtonOpensItsOwnTabSet(string opener, string tabs)
+    {
+        var vm = CreateViewModel(new RecordingTransport());
+        vm.ToggleDrawerPanelCommand.Execute(opener);
+        Assert.True(vm.IsQueueOpen);
+        Assert.Equal(opener, vm.DrawerTab);
+        Assert.Equal(tabs.Split(','), vm.VisibleDrawerTabs);
+        Assert.Equal(tabs.Split(','), PlayerPresentationViewModel.TabsFor(opener));
+    }
+
+    [Theory]
+    [InlineData("Chapters", "Queue,Chapters")]
+    [InlineData("Video", "Playback,Video,Information")]
+    [InlineData("Information", "Playback,Video,Information")]
+    public void MenusAndShortcutsShowTheTabSetOfTheirTab(string tab, string tabs)
+    {
+        var vm = new PlayerPresentationViewModel(new CapabilityTransport(), new EmptyPicker(), () => { });
+        if (tab == "Information") vm.MediaInformationCommand.Execute(null);
+        else vm.ToggleMediaControlsCommand.Execute(tab);
+        Assert.True(vm.IsQueueOpen);
+        Assert.Equal(tab, vm.DrawerTab);
+        Assert.Equal(tabs.Split(','), vm.VisibleDrawerTabs);
+    }
+
+    [Fact]
+    public void BarButtonsShowTheirActiveStateAndToggleTheirPanel()
+    {
+        var vm = CreateViewModel(new RecordingTransport());
+        List<string?> changed = [];
+        vm.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+        bool[] Active() => [vm.IsQueuePanelOpen, vm.IsAudioPanelOpen, vm.IsSubtitlePanelOpen, vm.IsPlaybackPanelOpen];
+
+        vm.ToggleDrawerPanel("Audio");
+        Assert.Equal([false, true, false, false], Active());
+        Assert.Contains(nameof(vm.IsAudioPanelOpen), changed);
+        // The other track button switches tabs instead of closing.
+        vm.ToggleDrawerPanel("Subtitles");
+        Assert.True(vm.IsQueueOpen);
+        Assert.Equal([false, false, true, false], Active());
+        vm.ToggleDrawerPanel("Subtitles");
+        Assert.False(vm.IsQueueOpen);
+        Assert.Equal([false, false, false, false], Active());
+
+        // The queue button stays active on its Chapters tab and closes from it.
+        vm.ToggleDrawerPanel("Queue");
+        vm.DrawerTab = "Chapters";
+        Assert.Equal([true, false, false, false], Active());
+        vm.ToggleDrawerPanel("Queue");
+        Assert.False(vm.IsQueueOpen);
+
+        // Another panel's button switches panels.
+        vm.ToggleDrawerPanel("Playback");
+        vm.DrawerTab = "Information";
+        Assert.Equal([false, false, false, true], Active());
+        vm.ToggleDrawerPanel("Queue");
+        Assert.True(vm.IsQueueOpen);
+        Assert.Equal("Queue", vm.DrawerTab);
+        Assert.Equal([true, false, false, false], Active());
+    }
+
+    [Fact]
+    public void QueueShortcutOpensTheQueuePanelOrClosesIt()
+    {
+        var vm = new PlayerPresentationViewModel(new QueueTransport(), new EmptyPicker(), () => { });
+        vm.DrawerTab = "Video";
+        vm.IsQueueOpen = true;
+        vm.ToggleQueueCommand.Execute(null);
+        Assert.True(vm.IsQueueOpen);
+        Assert.Equal("Queue", vm.DrawerTab);
+        vm.DrawerTab = "Chapters";
+        vm.ToggleQueueCommand.Execute(null);
+        Assert.False(vm.IsQueueOpen);
+        vm.ToggleQueueCommand.Execute(null);
+        Assert.True(vm.IsQueueOpen);
+        Assert.Equal("Chapters", vm.DrawerTab);
+    }
+
+    [Fact]
+    public void SpeedSliderShowsTheClampedRateAndWritesThroughTheRateCommand()
+    {
+        RecordingTransport transport = new();
+        var vm = CreateViewModel(transport);
+        List<string?> changed = [];
+        vm.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+        vm.ApplyEngineState(State(.5, PlaybackStatus.Playing, canSeek: true) with { PlaybackRate = 1.5 });
+        Assert.Equal(1.5, vm.PlaybackSpeed);
+        Assert.Equal("1.5×", vm.PlaybackRateText);
+        Assert.Contains(nameof(vm.PlaybackSpeed), changed);
+        Assert.Contains(nameof(vm.PlaybackRateText), changed);
+        Assert.Equal(0, transport.Rate);
+
+        vm.PlaybackSpeed = .8;
+        Assert.Equal(.75, transport.Rate);
+        vm.PlaybackSpeed = 5;
+        Assert.Equal(2, transport.Rate);
+
+        vm.ApplyEngineState(State(.5, PlaybackStatus.Playing, canSeek: true) with { PlaybackRate = 4 });
+        Assert.Equal(2, vm.PlaybackSpeed);
+        Assert.Equal("4×", vm.PlaybackRateText);
+    }
+
+    [Fact]
+    public void QueueHeaderCountsItemsAndShowsRepeatAndShuffleStates()
+    {
+        QueueTransport transport = new();
+        var vm = new PlayerPresentationViewModel(transport, new EmptyPicker(), () => { });
+        Assert.Equal("0 items", vm.QueueSummaryText);
+        transport.Publish(new(1, 1, QueueLoadState.Ready, [new("a", "a.mp4", "a.mp4", 0, true)], 0, QueueRepeatMode.CurrentItem, QueueOrder.Normal));
+        Assert.Equal("1 item", vm.QueueSummaryText);
+        Assert.True(vm.IsRepeatOn);
+        Assert.True(vm.IsRepeatItem);
+        Assert.False(vm.IsShuffleOn);
+        transport.Publish(new(1, 2, QueueLoadState.Ready, [new("a", "a.mp4", "a.mp4", 0, true), new("b", "b.mp4", "b.mp4", 1, false)], 0, QueueRepeatMode.None, QueueOrder.Random));
+        Assert.Equal("2 items", vm.QueueSummaryText);
+        Assert.False(vm.IsRepeatOn);
+        Assert.True(vm.IsShuffleOn);
+    }
 
     [Fact]
     public async Task CopyDiagnosticsWaitsForClipboardCompletionAndSurfacesResult()

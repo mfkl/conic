@@ -777,96 +777,172 @@
                        TextWrapping="Wrap" />
         </Border>
 
+        <!-- The design's bar panels: one drawer whose tab set follows the
+             selected tab (PlayerPresentationViewModel.Panels): Queue and
+             Chapters from the queue button, Audio and Subtitles from the track
+             buttons, Playback, Video and Info from the playback settings gear.
+             Anchored right between the title bar and the control bar, or a
+             sheet above the bar in narrow windows (ApplyDrawerLayout). -->
         <Border x:Name="QueueDrawer"
                 Grid.RowSpan="3"
                 ZIndex="10"
+                Classes="barPanel"
                 IsVisible="{Binding IsQueueOpen}"
                 Focusable="True"
                 KeyboardNavigation.TabNavigation="Cycle"
                 LayoutUpdated="OnQueueDrawerLayoutUpdated"
-                Width="390"
-                MaxWidth="390"
+                Width="400"
                 HorizontalAlignment="Right"
                 VerticalAlignment="Stretch"
-                Margin="0,52,16,66"
-                Padding="16"
-                CornerRadius="6"
-                Background="{DynamicResource PlayerSurface}"
-                BorderBrush="{DynamicResource PlayerBorder}"
-                BorderThickness="1"
-                BoxShadow="0 12 32 0 #80000000"
-                AutomationProperties.Name="Playback queue and media controls">
-            <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="10">
-                <Grid ColumnDefinitions="*,Auto">
-                    <TextBlock Text="Playback"
-                               FontSize="17"
-                               FontWeight="SemiBold" />
-                    <Button x:Name="CloseQueueButton"
-                            Classes="iconChrome"
-                            Grid.Column="1"
-                            Command="{Binding ToggleQueueCommand}"
-                            ToolTip.Tip="Close playback drawer"
-                            AutomationProperties.Name="Close playback drawer">
-                        <controls:VlcIcon Width="24" Height="24"
-                                          Icon="{StaticResource Icon.Close}" />
-                    </Button>
-                </Grid>
-                <WrapPanel x:Name="DrawerTabs"
-                           Grid.Row="1"
-                           Orientation="Horizontal"
-                           KeyDown="OnDrawerTabsKeyDown">
-                    <Button Classes="drawerTab"
-                            Classes.selected="{Binding IsQueueTab}"
-                            Content="Queue"
-                            Command="{Binding ToggleMediaControlsCommand}"
-                            CommandParameter="Queue" />
-                    <Button Classes="drawerTab"
-                            Classes.selected="{Binding IsAudioTab}"
-                            Content="Audio"
-                            Command="{Binding ToggleMediaControlsCommand}"
-                            CommandParameter="Audio" />
-                    <Button Classes="drawerTab"
-                            Classes.selected="{Binding IsVideoTab}"
-                            Content="Video"
-                            Command="{Binding ToggleMediaControlsCommand}"
-                            CommandParameter="Video" />
-                    <Button Classes="drawerTab"
-                            Classes.selected="{Binding IsSubtitleTab}"
-                            Content="Subtitles"
-                            Command="{Binding ToggleMediaControlsCommand}"
-                            CommandParameter="Subtitles" />
-                    <Button Classes="drawerTab"
-                            Classes.selected="{Binding IsChapterTab}"
-                            Content="Chapters"
-                            Command="{Binding ToggleMediaControlsCommand}"
-                            CommandParameter="Chapters" />
-                    <Button Classes="drawerTab"
-                            Classes.selected="{Binding IsInformationTab}"
-                            Content="Info"
-                            Command="{Binding MediaInformationCommand}" />
-                </WrapPanel>
-                <Grid Grid.Row="2">
-                    <ScrollViewer IsVisible="{Binding IsVideoTab}"
-                                  HorizontalScrollBarVisibility="Disabled">
-                        <views:VideoAdjustmentsView DataContext="{Binding VideoAdjustments}" />
-                    </ScrollViewer>
-                    <Grid IsVisible="{Binding IsQueueTab}" RowDefinitions="Auto,*,Auto" RowSpacing="10">
-                        <WrapPanel>
-                            <Button Margin="0,0,8,4"
-                                    Content="{Binding RepeatLabel}"
-                                    Command="{Binding CycleRepeatCommand}" />
-                            <Button Margin="0,0,8,4"
-                                    Content="{Binding ShuffleLabel}"
-                                    Command="{Binding ToggleShuffleCommand}" />
-                            <Button Margin="0,0,8,4"
-                                    Content="Save…"
-                                    Command="{Binding SavePlaylistCommand}"
-                                    AutomationProperties.Name="Save playlist" />
-                            <Button Margin="0,0,0,4"
-                                    Content="Clear"
-                                    Command="{Binding ClearQueueCommand}"
-                                    AutomationProperties.Name="Clear queue" />
-                        </WrapPanel>
+                AutomationProperties.Name="{Binding DrawerAutomationName}">
+            <Grid RowDefinitions="Auto,*,Auto">
+                <Border Classes="panelTabs">
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="4">
+                        <UniformGrid x:Name="DrawerTabs"
+                                     Rows="1"
+                                     KeyDown="OnDrawerTabsKeyDown">
+                            <Button Classes="panelTab"
+                                    Classes.selected="{Binding IsQueueTab}"
+                                    IsVisible="{Binding IsQueuePanel}"
+                                    Tag="Queue"
+                                    Command="{Binding ToggleMediaControlsCommand}"
+                                    CommandParameter="Queue"
+                                    AutomationProperties.Name="Queue">
+                                <StackPanel Classes="panelTab">
+                                    <controls:VlcIcon Icon="{StaticResource Icon.Queue}" />
+                                    <TextBlock Text="Queue" />
+                                </StackPanel>
+                            </Button>
+                            <Button Classes="panelTab"
+                                    Classes.selected="{Binding IsChapterTab}"
+                                    IsVisible="{Binding IsQueuePanel}"
+                                    Tag="Chapters"
+                                    Command="{Binding ToggleMediaControlsCommand}"
+                                    CommandParameter="Chapters"
+                                    AutomationProperties.Name="Chapters">
+                                <StackPanel Classes="panelTab">
+                                    <controls:VlcIcon Icon="{StaticResource Icon.List}" />
+                                    <TextBlock Text="Chapters" />
+                                </StackPanel>
+                            </Button>
+                            <Button Classes="panelTab"
+                                    Classes.selected="{Binding IsAudioTab}"
+                                    IsVisible="{Binding IsTracksPanel}"
+                                    Tag="Audio"
+                                    Command="{Binding ToggleMediaControlsCommand}"
+                                    CommandParameter="Audio"
+                                    AutomationProperties.Name="Audio">
+                                <StackPanel Classes="panelTab">
+                                    <controls:VlcIcon Icon="{StaticResource Icon.Audio}" />
+                                    <TextBlock Text="Audio" />
+                                </StackPanel>
+                            </Button>
+                            <Button Classes="panelTab"
+                                    Classes.selected="{Binding IsSubtitleTab}"
+                                    IsVisible="{Binding IsTracksPanel}"
+                                    Tag="Subtitles"
+                                    Command="{Binding ToggleMediaControlsCommand}"
+                                    CommandParameter="Subtitles"
+                                    AutomationProperties.Name="Subtitles">
+                                <StackPanel Classes="panelTab">
+                                    <controls:VlcIcon Icon="{StaticResource Icon.Subtitles}" />
+                                    <TextBlock Text="Subtitles" />
+                                </StackPanel>
+                            </Button>
+                            <Button Classes="panelTab"
+                                    Classes.selected="{Binding IsPlaybackTab}"
+                                    IsVisible="{Binding IsPlaybackPanel}"
+                                    Tag="Playback"
+                                    Command="{Binding ToggleMediaControlsCommand}"
+                                    CommandParameter="Playback"
+                                    AutomationProperties.Name="Playback">
+                                <StackPanel Classes="panelTab">
+                                    <controls:VlcIcon Icon="{StaticResource Icon.Playback}" />
+                                    <TextBlock Text="Playback" />
+                                </StackPanel>
+                            </Button>
+                            <Button Classes="panelTab"
+                                    Classes.selected="{Binding IsVideoTab}"
+                                    IsVisible="{Binding IsPlaybackPanel}"
+                                    Tag="Video"
+                                    Command="{Binding ToggleMediaControlsCommand}"
+                                    CommandParameter="Video"
+                                    AutomationProperties.Name="Video">
+                                <StackPanel Classes="panelTab">
+                                    <controls:VlcIcon Icon="{StaticResource Icon.Video}" />
+                                    <TextBlock Text="Video" />
+                                </StackPanel>
+                            </Button>
+                            <Button Classes="panelTab"
+                                    Classes.selected="{Binding IsInformationTab}"
+                                    IsVisible="{Binding IsPlaybackPanel}"
+                                    Tag="Information"
+                                    Command="{Binding MediaInformationCommand}"
+                                    AutomationProperties.Name="Info">
+                                <StackPanel Classes="panelTab">
+                                    <controls:VlcIcon Icon="{StaticResource Icon.Info}" />
+                                    <TextBlock Text="Info" />
+                                </StackPanel>
+                            </Button>
+                        </UniformGrid>
+                        <Button x:Name="CloseQueueButton"
+                                Grid.Column="1"
+                                Classes="icon"
+                                Click="OnCloseDrawer"
+                                ToolTip.Tip="Close panel (Esc)"
+                                AutomationProperties.Name="Close playback drawer">
+                            <controls:VlcIcon Width="20" Height="20"
+                                              Icon="{StaticResource Icon.Close}" />
+                        </Button>
+                    </Grid>
+                </Border>
+
+                <Grid Grid.Row="1">
+                    <!-- Queue (design: "4 items" and the queue tools, then
+                         30-tall rows with a drag handle and the title). -->
+                    <Grid IsVisible="{Binding IsQueueTab}" RowDefinitions="Auto,*,Auto" Margin="16,8,12,8" RowSpacing="4">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Classes="panelCaption"
+                                       VerticalAlignment="Center"
+                                       Text="{Binding QueueSummaryText}" />
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="2">
+                                <Button Classes="icon"
+                                        Classes.active="{Binding IsRepeatOn}"
+                                        Command="{Binding CycleRepeatCommand}"
+                                        ToolTip.Tip="{Binding RepeatLabel}"
+                                        AutomationProperties.Name="{Binding RepeatLabel}">
+                                    <Grid>
+                                        <controls:VlcIcon Width="24" Height="24"
+                                                          Icon="{StaticResource Icon.Repeat}" />
+                                        <TextBlock Classes="repeatOne"
+                                                   Text="1"
+                                                   IsVisible="{Binding IsRepeatItem}" />
+                                    </Grid>
+                                </Button>
+                                <Button Classes="icon"
+                                        Classes.active="{Binding IsShuffleOn}"
+                                        Command="{Binding ToggleShuffleCommand}"
+                                        ToolTip.Tip="{Binding ShuffleLabel}"
+                                        AutomationProperties.Name="{Binding ShuffleLabel}">
+                                    <controls:VlcIcon Width="24" Height="24"
+                                                      Icon="{StaticResource Icon.Shuffle}" />
+                                </Button>
+                                <Button Classes="icon"
+                                        Command="{Binding SavePlaylistCommand}"
+                                        ToolTip.Tip="Save playlist…"
+                                        AutomationProperties.Name="Save playlist">
+                                    <controls:VlcIcon Width="24" Height="24"
+                                                      Icon="{StaticResource Icon.Save}" />
+                                </Button>
+                                <Button Classes="icon"
+                                        Command="{Binding ClearQueueCommand}"
+                                        ToolTip.Tip="Clear queue"
+                                        AutomationProperties.Name="Clear queue">
+                                    <controls:VlcIcon Width="24" Height="24"
+                                                      Icon="{StaticResource Icon.Remove}" />
+                                </Button>
+                            </StackPanel>
+                        </Grid>
                         <Grid Grid.Row="1">
                             <TextBlock IsVisible="{Binding IsQueueLoading}"
                                        Text="Loading queue…"
@@ -879,56 +955,49 @@
                                 <ItemsControl ItemsSource="{Binding QueueItems}">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate x:DataType="application:QueueItem">
-                                            <Grid ColumnDefinitions="*,Auto,Auto,Auto" Margin="0,2">
-                                                <Button Classes="recentItem"
-                                                        Classes.selected="{Binding IsCurrent}"
-                                                        HorizontalContentAlignment="Stretch"
-                                                        Command="{Binding DataContext.SelectQueueItemCommand, ElementName=VideoArea}"
-                                                        CommandParameter="{Binding Token}"
-                                                        ToolTip.Tip="{Binding Name}"
-                                                        AutomationProperties.Name="{Binding Name}">
-                                                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
-                                                        <TextBlock Text="{Binding Index}" />
-                                                        <TextBlock Grid.Column="1"
-                                                                   Text="{Binding Name}"
-                                                                   TextTrimming="CharacterEllipsis" />
-                                                    </Grid>
-                                                </Button>
-                                                <Button Grid.Column="1"
-                                                        Classes="transport"
-                                                        Width="34"
-                                                        Height="30"
-                                                        Padding="7"
-                                                        Click="OnMoveQueueItemUp"
-                                                        ToolTip.Tip="Move earlier"
-                                                        AutomationProperties.Name="{Binding Name, StringFormat='Move {0} earlier in queue'}">
-                                                    <controls:VlcIcon Width="24" Height="24" Margin="-5"
-                                                                      Icon="{StaticResource Icon.ChevronUp}" />
-                                                </Button>
-                                                <Button Grid.Column="2"
-                                                        Classes="transport"
-                                                        Width="34"
-                                                        Height="30"
-                                                        Padding="7"
-                                                        Click="OnMoveQueueItemDown"
-                                                        ToolTip.Tip="Move later"
-                                                        AutomationProperties.Name="{Binding Name, StringFormat='Move {0} later in queue'}">
-                                                    <controls:VlcIcon Width="24" Height="24" Margin="-5"
-                                                                      Icon="{StaticResource Icon.ChevronDown}" />
-                                                </Button>
-                                                <Button Grid.Column="3"
-                                                        Classes="transport"
-                                                        Width="34"
-                                                        Height="30"
-                                                        Padding="7"
-                                                        Command="{Binding DataContext.RemoveQueueItemCommand, ElementName=VideoArea}"
-                                                        CommandParameter="{Binding Token}"
-                                                        ToolTip.Tip="Remove from queue"
-                                                        AutomationProperties.Name="{Binding Name, StringFormat='Remove {0} from queue'}">
-                                                    <controls:VlcIcon Width="24" Height="24" Margin="-6.5"
-                                                                      Icon="{StaticResource Icon.Close}" />
-                                                </Button>
-                                            </Grid>
+                                            <Border Classes="panelItem">
+                                                <Grid ColumnDefinitions="*,Auto">
+                                                    <Button Classes="panelRow"
+                                                            Classes.current="{Binding IsCurrent}"
+                                                            Command="{Binding DataContext.SelectQueueItemCommand, ElementName=VideoArea}"
+                                                            CommandParameter="{Binding Token}"
+                                                            ToolTip.Tip="{Binding Name}"
+                                                            AutomationProperties.Name="{Binding Name}">
+                                                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                                                            <!-- Design drag handle; reorder with the
+                                                                 row's earlier/later buttons. -->
+                                                            <Path Classes="dragHandle" Data="M0,0.5 H10 M0,4.5 H10" />
+                                                            <TextBlock Grid.Column="1"
+                                                                       Text="{Binding Name}"
+                                                                       TextTrimming="CharacterEllipsis" />
+                                                        </Grid>
+                                                    </Button>
+                                                    <StackPanel Grid.Column="1" Classes="rowActions">
+                                                        <Button Classes="icon rowAction"
+                                                                Click="OnMoveQueueItemUp"
+                                                                ToolTip.Tip="Move earlier"
+                                                                AutomationProperties.Name="{Binding Name, StringFormat='Move {0} earlier in queue'}">
+                                                            <controls:VlcIcon Width="20" Height="20"
+                                                                              Icon="{StaticResource Icon.ChevronUp}" />
+                                                        </Button>
+                                                        <Button Classes="icon rowAction"
+                                                                Click="OnMoveQueueItemDown"
+                                                                ToolTip.Tip="Move later"
+                                                                AutomationProperties.Name="{Binding Name, StringFormat='Move {0} later in queue'}">
+                                                            <controls:VlcIcon Width="20" Height="20"
+                                                                              Icon="{StaticResource Icon.ChevronDown}" />
+                                                        </Button>
+                                                        <Button Classes="icon rowAction"
+                                                                Command="{Binding DataContext.RemoveQueueItemCommand, ElementName=VideoArea}"
+                                                                CommandParameter="{Binding Token}"
+                                                                ToolTip.Tip="Remove from queue"
+                                                                AutomationProperties.Name="{Binding Name, StringFormat='Remove {0} from queue'}">
+                                                            <controls:VlcIcon Width="20" Height="20"
+                                                                              Icon="{StaticResource Icon.Close}" />
+                                                        </Button>
+                                                    </StackPanel>
+                                                </Grid>
+                                            </Border>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
@@ -937,52 +1006,116 @@
                         <StackPanel Grid.Row="2">
                             <TextBlock IsVisible="{Binding HasEmptyQueue}"
                                        Text="Your queue is empty. Open or drop media to start playing."
-                                       Classes="settingHint"
-                                       TextWrapping="Wrap" />
+                                       Classes="panelHint" />
                             <TextBlock IsVisible="{Binding HasQueueError}"
                                        Text="{Binding QueueError}"
                                        Foreground="{DynamicResource PlayerErrorText}"
                                        TextWrapping="Wrap" />
                         </StackPanel>
                     </Grid>
-                    <ScrollViewer x:Name="AudioScroll"
-                                  IsVisible="{Binding IsAudioTab}"
+
+                    <!-- Chapters (and titles), as track-style lists. -->
+                    <ScrollViewer x:Name="ChapterScroll"
+                                  IsVisible="{Binding IsChapterTab}"
                                   HorizontalScrollBarVisibility="Disabled">
-                        <StackPanel Spacing="9">
-                            <TextBlock Text="Audio tracks" FontWeight="SemiBold" />
+                        <StackPanel Classes="panelPage">
+                            <TextBlock Classes="panelCaption" Text="Titles and chapters" />
                             <TextBlock IsVisible="{Binding IsMediaCapabilitiesLoading}"
                                        Text="Loading media controls…"
-                                       Classes="settingHint" />
+                                       Classes="panelHint" />
                             <TextBlock IsVisible="{Binding AreMediaControlsUnavailable}"
-                                       Text="Open media to select audio tracks."
-                                       Classes="settingHint"
-                                       TextWrapping="Wrap" />
+                                       Text="Open media to select titles and chapters."
+                                       Classes="panelHint" />
                             <TextBlock IsVisible="{Binding HasMediaCapabilitiesEmpty}"
-                                       Text="No audio tracks are available."
-                                       Classes="settingHint"
-                                       TextWrapping="Wrap" />
-                            <ItemsControl ItemsSource="{Binding AudioTracks}">
+                                       Text="This media has no titles or chapters."
+                                       Classes="panelHint" />
+                            <ItemsControl ItemsSource="{Binding Titles}">
                                 <ItemsControl.ItemTemplate>
-                                    <DataTemplate x:DataType="application:MediaTrack">
-                                        <Button Classes="menuAction"
+                                    <DataTemplate x:DataType="application:MediaTitle">
+                                        <Button Classes="panelRow"
                                                 Classes.selected="{Binding IsSelected}"
-                                                HorizontalContentAlignment="Stretch"
-                                                Command="{Binding DataContext.SelectAudioTrackCommand, ElementName=VideoArea}"
+                                                Command="{Binding DataContext.SelectTitleCommand, ElementName=VideoArea}"
                                                 CommandParameter="{Binding Id}"
                                                 ToolTip.Tip="{Binding Label}"
                                                 AutomationProperties.Name="{Binding Label}">
-                                            <TextBlock Text="{Binding Label}"
-                                                       TextTrimming="CharacterEllipsis" />
+                                            <Grid ColumnDefinitions="20,*" ColumnSpacing="10">
+                                                <controls:VlcIcon Classes="rowCheck"
+                                                                  IsVisible="{Binding IsSelected}"
+                                                                  Icon="{StaticResource Icon.Check}" />
+                                                <TextBlock Grid.Column="1"
+                                                           Text="{Binding Label}"
+                                                           TextTrimming="CharacterEllipsis" />
+                                            </Grid>
                                         </Button>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
-                            <Button Content="Add external audio…"
-                                    Command="{Binding AttachExternalAudioCommand}"
-                                    ToolTip.Tip="Adds a track only for the next media open" />
-                            <TextBlock Text="Audio delay (ms)" FontWeight="SemiBold" />
+                            <ItemsControl ItemsSource="{Binding Chapters}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="application:MediaChapter">
+                                        <Button Classes="panelRow"
+                                                Classes.selected="{Binding IsSelected}"
+                                                Command="{Binding DataContext.SelectChapterCommand, ElementName=VideoArea}"
+                                                CommandParameter="{Binding Id}"
+                                                ToolTip.Tip="{Binding Label}"
+                                                AutomationProperties.Name="{Binding Label}">
+                                            <Grid ColumnDefinitions="20,*" ColumnSpacing="10">
+                                                <controls:VlcIcon Classes="rowCheck"
+                                                                  IsVisible="{Binding IsSelected}"
+                                                                  Icon="{StaticResource Icon.Check}" />
+                                                <TextBlock Grid.Column="1"
+                                                           Text="{Binding Label}"
+                                                           TextTrimming="CharacterEllipsis" />
+                                            </Grid>
+                                        </Button>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <!-- Audio (design: Embedded Tracks with a check on the
+                         selected one; Output Device is not supported). -->
+                    <ScrollViewer x:Name="AudioScroll"
+                                  IsVisible="{Binding IsAudioTab}"
+                                  HorizontalScrollBarVisibility="Disabled">
+                        <StackPanel Classes="panelPage">
+                            <TextBlock Classes="panelCaption" Text="Embedded Tracks" />
+                            <TextBlock IsVisible="{Binding IsMediaCapabilitiesLoading}"
+                                       Text="Loading media controls…"
+                                       Classes="panelHint" />
+                            <TextBlock IsVisible="{Binding AreMediaControlsUnavailable}"
+                                       Text="Open media to select audio tracks."
+                                       Classes="panelHint" />
+                            <TextBlock IsVisible="{Binding HasMediaCapabilitiesEmpty}"
+                                       Text="No audio tracks are available."
+                                       Classes="panelHint" />
+                            <ItemsControl ItemsSource="{Binding AudioTracks}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="application:MediaTrack">
+                                        <Button Classes="panelRow"
+                                                Classes.selected="{Binding IsSelected}"
+                                                Command="{Binding DataContext.SelectAudioTrackCommand, ElementName=VideoArea}"
+                                                CommandParameter="{Binding Id}"
+                                                ToolTip.Tip="{Binding Label}"
+                                                AutomationProperties.Name="{Binding Label}">
+                                            <Grid ColumnDefinitions="20,*" ColumnSpacing="10">
+                                                <controls:VlcIcon Classes="rowCheck"
+                                                                  IsVisible="{Binding IsSelected}"
+                                                                  Icon="{StaticResource Icon.Check}" />
+                                                <TextBlock Grid.Column="1"
+                                                           Text="{Binding Label}"
+                                                           TextTrimming="CharacterEllipsis" />
+                                            </Grid>
+                                        </Button>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <Border Classes="panelDivider" />
+                            <TextBlock Classes="panelCaption" Text="Synchronization" />
+                            <TextBlock Classes="panelLabel" Text="Audio delay (ms)" />
                             <WrapPanel>
-                                <Button Margin="0,0,6,6"
+                                <Button Classes="panelStep"
                                         Content="−100"
                                         Command="{Binding AdjustAudioDelayCommand}"
                                         CommandParameter="-100"
@@ -995,56 +1128,75 @@
                                                Width="112"
                                                Value="{Binding AudioDelayMilliseconds, Mode=TwoWay}"
                                                AutomationProperties.Name="Audio delay milliseconds" />
-                                <Button Margin="0,0,6,6"
+                                <Button Classes="panelStep"
                                         Content="+100"
                                         Command="{Binding AdjustAudioDelayCommand}"
                                         CommandParameter="100"
                                         AutomationProperties.Name="Increase audio delay by 100 milliseconds" />
-                                <Button Margin="0,0,0,6"
+                                <Button Classes="panelStep"
                                         Content="Reset"
                                         Command="{Binding ResetAudioDelayCommand}"
                                         AutomationProperties.Name="Reset audio delay" />
                             </WrapPanel>
+                            <Border Classes="panelDivider" />
+                            <Grid ColumnDefinitions="*,Auto">
+                                <TextBlock Classes="panelCaption"
+                                           VerticalAlignment="Center"
+                                           Text="External Tracks" />
+                                <Button Grid.Column="1"
+                                        Classes="icon"
+                                        Command="{Binding AttachExternalAudioCommand}"
+                                        ToolTip.Tip="Add an audio file. It plays from the next time this media opens."
+                                        AutomationProperties.Name="Add audio file">
+                                    <controls:VlcIcon Width="24" Height="24"
+                                                      Icon="{StaticResource Icon.Add}" />
+                                </Button>
+                            </Grid>
+                            <TextBlock Classes="panelHint" Text="Adds a track only for the next media open." />
                         </StackPanel>
                     </ScrollViewer>
+
+                    <!-- Subtitles (design: Embedded Tracks, External Tracks). -->
                     <ScrollViewer x:Name="SubtitleScroll"
                                   IsVisible="{Binding IsSubtitleTab}"
                                   HorizontalScrollBarVisibility="Disabled">
-                        <StackPanel Spacing="9">
-                            <TextBlock Text="Subtitle tracks" FontWeight="SemiBold" />
+                        <StackPanel Classes="panelPage">
+                            <TextBlock Classes="panelCaption" Text="Embedded Tracks" />
                             <TextBlock IsVisible="{Binding IsMediaCapabilitiesLoading}"
                                        Text="Loading media controls…"
-                                       Classes="settingHint" />
+                                       Classes="panelHint" />
                             <TextBlock IsVisible="{Binding AreMediaControlsUnavailable}"
                                        Text="Open media to select subtitle tracks."
-                                       Classes="settingHint"
-                                       TextWrapping="Wrap" />
+                                       Classes="panelHint" />
                             <TextBlock IsVisible="{Binding HasMediaCapabilitiesEmpty}"
                                        Text="No subtitle tracks are available."
-                                       Classes="settingHint"
-                                       TextWrapping="Wrap" />
+                                       Classes="panelHint" />
                             <ItemsControl ItemsSource="{Binding SubtitleTracks}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate x:DataType="application:MediaTrack">
-                                        <Button Classes="menuAction"
+                                        <Button Classes="panelRow"
                                                 Classes.selected="{Binding IsSelected}"
-                                                HorizontalContentAlignment="Stretch"
                                                 Command="{Binding DataContext.SelectSubtitleTrackCommand, ElementName=VideoArea}"
                                                 CommandParameter="{Binding Id}"
                                                 ToolTip.Tip="{Binding Label}"
                                                 AutomationProperties.Name="{Binding Label}">
-                                            <TextBlock Text="{Binding Label}"
-                                                       TextTrimming="CharacterEllipsis" />
+                                            <Grid ColumnDefinitions="20,*" ColumnSpacing="10">
+                                                <controls:VlcIcon Classes="rowCheck"
+                                                                  IsVisible="{Binding IsSelected}"
+                                                                  Icon="{StaticResource Icon.Check}" />
+                                                <TextBlock Grid.Column="1"
+                                                           Text="{Binding Label}"
+                                                           TextTrimming="CharacterEllipsis" />
+                                            </Grid>
                                         </Button>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
-                            <Button Content="Add external subtitle…"
-                                    Command="{Binding AttachExternalSubtitleCommand}"
-                                    ToolTip.Tip="Adds a track only for the next media open" />
-                            <TextBlock Text="Subtitle delay (ms)" FontWeight="SemiBold" />
+                            <Border Classes="panelDivider" />
+                            <TextBlock Classes="panelCaption" Text="Synchronization" />
+                            <TextBlock Classes="panelLabel" Text="Subtitle delay (ms)" />
                             <WrapPanel>
-                                <Button Margin="0,0,6,6"
+                                <Button Classes="panelStep"
                                         Content="−100"
                                         Command="{Binding AdjustSubtitleDelayCommand}"
                                         CommandParameter="-100"
@@ -1057,69 +1209,79 @@
                                                Width="112"
                                                Value="{Binding SubtitleDelayMilliseconds, Mode=TwoWay}"
                                                AutomationProperties.Name="Subtitle delay milliseconds" />
-                                <Button Margin="0,0,6,6"
+                                <Button Classes="panelStep"
                                         Content="+100"
                                         Command="{Binding AdjustSubtitleDelayCommand}"
                                         CommandParameter="100"
                                         AutomationProperties.Name="Increase subtitle delay by 100 milliseconds" />
-                                <Button Margin="0,0,0,6"
+                                <Button Classes="panelStep"
                                         Content="Reset"
                                         Command="{Binding ResetSubtitleDelayCommand}"
                                         AutomationProperties.Name="Reset subtitle delay" />
                             </WrapPanel>
+                            <Border Classes="panelDivider" />
+                            <Grid ColumnDefinitions="*,Auto">
+                                <TextBlock Classes="panelCaption"
+                                           VerticalAlignment="Center"
+                                           Text="External Tracks" />
+                                <Button Grid.Column="1"
+                                        Classes="icon"
+                                        Command="{Binding AttachExternalSubtitleCommand}"
+                                        ToolTip.Tip="Add a subtitle file. It shows from the next time this media opens."
+                                        AutomationProperties.Name="Add subtitle file">
+                                    <controls:VlcIcon Width="24" Height="24"
+                                                      Icon="{StaticResource Icon.Add}" />
+                                </Button>
+                            </Grid>
+                            <TextBlock Classes="panelHint" Text="Adds a track only for the next media open." />
                         </StackPanel>
                     </ScrollViewer>
-                    <ScrollViewer x:Name="ChapterScroll"
-                                  IsVisible="{Binding IsChapterTab}"
+
+                    <!-- Playback (design: setting rows; only Speed is
+                         supported): the value and a 0.25-2 slider with a tick
+                         and a label every 0.25. -->
+                    <ScrollViewer x:Name="PlaybackScroll"
+                                  IsVisible="{Binding IsPlaybackTab}"
                                   HorizontalScrollBarVisibility="Disabled">
-                        <StackPanel Spacing="9">
-                            <TextBlock Text="Titles and chapters" FontWeight="SemiBold" />
-                            <TextBlock IsVisible="{Binding IsMediaCapabilitiesLoading}"
-                                       Text="Loading media controls…"
-                                       Classes="settingHint" />
-                            <TextBlock IsVisible="{Binding AreMediaControlsUnavailable}"
-                                       Text="Open media to select titles and chapters."
-                                       Classes="settingHint"
-                                       TextWrapping="Wrap" />
-                            <TextBlock IsVisible="{Binding HasMediaCapabilitiesEmpty}"
-                                       Text="This media has no titles or chapters."
-                                       Classes="settingHint"
-                                       TextWrapping="Wrap" />
-                            <ItemsControl ItemsSource="{Binding Titles}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate x:DataType="application:MediaTitle">
-                                        <Button Classes="menuAction"
-                                                Classes.selected="{Binding IsSelected}"
-                                                HorizontalContentAlignment="Stretch"
-                                                Command="{Binding DataContext.SelectTitleCommand, ElementName=VideoArea}"
-                                                CommandParameter="{Binding Id}"
-                                                ToolTip.Tip="{Binding Label}"
-                                                AutomationProperties.Name="{Binding Label}">
-                                            <TextBlock Text="{Binding Label}"
-                                                       TextTrimming="CharacterEllipsis" />
-                                        </Button>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                            <ItemsControl ItemsSource="{Binding Chapters}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate x:DataType="application:MediaChapter">
-                                        <Button Classes="menuAction"
-                                                Classes.selected="{Binding IsSelected}"
-                                                HorizontalContentAlignment="Stretch"
-                                                Command="{Binding DataContext.SelectChapterCommand, ElementName=VideoArea}"
-                                                CommandParameter="{Binding Id}"
-                                                ToolTip.Tip="{Binding Label}"
-                                                AutomationProperties.Name="{Binding Label}">
-                                            <TextBlock Text="{Binding Label}"
-                                                       TextTrimming="CharacterEllipsis" />
-                                        </Button>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
+                        <StackPanel Classes="panelPage" Spacing="8">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <TextBlock Classes="panelLabel"
+                                           VerticalAlignment="Center"
+                                           Text="Speed" />
+                                <Border Grid.Column="1" Classes="panelValue">
+                                    <TextBlock HorizontalAlignment="Center" Text="{Binding PlaybackRateText}" />
+                                </Border>
+                            </Grid>
+                            <Slider x:Name="SpeedSlider"
+                                    Classes="speed"
+                                    Minimum="0.25"
+                                    Maximum="2"
+                                    SmallChange="0.25"
+                                    LargeChange="0.25"
+                                    TickFrequency="0.25"
+                                    IsSnapToTickEnabled="True"
+                                    Value="{Binding PlaybackSpeed, Mode=TwoWay}"
+                                    ToolTip.Tip="{Binding PlaybackRateText}"
+                                    AutomationProperties.Name="Playback speed" />
+                            <controls:TickPanel Inset="6">
+                                <TextBlock Classes="tickLabel" Text="0.25" />
+                                <TextBlock Classes="tickLabel" Text="0.5" />
+                                <TextBlock Classes="tickLabel" Text="0.75" />
+                                <TextBlock Classes="tickLabel" Text="1" />
+                                <TextBlock Classes="tickLabel" Text="1.25" />
+                                <TextBlock Classes="tickLabel" Text="1.5" />
+                                <TextBlock Classes="tickLabel" Text="1.75" />
+                                <TextBlock Classes="tickLabel" Text="2" />
+                            </controls:TickPanel>
                         </StackPanel>
                     </ScrollViewer>
-                    <Grid IsVisible="{Binding IsInformationTab}" RowDefinitions="*,Auto" RowSpacing="10">
+
+                    <ScrollViewer IsVisible="{Binding IsVideoTab}"
+                                  HorizontalScrollBarVisibility="Disabled">
+                        <views:VideoAdjustmentsView Margin="16,12" DataContext="{Binding VideoAdjustments}" />
+                    </ScrollViewer>
+
+                    <Grid IsVisible="{Binding IsInformationTab}" RowDefinitions="*,Auto" RowSpacing="10" Margin="16,12">
                         <ScrollViewer x:Name="InformationScroll"
                                       HorizontalScrollBarVisibility="Disabled">
                             <views:MediaInformationView DataContext="{Binding MediaInformation}" />
@@ -1134,25 +1296,41 @@
                             </WrapPanel>
                             <TextBlock Text="{Binding CopyStatus}"
                                        IsVisible="{Binding HasCopyStatus}"
-                                       Classes="settingHint"
-                                       TextWrapping="Wrap" />
+                                       Classes="panelHint" />
                         </StackPanel>
                     </Grid>
                 </Grid>
-                <ScrollViewer Grid.Row="3"
-                              MaxHeight="80"
-                              HorizontalScrollBarVisibility="Disabled">
-                    <StackPanel Spacing="4">
-                        <TextBlock IsVisible="{Binding HasMediaCapabilitiesError}"
-                                   Text="{Binding MediaCapabilitiesError}"
-                                   Foreground="{DynamicResource PlayerErrorText}"
-                                   TextWrapping="Wrap" />
-                        <TextBlock IsVisible="{Binding HasMediaControlsNotice}"
-                                   Text="{Binding MediaControlsNotice}"
-                                   Foreground="{DynamicResource Vlc.Accent.Bright}"
-                                   TextWrapping="Wrap" />
-                    </StackPanel>
-                </ScrollViewer>
+
+                <StackPanel Grid.Row="2">
+                    <ScrollViewer MaxHeight="80"
+                                  Margin="16,0,16,8"
+                                  HorizontalScrollBarVisibility="Disabled">
+                        <ScrollViewer.IsVisible>
+                            <MultiBinding Converter="{x:Static BoolConverters.Or}">
+                                <Binding Path="HasMediaCapabilitiesError" />
+                                <Binding Path="HasMediaControlsNotice" />
+                            </MultiBinding>
+                        </ScrollViewer.IsVisible>
+                        <StackPanel Spacing="4">
+                            <TextBlock IsVisible="{Binding HasMediaCapabilitiesError}"
+                                       Text="{Binding MediaCapabilitiesError}"
+                                       Foreground="{DynamicResource PlayerErrorText}"
+                                       TextWrapping="Wrap" />
+                            <TextBlock IsVisible="{Binding HasMediaControlsNotice}"
+                                       Text="{Binding MediaControlsNotice}"
+                                       Foreground="{DynamicResource Vlc.Accent.Bright}"
+                                       TextWrapping="Wrap" />
+                        </StackPanel>
+                    </ScrollViewer>
+                    <!-- Design: "Show Preferences" at the foot of the tracks
+                         panel; opens the matching Settings page. -->
+                    <Button x:Name="ShowPreferencesButton"
+                            Classes="panelFooter"
+                            Content="Show Preferences"
+                            IsVisible="{Binding IsTracksPanel}"
+                            Click="OnShowPreferences"
+                            ToolTip.Tip="Open the audio and subtitle settings" />
+                </StackPanel>
             </Grid>
         </Border>
 
@@ -1286,8 +1464,8 @@
                                                  DragCompleted="OnVolumeDragCompleted" />
                 </StackPanel>
 
-                <!-- Tools. Phase 4b turns these into the design's bar panels;
-                     for now they open the playback drawer's tabs. -->
+                <!-- Tools: each opens its bar panel (the drawer's tab set for
+                     that button) and shows the accent state while it is open. -->
                 <StackPanel x:Name="ToolsGroup"
                             Grid.Column="3"
                             Orientation="Horizontal"
@@ -1295,7 +1473,9 @@
                             VerticalAlignment="Center">
                     <Button x:Name="AudioTracksButton"
                             Classes="icon"
-                            Command="{Binding ToggleMediaControlsCommand}"
+                            Classes.active="{Binding IsAudioPanelOpen}"
+                            Click="OnBarPanelButtonClick"
+                            Command="{Binding ToggleDrawerPanelCommand}"
                             CommandParameter="Audio"
                             ToolTip.Tip="Audio tracks and synchronization"
                             AutomationProperties.Name="Audio tracks">
@@ -1304,7 +1484,9 @@
                     </Button>
                     <Button x:Name="SubtitleTracksButton"
                             Classes="icon"
-                            Command="{Binding ToggleMediaControlsCommand}"
+                            Classes.active="{Binding IsSubtitlePanelOpen}"
+                            Click="OnBarPanelButtonClick"
+                            Command="{Binding ToggleDrawerPanelCommand}"
                             CommandParameter="Subtitles"
                             ToolTip.Tip="Subtitle tracks and synchronization"
                             AutomationProperties.Name="Subtitle tracks">
@@ -1313,16 +1495,20 @@
                     </Button>
                     <Button x:Name="PlaybackSettingsButton"
                             Classes="icon"
-                            Command="{Binding ToggleMediaControlsCommand}"
-                            CommandParameter="Video"
-                            ToolTip.Tip="Video adjustments"
-                            AutomationProperties.Name="Video adjustments">
+                            Classes.active="{Binding IsPlaybackPanelOpen}"
+                            Click="OnBarPanelButtonClick"
+                            Command="{Binding ToggleDrawerPanelCommand}"
+                            CommandParameter="Playback"
+                            ToolTip.Tip="Playback settings: speed, video adjustments and media information"
+                            AutomationProperties.Name="Playback settings">
                         <controls:VlcIcon Width="24" Height="24"
                                           Icon="{StaticResource Icon.Settings}" />
                     </Button>
                     <Button x:Name="QueueButton"
                             Classes="icon"
-                            Command="{Binding ToggleQueueCommand}"
+                            Classes.active="{Binding IsQueuePanelOpen}"
+                            Click="OnBarPanelButtonClick"
+                            Command="{Binding ToggleDrawerPanelCommand}"
                             CommandParameter="Queue"
                             ToolTip.Tip="Playback queue (Ctrl+J)"
                             AutomationProperties.Name="Open playback queue">

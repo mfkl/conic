@@ -1,11 +1,14 @@
 #if SMOKE
 using Avalonia;
+using Avalonia.Automation.Peers;
+using Avalonia.Automation.Provider;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input;
 using Avalonia.VisualTree;
 using Player.Application;
 using Player.Contracts;
+using VLCAvalonia.ViewModels;
 
 namespace VLCAvalonia;
 
@@ -56,18 +59,22 @@ public partial class MainWindow
                 MediaTrack[] tracks = [new("-1", "Disable", true, false), .. Enumerable.Range(0, 24).Select(i => new MediaTrack(i.ToString(), $"{i} {label}", false, i == 0))];
                 _presentation.ApplyMediaCapabilities(new(1, 1, MediaCapabilityLoadState.Ready, tracks, tracks,
                     [new("0", label, true)], Enumerable.Range(0, 24).Select(i => new MediaChapter(i.ToString(), $"{i} {label}", i == 0)).ToArray(), new(0, 0)));
+                _presentation.DrawerTab = "Queue";
                 _presentation.IsQueueOpen = true;
                 await WaitFor(() => CloseQueueButton.IsFocused, "opening the drawer places focus inside it");
+                Button[] VisibleTabs() => DrawerTabs.Children.OfType<Button>().Where(tab => tab.IsVisible).ToArray();
+                bool ShowsTabsOf(string tab) => VisibleTabs().Select(button => button.Tag as string).SequenceEqual(PlayerPresentationViewModel.TabsFor(tab));
                 foreach (int width in new[] { 1280, 480 })
                 {
                     Width = width; Height = width == 480 ? 360 : 720;
-                    foreach (var entry in new[] { ("Queue", QueueScroll), ("Audio", AudioScroll), ("Subtitles", SubtitleScroll), ("Chapters", ChapterScroll) })
+                    foreach (var entry in new[] { ("Queue", QueueScroll), ("Chapters", ChapterScroll), ("Audio", AudioScroll), ("Subtitles", SubtitleScroll) })
                     {
                         _presentation.DrawerTab = entry.Item1;
                         ScrollViewer scroll = entry.Item2;
                         scroll.Offset = default;
                         await Task.Delay(120);
-                        Require(IsContained(QueueDrawer) && IsContained(scroll) && scroll.Viewport.Height > 20, "drawer viewport is contained and usable");
+                        Require(ShowsTabsOf(entry.Item1), $"{entry.Item1} shows its own panel's tabs");
+                        Require(IsContained(QueueDrawer) && VisibleTabs().All(IsContained) && IsContained(scroll) && scroll.Viewport.Height > 20, "drawer viewport is contained and usable");
                         Require(scroll.Extent.Height > scroll.Viewport.Height, "long lists scroll vertically");
                         Require(scroll.Extent.Width <= scroll.Viewport.Width + 1, "long labels do not add horizontal overflow");
                         CaptureHome($"drawer-{entry.Item1}-{width}");
@@ -76,25 +83,67 @@ public partial class MainWindow
                         if (entry.Item1 == "Audio") Require(IsContained(AudioDelayInput), "audio delay remains reachable at the end of the list");
                         if (entry.Item1 == "Subtitles") Require(IsContained(SubtitleDelayInput), "subtitle delay remains reachable at the end of the list");
                     }
+                    foreach (string tab in new[] { "Playback", "Video", "Information" })
+                    {
+                        _presentation.DrawerTab = tab;
+                        await Task.Delay(120);
+                        Require(ShowsTabsOf(tab), $"{tab} shows the playback settings tabs");
+                        Require(IsContained(QueueDrawer) && VisibleTabs().All(IsContained), "playback settings panel and tabs are contained");
+                        if (tab == "Playback") Require(IsContained(SpeedSlider) && SpeedSlider.Bounds.Width > 100, "speed slider is contained and usable");
+                        CaptureHome($"drawer-{tab}-{width}");
+                    }
                 }
-                Button[] tabs = DrawerTabs.Children.OfType<Button>().ToArray();
-                tabs[0].Focus(NavigationMethod.Tab);
-                tabs[0].RaiseEvent(new KeyEventArgs { RoutedEvent = KeyDownEvent, Key = Key.Right });
-                Require(_presentation.IsAudioTab && tabs[1].IsFocused, "Right arrow selects and focuses the next tab");
-                tabs[1].RaiseEvent(new KeyEventArgs { RoutedEvent = KeyDownEvent, Key = Key.End });
-                Require(_presentation.IsInformationTab && tabs[^1].IsFocused, "End selects Info");
-                tabs[^1].RaiseEvent(new KeyEventArgs { RoutedEvent = KeyDownEvent, Key = Key.Home });
-                Require(_presentation.IsQueueTab && tabs[0].IsFocused, "Home selects Queue");
-                CloseQueueButton.Focus(NavigationMethod.Tab);
-                for (int index = 0; index < 110; index++)
+
+                // Each bar button opens its own tab set, shows the active state
+                // while its panel is open, and gets focus back on Escape.
+                Width = 1280; Height = 720;
+                _presentation.IsQueueOpen = false;
+                await Task.Delay(150);
+                void Press(Control target, Key key) => target.RaiseEvent(new KeyEventArgs { RoutedEvent = KeyDownEvent, Key = key });
+                foreach (var (opener, tab) in new (Button, string)[] { (QueueButton, "Queue"), (AudioTracksButton, "Audio"), (SubtitleTracksButton, "Subtitles"), (PlaybackSettingsButton, "Playback") })
                 {
-                    Require(FocusManager!.TryMoveFocus(NavigationDirection.Next), "Tab moves through drawer controls");
-                    Require(QueueDrawer.IsKeyboardFocusWithin, "Tab stays inside the drawer");
+                    ((IInvokeProvider)ControlAutomationPeer.CreatePeerForElement(opener)!).Invoke();
+                    await Task.Delay(150);
+                    Require(_presentation.IsQueueOpen && _presentation.DrawerTab == tab && ShowsTabsOf(tab), $"{opener.Name} opens {tab} with its tab set");
+                    Require(ToolsGroup.Children.OfType<Button>().Where(button => button.Classes.Contains("active")).SequenceEqual([opener]), $"{opener.Name} alone shows the active state");
+                    Button[] tabs = VisibleTabs();
+                    tabs[0].Focus(NavigationMethod.Tab);
+                    Press(tabs[0], Key.Right);
+                    Require(_presentation.DrawerTab == (string)tabs[1].Tag! && tabs[1].IsFocused, "Right arrow selects and focuses the next tab");
+                    Press(tabs[1], Key.End);
+                    Require(_presentation.DrawerTab == (string)tabs[^1].Tag! && tabs[^1].IsFocused, "End selects the last tab");
+                    Press(tabs[^1], Key.Home);
+                    Require(_presentation.DrawerTab == (string)tabs[0].Tag! && tabs[0].IsFocused, "Home selects the first tab");
+                    Press(tabs[0], Key.Left);
+                    Require(_presentation.DrawerTab == (string)tabs[^1].Tag! && tabs[^1].IsFocused, "Left arrow wraps to the last tab");
+                    Require(ShowsTabsOf(tab), "arrows stay within the panel's tabs");
+                    if (opener == QueueButton)
+                    {
+                        Press(tabs[^1], Key.Home);
+                        await Task.Delay(100);
+                        CloseQueueButton.Focus(NavigationMethod.Tab);
+                        for (int index = 0; index < 110; index++)
+                        {
+                            Require(FocusManager!.TryMoveFocus(NavigationDirection.Next), "Tab moves through drawer controls");
+                            Require(QueueDrawer.IsKeyboardFocusWithin, "Tab stays inside the drawer");
+                        }
+                    }
+                    (FocusManager!.GetFocusedElement() as Control)!.RaiseEvent(new KeyEventArgs { RoutedEvent = KeyDownEvent, Key = Key.Escape });
+                    await Task.Delay(150);
+                    Require(!_presentation.IsQueueOpen && opener.IsFocused, $"Escape closes the {tab} panel and returns focus to {opener.Name}");
+                    Require(!ToolsGroup.Children.OfType<Button>().Any(button => button.Classes.Contains("active")), "no bar button is active once the panel closes");
                 }
-                (FocusManager!.GetFocusedElement() as Control)!.RaiseEvent(new KeyEventArgs { RoutedEvent = KeyDownEvent, Key = Key.Escape });
-                await Task.Delay(100);
-                Require(!_presentation.IsQueueOpen && QueueButton.IsFocused, "Escape closes the drawer and returns focus");
-                Console.WriteLine("[drawer-smoke] PASS long labels/lists, compact scrolling, reachable delays, tab arrows, focus cycle and Escape");
+                // Narrow: the track buttons are hidden, so focus returns to More.
+                Width = 480; Height = 360;
+                await Task.Delay(150);
+                _presentation.ToggleMediaControlsCommand.Execute("Audio");
+                await Task.Delay(150);
+                Require(!AudioTracksButton.IsVisible && IsContained(QueueDrawer), "narrow tracks panel is contained");
+                CloseQueueButton.Focus(NavigationMethod.Tab);
+                CloseQueueButton.RaiseEvent(new KeyEventArgs { RoutedEvent = KeyDownEvent, Key = Key.Escape });
+                await Task.Delay(150);
+                Require(!_presentation.IsQueueOpen && OpenOptionsButton.IsFocused, "narrow Escape returns focus to More");
+                Console.WriteLine("[drawer-smoke] PASS per-button tab sets and active states, long labels/lists, compact scrolling, reachable delays, tab arrows, focus cycle and Escape focus return");
                 desktop.Shutdown(0);
             }
             catch (Exception error) { Console.Error.WriteLine($"[drawer-smoke] FAIL {error}"); desktop.Shutdown(1); }

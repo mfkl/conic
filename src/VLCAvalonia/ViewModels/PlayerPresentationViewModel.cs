@@ -132,7 +132,7 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
         registry.Register(new(PlayerCommandId.ToggleFullscreen, "Fullscreen", "Window", "F11"), _ => toggleFullscreen?.Invoke(), _ => toggleFullscreen is not null);
         registry.Register(new(PlayerCommandId.SetAlwaysOnTop, "Always on top", "Window"), parameter => IsAlwaysOnTop = parameter is true);
         registry.Register(new(PlayerCommandId.OpenSettings, "Settings", "Window", "Ctrl+,"), _ => openSettings?.Invoke(), _ => openSettings is not null);
-        registry.Register(new(PlayerCommandId.ToggleQueue, "Playback queue", "Playback", "Ctrl+J"), p => { if (p is string tab && tab == "Queue" && DrawerTab != "Queue") { DrawerTab = tab; IsQueueOpen = true; } else IsQueueOpen = !IsQueueOpen; }, _ => _queue is not null);
+        registry.Register(new(PlayerCommandId.ToggleQueue, "Playback queue", "Playback", "Ctrl+J"), _ => { if (IsQueueOpen && IsQueuePanel) IsQueueOpen = false; else { if (!IsQueuePanel) DrawerTab = "Queue"; IsQueueOpen = true; } }, _ => _queue is not null);
         registry.Register(new(PlayerCommandId.QueuePrevious, "Previous item", "Playback"), _ => _queue?.Previous(), _ => QueueState.CanPrevious);
         registry.Register(new(PlayerCommandId.QueueNext, "Next item", "Playback"), _ => _queue?.Next(), _ => QueueState.CanNext);
         registry.Register(new(PlayerCommandId.QueueSelect, "Play queue item", "Playback"), p => _queue?.SelectAndPlay(p as string ?? string.Empty), p => p is string token && QueueItems.Any(x => x.Token == token));
@@ -362,7 +362,16 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
             OnPropertyChanged(nameof(VolumeLevel));
         }
     }
-    public double PlaybackRate { get => _playbackRate; private set => Set(ref _playbackRate, value); }
+    public double PlaybackRate
+    {
+        get => _playbackRate;
+        private set
+        {
+            if (!Set(ref _playbackRate, value)) return;
+            OnPropertyChanged(nameof(PlaybackSpeed));
+            OnPropertyChanged(nameof(PlaybackRateText));
+        }
+    }
     public string MediaTitle { get => _mediaTitle; private set => Set(ref _mediaTitle, value); }
     public bool IsFullscreen { get => _isFullscreen; set { if (Set(ref _isFullscreen, value)) OnPropertyChanged(nameof(FullscreenName)); } }
     public string OpenError
@@ -468,8 +477,9 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
         get => _isQueueOpen;
         set
         {
-            if (Set(ref _isQueueOpen, value) && value)
-                IsLibraryOpen = false;
+            if (!Set(ref _isQueueOpen, value)) return;
+            if (value) IsLibraryOpen = false;
+            NotifyDrawerPanel();
         }
     }
     public bool HasQueueError => !string.IsNullOrWhiteSpace(QueueState.Error);
@@ -500,6 +510,7 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
                 OnPropertyChanged(nameof(IsSubtitleTab)); OnPropertyChanged(nameof(IsChapterTab));
                 OnPropertyChanged(nameof(IsInformationTab));
                 OnPropertyChanged(nameof(IsVideoTab));
+                NotifyDrawerPanel();
             }
         }
     }
@@ -735,6 +746,7 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
         if (state.Generation < QueueState.Generation || (_activeGeneration >= 0 && state.Generation > 0 && state.Generation != _activeGeneration)) return;
         QueueState = state;
         OnPropertyChanged(nameof(QueueItems)); OnPropertyChanged(nameof(HasQueueError)); OnPropertyChanged(nameof(QueueError)); OnPropertyChanged(nameof(IsQueueLoading)); OnPropertyChanged(nameof(HasQueueItems)); OnPropertyChanged(nameof(HasEmptyQueue)); OnPropertyChanged(nameof(RepeatLabel)); OnPropertyChanged(nameof(ShuffleLabel));
+        OnPropertyChanged(nameof(QueueSummaryText)); OnPropertyChanged(nameof(IsRepeatOn)); OnPropertyChanged(nameof(IsRepeatItem)); OnPropertyChanged(nameof(IsShuffleOn));
         foreach (RegistryCommand? command in new[] { PreviousCommand, NextCommand, SelectQueueItemCommand, MoveQueueItemCommand, RemoveQueueItemCommand, ClearQueueCommand, CycleRepeatCommand, ToggleShuffleCommand }.OfType<RegistryCommand>()) command.RaiseCanExecuteChanged();
         (SavePlaylistCommand as RegistryCommand)?.RaiseCanExecuteChanged();
     }

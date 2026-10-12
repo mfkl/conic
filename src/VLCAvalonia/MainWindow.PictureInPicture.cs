@@ -10,7 +10,7 @@ public partial class MainWindow
 {
     private sealed record WindowPlacement(double Width, double Height, PixelPoint Position);
     private sealed record PictureInPictureRestore(WindowPlacement Placement, WindowState State,
-        WindowDecorations Decorations, double MinWidth, double MinHeight, bool Topmost, bool Home);
+        WindowDecorations Decorations, double MinWidth, double MinHeight, double MaxWidth, double MaxHeight, bool Topmost, bool Home);
 
     private WindowPlacement? _normalPlacement;
     private PictureInPictureRestore? _pictureInPictureRestore;
@@ -21,7 +21,7 @@ public partial class MainWindow
         _presentation.PictureInPictureRequested += (_, _) => TogglePictureInPicture();
         _presentation.MainLayoutRequested += (_, _) => ExitPictureInPicture();
         PositionChanged += (_, _) => RememberNormalPlacement();
-        SizeChanged += (_, _) => RememberNormalPlacement();
+        SizeChanged += (_, _) => { RememberNormalPlacement(); KeepPictureInPictureOnScreen(); };
         Opened += (_, _) => RememberNormalPlacement();
     }
 
@@ -37,7 +37,7 @@ public partial class MainWindow
         if (!_presentation.CanTogglePlayback) return;
         RememberNormalPlacement();
         _pictureInPictureRestore = new(_normalPlacement ?? new(1280, 720, Position), WindowState,
-            WindowDecorations, MinWidth, MinHeight, Topmost, _presentation.IsHomeOpen);
+            WindowDecorations, MinWidth, MinHeight, MaxWidth, MaxHeight, Topmost, _presentation.IsHomeOpen);
         _changingWindowMode = true;
         try
         {
@@ -55,19 +55,38 @@ public partial class MainWindow
             WindowDecorations = WindowDecorations.BorderOnly;
             MinWidth = 320;
             MinHeight = 180;
-            Width = 480;
-            Height = 270;
             SetCurrentValue(TopmostProperty, true);
-            if (Screens.ScreenFromWindow(this) is { } screen)
-            {
-                PixelRect area = screen.WorkingArea;
-                Position = new(Math.Max(area.X, area.Right - (int)(496 * RenderScaling)),
-                    Math.Max(area.Y, area.Bottom - (int)(286 * RenderScaling)));
-            }
+            PlacePictureInPicture();
             WakeChrome();
             Dispatcher.UIThread.Post(() => PictureInPictureChrome.Focus());
         }
         finally { _changingWindowMode = false; }
+    }
+
+    // macOS applies frame changes and fullscreen exits asynchronously; CI
+    // once left the PiP window at 480x2645370 (and an absurd Metal drawable
+    // that aborted the app) right after leaving fullscreen. A maximum size
+    // makes AppKit clamp such frames, and a size beyond the screen is never
+    // the user's, so put the window back.
+    private void PlacePictureInPicture()
+    {
+        Width = 480;
+        Height = 270;
+        if (Screens.ScreenFromWindow(this) is not { } screen) return;
+        PixelRect area = screen.WorkingArea;
+        MaxWidth = area.Width / RenderScaling;
+        MaxHeight = area.Height / RenderScaling;
+        Position = new(Math.Max(area.X, area.Right - (int)(496 * RenderScaling)),
+            Math.Max(area.Y, area.Bottom - (int)(286 * RenderScaling)));
+    }
+
+    private void KeepPictureInPictureOnScreen()
+    {
+        if (_changingWindowMode || !_presentation.IsPictureInPicture || Screens.ScreenFromWindow(this) is not { } screen) return;
+        PixelRect area = screen.WorkingArea;
+        if (ClientSize.Width * RenderScaling <= area.Width && ClientSize.Height * RenderScaling <= area.Height) return;
+        Console.WriteLine($"[pip] window left at {ClientSize.Width}x{ClientSize.Height}; restoring the compact size");
+        Dispatcher.UIThread.Post(() => { if (_presentation.IsPictureInPicture) PlacePictureInPicture(); });
     }
 
     private void ExitPictureInPicture(bool restoreRoute = true)
@@ -81,6 +100,8 @@ public partial class MainWindow
             WindowDecorations = saved.Decorations;
             MinWidth = saved.MinWidth;
             MinHeight = saved.MinHeight;
+            MaxWidth = saved.MaxWidth;
+            MaxHeight = saved.MaxHeight;
             Width = saved.Placement.Width;
             Height = saved.Placement.Height;
             Position = saved.Placement.Position;

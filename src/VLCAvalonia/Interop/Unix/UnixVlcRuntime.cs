@@ -11,6 +11,7 @@ internal static unsafe class UnixVlcRuntime
 {
     private const string PluginPathVariable = "VLC_PLUGIN_PATH";
     private const string DataPathVariable = "VLC_DATA_PATH";
+    private const string LanguageVariable = "LANGUAGE";
 
     public static void Initialize()
     {
@@ -40,6 +41,11 @@ internal static unsafe class UnixVlcRuntime
         }
         if (RepositoryPaths.DataDirectory is { } data && Environment.GetEnvironmentVariable(DataPathVariable) is null or "")
             SetNativeEnvironment(DataPathVariable, data);
+        // The app is English only, but VLC translates the labels it hands us
+        // (aspect, crop and zoom choices, track names) through gettext from
+        // LANG or, on macOS, the system's preferred language. LANGUAGE takes
+        // precedence over both for messages and leaves number formats alone.
+        SetNativeEnvironment(LanguageVariable, "en");
 
         // Distribution packages ship versioned sonames only (libvlccore.so.9), and
         // VLC.app is outside every library search path, so load them by path.

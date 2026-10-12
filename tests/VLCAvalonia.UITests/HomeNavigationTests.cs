@@ -107,6 +107,23 @@ public sealed class HomeNavigationTests
     }
 
     [Fact]
+    public void HomeItemCountFollowsTheCardsShown()
+    {
+        MediaHistoryService history = new(new Storage());
+        history.RecordOpened(new(Path.GetFullPath("mountains.mp4"), MediaSourceKind.File, "Mountains"), true);
+        history.RecordOpened(new(Path.GetFullPath("ocean.mp4"), MediaSourceKind.File, "Ocean"), true);
+        PlayerPresentationViewModel vm = Create(new Transport(), history);
+        List<string?> changed = [];
+        vm.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+        Assert.Equal("2 items", vm.HomeItemCountText);
+        vm.HomeSearch = "ocean";
+        Assert.Equal("1 item", vm.HomeItemCountText);
+        Assert.Contains(nameof(vm.HomeItemCountText), changed);
+        vm.HomeSearch = "missing";
+        Assert.Equal("0 items", vm.HomeItemCountText);
+    }
+
+    [Fact]
     public void SuccessfulOpenLeavesHomeOnlyAfterValidation()
     {
         Transport transport = new();

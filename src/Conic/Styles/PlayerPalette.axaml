@@ -303,10 +303,12 @@
             <SolidColorBrush x:Key="Vlc.Bg.A5" Color="#C2C2C2" />
             <SolidColorBrush x:Key="Vlc.Bg.B1" Color="#E7E7E7" />
             <SolidColorBrush x:Key="Vlc.Bg.B2" Color="#DEDEDE" />
-            <!-- The design's "Transparent" styles: #D5D5D5 at 75%, #E7E7E7 at
-                 80%; BG/B2 has none in the Light column (#DEDEDE at 80%). -->
-            <SolidColorBrush x:Key="Vlc.Bg.A3Transparent" Color="#BFD5D5D5" />
-            <SolidColorBrush x:Key="Vlc.Bg.B1Transparent" Color="#CCE7E7E7" />
+            <!-- The design's "Transparent" styles are #D5D5D5 at 75% and
+                 #E7E7E7 at 80%; both are at 95% here, as in Dark: without the
+                 backdrop blur, menus over video were hard to read. BG/B2 has
+                 none in the Light column (#DEDEDE at 80%). -->
+            <SolidColorBrush x:Key="Vlc.Bg.A3Transparent" Color="#F2D5D5D5" />
+            <SolidColorBrush x:Key="Vlc.Bg.B1Transparent" Color="#F2E7E7E7" />
             <SolidColorBrush x:Key="Vlc.Bg.B2Transparent" Color="#CCDEDEDE" />
             <SolidColorBrush x:Key="Vlc.Bg.AccentBright" Color="#D8BA9A" />
             <SolidColorBrush x:Key="Vlc.Bg.AccentDark" Color="#C6AB89" />

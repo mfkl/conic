@@ -576,6 +576,7 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
         try
         {
             _lastState = state;
+            UpdateNowPlaying();
             if (state.Generation > _mediaInformation.QueueGeneration)
                 MediaInformation = new(state.Generation, 0, MediaInformationLoadState.Loading, "", MediaInformationState.Unavailable.Metadata);
             if (state.Status == PlaybackStatus.Opening && state.Generation != _homeMediaGeneration)
@@ -659,6 +660,7 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
         CheckpointCurrent(true);
         _stoppedSource = null;
         _currentSource = result.Source;
+        UpdateNowPlaying();
         IsHomeOpen = false;
         PlaybackStatus = PlaybackStatus.Opening;
         _generationFloor = _lastObservedGeneration; _activeGeneration = -1; _resumeReady = false; _lastState = null; _recordedOpenGeneration = -1;
@@ -702,7 +704,7 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
         if (expansion.Sources.Count == 0) { OpenError = expansion.Failures.FirstOrDefault() ?? "No usable media files were found."; return; }
         if (_queue is null) { OpenError = "The playback queue is not ready yet."; return; }
         _stoppedSource = null;
-        _currentSource = expansion.Sources[0]; _generationFloor = _lastObservedGeneration; _activeGeneration = -1; _resumeReady = false; _pendingResume = null; NotifyPendingResume();
+        _currentSource = expansion.Sources[0]; UpdateNowPlaying(); _generationFloor = _lastObservedGeneration; _activeGeneration = -1; _resumeReady = false; _pendingResume = null; NotifyPendingResume();
         try { if (replace) _queue.OpenQueue(expansion.Sources.Select(x => x.CanonicalSource).ToArray()); else _queue.Enqueue(expansion.Sources.Select(x => x.CanonicalSource)); }
         catch (Exception exception) { _diagnostic?.Invoke(exception.ToString()); OpenError = "Media could not be queued."; return; }
         OpenError = expansion.Failures.Count > 0 || expansion.WasBounded ? $"Queued {expansion.Sources.Count} item(s). {expansion.Failures.Count} item(s) could not be read{(expansion.WasBounded ? "; folder limit reached" : string.Empty)}." : string.Empty;
@@ -745,7 +747,8 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
     {
         if (state.Generation < QueueState.Generation || (_activeGeneration >= 0 && state.Generation > 0 && state.Generation != _activeGeneration)) return;
         QueueState = state;
-        OnPropertyChanged(nameof(QueueItems)); OnPropertyChanged(nameof(HasQueueError)); OnPropertyChanged(nameof(QueueError)); OnPropertyChanged(nameof(IsQueueLoading)); OnPropertyChanged(nameof(HasQueueItems)); OnPropertyChanged(nameof(HasEmptyQueue)); OnPropertyChanged(nameof(RepeatLabel)); OnPropertyChanged(nameof(ShuffleLabel));
+        UpdateNowPlaying();
+        OnPropertyChanged(nameof(QueueItems)); OnPropertyChanged(nameof(HasQueueNavigation)); OnPropertyChanged(nameof(HasQueueError)); OnPropertyChanged(nameof(QueueError)); OnPropertyChanged(nameof(IsQueueLoading)); OnPropertyChanged(nameof(HasQueueItems)); OnPropertyChanged(nameof(HasEmptyQueue)); OnPropertyChanged(nameof(RepeatLabel)); OnPropertyChanged(nameof(ShuffleLabel));
         OnPropertyChanged(nameof(QueueSummaryText)); OnPropertyChanged(nameof(IsRepeatOn)); OnPropertyChanged(nameof(IsRepeatItem)); OnPropertyChanged(nameof(IsShuffleOn));
         foreach (RegistryCommand? command in new[] { PreviousCommand, NextCommand, SelectQueueItemCommand, MoveQueueItemCommand, RemoveQueueItemCommand, ClearQueueCommand, CycleRepeatCommand, ToggleShuffleCommand }.OfType<RegistryCommand>()) command.RaiseCanExecuteChanged();
         (SavePlaylistCommand as RegistryCommand)?.RaiseCanExecuteChanged();

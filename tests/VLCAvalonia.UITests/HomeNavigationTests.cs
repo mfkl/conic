@@ -218,6 +218,55 @@ public sealed class HomeNavigationTests
         Assert.Equal(columns, MediaGridPanel.ColumnCount(width, min, max, MediaGridPanel.DefaultSpacing));
 
     [Fact]
+    public void MiniPlayerNamesTheFolderOfThePlayingFile()
+    {
+        string movie = Path.Combine(Path.GetTempPath(), "Shows", "S01", "movie.mp4");
+        PlayerPresentationViewModel vm = Create(new Transport());
+        Assert.Null(vm.NowPlayingSource);
+        Assert.False(vm.HasNowPlayingFolder);
+        List<string?> changed = [];
+        vm.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+        vm.OpenSource(movie, MediaSourceKind.File);
+        Assert.Equal(movie, vm.NowPlayingSource);
+        Assert.Equal("S01", vm.NowPlayingFolder);
+        Assert.True(vm.HasNowPlayingFolder);
+        Assert.Contains(nameof(vm.NowPlayingFolder), changed);
+        Assert.Contains(nameof(vm.HasNowPlayingFolder), changed);
+    }
+
+    [Fact]
+    public void MiniPlayerFolderNamesFilesUrlsAndStreams()
+    {
+        string file = Path.Combine(Path.GetTempPath(), "Music", "song.flac");
+        Assert.Equal("Music", PlayerPresentationViewModel.FolderNameOf(file));
+        Assert.Equal("Music", PlayerPresentationViewModel.FolderNameOf(new Uri(file).AbsoluteUri));
+        Assert.Equal("example.com", PlayerPresentationViewModel.FolderNameOf("https://example.com/live/stream.m3u8"));
+        string root = Path.GetPathRoot(Path.GetTempPath())!;
+        Assert.Equal(root, PlayerPresentationViewModel.FolderNameOf(Path.Combine(root, "movie.mp4")));
+        Assert.Equal("", PlayerPresentationViewModel.FolderNameOf(null));
+        Assert.Equal("", PlayerPresentationViewModel.FolderNameOf("movie.mp4"));
+    }
+
+    [Fact]
+    public void MiniPlayerFollowsTheQueuesCurrentItemAndOffersNavigationForSeveral()
+    {
+        string first = Path.Combine(Path.GetTempPath(), "A", "one.mp4"), second = Path.Combine(Path.GetTempPath(), "B", "two.mp4");
+        PlayerPresentationViewModel vm = Create(new Transport());
+        vm.OpenSource(first, MediaSourceKind.File);
+        Assert.False(vm.HasQueueNavigation);
+        List<string?> changed = [];
+        vm.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+        vm.ApplyQueueState(new(1, 1, QueueLoadState.Ready, [new("1", "one.mp4", first, 0, false), new("2", "two.mp4", second, 1, true)], 1, QueueRepeatMode.None, QueueOrder.Normal));
+        Assert.True(vm.HasQueueNavigation);
+        Assert.Contains(nameof(vm.HasQueueNavigation), changed);
+        Assert.Equal(second, vm.NowPlayingSource);
+        Assert.Equal("B", vm.NowPlayingFolder);
+        vm.ApplyQueueState(new(1, 2, QueueLoadState.Ready, [new("1", "one.mp4", first, 0, true)], 0, QueueRepeatMode.None, QueueOrder.Normal));
+        Assert.False(vm.HasQueueNavigation);
+        Assert.Equal("A", vm.NowPlayingFolder);
+    }
+
+    [Fact]
     public void SuccessfulOpenLeavesHomeOnlyAfterValidation()
     {
         Transport transport = new();

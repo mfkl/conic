@@ -90,28 +90,34 @@
               IsVisible="False"
               Focusable="True"
               AutomationProperties.Name="Picture in picture controls">
+            <!-- Styled like the mini player's preview overlay: a dark scrim
+                 header (return, title, close), the accent play pill in the
+                 middle and the design timeline at the bottom. -->
             <Border x:Name="PictureInPictureHeader"
                     VerticalAlignment="Top"
-                    Background="#B0000000"
+                    Background="{DynamicResource Vlc.Bg.B2Transparent}"
                     PointerPressed="OnPictureInPictureDrag"
-                    Padding="8,4">
-                <Grid ColumnDefinitions="40,*,40">
+                    Padding="6,4">
+                <Grid ColumnDefinitions="Auto,*,Auto">
                     <Button x:Name="PictureInPictureReturn"
-                            Classes="iconChrome"
+                            Classes="icon"
+                            Foreground="{DynamicResource Vlc.Fg.2}"
                             Command="{Binding TogglePictureInPictureCommand}"
                             ToolTip.Tip="Return to main window (Escape)"
                             AutomationProperties.Name="Return from picture in picture">
                         <controls:VlcIcon Width="24" Height="24"
-                                          Icon="{StaticResource Icon.Pip}" />
+                                          Icon="{StaticResource Icon.Open}" />
                     </Button>
                     <TextBlock Grid.Column="1"
                                Text="{Binding MediaTitle}"
                                TextTrimming="CharacterEllipsis"
                                VerticalAlignment="Center"
                                Margin="8,0"
-                               Foreground="{DynamicResource PlayerText}" />
+                               FontSize="13"
+                               Foreground="{DynamicResource Vlc.Fg.2}" />
                     <Button Grid.Column="2"
-                            Classes="iconChrome"
+                            Classes="icon"
+                            Foreground="{DynamicResource Vlc.Fg.2}"
                             Click="OnPictureInPictureClose"
                             ToolTip.Tip="Close VLC"
                             AutomationProperties.Name="Close VLC">
@@ -121,13 +127,9 @@
                 </Grid>
             </Border>
             <Button x:Name="PictureInPicturePlay"
-                    Classes="iconChrome"
-                    Width="52"
-                    Height="52"
-                    CornerRadius="26"
+                    Classes="primary play"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center"
-                    Background="#B0000000"
                     Command="{Binding TogglePauseCommand}"
                     ToolTip.Tip="{Binding PlayPauseToolTip}"
                     AutomationProperties.Name="{Binding PlayPauseName}">
@@ -141,22 +143,22 @@
                 </Grid>
             </Button>
             <Border VerticalAlignment="Bottom"
-                    Background="#B0000000"
-                    Padding="12,4,12,6">
-                <Grid RowDefinitions="Auto,24" ColumnDefinitions="*,Auto">
+                    Background="{DynamicResource Vlc.Bg.B2Transparent}"
+                    Padding="10,4,10,8">
+                <Grid RowDefinitions="Auto,28" ColumnDefinitions="*,Auto" RowSpacing="2">
                     <TextBlock Text="{Binding ElapsedText}"
                                FontSize="11"
                                FontFeatures="tnum"
-                               Foreground="{DynamicResource PlayerText}" />
+                               Foreground="{DynamicResource Vlc.Fg.2}" />
                     <TextBlock Grid.Column="1"
                                Text="{Binding DurationText}"
                                FontSize="11"
                                FontFeatures="tnum"
-                               Foreground="{DynamicResource Vlc.Fg.2}" />
+                               Foreground="{DynamicResource PlayerSecondaryText}" />
                     <controls:PlayerTimeline x:Name="PictureInPictureTimeline"
                                              Grid.Row="1"
                                              Grid.ColumnSpan="2"
-                                             Classes="timeline monochrome"
+                                             Classes="timeline"
                                              Minimum="0"
                                              Maximum="1"
                                              SmallChange="{Binding SeekStep}"

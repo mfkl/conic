@@ -130,7 +130,23 @@ public partial class MainWindow
         Require(_settingsViewModel.Accent == accent, "Left arrow returns to the previous accent");
         CaptureSettings("settings-general-focus");
 
+        // The Theme applies live: Light swaps the palette, while the video
+        // canvas and the picture-in-picture chrome over it stay dark.
+        string theme = _settingsViewModel.Theme;
+        themes.Single(option => AutomationName(option) == "Theme Light").IsChecked = true;
+        await Task.Delay(150);
+        Require(_settingsViewModel.Theme == "Light" && ActualThemeVariant == Avalonia.Styling.ThemeVariant.Light, "Light theme applies live");
+        Require(BrushColor(SettingsPanel, "Vlc.Bg.B1") == Avalonia.Media.Color.Parse("#E7E7E7") &&
+            BrushColor(PictureInPictureChrome, "Vlc.Fg.1") == Avalonia.Media.Color.Parse("#EAEAEA") &&
+            BrushColor(VideoArea, "PlayerCanvas") == Avalonia.Media.Colors.Black, "Light palette, dark video surfaces");
+        CaptureSettings("settings-general-light");
+        themes.Single(option => AutomationName(option) == $"Theme {theme}").IsChecked = true;
+        await Task.Delay(150);
+        Require(_settingsViewModel.Theme == theme, "theme restored");
+
         static string AutomationName(Control control) => Avalonia.Automation.AutomationProperties.GetName(control) ?? "";
+        static Avalonia.Media.Color? BrushColor(Control control, string key) =>
+            control.TryFindResource(key, control.ActualThemeVariant, out object? value) && value is Avalonia.Media.ISolidColorBrush brush ? brush.Color : null;
     }
 
     private void CaptureSettings(string name)

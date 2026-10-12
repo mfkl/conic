@@ -18,7 +18,6 @@
         MinHeight="360"
         Background="{DynamicResource PlayerCanvas}"
         Foreground="{DynamicResource PlayerText}"
-        RequestedThemeVariant="Dark"
         Topmost="{Binding IsAlwaysOnTop}"
         WindowDecorations="BorderOnly"
         ExtendClientAreaToDecorationsHint="True"
@@ -84,156 +83,166 @@
                         ZIndex="1"
                         IsVisible="{Binding IsHomeOpen}" />
 
-        <Grid x:Name="PictureInPictureChrome"
-              Grid.RowSpan="3"
-              ZIndex="2"
-              IsVisible="False"
-              Focusable="True"
-              AutomationProperties.Name="Picture in picture controls">
-            <!-- Styled like the mini player's preview overlay: a dark scrim
-                 header (return, title, close), the accent play pill in the
-                 middle and the design timeline at the bottom. -->
-            <Border x:Name="PictureInPictureHeader"
-                    VerticalAlignment="Top"
-                    Background="{DynamicResource Vlc.Bg.B2Transparent}"
-                    PointerPressed="OnPictureInPictureDrag"
-                    Padding="6,4">
-                <Grid ColumnDefinitions="Auto,*,Auto">
-                    <Button x:Name="PictureInPictureReturn"
-                            Classes="icon"
-                            Foreground="{DynamicResource Vlc.Fg.2}"
-                            Command="{Binding TogglePictureInPictureCommand}"
-                            ToolTip.Tip="Return to main window (Escape)"
-                            AutomationProperties.Name="Return from picture in picture">
+        <!-- Over the video, so dark in both themes. -->
+        <ThemeVariantScope x:Name="PictureInPictureChrome"
+                           Grid.RowSpan="3"
+                           ZIndex="2"
+                           IsVisible="False"
+                           Focusable="True"
+                           RequestedThemeVariant="Dark"
+                           AutomationProperties.Name="Picture in picture controls">
+            <Grid>
+                <!-- Styled like the mini player's preview overlay: a dark scrim
+                     header (return, title, close), the accent play pill in the
+                     middle and the design timeline at the bottom. -->
+                <Border x:Name="PictureInPictureHeader"
+                        VerticalAlignment="Top"
+                        Background="{DynamicResource Vlc.OnMedia.Scrim}"
+                        PointerPressed="OnPictureInPictureDrag"
+                        Padding="6,4">
+                    <Grid ColumnDefinitions="Auto,*,Auto">
+                        <Button x:Name="PictureInPictureReturn"
+                                Classes="icon"
+                                Foreground="{DynamicResource Vlc.Fg.2}"
+                                Command="{Binding TogglePictureInPictureCommand}"
+                                ToolTip.Tip="Return to main window (Escape)"
+                                AutomationProperties.Name="Return from picture in picture">
+                            <controls:VlcIcon Width="24" Height="24"
+                                              Icon="{StaticResource Icon.Open}" />
+                        </Button>
+                        <TextBlock Grid.Column="1"
+                                   Text="{Binding MediaTitle}"
+                                   TextTrimming="CharacterEllipsis"
+                                   VerticalAlignment="Center"
+                                   Margin="8,0"
+                                   FontSize="13"
+                                   Foreground="{DynamicResource Vlc.Fg.2}" />
+                        <Button Grid.Column="2"
+                                Classes="icon"
+                                Foreground="{DynamicResource Vlc.Fg.2}"
+                                Click="OnPictureInPictureClose"
+                                ToolTip.Tip="Close VLC"
+                                AutomationProperties.Name="Close VLC">
+                            <controls:VlcIcon Width="24" Height="24"
+                                              Icon="{StaticResource Icon.Close}" />
+                        </Button>
+                    </Grid>
+                </Border>
+                <Button x:Name="PictureInPicturePlay"
+                        Classes="primary play"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Command="{Binding TogglePauseCommand}"
+                        ToolTip.Tip="{Binding PlayPauseToolTip}"
+                        AutomationProperties.Name="{Binding PlayPauseName}">
+                    <Grid>
                         <controls:VlcIcon Width="24" Height="24"
-                                          Icon="{StaticResource Icon.Open}" />
-                    </Button>
-                    <TextBlock Grid.Column="1"
-                               Text="{Binding MediaTitle}"
-                               TextTrimming="CharacterEllipsis"
-                               VerticalAlignment="Center"
-                               Margin="8,0"
-                               FontSize="13"
-                               Foreground="{DynamicResource Vlc.Fg.2}" />
-                    <Button Grid.Column="2"
-                            Classes="icon"
-                            Foreground="{DynamicResource Vlc.Fg.2}"
-                            Click="OnPictureInPictureClose"
-                            ToolTip.Tip="Close VLC"
-                            AutomationProperties.Name="Close VLC">
+                                          IsVisible="{Binding !IsPlaying}"
+                                          Icon="{StaticResource Icon.Play}" />
                         <controls:VlcIcon Width="24" Height="24"
-                                          Icon="{StaticResource Icon.Close}" />
-                    </Button>
-                </Grid>
-            </Border>
-            <Button x:Name="PictureInPicturePlay"
-                    Classes="primary play"
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Center"
-                    Command="{Binding TogglePauseCommand}"
-                    ToolTip.Tip="{Binding PlayPauseToolTip}"
-                    AutomationProperties.Name="{Binding PlayPauseName}">
-                <Grid>
-                    <controls:VlcIcon Width="24" Height="24"
-                                      IsVisible="{Binding !IsPlaying}"
+                                          IsVisible="{Binding IsPlaying}"
+                                          Icon="{StaticResource Icon.Pause}" />
+                    </Grid>
+                </Button>
+                <Border VerticalAlignment="Bottom"
+                        Background="{DynamicResource Vlc.OnMedia.Scrim}"
+                        Padding="10,4,10,8">
+                    <Grid RowDefinitions="Auto,28" ColumnDefinitions="*,Auto" RowSpacing="2">
+                        <TextBlock Text="{Binding ElapsedText}"
+                                   FontSize="11"
+                                   FontFeatures="tnum"
+                                   Foreground="{DynamicResource Vlc.Fg.2}" />
+                        <TextBlock Grid.Column="1"
+                                   Text="{Binding DurationText}"
+                                   FontSize="11"
+                                   FontFeatures="tnum"
+                                   Foreground="{DynamicResource PlayerSecondaryText}" />
+                        <controls:PlayerTimeline x:Name="PictureInPictureTimeline"
+                                                 Grid.Row="1"
+                                                 Grid.ColumnSpan="2"
+                                                 Classes="timeline"
+                                                 Minimum="0"
+                                                 Maximum="1"
+                                                 SmallChange="{Binding SeekStep}"
+                                                 Value="{Binding Position, Mode=TwoWay}"
+                                                 IsEnabled="{Binding CanSeek}"
+                                                 AutomationProperties.Name="Picture in picture position"
+                                                 AutomationProperties.HelpText="Use left and right arrow keys to seek."
+                                                 SeekStarted="OnSeekStarted"
+                                                 SeekCommitted="OnSeekCommitted" />
+                    </Grid>
+                </Border>
+            </Grid>
+        </ThemeVariantScope>
+
+        <!-- Ready, opening and error states sit on the black video canvas,
+             so they keep the dark theme. -->
+        <ThemeVariantScope Grid.Row="1" RequestedThemeVariant="Dark">
+            <Panel TextElement.Foreground="{DynamicResource PlayerText}">
+            <!-- Hidden under Home, which covers the player. -->
+            <StackPanel x:Name="NoMediaSurface"
+                        Grid.Row="1"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Spacing="14">
+                <StackPanel.IsVisible>
+                    <MultiBinding Converter="{x:Static BoolConverters.And}">
+                        <Binding Path="IsNoMedia" />
+                        <Binding Path="!IsHomeOpen" />
+                    </MultiBinding>
+                </StackPanel.IsVisible>
+                <Border Width="72"
+                        Height="72"
+                        CornerRadius="36"
+                        Background="{DynamicResource PlayerCard}"
+                        BorderBrush="{DynamicResource PlayerBorder}"
+                        BorderThickness="1">
+                    <controls:VlcIcon Width="32" Height="32"
+                                      Foreground="{DynamicResource PlayerSecondaryText}"
                                       Icon="{StaticResource Icon.Play}" />
-                    <controls:VlcIcon Width="24" Height="24"
-                                      IsVisible="{Binding IsPlaying}"
-                                      Icon="{StaticResource Icon.Pause}" />
-                </Grid>
-            </Button>
-            <Border VerticalAlignment="Bottom"
-                    Background="{DynamicResource Vlc.Bg.B2Transparent}"
-                    Padding="10,4,10,8">
-                <Grid RowDefinitions="Auto,28" ColumnDefinitions="*,Auto" RowSpacing="2">
-                    <TextBlock Text="{Binding ElapsedText}"
-                               FontSize="11"
-                               FontFeatures="tnum"
-                               Foreground="{DynamicResource Vlc.Fg.2}" />
-                    <TextBlock Grid.Column="1"
-                               Text="{Binding DurationText}"
-                               FontSize="11"
-                               FontFeatures="tnum"
-                               Foreground="{DynamicResource PlayerSecondaryText}" />
-                    <controls:PlayerTimeline x:Name="PictureInPictureTimeline"
-                                             Grid.Row="1"
-                                             Grid.ColumnSpan="2"
-                                             Classes="timeline"
-                                             Minimum="0"
-                                             Maximum="1"
-                                             SmallChange="{Binding SeekStep}"
-                                             Value="{Binding Position, Mode=TwoWay}"
-                                             IsEnabled="{Binding CanSeek}"
-                                             AutomationProperties.Name="Picture in picture position"
-                                             AutomationProperties.HelpText="Use left and right arrow keys to seek."
-                                             SeekStarted="OnSeekStarted"
-                                             SeekCommitted="OnSeekCommitted" />
-                </Grid>
-            </Border>
-        </Grid>
+                </Border>
+                <TextBlock Text="Ready to play"
+                           FontSize="20"
+                           FontWeight="SemiBold"
+                           HorizontalAlignment="Center" />
+                <Button Classes="openMedia"
+                        Content="Open media"
+                        Command="{Binding OpenMediaCommand}"
+                        AutomationProperties.Name="Open media"
+                        ToolTip.Tip="Open a media file (Ctrl+O)" />
+                <TextBlock Text="or drop media anywhere"
+                           Foreground="{DynamicResource PlayerSecondaryText}"
+                           FontSize="12"
+                           HorizontalAlignment="Center" />
+            </StackPanel>
 
-        <!-- Hidden under Home, which covers the player. -->
-        <StackPanel x:Name="NoMediaSurface"
-                    Grid.Row="1"
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Center"
-                    Spacing="14">
-            <StackPanel.IsVisible>
-                <MultiBinding Converter="{x:Static BoolConverters.And}">
-                    <Binding Path="IsNoMedia" />
-                    <Binding Path="!IsHomeOpen" />
-                </MultiBinding>
-            </StackPanel.IsVisible>
-            <Border Width="72"
-                    Height="72"
-                    CornerRadius="36"
-                    Background="{DynamicResource PlayerCard}"
-                    BorderBrush="{DynamicResource PlayerBorder}"
-                    BorderThickness="1">
-                <controls:VlcIcon Width="32" Height="32"
-                                  Foreground="{DynamicResource PlayerSecondaryText}"
-                                  Icon="{StaticResource Icon.Play}" />
-            </Border>
-            <TextBlock Text="Ready to play"
-                       FontSize="20"
-                       FontWeight="SemiBold"
-                       HorizontalAlignment="Center" />
-            <Button Classes="openMedia"
-                    Content="Open media"
-                    Command="{Binding OpenMediaCommand}"
-                    AutomationProperties.Name="Open media"
-                    ToolTip.Tip="Open a media file (Ctrl+O)" />
-            <TextBlock Text="or drop media anywhere"
-                       Foreground="{DynamicResource PlayerSecondaryText}"
-                       FontSize="12"
-                       HorizontalAlignment="Center" />
-        </StackPanel>
+            <StackPanel IsVisible="{Binding IsOpening}"
+                        Grid.Row="1"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Spacing="12">
+                <ProgressBar Width="220"
+                             Height="4"
+                             IsIndeterminate="True" />
+                <TextBlock Text="{Binding MediaTitle, StringFormat='Opening {0}…'}"
+                           Foreground="{DynamicResource Vlc.Fg.2}" />
+            </StackPanel>
 
-        <StackPanel IsVisible="{Binding IsOpening}"
-                    Grid.Row="1"
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Center"
-                    Spacing="12">
-            <ProgressBar Width="220"
-                         Height="4"
-                         IsIndeterminate="True" />
-            <TextBlock Text="{Binding MediaTitle, StringFormat='Opening {0}…'}"
-                       Foreground="{DynamicResource Vlc.Fg.2}" />
-        </StackPanel>
-
-        <StackPanel IsVisible="{Binding IsFaulted}"
-                    Grid.Row="1"
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Center"
-                    Spacing="12">
-            <TextBlock Text="Media could not be played"
-                       FontSize="18"
-                       FontWeight="SemiBold"
-                       Foreground="{DynamicResource PlayerErrorText}" />
-            <Button Classes="openMedia"
-                    Content="Open another file"
-                    Command="{Binding OpenMediaCommand}" />
-        </StackPanel>
+            <StackPanel IsVisible="{Binding IsFaulted}"
+                        Grid.Row="1"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Spacing="12">
+                <TextBlock Text="Media could not be played"
+                           FontSize="18"
+                           FontWeight="SemiBold"
+                           Foreground="{DynamicResource PlayerErrorText}" />
+                <Button Classes="openMedia"
+                        Content="Open another file"
+                        Command="{Binding OpenMediaCommand}" />
+            </StackPanel>
+            </Panel>
+        </ThemeVariantScope>
 
         <!-- The design's title bar doubles as the caption: with the client
              area extended over the decorations, dragging it moves the window
@@ -1340,7 +1349,7 @@
                                        TextWrapping="Wrap" />
                             <TextBlock IsVisible="{Binding HasMediaControlsNotice}"
                                        Text="{Binding MediaControlsNotice}"
-                                       Foreground="{DynamicResource Vlc.Accent.Bright}"
+                                       Foreground="{DynamicResource PlayerAccentText}"
                                        TextWrapping="Wrap" />
                         </StackPanel>
                     </ScrollViewer>

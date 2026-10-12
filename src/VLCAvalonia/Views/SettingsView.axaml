@@ -27,8 +27,10 @@
         <!-- The surface and its shadow are a childless Border behind the
              content: offscreen captures above 100 % scale misplace the
              children of a shadowed Border (as for the mini player). -->
+        <!-- Opaque: without the design's backdrop blur, BG/B1 at 0.95 (0.8
+             in Light) lets the screen behind show through. -->
         <Style Selector="Border#SettingsSurface">
-            <Setter Property="Background" Value="{DynamicResource Vlc.Bg.B1Transparent}" />
+            <Setter Property="Background" Value="{DynamicResource Vlc.Bg.B1}" />
             <Setter Property="CornerRadius" Value="14" />
             <Setter Property="BoxShadow" Value="0 8 15 0 #75000000" />
         </Style>
@@ -69,7 +71,6 @@
         <Style Selector=":is(UserControl).compact Border#SettingsSurface">
             <Setter Property="CornerRadius" Value="0" />
             <Setter Property="BoxShadow" Value="none" />
-            <Setter Property="Background" Value="{DynamicResource Vlc.Bg.B1}" />
         </Style>
         <Style Selector=":is(UserControl).compact Border#SettingsDialogContent, :is(UserControl).compact Border#SettingsHeader">
             <Setter Property="CornerRadius" Value="0" />
@@ -132,7 +133,7 @@
         </Style>
         <Style Selector="controls|VlcIcon.categoryIconActive">
             <Setter Property="IsVisible" Value="False" />
-            <Setter Property="Foreground" Value="{DynamicResource PlayerAccent}" />
+            <Setter Property="Foreground" Value="{DynamicResource PlayerAccentIcon}" />
         </Style>
         <Style Selector="ListBox#SettingsPages ListBoxItem:selected controls|VlcIcon.categoryIconActive">
             <Setter Property="IsVisible" Value="True" />
@@ -279,7 +280,7 @@
         </Style>
         <Style Selector="RadioButton.segment:checked">
             <Setter Property="Background" Value="{DynamicResource Vlc.Bg.AccentBright}" />
-            <Setter Property="Foreground" Value="{DynamicResource PlayerAccent}" />
+            <Setter Property="Foreground" Value="{DynamicResource PlayerAccentText}" />
         </Style>
         <Style Selector="RadioButton.segment:focus-visible">
             <Setter Property="BorderBrush" Value="{DynamicResource PlayerAccent}" />

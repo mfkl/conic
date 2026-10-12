@@ -21,14 +21,6 @@
             <Setter Property="Padding" Value="12,10" />
             <Setter Property="CornerRadius" Value="4" />
         </Style>
-        <Style Selector="ListBoxItem:selected">
-            <Setter Property="Background" Value="{DynamicResource PlayerSelection}" />
-            <Setter Property="Foreground" Value="{DynamicResource PlayerAccent}" />
-        </Style>
-        <Style Selector="ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="{DynamicResource PlayerSelection}" />
-            <Setter Property="Foreground" Value="{DynamicResource PlayerAccent}" />
-        </Style>
         <Style Selector="TextBlock.settingHint">
             <Setter Property="FontSize" Value="12" />
         </Style>
@@ -46,7 +38,7 @@
     <Grid RowDefinitions="52,*">
         <Grid x:Name="SettingsHeader" ColumnDefinitions="Auto,Auto,*,Auto" Margin="12,0">
             <Button Classes="iconChrome" Click="OnSettingsClose" AutomationProperties.Name="Close settings" ToolTip.Tip="Return (Escape)">
-                <controls:VlcIcon Width="24" Height="24" Margin="-2"
+                <controls:VlcIcon Width="24" Height="24"
                                   Icon="{StaticResource Icon.ArrowLeft}" />
             </Button>
             <controls:VlcCone Grid.Column="1" Width="30" Height="34" Margin="12,0" />
@@ -62,7 +54,7 @@
             </ListBox>
             <Border x:Name="SettingsBody" Grid.Column="1" Background="{DynamicResource Vlc.Bg.A4}" CornerRadius="8,0,0,0" Padding="24" x:FieldModifier="internal">
                 <Grid RowDefinitions="Auto,Auto,Auto,*">
-                    <TextBox x:Name="SettingsSearch" Margin="0,0,0,16" Text="{Binding Search, Mode=TwoWay}" PlaceholderText="Search settings" AutomationProperties.Name="Search settings" x:FieldModifier="internal" />
+                    <TextBox x:Name="SettingsSearch" Classes="search" Margin="0,0,0,16" Text="{Binding Search, Mode=TwoWay}" PlaceholderText="Search settings" AutomationProperties.Name="Search settings" x:FieldModifier="internal" />
                     <ComboBox x:Name="CompactSettingsPages" Grid.Row="1" Margin="0,0,0,16" IsVisible="False" HorizontalAlignment="Stretch" ItemsSource="{Binding FilteredPages}" SelectedItem="{Binding SelectedPage}" AutomationProperties.Name="Settings pages" x:FieldModifier="internal">
                         <ComboBox.ItemTemplate>
                             <DataTemplate>
@@ -182,7 +174,7 @@
                             </Border>
                             <Border Classes="settingsCard" IsVisible="{Binding IsHotkeys}">
                                 <StackPanel Spacing="18">
-                                    <TextBox PlaceholderText="Search shortcuts" Text="{Binding ShortcutSearch, Mode=TwoWay}" AutomationProperties.Name="Search shortcuts" />
+                                    <TextBox Classes="search" PlaceholderText="Search shortcuts" Text="{Binding ShortcutSearch, Mode=TwoWay}" AutomationProperties.Name="Search shortcuts" />
                                     <TextBlock Text="Edit a shortcut, then Save. Conflicting shortcuts must be resolved before saving." TextWrapping="Wrap" Classes="settingHint" />
                                     <ItemsControl ItemsSource="{Binding EditableShortcutRows}">
                                         <ItemsControl.ItemTemplate>

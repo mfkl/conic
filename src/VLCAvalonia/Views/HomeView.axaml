@@ -85,7 +85,7 @@
                     IsVisible="{Binding ShowMiniPlayer}"
                     ToolTip.Tip="Return to player"
                     AutomationProperties.Name="Return to player">
-                <controls:VlcIcon Width="24" Height="24" Margin="-2"
+                <controls:VlcIcon Width="24" Height="24"
                                   Icon="{StaticResource Icon.ArrowLeft}" />
             </Button>
             <controls:VlcCone Grid.Column="1"
@@ -106,7 +106,7 @@
                     Command="{Binding ToggleQueueCommand}"
                     ToolTip.Tip="Playback queue"
                     AutomationProperties.Name="Playback queue">
-                <controls:VlcIcon Width="24" Height="24" Margin="-2"
+                <controls:VlcIcon Width="24" Height="24"
                                   Icon="{StaticResource Icon.Lists}" />
             </Button>
             <Button Grid.Column="5"
@@ -114,7 +114,7 @@
                     Click="OnMore"
                     ToolTip.Tip="Open options"
                     AutomationProperties.Name="Open options">
-                <controls:VlcIcon Width="24" Height="24" Margin="-2"
+                <controls:VlcIcon Width="24" Height="24"
                                   Icon="{StaticResource Icon.More}" />
             </Button>
             <controls:WindowCaptionButtons Grid.Column="6"
@@ -255,6 +255,7 @@
                     </Grid>
                     <StackPanel Grid.Row="1" Spacing="8" Margin="0,0,0,16" IsVisible="{Binding !ShowHomeWelcome}">
                         <TextBox x:Name="HomeSearchBox"
+                                 Classes="search"
                                  Text="{Binding HomeSearch}"
                                  PlaceholderText="Search your media"
                                  AutomationProperties.Name="Search your media" />

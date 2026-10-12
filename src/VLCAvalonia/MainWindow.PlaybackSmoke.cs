@@ -6,6 +6,7 @@ using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Input.Raw;
 using Avalonia.Interactivity;
+using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
@@ -178,9 +179,13 @@ public partial class MainWindow
         Track? track = slider.GetVisualDescendants().OfType<Track>().SingleOrDefault();
         Require(track is { Bounds.Width: > 0, Thumb.Bounds.Width: > 0 }, $"{slider.Name} has a visible track and thumb");
         Require(track!.Thumb!.GetVisualDescendants().OfType<Border>().Any(b => b.Background is not null && b.Bounds.Width > 0), $"{slider.Name} thumb has a rendered surface");
-        Require(track.DecreaseButton!.GetVisualDescendants().OfType<Border>().Any(b => b.Background is not null && b.Bounds.Height == 4), $"{slider.Name} has a rendered progress fill");
+        // The fill sits inside a transparent hit area; it must be painted and
+        // at least 4 tall (the design's played part is inset in the track).
+        Require(track.DecreaseButton!.GetVisualDescendants().OfType<Border>().Any(b => IsPainted(b.Background) && b.Bounds.Height >= 4), $"{slider.Name} has a rendered progress fill");
         return track!;
     }
+
+    private static bool IsPainted(IBrush? brush) => brush is not null and not ISolidColorBrush { Color.A: 0 };
 
     private void ClickTrack(Track track, double fraction)
     {

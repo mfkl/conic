@@ -9,8 +9,7 @@ evidence that hardware decoding occurred.
 
 Branch `feature/macos-port` runs VLC Avalonia on macOS arm64 and x64 with a
 GPU video path. CI runs it on GitHub's `macos-15` (arm64) and
-`macos-15-intel` (x64) runners; [MACOS_HOST_TODO.md](MACOS_HOST_TODO.md) lists
-the checks that need a real Mac.
+`macos-15-intel` (x64) runners, and it was qualified on an M1 Pro Mac.
 
 - **ABI.** Apple arm64 passes every variadic argument on the stack in its own
   8-byte slot. `vlc_set` (module registration), `vlc_Log` and
@@ -150,7 +149,7 @@ hardware requirement above.
 | --- | --- |
 | Windows x64 | Existing D3D11VA opaque picture pool, GPU video-processor conversion and keyed-mutex import. Retest lifecycle whenever shared integration changes. |
 | Linux | Qualify VLC 3 hardware decoding on the selected GPU/driver, starting with VA-API. Implement ownership and GPU import of those decoded surfaces into the active Avalonia backend. Cover X11 and Wayland separately. Other GPU/decoder combinations require their own coverage. |
-| macOS | Implemented on `feature/macos-port` (VideoToolbox, `cvpx` conversion, IOSurface import with Metal shared events). Qualify on real Apple Silicon and Intel Macs: [MACOS_HOST_TODO.md](MACOS_HOST_TODO.md). |
+| macOS | Implemented on `feature/macos-port` (VideoToolbox, `cvpx` conversion, IOSurface import with Metal shared events). Qualified on an M1 Pro; Intel and dual-GPU Macs are not yet checked by hand. |
 
 VLC 3 includes [VideoToolbox and VA-API decoding](https://images.videolan.org/vlc/releases/3.0.7.html).
 Avalonia describes [external GPU resource import](https://docs.avaloniaui.net/docs/graphics-animation/custom-rendering),

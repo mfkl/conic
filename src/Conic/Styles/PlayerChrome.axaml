@@ -87,11 +87,13 @@
         <Setter Property="VerticalContentAlignment" Value="Center" />
         <Setter Property="FontWeight" Value="SemiBold" />
     </Style>
-    <!-- The design's play pill, at the current bar's scale. -->
+    <!-- The control bar's play pill: 54x28, a centered 24 icon. -->
     <Style Selector="Button.play">
-        <Setter Property="Width" Value="64" />
-        <Setter Property="Height" Value="40" />
-        <Setter Property="Padding" Value="20,8" />
+        <Setter Property="Width" Value="54" />
+        <Setter Property="Height" Value="28" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
     </Style>
 
     <!-- Design icon button: 30x32, radius 4, 24 icon in FG/A2; accent when
@@ -143,31 +145,23 @@
         <Setter Property="Foreground" Value="{DynamicResource PlayerSecondaryText}" />
         <Setter Property="BorderThickness" Value="0" />
     </Style>
+    <!-- Control bar transport buttons (previous, next, stop): 30x28. -->
     <Style Selector="Button.transport">
-        <Setter Property="Width" Value="44" />
-        <Setter Property="Height" Value="44" />
-        <Setter Property="Padding" Value="10" />
-        <Setter Property="CornerRadius" Value="6" />
+        <Setter Property="Width" Value="30" />
+        <Setter Property="Height" Value="28" />
+        <Setter Property="Padding" Value="3,2" />
+        <Setter Property="CornerRadius" Value="4" />
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="BorderThickness" Value="0" />
         <Setter Property="Foreground" Value="{DynamicResource PlayerSecondaryText}" />
     </Style>
-    <!-- Disabled transport controls stay quiet over the video. -->
+    <!-- Disabled transport controls stay quiet. -->
     <Style Selector="Button.transport:disabled">
         <Setter Property="Opacity" Value="0.48" />
     </Style>
     <Style Selector="Button.transport:disabled /template/ ContentPresenter#PART_ContentPresenter">
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="BorderThickness" Value="0" />
-    </Style>
-    <Style Selector="Button.mute">
-        <Setter Property="Width" Value="40" />
-        <Setter Property="Height" Value="40" />
-        <Setter Property="Padding" Value="8" />
-        <Setter Property="CornerRadius" Value="6" />
-        <Setter Property="Background" Value="Transparent" />
-        <Setter Property="BorderThickness" Value="0" />
-        <Setter Property="Foreground" Value="{DynamicResource PlayerSecondaryText}" />
     </Style>
 
     <!-- Text buttons: secondary labels in FG/A2 that brighten on hover. -->
@@ -216,6 +210,23 @@
     <Style Selector="Button.drawerTab.selected:pointerover /template/ ContentPresenter#PART_ContentPresenter, Button.menuAction.selected:pointerover /template/ ContentPresenter#PART_ContentPresenter, Button.recentItem.selected:pointerover /template/ ContentPresenter#PART_ContentPresenter">
         <Setter Property="Background" Value="{DynamicResource PlayerSelection}" />
         <Setter Property="Foreground" Value="{DynamicResource Vlc.Accent.Bright}" />
+    </Style>
+
+    <!-- Control bar (design: 54 tall, BG/A3, padding 11 vertical; the
+         horizontal padding and the group gap follow PlayerLayoutPolicy). -->
+    <Style Selector="Border.playerBar">
+        <Setter Property="Height" Value="54" />
+        <Setter Property="Padding" Value="20,11" />
+        <Setter Property="Background" Value="{DynamicResource Vlc.Bg.A3}" />
+    </Style>
+    <!-- Elapsed and duration: 15 px FG/A2 in a 76 wide box. -->
+    <Style Selector="TextBlock.barTime">
+        <Setter Property="FontSize" Value="15" />
+        <Setter Property="FontFeatures" Value="tnum" />
+        <Setter Property="MinWidth" Value="76" />
+        <Setter Property="TextAlignment" Value="Center" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="Foreground" Value="{DynamicResource PlayerSecondaryText}" />
     </Style>
 
     <!-- Title bar (design: 40 tall, padding 6, items centered). The bar's
@@ -505,11 +516,12 @@
         <Setter Property="Background" Value="{DynamicResource Vlc.Fg.A4}" />
     </Style>
 
-    <!-- Volume: the same dark track at 20 tall with an accent fill (bright
-         above 100 %) and a light 6-wide handle that stays visible on both. -->
+    <!-- Volume (design: 88x28): the same dark track at 20 tall with an accent
+         fill (bright above 100 %) and a light 6-wide handle that stays visible
+         on both. -->
     <Style Selector="Slider.volume">
-        <Setter Property="Width" Value="120" />
-        <Setter Property="Height" Value="40" />
+        <Setter Property="Width" Value="88" />
+        <Setter Property="Height" Value="28" />
         <Setter Property="Padding" Value="0" />
         <Setter Property="VerticalAlignment" Value="Center" />
         <Setter Property="Background" Value="{DynamicResource Vlc.Bg.B2}" />
@@ -569,10 +581,6 @@
 
     <!-- Layout density and text ............................................ -->
 
-    <Style Selector="Window.compact-density Border#PlayerDock">
-        <Setter Property="Padding" Value="16,10" />
-        <Setter Property="CornerRadius" Value="16" />
-    </Style>
     <Style Selector="TextBlock.settingBadge">
         <Setter Property="Background" Value="{DynamicResource PlayerSelection}" />
         <Setter Property="Foreground" Value="{DynamicResource Vlc.Accent.Bright}" />

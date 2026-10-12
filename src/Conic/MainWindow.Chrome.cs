@@ -4,13 +4,17 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Threading;
 using Player.Application;
+using Conic.Controls;
 
 namespace Conic;
 
 // Pointer, fullscreen and seek/volume interaction with the player chrome,
-// plus the responsive dock layout.
+// plus the docked video layout and the responsive control bar.
 public partial class MainWindow
 {
+    /// <summary>Height of the design's control bar (VideoArea's last row).</summary>
+    private const double PlayerBarHeight = 54;
+
     private void OnPlayerInteraction(object? sender, PointerEventArgs e)
     {
         _keyboardNavigation = false;
@@ -41,7 +45,33 @@ public partial class MainWindow
         _chromeVisibility.Wake();
         SetChromeVisibility(true);
         _autoHideTimer.Stop();
-        if (_presentation.IsPlaying && !_settings.Current.ReduceMotion) _autoHideTimer.Start();
+        if (_chromeVisibility.HidesAutomatically) _autoHideTimer.Start();
+    }
+
+    // Also runs when the platform changes the state (macOS green button).
+    private void OnWindowStateChanged()
+    {
+        bool fullscreen = WindowState == WindowState.FullScreen;
+        if (_chromeVisibility.IsFullscreen != fullscreen) _chromeVisibility.SetFullscreen(fullscreen);
+        _presentation.IsFullscreen = fullscreen;
+        ApplyVideoLayout();
+    }
+
+    /// <summary>
+    /// Windowed, the video sits between the docked title bar and control bar
+    /// (row 1). In fullscreen and picture in picture it spans every row and
+    /// the bars overlay it. Only the surface's row changes: re-parenting it
+    /// would dispose the VLC backend, which re-reads its bounds every frame.
+    /// </summary>
+    private void ApplyVideoLayout()
+    {
+        bool docked = !_chromeVisibility.OverlaysVideo;
+        foreach (Control layer in new Control[] { VideoSurface, SubtitleLayer })
+        {
+            Grid.SetRow(layer, docked ? 1 : 0);
+            Grid.SetRowSpan(layer, docked ? 1 : 3);
+        }
+        SetChromeVisibility(_chromeVisibility.IsVisible);
     }
 
     // With the client area extended over the decorations, the top chrome is
@@ -73,7 +103,7 @@ public partial class MainWindow
         _chromeVisibility.SetFullscreen(_presentation.IsFullscreen);
         SetChromeVisibility(true);
         _autoHideTimer.Stop();
-        if (_presentation.IsPlaying) _autoHideTimer.Start();
+        if (_chromeVisibility.HidesAutomatically) _autoHideTimer.Start();
     }
 
     private Rect GetClientRect(Control control)
@@ -119,50 +149,42 @@ public partial class MainWindow
     private void ApplyResponsiveChrome()
     {
         PlayerLayoutResult layout = PlayerLayoutPolicy.ForWidth(Bounds.Width);
-        OpenMenu.MaxHeight = Math.Max(160, Bounds.Height - 90);
-        bool compactTopChrome = Bounds.Width < PlayerLayoutPolicy.CompactWidth;
-        TopChrome.Margin = new Thickness(0);
-        TopChromeTitle.IsVisible = true;
-        ProductMark.IsVisible = !compactTopChrome;
-        LeftTransport.IsVisible = !compactTopChrome;
-        PreviousButton.IsVisible = !compactTopChrome;
-        NextButton.IsVisible = !compactTopChrome;
-        PlayerVolume.IsVisible = true;
-        if (compactTopChrome)
+        ProductMark.IsVisible = !layout.IsCompact;
+        ElapsedLabel.IsVisible = layout.ShowTimeLabels;
+        DurationLabel.IsVisible = layout.ShowTimeLabels;
+        PlayerVolume.IsVisible = layout.ShowVolumeSlider;
+        // Below the narrow width the More menu and the context menu carry these.
+        AudioTracksButton.IsVisible = layout.ShowTrackButtons;
+        SubtitleTracksButton.IsVisible = layout.ShowTrackButtons;
+        PlaybackSettingsButton.IsVisible = layout.ShowTrackButtons;
+        bool denseBar = Classes.Contains("compact-density");
+        DockGrid.ColumnSpacing = denseBar ? Math.Min(layout.Spacing, 12) : layout.Spacing;
+        PlayerDock.Padding = new Thickness(denseBar ? Math.Min(layout.Padding, 12) : layout.Padding, 11);
+
+        // Panels open between the title bar and the control bar.
+        double top = PlatformChrome.TitleBarHeight;
+        OpenMenu.MaxHeight = Math.Max(160, Bounds.Height - OpenMenu.Margin.Top - PlayerBarHeight - 8);
+        if (layout.IsCompact)
         {
+            const double gap = 8;
+            double room = Math.Max(160, Bounds.Height - top - PlayerBarHeight - 2 * gap);
             QueueDrawer.Width = double.NaN;
             QueueDrawer.MaxWidth = double.PositiveInfinity;
-            QueueDrawer.Height = Math.Min(Math.Max(260, Bounds.Height * .72), 520);
+            QueueDrawer.Height = Math.Min(Math.Min(Math.Max(260, Bounds.Height * .72), 520), room);
             QueueDrawer.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch;
             QueueDrawer.VerticalAlignment = Avalonia.Layout.VerticalAlignment.Bottom;
-            QueueDrawer.Margin = new Thickness(12);
+            QueueDrawer.Margin = new Thickness(12, top + gap, 12, PlayerBarHeight + gap);
         }
         else
         {
+            const double gap = 12;
             QueueDrawer.Width = 400;
             QueueDrawer.MaxWidth = Math.Max(320, Bounds.Width * .42);
             QueueDrawer.Height = double.NaN;
             QueueDrawer.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right;
             QueueDrawer.VerticalAlignment = Avalonia.Layout.VerticalAlignment.Stretch;
-            QueueDrawer.Margin = new Thickness(0, 76, 16, 18);
+            QueueDrawer.Margin = new Thickness(0, top + gap, 16, PlayerBarHeight + gap);
         }
-        CenterTransport.Spacing = layout.Spacing;
-        RightTransport.Spacing = layout.Spacing;
-        Grid.SetRow(RightTransport, layout.RightRow);
-        Grid.SetColumn(RightTransport, layout.RightColumn);
-        Grid.SetColumnSpan(RightTransport, layout.RightColumnSpan);
-        Grid.SetColumn(CenterTransport, compactTopChrome ? 0 : 1);
-        Grid.SetColumnSpan(CenterTransport, compactTopChrome ? 3 : 1);
-        RightTransport.HorizontalAlignment = layout.IsCompact
-            ? Avalonia.Layout.HorizontalAlignment.Center
-            : Avalonia.Layout.HorizontalAlignment.Right;
-        // Row reassignment can happen during the window's arrange pass. Queue
-        // a fresh measure so the dock grows before the compact volume row paints.
-        Dispatcher.UIThread.Post(() =>
-        {
-            DockGrid.InvalidateMeasure();
-            PlayerDock.InvalidateMeasure();
-        }, DispatcherPriority.Loaded);
     }
 
     private void ApplyResponsiveSettings() => SettingsPanel.ApplyResponsiveLayout();

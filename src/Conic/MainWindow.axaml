@@ -24,7 +24,13 @@
         ExtendClientAreaToDecorationsHint="True"
         ExtendClientAreaTitleBarHeightHint="40">
 
+    <!-- Rows: the 40 px title bar, the video, the 54 px control bar. Windowed,
+         the bars dock around the video in rows 0 and 2; in fullscreen and
+         picture in picture the video spans all rows and the bars overlay it
+         (MainWindow.Chrome.cs, ApplyVideoLayout). Every other layer spans all
+         rows. -->
     <Grid x:Name="VideoArea"
+          RowDefinitions="40,*,54"
           Background="{DynamicResource PlayerCanvas}"
           PointerMoved="OnPlayerInteraction"
           PointerPressed="OnVideoPointerPressed"
@@ -68,14 +74,18 @@
             </ContextMenu>
         </Grid.ContextMenu>
 
-        <controls:CompositionVideoSurface x:Name="VideoSurface" />
-        <controls:SubtitleOverlay x:Name="SubtitleLayer" />
+        <!-- Never re-parent the surface (detaching disposes the VLC backend);
+             only its row changes. Subtitles always share its cell. -->
+        <controls:CompositionVideoSurface x:Name="VideoSurface" Grid.Row="1" />
+        <controls:SubtitleOverlay x:Name="SubtitleLayer" Grid.Row="1" />
 
         <views:HomeView x:Name="HomeScreen"
+                        Grid.RowSpan="3"
                         ZIndex="1"
                         IsVisible="{Binding IsHomeOpen}" />
 
         <Grid x:Name="PictureInPictureChrome"
+              Grid.RowSpan="3"
               ZIndex="2"
               IsVisible="False"
               Focusable="True"
@@ -162,6 +172,7 @@
 
         <!-- Hidden under Home, which covers the player. -->
         <StackPanel x:Name="NoMediaSurface"
+                    Grid.Row="1"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center"
                     Spacing="14">
@@ -197,6 +208,7 @@
         </StackPanel>
 
         <StackPanel IsVisible="{Binding IsOpening}"
+                    Grid.Row="1"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center"
                     Spacing="12">
@@ -208,6 +220,7 @@
         </StackPanel>
 
         <StackPanel IsVisible="{Binding IsFaulted}"
+                    Grid.Row="1"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center"
                     Spacing="12">
@@ -223,9 +236,11 @@
         <!-- The design's title bar doubles as the caption: with the client
              area extended over the decorations, dragging it moves the window
              and the in-app buttons replace the light system caption (macOS
-             keeps its traffic lights; see PlatformChrome). It still overlays
-             the video and hides with the dock while playing. -->
+             keeps its traffic lights; see PlatformChrome). Docked above the
+             video in a window; in fullscreen it overlays the video and hides
+             with the control bar while playing. -->
         <Border x:Name="TopChrome"
+                Grid.Row="0"
                 Classes="titleBar"
                 VerticalAlignment="Top"
                 Background="{DynamicResource Vlc.Bg.A3}"
@@ -276,17 +291,26 @@
                            Text="{Binding MediaTitle}"
                            ToolTip.Tip="{Binding MediaTitle}" />
                 <StackPanel Orientation="Horizontal" Spacing="10">
-                    <!-- Phase 4 moves the queue into the control bar. -->
-                    <Button x:Name="QueueButton"
-                            Classes="titleBar"
-                            Command="{Binding ToggleQueueCommand}"
-                            CommandParameter="Queue"
-                            ToolTip.Tip="Playback queue (Ctrl+J)"
-                            AutomationProperties.Name="Open playback queue">
-                        <controls:VlcIcon Width="24" Height="24"
-                                          Icon="{StaticResource Icon.Lists}" />
-                    </Button>
-                    <controls:WindowCaptionButtons />
+                    <controls:WindowCaptionButtons>
+                        <!-- Design: minimize, maximize, fullscreen, close. It
+                             stays in fullscreen (as exit) and on macOS. -->
+                        <controls:WindowCaptionButtons.Accessory>
+                            <Button x:Name="FullscreenButton"
+                                    Classes="caption"
+                                    ToolTip.Tip="{Binding FullscreenName}"
+                                    Command="{Binding ToggleFullscreenCommand}"
+                                    AutomationProperties.Name="{Binding FullscreenName}">
+                                <Grid>
+                                    <controls:VlcIcon Width="24" Height="24"
+                                                      IsVisible="{Binding !IsFullscreen}"
+                                                      Icon="{StaticResource Icon.Fullscreen}" />
+                                    <controls:VlcIcon Width="24" Height="24"
+                                                      IsVisible="{Binding IsFullscreen}"
+                                                      Icon="{StaticResource Icon.FullscreenExit}" />
+                                </Grid>
+                            </Button>
+                        </controls:WindowCaptionButtons.Accessory>
+                    </controls:WindowCaptionButtons>
                     <Button x:Name="LibraryButton"
                             IsVisible="False"
                             Command="{Binding OpenLibraryCommand}" />
@@ -295,6 +319,7 @@
         </Border>
 
         <Border x:Name="OpenMenu"
+                Grid.RowSpan="3"
                 ZIndex="20"
                 IsVisible="False"
                 Focusable="True"
@@ -451,7 +476,10 @@
             </ScrollViewer>
         </Border>
 
+        <!-- Drawers and panels open below the title bar and above the
+             control bar (40 + 12 and 54 + 12). -->
         <Border x:Name="LibraryPanel"
+                Grid.RowSpan="3"
                 ZIndex="30"
                 IsVisible="{Binding IsLibraryOpen}"
                 Focusable="True"
@@ -459,7 +487,7 @@
                 MaxWidth="430"
                 HorizontalAlignment="Right"
                 VerticalAlignment="Stretch"
-                Margin="0,76,16,18"
+                Margin="0,52,16,66"
                 Padding="16"
                 CornerRadius="6"
                 Background="{DynamicResource PlayerSurface}"
@@ -641,12 +669,13 @@
         </Border>
 
         <Border x:Name="UrlPanel"
+                Grid.RowSpan="3"
                 ZIndex="30"
                 IsVisible="False"
                 MaxWidth="460"
                 HorizontalAlignment="Center"
                 VerticalAlignment="Top"
-                Margin="24,82,24,0"
+                Margin="24,52,24,0"
                 Padding="16"
                 CornerRadius="16"
                 Background="{DynamicResource Vlc.Bg.B1Transparent}"
@@ -686,6 +715,7 @@
         </Border>
 
         <Border x:Name="ResumePanel"
+                Grid.RowSpan="3"
                 ZIndex="30"
                 IsVisible="{Binding HasPendingResume}"
                 MaxWidth="420"
@@ -732,12 +762,13 @@
         </Border>
 
         <Border x:Name="OpenErrorToast"
+                Grid.RowSpan="3"
                 ZIndex="30"
                 IsVisible="False"
                 MaxWidth="560"
                 HorizontalAlignment="Center"
                 VerticalAlignment="Top"
-                Margin="24,90,24,0"
+                Margin="24,52,24,0"
                 Padding="10"
                 Background="{DynamicResource PlayerErrorSurface}"
                 CornerRadius="10">
@@ -747,6 +778,7 @@
         </Border>
 
         <Border x:Name="QueueDrawer"
+                Grid.RowSpan="3"
                 ZIndex="10"
                 IsVisible="{Binding IsQueueOpen}"
                 Focusable="True"
@@ -756,7 +788,7 @@
                 MaxWidth="390"
                 HorizontalAlignment="Right"
                 VerticalAlignment="Stretch"
-                Margin="0,76,16,18"
+                Margin="0,52,16,66"
                 Padding="16"
                 CornerRadius="6"
                 Background="{DynamicResource PlayerSurface}"
@@ -1124,105 +1156,23 @@
             </Grid>
         </Border>
 
-        <!-- Edge-to-edge playback chrome, kept above both GPU and CPU video
-             paths. The scrim runs darker than the original capture so the
-             controls stay legible over bright video. -->
+        <!-- The design's control bar (design spec "Control bar"): one row of
+             transport, timeline, volume and tool groups. Docked below the
+             video in a window; in fullscreen it overlays the video and
+             auto-hides. PlayerLayoutPolicy drops secondary controls as the
+             window narrows. -->
         <Border x:Name="PlayerDock"
+                Grid.Row="2"
+                Classes="playerBar"
                 VerticalAlignment="Bottom"
-                HorizontalAlignment="Stretch"
-                Padding="20,20,20,8"
-                BorderThickness="0">
-            <Border.Background>
-                <LinearGradientBrush StartPoint="50%,0%" EndPoint="50%,100%">
-                    <GradientStop Offset="0" Color="#00000000" />
-                    <GradientStop Offset="0.45" Color="#CC000000" />
-                    <GradientStop Offset="1" Color="#FA000000" />
-                </LinearGradientBrush>
-            </Border.Background>
+                HorizontalAlignment="Stretch">
             <Grid x:Name="DockGrid"
-                  RowDefinitions="48,68,Auto"
-                  ColumnDefinitions="*,Auto,*"
-                  RowSpacing="0">
-                <Grid Grid.Row="0" Grid.ColumnSpan="3" ColumnDefinitions="*,*" RowDefinitions="20,28">
-                    <TextBlock Grid.Column="0"
-                               Text="{Binding ElapsedText}"
-                               Margin="0,0,12,0"
-                               Foreground="{DynamicResource PlayerSecondaryText}"
-                               FontSize="12"
-                               FontFeatures="tnum"
-                               VerticalAlignment="Center" />
-                    <controls:PlayerTimeline x:Name="PlayerTimeline"
-                                             Grid.Row="1"
-                                             Grid.ColumnSpan="2"
-                                             Classes="timeline monochrome"
-                                             Minimum="0"
-                                             Maximum="1"
-                                             SmallChange="{Binding SeekStep}"
-                                             Value="{Binding Position, Mode=TwoWay}"
-                                             IsEnabled="{Binding CanSeek}"
-                                             AutomationProperties.Name="Playback position"
-                                             AutomationProperties.HelpText="Use left and right arrow keys to seek."
-                                             SeekStarted="OnSeekStarted"
-                                             SeekCommitted="OnSeekCommitted" />
-                    <Border Grid.Row="1"
-                            Grid.ColumnSpan="2"
-                            IsVisible="{Binding IsSeeking}"
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Top"
-                            Margin="0,-24,0,0"
-                            Padding="7,3"
-                            CornerRadius="6"
-                            Background="{DynamicResource Vlc.Bg.B1Transparent}">
-                        <TextBlock Text="{Binding SeekPreviewText}"
-                                   FontSize="11"
-                                   FontFeatures="tnum" />
-                    </Border>
-                    <TextBlock Grid.Column="1"
-                               HorizontalAlignment="Right"
-                               Text="{Binding DurationText}"
-                               Margin="12,0,0,0"
-                               Foreground="{DynamicResource PlayerSecondaryText}"
-                               FontSize="12"
-                               FontFeatures="tnum"
-                               VerticalAlignment="Center" />
-                </Grid>
-
-                <StackPanel x:Name="LeftTransport"
-                            Grid.Row="1"
-                            Grid.Column="0"
-                            Orientation="Horizontal"
-                            Spacing="4"
-                            HorizontalAlignment="Left"
-                            VerticalAlignment="Center">
-                    <Button Classes="playbackAction"
-                            Command="{Binding ToggleMediaControlsCommand}"
-                            CommandParameter="Audio"
-                            Content="Audio / subtitles"
-                            ToolTip.Tip="Audio tracks, subtitles, and chapters"
-                            AutomationProperties.Name="Audio, subtitles, and chapters" />
-                </StackPanel>
-
-                <StackPanel x:Name="CenterTransport"
-                            Grid.Row="1"
-                            Grid.Column="1"
+                  ColumnDefinitions="Auto,*,Auto,Auto"
+                  ColumnSpacing="20">
+                <StackPanel x:Name="TransportGroup"
                             Orientation="Horizontal"
                             Spacing="8"
-                            HorizontalAlignment="Center"
                             VerticalAlignment="Center">
-                    <Button Classes="transport"
-                            Command="{Binding SkipBackwardCommand}"
-                            AutomationProperties.Name="Skip backward"
-                            ToolTip.Tip="{Binding SkipBackwardLabel, StringFormat='Back {0} seconds (Alt+Left)'}">
-                        <Grid Width="26" Height="30">
-                            <controls:VlcIcon Width="26" Height="26"
-                                              VerticalAlignment="Top"
-                                              Icon="{StaticResource Icon.SkipBackwardArrow}" />
-                            <TextBlock Text="{Binding SkipBackwardLabel}"
-                                       FontSize="10"
-                                       HorizontalAlignment="Center"
-                                       VerticalAlignment="Bottom" />
-                        </Grid>
-                    </Button>
                     <Button x:Name="PreviousButton"
                             Classes="transport"
                             Command="{Binding PreviousCommand}"
@@ -1231,7 +1181,8 @@
                         <controls:VlcIcon Width="24" Height="24"
                                           Icon="{StaticResource Icon.Previous}" />
                     </Button>
-                    <Button Classes="play"
+                    <Button x:Name="PlayButton"
+                            Classes="primary play"
                             Command="{Binding TogglePauseCommand}"
                             AutomationProperties.Name="{Binding PlayPauseName}"
                             ToolTip.Tip="{Binding PlayPauseToolTip}">
@@ -1244,14 +1195,6 @@
                                               Icon="{StaticResource Icon.Pause}" />
                         </Grid>
                     </Button>
-                    <Button x:Name="StopButton"
-                            Classes="transport"
-                            Command="{Binding StopCommand}"
-                            AutomationProperties.Name="Stop playback"
-                            ToolTip.Tip="Stop playback">
-                        <controls:VlcIcon Width="24" Height="24"
-                                          Icon="{StaticResource Icon.Stop}" />
-                    </Button>
                     <Button x:Name="NextButton"
                             Classes="transport"
                             Command="{Binding NextCommand}"
@@ -1260,41 +1203,74 @@
                         <controls:VlcIcon Width="24" Height="24"
                                           Icon="{StaticResource Icon.Next}" />
                     </Button>
-                    <Button Classes="transport"
-                            Command="{Binding SkipForwardCommand}"
-                            AutomationProperties.Name="Skip forward"
-                            ToolTip.Tip="{Binding SkipForwardLabel, StringFormat='Forward {0} seconds (Alt+Right)'}">
-                        <Grid Width="26" Height="30">
-                            <controls:VlcIcon Width="26" Height="26"
-                                              VerticalAlignment="Top"
-                                              Icon="{StaticResource Icon.SkipForwardArrow}" />
-                            <TextBlock Text="{Binding SkipForwardLabel}"
-                                       FontSize="10"
-                                       HorizontalAlignment="Center"
-                                       VerticalAlignment="Bottom" />
-                        </Grid>
+                    <!-- Not in the design's default bar, but in its customize
+                         palette; kept so Stop stays one click away. -->
+                    <Button x:Name="StopButton"
+                            Classes="transport"
+                            Command="{Binding StopCommand}"
+                            AutomationProperties.Name="Stop playback"
+                            ToolTip.Tip="Stop playback">
+                        <controls:VlcIcon Width="24" Height="24"
+                                          Icon="{StaticResource Icon.Stop}" />
                     </Button>
                 </StackPanel>
 
-                <StackPanel x:Name="RightTransport"
-                            Grid.Row="1"
+                <Grid x:Name="TimelineGroup"
+                      Grid.Column="1"
+                      ColumnDefinitions="Auto,*,Auto"
+                      VerticalAlignment="Center">
+                    <TextBlock x:Name="ElapsedLabel"
+                               Classes="barTime"
+                               Margin="0,0,8,0"
+                               Text="{Binding ElapsedText}" />
+                    <controls:PlayerTimeline x:Name="PlayerTimeline"
+                                             Grid.Column="1"
+                                             Classes="timeline monochrome"
+                                             Minimum="0"
+                                             Maximum="1"
+                                             SmallChange="{Binding SeekStep}"
+                                             Value="{Binding Position, Mode=TwoWay}"
+                                             IsEnabled="{Binding CanSeek}"
+                                             AutomationProperties.Name="Playback position"
+                                             AutomationProperties.HelpText="Use left and right arrow keys to seek."
+                                             SeekStarted="OnSeekStarted"
+                                             SeekCommitted="OnSeekCommitted" />
+                    <!-- Seek preview, above the bar while dragging. -->
+                    <Border Grid.Column="1"
+                            IsVisible="{Binding IsSeeking}"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Top"
+                            Margin="0,-34,0,0"
+                            Padding="7,3"
+                            CornerRadius="6"
+                            Background="{DynamicResource Vlc.Bg.B1Transparent}">
+                        <TextBlock Text="{Binding SeekPreviewText}"
+                                   FontSize="11"
+                                   FontFeatures="tnum" />
+                    </Border>
+                    <TextBlock x:Name="DurationLabel"
+                               Grid.Column="2"
+                               Classes="barTime"
+                               Margin="8,0,0,0"
+                               Text="{Binding DurationText}" />
+                </Grid>
+
+                <StackPanel x:Name="VolumeGroup"
                             Grid.Column="2"
                             Orientation="Horizontal"
                             Spacing="8"
-                            Height="44"
-                            Margin="0,0,4,0"
-                            HorizontalAlignment="Right"
                             VerticalAlignment="Center">
                     <Button x:Name="MuteButton"
-                            Classes="mute"
+                            Classes="icon"
                             Command="{Binding ToggleMuteCommand}"
                             AutomationProperties.Name="{Binding MuteName}"
                             ToolTip.Tip="{Binding MuteName}">
                         <controls:VlcIcon Width="24" Height="24"
                                           Icon="{Binding VolumeLevel, Converter={x:Static controls:VolumeIconConverter.Instance}}" />
                     </Button>
+                    <!-- The level shows in the tooltip and through automation
+                         (0-200 %); the fill turns bright above 100 %. -->
                     <controls:PlayerVolumeSlider x:Name="PlayerVolume"
-                                                 Width="120"
                                                  Classes="volume monochrome"
                                                  Minimum="0"
                                                  Maximum="200"
@@ -1308,31 +1284,57 @@
                                                  ToolTip.Tip="{Binding VolumeText}"
                                                  DragStarted="OnVolumeDragStarted"
                                                  DragCompleted="OnVolumeDragCompleted" />
-                    <TextBlock Text="{Binding Volume, StringFormat='{}{0:0}%'}"
-                               MinWidth="38"
-                               FontSize="12"
-                               Foreground="{DynamicResource Vlc.Fg.2}"
-                               VerticalAlignment="Center"
-                               ToolTip.Tip="{Binding VolumeText}" />
-                    <Button x:Name="FullscreenButton"
-                            Classes="transport"
-                            ToolTip.Tip="{Binding FullscreenName}"
-                            Command="{Binding ToggleFullscreenCommand}"
-                            AutomationProperties.Name="{Binding FullscreenName}">
-                        <Grid>
-                            <controls:VlcIcon Width="24" Height="24"
-                                              IsVisible="{Binding !IsFullscreen}"
-                                              Icon="{StaticResource Icon.Fullscreen}" />
-                            <controls:VlcIcon Width="24" Height="24"
-                                              IsVisible="{Binding IsFullscreen}"
-                                              Icon="{StaticResource Icon.FullscreenExit}" />
-                        </Grid>
+                </StackPanel>
+
+                <!-- Tools. Phase 4b turns these into the design's bar panels;
+                     for now they open the playback drawer's tabs. -->
+                <StackPanel x:Name="ToolsGroup"
+                            Grid.Column="3"
+                            Orientation="Horizontal"
+                            Spacing="12"
+                            VerticalAlignment="Center">
+                    <Button x:Name="AudioTracksButton"
+                            Classes="icon"
+                            Command="{Binding ToggleMediaControlsCommand}"
+                            CommandParameter="Audio"
+                            ToolTip.Tip="Audio tracks and synchronization"
+                            AutomationProperties.Name="Audio tracks">
+                        <controls:VlcIcon Width="24" Height="24"
+                                          Icon="{StaticResource Icon.Audio}" />
+                    </Button>
+                    <Button x:Name="SubtitleTracksButton"
+                            Classes="icon"
+                            Command="{Binding ToggleMediaControlsCommand}"
+                            CommandParameter="Subtitles"
+                            ToolTip.Tip="Subtitle tracks and synchronization"
+                            AutomationProperties.Name="Subtitle tracks">
+                        <controls:VlcIcon Width="24" Height="24"
+                                          Icon="{StaticResource Icon.Subtitles}" />
+                    </Button>
+                    <Button x:Name="PlaybackSettingsButton"
+                            Classes="icon"
+                            Command="{Binding ToggleMediaControlsCommand}"
+                            CommandParameter="Video"
+                            ToolTip.Tip="Video adjustments"
+                            AutomationProperties.Name="Video adjustments">
+                        <controls:VlcIcon Width="24" Height="24"
+                                          Icon="{StaticResource Icon.Settings}" />
+                    </Button>
+                    <Button x:Name="QueueButton"
+                            Classes="icon"
+                            Command="{Binding ToggleQueueCommand}"
+                            CommandParameter="Queue"
+                            ToolTip.Tip="Playback queue (Ctrl+J)"
+                            AutomationProperties.Name="Open playback queue">
+                        <controls:VlcIcon Width="24" Height="24"
+                                          Icon="{StaticResource Icon.Lists}" />
                     </Button>
                 </StackPanel>
             </Grid>
         </Border>
 
         <views:SettingsView x:Name="SettingsPanel"
+                            Grid.RowSpan="3"
                             ZIndex="30"
                             IsVisible="False" />
     </Grid>

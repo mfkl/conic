@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
 using VLCAvalonia.Controls;
@@ -9,12 +10,15 @@ namespace VLCAvalonia.Views;
 
 public partial class SettingsView : UserControl
 {
+    /// <summary>Below this width the dialog fills the window and a ComboBox replaces the category pane.</summary>
+    private const double CompactWidth = 720;
+    private static readonly Thickness HeaderPadding = new(8, 0, 14, 0);
+
     private PlayerPresentationViewModel? _player;
     public event EventHandler? CloseRequested;
     public SettingsView()
     {
         InitializeComponent();
-        SettingsHeader.Margin = PlatformChrome.ClearOfCaptionButtons(SettingsHeader.Margin);
         SizeChanged += (_, _) => ApplyResponsiveLayout();
     }
 
@@ -34,12 +38,28 @@ public partial class SettingsView : UserControl
 
     internal void ApplyResponsiveLayout()
     {
-        bool compact = Bounds.Width < 720;
+        bool compact = Bounds.Width < CompactWidth;
         Classes.Set("compact", compact);
+        SettingsCategoryPane.IsVisible = !compact;
         SettingsPages.IsVisible = !compact;
         CompactSettingsPages.IsVisible = compact;
-        SettingsColumns.ColumnDefinitions[0].Width = new GridLength(compact ? 0 : 176);
-        SettingsBody.Padding = new Thickness(compact ? 16 : 24);
+        SettingsColumns.ColumnDefinitions[0].Width = new GridLength(compact ? 0 : 216);
+        SettingsPageContent.Margin = compact ? new Thickness(16, 16, 16, 24) : new Thickness(24, 20, 24, 32);
+        // The compact dialog fills the window, so its header reaches the
+        // macOS traffic lights; the centered dialog stays below the title bar.
+        SettingsHeader.Padding = compact ? PlatformChrome.ClearOfCaptionButtons(HeaderPadding) : HeaderPadding;
+    }
+
+    // The dimmed backdrop: pressing it closes Settings, except over the
+    // title bar band, where it still moves the window.
+    private void OnScrimPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) return;
+        if (e.GetPosition(this).Y < PlatformChrome.TitleBarHeight && TopLevel.GetTopLevel(this) is Window { WindowState: not WindowState.FullScreen } window)
+            window.BeginMoveDrag(e);
+        else
+            CloseRequested?.Invoke(this, EventArgs.Empty);
+        e.Handled = true;
     }
 
     internal void UpdateHistory(PlayerPresentationViewModel player)

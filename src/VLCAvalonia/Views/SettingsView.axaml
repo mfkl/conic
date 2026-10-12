@@ -1,215 +1,742 @@
-<UserControl xmlns="https://github.com/avaloniaui" xmlns:controls="clr-namespace:VLCAvalonia.Controls" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="VLCAvalonia.Views.SettingsView" x:DataType="viewModels:SettingsViewModel" Classes.dense="{Binding IsCompactDensity}" Background="{DynamicResource Vlc.Bg.B2}" xmlns:viewModels="clr-namespace:VLCAvalonia.ViewModels">
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:VLCAvalonia.Controls"
+             xmlns:viewModels="clr-namespace:VLCAvalonia.ViewModels"
+             x:Class="VLCAvalonia.Views.SettingsView"
+             x:DataType="viewModels:SettingsViewModel"
+             Classes.dense="{Binding IsCompactDensity}"
+             Background="Transparent">
+    <!-- The design's Settings dialog (spec.md "Settings dialog", frames
+         999:5047 to 6542:15251): a 1048x865 (at most) modal over a dimmed
+         backdrop, a 50 px header (search, title, close), the category pane
+         (App / Media / System) and the selected category's sections. Below
+         720 DIPs (.compact, SettingsView.axaml.cs) the dialog fills the
+         window and a ComboBox replaces the category pane. -->
     <UserControl.Styles>
-        <Style Selector="Border.settingsCard">
-            <Setter Property="Padding" Value="20" />
-            <Setter Property="Background" Value="{DynamicResource Vlc.Bg.A1}" />
-            <Setter Property="CornerRadius" Value="6" />
+        <!-- Dialog ........................................................ -->
+        <Style Selector="Border#SettingsScrim">
+            <Setter Property="Background" Value="{DynamicResource Vlc.Overlay.Scrim}" />
         </Style>
-        <Style Selector="Button">
-            <Setter Property="MinHeight" Value="40" />
-            <Setter Property="CornerRadius" Value="4" />
+        <Style Selector="Panel#SettingsDialog">
+            <Setter Property="MaxWidth" Value="1048" />
+            <Setter Property="MaxHeight" Value="865" />
+            <!-- Clear of the 40 px title bar, so the dialog never reaches the
+                 window's caption buttons. -->
+            <Setter Property="Margin" Value="24,48,24,24" />
         </Style>
-        <Style Selector="NumericUpDown">
-            <Setter Property="MinWidth" Value="132" />
-            <Setter Property="MinHeight" Value="40" />
+        <!-- The surface and its shadow are a childless Border behind the
+             content: offscreen captures above 100 % scale misplace the
+             children of a shadowed Border (as for the mini player). -->
+        <Style Selector="Border#SettingsSurface">
+            <Setter Property="Background" Value="{DynamicResource Vlc.Bg.B1Transparent}" />
+            <Setter Property="CornerRadius" Value="14" />
+            <Setter Property="BoxShadow" Value="0 8 15 0 #75000000" />
         </Style>
-        <Style Selector="ComboBox">
-            <Setter Property="MinHeight" Value="40" />
+        <Style Selector="Border#SettingsDialogContent">
+            <Setter Property="CornerRadius" Value="14" />
+            <Setter Property="ClipToBounds" Value="True" />
         </Style>
-        <Style Selector="ListBoxItem">
-            <Setter Property="MinHeight" Value="44" />
-            <Setter Property="Padding" Value="12,10" />
-            <Setter Property="CornerRadius" Value="4" />
+        <Style Selector="Border#SettingsHeader">
+            <Setter Property="Height" Value="50" />
+            <Setter Property="Padding" Value="8,0,14,0" />
+            <Setter Property="CornerRadius" Value="14,14,0,0" />
+            <Setter Property="Background" Value="{DynamicResource Vlc.Bg.B2}" />
         </Style>
-        <Style Selector="TextBlock.settingHint">
-            <Setter Property="FontSize" Value="12" />
-        </Style>
-        <Style Selector="TextBlock.settingBadge">
+        <Style Selector="TextBox#SettingsSearch">
+            <Setter Property="Width" Value="200" />
+            <Setter Property="Height" Value="34" />
+            <Setter Property="MinHeight" Value="34" />
             <Setter Property="VerticalAlignment" Value="Center" />
-            <Setter Property="Background" Value="{DynamicResource PlayerSelection}" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
         </Style>
-        <Style Selector=":is(UserControl).compact Border.settingsCard">
-            <Setter Property="Padding" Value="16" />
+        <Style Selector="TextBlock#SettingsTitle">
+            <Setter Property="Margin" Value="32,0,12,0" />
+            <Setter Property="FontSize" Value="16" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+            <Setter Property="Foreground" Value="{DynamicResource Vlc.Fg.A1}" />
         </Style>
-        <Style Selector=":is(UserControl).dense Border.settingsCard">
-            <Setter Property="Padding" Value="12" />
+        <Style Selector="Button#SettingsCloseButton">
+            <Setter Property="Width" Value="32" />
+            <Setter Property="Height" Value="32" />
+            <Setter Property="Padding" Value="4" />
+        </Style>
+        <Style Selector=":is(UserControl).compact Panel#SettingsDialog">
+            <Setter Property="MaxWidth" Value="Infinity" />
+            <Setter Property="MaxHeight" Value="Infinity" />
+            <Setter Property="Margin" Value="0" />
+        </Style>
+        <Style Selector=":is(UserControl).compact Border#SettingsSurface">
+            <Setter Property="CornerRadius" Value="0" />
+            <Setter Property="BoxShadow" Value="none" />
+            <Setter Property="Background" Value="{DynamicResource Vlc.Bg.B1}" />
+        </Style>
+        <Style Selector=":is(UserControl).compact Border#SettingsDialogContent, :is(UserControl).compact Border#SettingsHeader">
+            <Setter Property="CornerRadius" Value="0" />
+        </Style>
+        <Style Selector=":is(UserControl).compact TextBox#SettingsSearch">
+            <Setter Property="Width" Value="NaN" />
+            <Setter Property="Grid.ColumnSpan" Value="2" />
+        </Style>
+        <Style Selector=":is(UserControl).compact TextBlock#SettingsTitle">
+            <Setter Property="IsVisible" Value="False" />
+        </Style>
+
+        <!-- Category pane: 216 wide, a BG/A4 inner panel (radius 6, padding
+             6); group headers 14 FG/A3, categories 40 tall with a 24 icon
+             and a 14 label; selected BG/A1 with FG/1 and the active icon. -->
+        <Style Selector="Border.categoryPanel">
+            <Setter Property="Background" Value="{DynamicResource Vlc.Bg.A4}" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="6" />
+        </Style>
+        <Style Selector="ListBox#SettingsPages">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="BorderThickness" Value="0" />
+        </Style>
+        <Style Selector="ListBox#SettingsPages ListBoxItem" x:DataType="viewModels:SettingsPage">
+            <Setter Property="Padding" Value="4" />
+            <Setter Property="Margin" Value="0,0,0,8" />
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="AutomationProperties.Name" Value="{Binding Name}" />
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <StackPanel Spacing="8" x:DataType="viewModels:SettingsPage">
+                        <TextBlock Classes="categoryGroup"
+                                   Text="{Binding Group}"
+                                   IsVisible="{Binding ShowsGroupHeader}" />
+                        <ContentPresenter Name="PART_ContentPresenter"
+                                          Height="40"
+                                          CornerRadius="2"
+                                          Padding="{TemplateBinding Padding}"
+                                          Background="{TemplateBinding Background}"
+                                          BorderBrush="{TemplateBinding BorderBrush}"
+                                          BorderThickness="{TemplateBinding BorderThickness}"
+                                          Content="{TemplateBinding Content}"
+                                          ContentTemplate="{TemplateBinding ContentTemplate}"
+                                          VerticalContentAlignment="Center" />
+                    </StackPanel>
+                </ControlTemplate>
+            </Setter>
+        </Style>
+        <Style Selector="ListBox#SettingsPages ListBoxItem:focus-visible /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="BorderBrush" Value="{DynamicResource PlayerAccent}" />
+            <Setter Property="BorderThickness" Value="2" />
+        </Style>
+        <Style Selector="TextBlock.categoryGroup">
+            <Setter Property="Padding" Value="10,10,10,8" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="Foreground" Value="{DynamicResource Vlc.Fg.A3}" />
+        </Style>
+        <Style Selector="controls|VlcIcon.categoryIconActive">
+            <Setter Property="IsVisible" Value="False" />
+            <Setter Property="Foreground" Value="{DynamicResource PlayerAccent}" />
+        </Style>
+        <Style Selector="ListBox#SettingsPages ListBoxItem:selected controls|VlcIcon.categoryIconActive">
+            <Setter Property="IsVisible" Value="True" />
+        </Style>
+        <Style Selector="ListBox#SettingsPages ListBoxItem:selected controls|VlcIcon.categoryIcon">
+            <Setter Property="IsVisible" Value="False" />
+        </Style>
+
+        <!-- Content: padding 20,24 (top, sides), 20 between sections; section
+             titles Inter Medium 16 FG/2; rows 46 tall with the label in 14
+             FG/A2 and the control in a 320 column. -->
+        <Style Selector="StackPanel.settingsSection">
+            <Setter Property="Spacing" Value="0" />
+        </Style>
+        <Style Selector="TextBlock.sectionTitle">
+            <Setter Property="Margin" Value="0,10" />
+            <Setter Property="FontSize" Value="16" />
+            <Setter Property="FontWeight" Value="Medium" />
+            <Setter Property="Foreground" Value="{DynamicResource Vlc.Fg.2}" />
+        </Style>
+        <Style Selector="controls|SettingRow">
+            <Setter Property="MinHeight" Value="46" />
+            <Setter Property="Padding" Value="0,5" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <controls:SettingRowPanel Margin="{TemplateBinding Padding}"
+                                              ControlWidth="{TemplateBinding ControlWidth}"
+                                              MinHeight="36"
+                                              VerticalAlignment="Center">
+                        <WrapPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Classes="settingLabel"
+                                       Text="{TemplateBinding Label}" />
+                            <Border Classes="settingInfo"
+                                    IsVisible="{TemplateBinding Help, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                    ToolTip.Tip="{TemplateBinding Help}">
+                                <controls:VlcIcon Width="16" Height="16"
+                                                  Icon="{StaticResource Icon.Info}" />
+                            </Border>
+                            <Border Classes="settingBadge"
+                                    IsVisible="{TemplateBinding Badge, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                                <TextBlock Text="{TemplateBinding Badge}" />
+                            </Border>
+                        </WrapPanel>
+                        <ContentPresenter Content="{TemplateBinding Content}"
+                                          ContentTemplate="{TemplateBinding ContentTemplate}"
+                                          HorizontalContentAlignment="Stretch"
+                                          VerticalAlignment="Center" />
+                    </controls:SettingRowPanel>
+                </ControlTemplate>
+            </Setter>
+        </Style>
+        <Style Selector="TextBlock.settingLabel">
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Margin" Value="0,0,8,0" />
+            <Setter Property="Foreground" Value="{DynamicResource Vlc.Fg.A2}" />
+        </Style>
+        <Style Selector="Border.settingInfo">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Margin" Value="0,0,8,0" />
+            <Setter Property="ToolTip.ShowDelay" Value="200" />
+        </Style>
+        <Style Selector="Border.settingInfo controls|VlcIcon">
+            <Setter Property="Foreground" Value="{DynamicResource Vlc.Fg.A3}" />
+        </Style>
+        <Style Selector="Border.settingInfo:pointerover controls|VlcIcon">
+            <Setter Property="Foreground" Value="{DynamicResource Vlc.Fg.A1}" />
+        </Style>
+        <!-- Apply-mode tag: quiet text in a thin outline. -->
+        <Style Selector="Border.settingBadge">
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Padding" Value="6,1" />
+            <Setter Property="CornerRadius" Value="4" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="BorderBrush" Value="{DynamicResource Vlc.Divider.Bright}" />
+        </Style>
+        <Style Selector="Border.settingBadge > TextBlock">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Foreground" Value="{DynamicResource Vlc.Fg.A3}" />
+        </Style>
+        <Style Selector="TextBlock.settingNote">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="Foreground" Value="{DynamicResource Vlc.Fg.A3}" />
+        </Style>
+        <!-- Controls in the 320 column: 36 tall, full width. -->
+        <Style Selector="controls|SettingRow ComboBox, controls|SettingRow NumericUpDown, controls|SettingRow Button.settingAction">
+            <Setter Property="Height" Value="36" />
+            <Setter Property="MinHeight" Value="36" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+        </Style>
+        <Style Selector="controls|SettingRow NumericUpDown">
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Button.settingAction">
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Padding" Value="12,0" />
+        </Style>
+        <Style Selector="Button.settingsSmall">
+            <Setter Property="Height" Value="32" />
+            <Setter Property="MinHeight" Value="32" />
+            <Setter Property="Padding" Value="12,0" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+
+        <!-- Segmented control (Theme): 320x36 BG/B2 container (radius 6,
+             padding 2, gap 2), segments radius 4 in BG/A4, the selected one
+             in BG/Accent Bright with an accent label. -->
+        <Style Selector="Border.segmented">
+            <Setter Property="Height" Value="36" />
+            <Setter Property="Padding" Value="2" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Background" Value="{DynamicResource Vlc.Bg.B2}" />
+        </Style>
+        <Style Selector="RadioButton.segment">
+            <Setter Property="Margin" Value="1,0" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="VerticalAlignment" Value="Stretch" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="Background" Value="{DynamicResource Vlc.Bg.A4}" />
+            <Setter Property="Foreground" Value="{DynamicResource Vlc.Fg.A2}" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="4">
+                        <ContentPresenter Content="{TemplateBinding Content}"
+                                          Foreground="{TemplateBinding Foreground}"
+                                          HorizontalAlignment="Center"
+                                          VerticalAlignment="Center" />
+                    </Border>
+                </ControlTemplate>
+            </Setter>
+        </Style>
+        <Style Selector="RadioButton.segment:pointerover">
+            <Setter Property="Foreground" Value="{DynamicResource Vlc.Fg.1}" />
+        </Style>
+        <Style Selector="RadioButton.segment:checked">
+            <Setter Property="Background" Value="{DynamicResource Vlc.Bg.AccentBright}" />
+            <Setter Property="Foreground" Value="{DynamicResource PlayerAccent}" />
+        </Style>
+        <Style Selector="RadioButton.segment:focus-visible">
+            <Setter Property="BorderBrush" Value="{DynamicResource PlayerAccent}" />
+            <Setter Property="BorderThickness" Value="2" />
+        </Style>
+        <!-- Accent swatches: 32x32 cells (radius 4, padding 6) with the
+             color in a 20x20 square; unselected swatches are dimmed as in the
+             design, the selected one has BG/Accent Bright behind it. -->
+        <Style Selector="RadioButton.swatch">
+            <Setter Property="Width" Value="32" />
+            <Setter Property="Height" Value="32" />
+            <Setter Property="Margin" Value="0,0,4,0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="2" />
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="4">
+                        <Border x:Name="SwatchColor"
+                                Width="20"
+                                Height="20"
+                                CornerRadius="3"
+                                Opacity="0.7"
+                                Background="{TemplateBinding Foreground}" />
+                    </Border>
+                </ControlTemplate>
+            </Setter>
+        </Style>
+        <Style Selector="RadioButton.swatch:pointerover /template/ Border#SwatchColor, RadioButton.swatch:checked /template/ Border#SwatchColor">
+            <Setter Property="Opacity" Value="1" />
+        </Style>
+        <Style Selector="RadioButton.swatch:checked">
+            <Setter Property="Background" Value="{DynamicResource Vlc.Bg.AccentBright}" />
+        </Style>
+        <Style Selector="RadioButton.swatch:focus-visible">
+            <Setter Property="BorderBrush" Value="{DynamicResource Vlc.Fg.1}" />
+        </Style>
+
+        <!-- Keyboard shortcuts editor rows. -->
+        <Style Selector="Grid.shortcutRow">
+            <Setter Property="MinHeight" Value="40" />
+        </Style>
+        <Style Selector="Grid.shortcutRow TextBox">
+            <Setter Property="Height" Value="32" />
+            <Setter Property="MinHeight" Value="32" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+        <Style Selector="TextBlock.shortcutName">
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="Foreground" Value="{DynamicResource Vlc.Fg.A2}" />
+        </Style>
+
+        <!-- Compact density: tighter rows. -->
+        <Style Selector=":is(UserControl).dense controls|SettingRow">
+            <Setter Property="MinHeight" Value="40" />
+            <Setter Property="Padding" Value="0,2" />
+        </Style>
+        <Style Selector=":is(UserControl).dense StackPanel#SettingsPageContent">
+            <Setter Property="Spacing" Value="12" />
         </Style>
     </UserControl.Styles>
-    <Grid RowDefinitions="52,*">
-        <Grid x:Name="SettingsHeader" ColumnDefinitions="Auto,Auto,*,Auto" Margin="12,0">
-            <Button Classes="iconChrome" Click="OnSettingsClose" AutomationProperties.Name="Close settings" ToolTip.Tip="Return (Escape)">
-                <controls:VlcIcon Width="24" Height="24"
-                                  Icon="{StaticResource Icon.ArrowLeft}" />
-            </Button>
-            <controls:VlcCone Grid.Column="1" Width="30" Height="34" Margin="12,0" />
-            <TextBlock Grid.Column="2" Text="Preferences" FontSize="18" VerticalAlignment="Center" />
-        </Grid>
-        <Grid x:Name="SettingsColumns" Grid.Row="1" ColumnDefinitions="176,*" x:FieldModifier="internal">
-            <ListBox x:Name="SettingsPages" Margin="4,8,4,4" Background="Transparent" ItemsSource="{Binding FilteredPages}" SelectedItem="{Binding SelectedPage}" AutomationProperties.Name="Settings pages" x:FieldModifier="internal">
-                <ListBox.ItemTemplate>
-                    <DataTemplate>
-                        <TextBlock Text="{Binding Name}" />
-                    </DataTemplate>
-                </ListBox.ItemTemplate>
-            </ListBox>
-            <Border x:Name="SettingsBody" Grid.Column="1" Background="{DynamicResource Vlc.Bg.A4}" CornerRadius="8,0,0,0" Padding="24" x:FieldModifier="internal">
-                <Grid RowDefinitions="Auto,Auto,Auto,*">
-                    <TextBox x:Name="SettingsSearch" Classes="search" Margin="0,0,0,16" Text="{Binding Search, Mode=TwoWay}" PlaceholderText="Search settings" AutomationProperties.Name="Search settings" x:FieldModifier="internal" />
-                    <ComboBox x:Name="CompactSettingsPages" Grid.Row="1" Margin="0,0,0,16" IsVisible="False" HorizontalAlignment="Stretch" ItemsSource="{Binding FilteredPages}" SelectedItem="{Binding SelectedPage}" AutomationProperties.Name="Settings pages" x:FieldModifier="internal">
-                        <ComboBox.ItemTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding Name}" />
-                            </DataTemplate>
-                        </ComboBox.ItemTemplate>
-                    </ComboBox>
-                    <TextBlock Grid.Row="2" Margin="0,0,0,16" Text="{Binding ErrorMessage}" IsVisible="{Binding HasError}" Foreground="{DynamicResource Vlc.Accent.Bright}" TextWrapping="Wrap" AutomationProperties.Name="Settings error" />
-                    <TextBlock Grid.Row="3" IsVisible="{Binding !HasSettingsResults}" Text="No settings match your search." HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource PlayerSecondaryText}" />
-                    <ScrollViewer x:Name="SettingsContent" Grid.Row="3" IsVisible="{Binding HasSettingsResults}" HorizontalScrollBarVisibility="Disabled" x:FieldModifier="internal">
-                        <StackPanel Spacing="16" MaxWidth="880" HorizontalAlignment="Stretch">
-                            <TextBlock Text="{Binding SelectedPage.Name}" FontSize="24" FontWeight="SemiBold" />
-                            <TextBlock Text="{Binding PageSummary}" Classes="settingHint" TextWrapping="Wrap" />
-                            <Border Classes="settingsCard" IsVisible="{Binding IsGeneral}">
-                                <StackPanel Spacing="18">
-                                    <CheckBox Content="Resume playback" IsChecked="{Binding ResumePlayback, Mode=TwoWay}" AutomationProperties.Name="Resume playback" ToolTip.Tip="Ask to resume eligible media next time it opens" />
-                                    <TextBlock Text="Next open" Classes="settingHint" TextWrapping="Wrap" />
-                                    <CheckBox Content="Remember volume" IsChecked="{Binding RememberVolume, Mode=TwoWay}" AutomationProperties.Name="Remember volume" />
-                                    <TextBlock Text="Takes effect next time media is opened" Classes="settingHint" TextWrapping="Wrap" />
-                                    <CheckBox Content="Remember recent media" IsChecked="{Binding RememberRecentMedia, Mode=TwoWay}" AutomationProperties.Name="Remember recent media" ToolTip.Tip="Turning this off clears recent media immediately" />
-                                    <TextBlock Text="Live · turning this off immediately clears existing recent history." Classes="settingHint" TextWrapping="Wrap" />
-                                    <StackPanel Spacing="5">
-                                        <Button x:Name="SettingsClearRecentButton" Content="Clear recent history…" Click="OnSettingsClearRecent" HorizontalAlignment="Left" AutomationProperties.Name="Clear recent history" ToolTip.Tip="Clear recently opened media" x:FieldModifier="internal" />
-                                        <StackPanel x:Name="SettingsClearRecentPrompt" IsVisible="False" Spacing="5" x:FieldModifier="internal">
-                                            <TextBlock Text="Clear recent history?" Classes="settingHint" TextWrapping="Wrap" />
+
+    <Panel>
+        <Border x:Name="SettingsScrim" PointerPressed="OnScrimPointerPressed" />
+        <Panel x:Name="SettingsDialog"
+               KeyboardNavigation.TabNavigation="Cycle"
+               x:FieldModifier="internal">
+            <Border x:Name="SettingsSurface" />
+            <Border x:Name="SettingsDialogContent">
+                <Grid RowDefinitions="Auto,*">
+                    <Border x:Name="SettingsHeader" x:FieldModifier="internal">
+                        <Grid ColumnDefinitions="Auto,*,Auto">
+                            <TextBox x:Name="SettingsSearch"
+                                     Classes="search"
+                                     Text="{Binding Search, Mode=TwoWay}"
+                                     PlaceholderText="Search"
+                                     AutomationProperties.Name="Search settings"
+                                     x:FieldModifier="internal" />
+                            <TextBlock x:Name="SettingsTitle"
+                                       Grid.Column="1"
+                                       Text="{Binding DialogTitle}" />
+                            <Button x:Name="SettingsCloseButton"
+                                    Grid.Column="2"
+                                    Classes="icon"
+                                    Click="OnSettingsClose"
+                                    AutomationProperties.Name="Close settings"
+                                    ToolTip.Tip="Close (Escape)">
+                                <controls:VlcIcon Width="24" Height="24"
+                                                  Icon="{StaticResource Icon.Close}" />
+                            </Button>
+                        </Grid>
+                    </Border>
+                    <Grid x:Name="SettingsColumns"
+                          Grid.Row="1"
+                          ColumnDefinitions="216,*"
+                          x:FieldModifier="internal">
+                        <Border x:Name="SettingsCategoryPane" Padding="8" x:FieldModifier="internal">
+                            <Border Classes="categoryPanel">
+                                <ListBox x:Name="SettingsPages"
+                                         ItemsSource="{Binding FilteredPages}"
+                                         SelectedItem="{Binding SelectedPage}"
+                                         AutomationProperties.Name="Settings pages"
+                                         x:FieldModifier="internal">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate x:DataType="viewModels:SettingsPage">
                                             <StackPanel Orientation="Horizontal" Spacing="8">
-                                                <Button x:Name="SettingsCancelClearRecentButton" Content="Cancel" Click="OnSettingsCancelClearRecent" x:FieldModifier="internal" />
-                                                <Button x:Name="SettingsConfirmClearRecentButton" Content="Clear" Click="OnSettingsConfirmClearRecent" AutomationProperties.Name="Confirm clear recent history" x:FieldModifier="internal" />
+                                                <Panel Width="32" Height="32">
+                                                    <controls:VlcIcon Classes="categoryIcon"
+                                                                      Width="24" Height="24"
+                                                                      Icon="{Binding Icon, Converter={x:Static controls:IconKeyConverter.Instance}}" />
+                                                    <controls:VlcIcon Classes="categoryIconActive"
+                                                                      Width="24" Height="24"
+                                                                      Icon="{Binding Icon, Converter={x:Static controls:IconKeyConverter.Instance}, ConverterParameter=Active}" />
+                                                </Panel>
+                                                <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
                                             </StackPanel>
-                                        </StackPanel>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </Border>
+                        </Border>
+                        <Grid x:Name="SettingsBody"
+                              Grid.Column="1"
+                              RowDefinitions="Auto,Auto,*"
+                              x:FieldModifier="internal">
+                            <ComboBox x:Name="CompactSettingsPages"
+                                      Margin="16,12,16,0"
+                                      IsVisible="False"
+                                      HorizontalAlignment="Stretch"
+                                      ItemsSource="{Binding FilteredPages}"
+                                      SelectedItem="{Binding SelectedPage}"
+                                      AutomationProperties.Name="Settings pages"
+                                      x:FieldModifier="internal">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate x:DataType="viewModels:SettingsPage">
+                                        <TextBlock Text="{Binding Name}" />
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                            <TextBlock Grid.Row="1"
+                                       Margin="24,12,24,0"
+                                       Text="{Binding ErrorMessage}"
+                                       IsVisible="{Binding HasError}"
+                                       Foreground="{DynamicResource PlayerErrorText}"
+                                       TextWrapping="Wrap"
+                                       AutomationProperties.Name="Settings error" />
+                            <TextBlock Grid.Row="2"
+                                       IsVisible="{Binding !HasSettingsResults}"
+                                       Text="No settings match your search."
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"
+                                       Foreground="{DynamicResource PlayerSecondaryText}" />
+                            <ScrollViewer x:Name="SettingsContent"
+                                          Grid.Row="2"
+                                          IsVisible="{Binding HasSettingsResults}"
+                                          HorizontalScrollBarVisibility="Disabled"
+                                          x:FieldModifier="internal">
+                                <StackPanel x:Name="SettingsPageContent"
+                                            Margin="24,20,24,32"
+                                            Spacing="20">
+                                    <!-- App › General -->
+                                    <StackPanel Classes="settingsSection" IsVisible="{Binding IsGeneral}">
+                                        <TextBlock Classes="sectionTitle" Text="Appearance" />
+                                        <controls:SettingRow Label="Theme" Help="Dark, light, or the same as your system">
+                                            <Border Classes="segmented">
+                                                <ItemsControl x:Name="ThemeSegments"
+                                                              ItemsSource="{Binding ThemeChoices}"
+                                                              controls:RadioGroupNavigation.IsEnabled="True"
+                                                              AutomationProperties.Name="Theme"
+                                                              x:FieldModifier="internal">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <UniformGrid Rows="1" />
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate x:DataType="viewModels:SettingChoice">
+                                                            <RadioButton Classes="segment"
+                                                                         GroupName="SettingsTheme"
+                                                                         Content="{Binding Label}"
+                                                                         IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                                                         IsTabStop="{Binding IsSelected}"
+                                                                         AutomationProperties.Name="{Binding AutomationName}" />
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </Border>
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Accent color" Help="The color of buttons, sliders and selections">
+                                            <Border Classes="segmented" HorizontalAlignment="Left">
+                                                <ItemsControl x:Name="AccentSwatches"
+                                                              ItemsSource="{Binding AccentChoices}"
+                                                              controls:RadioGroupNavigation.IsEnabled="True"
+                                                              AutomationProperties.Name="Accent color"
+                                                              x:FieldModifier="internal">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <StackPanel Orientation="Horizontal" />
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate x:DataType="viewModels:SettingChoice">
+                                                            <RadioButton Classes="swatch"
+                                                                         GroupName="SettingsAccent"
+                                                                         Foreground="{Binding Swatch}"
+                                                                         IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                                                         IsTabStop="{Binding IsSelected}"
+                                                                         ToolTip.Tip="{Binding Label}"
+                                                                         AutomationProperties.Name="{Binding AutomationName}" />
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </Border>
+                                        </controls:SettingRow>
                                     </StackPanel>
-                                    <CheckBox Content="Remember resume history" IsChecked="{Binding RememberResumeHistory, Mode=TwoWay}" AutomationProperties.Name="Remember resume history" ToolTip.Tip="Turning this off clears saved positions immediately" />
-                                    <TextBlock Text="Live · turning this off immediately clears saved positions and any pending prompt." Classes="settingHint" TextWrapping="Wrap" />
-                                    <StackPanel Spacing="5">
-                                        <Button x:Name="SettingsClearResumeButton" Content="Clear resume positions…" Click="OnSettingsClearResume" HorizontalAlignment="Left" AutomationProperties.Name="Clear resume positions" ToolTip.Tip="Clear saved media positions" x:FieldModifier="internal" />
-                                        <StackPanel x:Name="SettingsClearResumePrompt" IsVisible="False" Spacing="5" x:FieldModifier="internal">
-                                            <TextBlock Text="Clear saved resume positions?" Classes="settingHint" TextWrapping="Wrap" />
-                                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                                <Button x:Name="SettingsCancelClearResumeButton" Content="Cancel" Click="OnSettingsCancelClearResume" x:FieldModifier="internal" />
-                                                <Button x:Name="SettingsConfirmClearResumeButton" Content="Clear" Click="OnSettingsConfirmClearResume" AutomationProperties.Name="Confirm clear resume positions" x:FieldModifier="internal" />
-                                            </StackPanel>
-                                        </StackPanel>
+
+                                    <!-- App › Interface -->
+                                    <StackPanel Classes="settingsSection" IsVisible="{Binding IsInterface}">
+                                        <TextBlock Classes="sectionTitle" Text="Layout" />
+                                        <controls:SettingRow Label="Density" Help="Compact tightens spacing in the player and Settings">
+                                            <ComboBox ItemsSource="{Binding DensityOptions}"
+                                                      SelectedItem="{Binding Density, Mode=TwoWay}"
+                                                      AutomationProperties.Name="Density" />
+                                        </controls:SettingRow>
                                     </StackPanel>
-                                    <TextBlock x:Name="SettingsHistoryError" IsVisible="False" Foreground="{DynamicResource PlayerErrorText}" TextWrapping="Wrap" AutomationProperties.Name="Media history error" x:FieldModifier="internal" />
-                                    <WrapPanel Orientation="Horizontal">
-                                        <TextBlock Text="Resume after (seconds)" Width="155" VerticalAlignment="Center" Margin="0,4,12,4" TextWrapping="Wrap" />
-                                        <NumericUpDown Minimum="0" Maximum="3600" Value="{Binding ResumeMinimumElapsedSeconds, Mode=TwoWay}" Margin="0,4,12,4" AutomationProperties.Name="Resume after (seconds)" />
-                                        <TextBlock Text="Next open" Classes="settingBadge" Margin="0,4,12,4" TextWrapping="Wrap" />
-                                    </WrapPanel>
-                                    <WrapPanel Orientation="Horizontal">
-                                        <TextBlock Text="Skip resume near end (seconds)" Width="155" VerticalAlignment="Center" Margin="0,4,12,4" TextWrapping="Wrap" />
-                                        <NumericUpDown Minimum="0" Maximum="3600" Value="{Binding ResumeMaximumRemainingSeconds, Mode=TwoWay}" Margin="0,4,12,4" AutomationProperties.Name="Do not resume within (seconds)" />
-                                        <TextBlock Text="Next open" Classes="settingBadge" Margin="0,4,12,4" TextWrapping="Wrap" />
-                                    </WrapPanel>
-                                </StackPanel>
-                            </Border>
-                            <Border Classes="settingsCard" IsVisible="{Binding IsAppearance}">
-                                <StackPanel Spacing="18">
-                                    <TextBlock Text="VLC uses a dark appearance for media browsing and playback." Classes="settingHint" TextWrapping="Wrap" />
-                                    <WrapPanel Orientation="Horizontal">
-                                        <TextBlock Text="Density" Width="155" VerticalAlignment="Center" Margin="0,4,12,4" TextWrapping="Wrap" />
-                                        <ComboBox ItemsSource="{Binding DensityOptions}" SelectedItem="{Binding Density, Mode=TwoWay}" Margin="0,4,12,4" AutomationProperties.Name="Density" />
-                                        <TextBlock Text="Live" Classes="settingBadge" Margin="0,4,12,4" TextWrapping="Wrap" />
-                                    </WrapPanel>
-                                    <WrapPanel Orientation="Horizontal">
-                                        <TextBlock Text="Controls hide after" Width="155" VerticalAlignment="Center" Margin="0,4,12,4" TextWrapping="Wrap" />
-                                        <NumericUpDown Minimum="1" Maximum="15" Value="{Binding ControlTimeoutSeconds, Mode=TwoWay}" Margin="0,4,12,4" AutomationProperties.Name="Controls hide after" />
-                                        <TextBlock Text="Live" Classes="settingBadge" Margin="0,4,12,4" TextWrapping="Wrap" />
-                                    </WrapPanel>
-                                    <CheckBox Content="Reduce motion" IsChecked="{Binding ReduceMotion, Mode=TwoWay}" AutomationProperties.Name="Reduce motion" ToolTip.Tip="Keeps playback controls visible and disables nonessential motion" />
-                                </StackPanel>
-                            </Border>
-                            <Border Classes="settingsCard" IsVisible="{Binding IsPlayback}">
-                                <StackPanel Spacing="18">
-                                    <WrapPanel Orientation="Horizontal">
-                                        <TextBlock Text="Default speed" Width="155" VerticalAlignment="Center" Margin="0,4,12,4" TextWrapping="Wrap" />
-                                        <ComboBox ItemsSource="{Binding SpeedOptions}" SelectedItem="{Binding DefaultSpeed, Mode=TwoWay}" Margin="0,4,12,4" AutomationProperties.Name="Default speed" />
-                                        <TextBlock Text="Next open" Classes="settingBadge" Margin="0,4,12,4" TextWrapping="Wrap" />
-                                    </WrapPanel>
-                                    <WrapPanel Orientation="Horizontal">
-                                        <TextBlock Text="Skip backward (seconds)" Width="155" VerticalAlignment="Center" Margin="0,4,12,4" TextWrapping="Wrap" />
-                                        <NumericUpDown Minimum="1" Maximum="120" Value="{Binding SkipBackwardSeconds, Mode=TwoWay}" Margin="0,4,12,4" AutomationProperties.Name="Skip backward (seconds)" />
-                                        <TextBlock Text="Live" Classes="settingBadge" Margin="0,4,12,4" TextWrapping="Wrap" />
-                                    </WrapPanel>
-                                    <WrapPanel Orientation="Horizontal">
-                                        <TextBlock Text="Skip forward (seconds)" Width="155" VerticalAlignment="Center" Margin="0,4,12,4" TextWrapping="Wrap" />
-                                        <NumericUpDown Minimum="1" Maximum="120" Value="{Binding SkipForwardSeconds, Mode=TwoWay}" Margin="0,4,12,4" AutomationProperties.Name="Skip forward (seconds)" />
-                                        <TextBlock Text="Live" Classes="settingBadge" Margin="0,4,12,4" TextWrapping="Wrap" />
-                                    </WrapPanel>
-                                </StackPanel>
-                            </Border>
-                            <Border Classes="settingsCard" IsVisible="{Binding IsAudio}">
-                                <StackPanel Spacing="18">
-                                    <WrapPanel Orientation="Horizontal">
-                                        <TextBlock Text="Output module" Width="155" VerticalAlignment="Center" Margin="0,4,12,4" TextWrapping="Wrap" />
-                                        <ComboBox ItemsSource="{Binding AudioOutputOptions}" SelectedItem="{Binding AudioOutputModule, Mode=TwoWay}" Margin="0,4,12,4" AutomationProperties.Name="Output module" />
-                                    </WrapPanel>
-                                    <WrapPanel Orientation="Horizontal">
-                                        <TextBlock Text="Normalization level" Width="155" VerticalAlignment="Center" Margin="0,4,12,4" TextWrapping="Wrap" />
-                                        <NumericUpDown Minimum="0.5" Maximum="10" Increment="0.5" Value="{Binding NormalizationMaximumLevel, Mode=TwoWay}" Margin="0,4,12,4" AutomationProperties.Name="Normvol max level" />
-                                    </WrapPanel>
-                                    <CheckBox Content="S/PDIF passthrough" IsChecked="{Binding AudioPassthrough, Mode=TwoWay}" AutomationProperties.Name="S/PDIF passthrough" />
-                                    <TextBlock Text="Audio device selection is not available yet. VLC uses the selected output module." Classes="settingHint" TextWrapping="Wrap" />
-                                    <Button Content="Audio tracks and timing" Command="{Binding OpenAudioControlsCommand}" HorizontalAlignment="Left" />
-                                </StackPanel>
-                            </Border>
-                            <Border Classes="settingsCard" IsVisible="{Binding IsVideo}">
-                                <StackPanel Spacing="14">
-                                    <TextBlock Text="Adjust aspect ratio, crop and zoom during playback from More → Video adjustments. Deinterlacing and snapshots are not available yet." Classes="settingHint" TextWrapping="Wrap" />
-                                </StackPanel>
-                            </Border>
-                            <Border Classes="settingsCard" IsVisible="{Binding IsSubtitles}">
-                                <StackPanel Spacing="14">
-                                    <TextBlock Text="Choose tracks and adjust timing during playback." Classes="settingHint" TextWrapping="Wrap" />
-                                    <Button Content="Subtitle tracks and timing" Command="{Binding OpenSubtitleControlsCommand}" HorizontalAlignment="Left" />
-                                </StackPanel>
-                            </Border>
-                            <Border Classes="settingsCard" IsVisible="{Binding IsHotkeys}">
-                                <StackPanel Spacing="18">
-                                    <TextBox Classes="search" PlaceholderText="Search shortcuts" Text="{Binding ShortcutSearch, Mode=TwoWay}" AutomationProperties.Name="Search shortcuts" />
-                                    <TextBlock Text="Edit a shortcut, then Save. Conflicting shortcuts must be resolved before saving." TextWrapping="Wrap" Classes="settingHint" />
-                                    <ItemsControl ItemsSource="{Binding EditableShortcutRows}">
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate x:DataType="viewModels:ShortcutRow">
-                                                <Grid ColumnDefinitions="*,130,Auto,Auto" ColumnSpacing="6" Margin="0,3" Classes="shortcutRow">
-                                                    <StackPanel>
-                                                        <TextBlock Text="{Binding Name}" TextWrapping="Wrap" />
-                                                        <TextBlock Text="{Binding Category}" Classes="settingHint" TextWrapping="Wrap" />
+                                    <StackPanel Classes="settingsSection" IsVisible="{Binding IsInterface}">
+                                        <TextBlock Classes="sectionTitle" Text="Playback Controls" />
+                                        <controls:SettingRow Label="Controls hide after (seconds)" Help="How long the bars stay up over fullscreen video without input">
+                                            <NumericUpDown Minimum="1"
+                                                           Maximum="15"
+                                                           Value="{Binding ControlTimeoutSeconds, Mode=TwoWay}"
+                                                           AutomationProperties.Name="Controls hide after" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Reduce motion" Help="Keeps playback controls visible and disables nonessential motion" ControlWidth="68">
+                                            <CheckBox IsChecked="{Binding ReduceMotion, Mode=TwoWay}"
+                                                      AutomationProperties.Name="Reduce motion"
+                                                      AutomationProperties.HelpText="Keeps playback controls visible and disables nonessential motion" />
+                                        </controls:SettingRow>
+                                    </StackPanel>
+
+                                    <!-- App › Privacy -->
+                                    <StackPanel Classes="settingsSection" IsVisible="{Binding IsPrivacy}">
+                                        <TextBlock Classes="sectionTitle" Text="History" />
+                                        <controls:SettingRow Label="Remember recent media" Help="Turning this off clears recent media immediately" ControlWidth="68">
+                                            <CheckBox IsChecked="{Binding RememberRecentMedia, Mode=TwoWay}"
+                                                      AutomationProperties.Name="Remember recent media"
+                                                      AutomationProperties.HelpText="Turning this off clears recent media immediately" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Recent history">
+                                            <StackPanel Spacing="6">
+                                                <Button x:Name="SettingsClearRecentButton"
+                                                        Classes="secondary settingAction"
+                                                        Content="Clear recent history…"
+                                                        Click="OnSettingsClearRecent"
+                                                        AutomationProperties.Name="Clear recent history"
+                                                        ToolTip.Tip="Clear recently opened media"
+                                                        x:FieldModifier="internal" />
+                                                <StackPanel x:Name="SettingsClearRecentPrompt" IsVisible="False" Spacing="6" x:FieldModifier="internal">
+                                                    <TextBlock Text="Clear recent history?" Classes="settingNote" />
+                                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                                        <Button x:Name="SettingsCancelClearRecentButton" Classes="secondary settingsSmall" Content="Cancel" Click="OnSettingsCancelClearRecent" x:FieldModifier="internal" />
+                                                        <Button x:Name="SettingsConfirmClearRecentButton" Classes="secondary settingsSmall" Content="Clear" Click="OnSettingsConfirmClearRecent" AutomationProperties.Name="Confirm clear recent history" x:FieldModifier="internal" />
                                                     </StackPanel>
-                                                    <TextBox Grid.Column="1" Text="{Binding PendingGesture, Mode=TwoWay}" AutomationProperties.Name="{Binding Name, StringFormat='{}{0} shortcut'}" />
-                                                    <Button Grid.Column="2" Content="Save" Command="{Binding SaveCommand}" AutomationProperties.Name="{Binding Name, StringFormat='Save {0} shortcut'}" />
-                                                    <Button Grid.Column="3" Content="Reset" Command="{Binding ResetCommand}" AutomationProperties.Name="{Binding Name, StringFormat='Reset {0} shortcut'}" />
-                                                </Grid>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                    <TextBlock Text="No shortcuts match your search." IsVisible="{Binding !HasShortcutResults}" Classes="settingHint" />
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Remember resume history" Help="Turning this off clears saved positions and any pending prompt immediately" ControlWidth="68">
+                                            <CheckBox IsChecked="{Binding RememberResumeHistory, Mode=TwoWay}"
+                                                      AutomationProperties.Name="Remember resume history"
+                                                      AutomationProperties.HelpText="Turning this off clears saved positions immediately" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Resume positions">
+                                            <StackPanel Spacing="6">
+                                                <Button x:Name="SettingsClearResumeButton"
+                                                        Classes="secondary settingAction"
+                                                        Content="Clear resume positions…"
+                                                        Click="OnSettingsClearResume"
+                                                        AutomationProperties.Name="Clear resume positions"
+                                                        ToolTip.Tip="Clear saved media positions"
+                                                        x:FieldModifier="internal" />
+                                                <StackPanel x:Name="SettingsClearResumePrompt" IsVisible="False" Spacing="6" x:FieldModifier="internal">
+                                                    <TextBlock Text="Clear saved resume positions?" Classes="settingNote" />
+                                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                                        <Button x:Name="SettingsCancelClearResumeButton" Classes="secondary settingsSmall" Content="Cancel" Click="OnSettingsCancelClearResume" x:FieldModifier="internal" />
+                                                        <Button x:Name="SettingsConfirmClearResumeButton" Classes="secondary settingsSmall" Content="Clear" Click="OnSettingsConfirmClearResume" AutomationProperties.Name="Confirm clear resume positions" x:FieldModifier="internal" />
+                                                    </StackPanel>
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </controls:SettingRow>
+                                        <TextBlock x:Name="SettingsHistoryError"
+                                                   IsVisible="False"
+                                                   Foreground="{DynamicResource PlayerErrorText}"
+                                                   TextWrapping="Wrap"
+                                                   AutomationProperties.Name="Media history error"
+                                                   x:FieldModifier="internal" />
+                                    </StackPanel>
+
+                                    <!-- App › Controls -->
+                                    <StackPanel Classes="settingsSection" IsVisible="{Binding IsControls}">
+                                        <TextBlock Classes="sectionTitle" Text="Skip Amounts" />
+                                        <controls:SettingRow Label="Skip backward (seconds)">
+                                            <NumericUpDown Minimum="1"
+                                                           Maximum="120"
+                                                           Value="{Binding SkipBackwardSeconds, Mode=TwoWay}"
+                                                           AutomationProperties.Name="Skip backward (seconds)" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Skip forward (seconds)">
+                                            <NumericUpDown Minimum="1"
+                                                           Maximum="120"
+                                                           Value="{Binding SkipForwardSeconds, Mode=TwoWay}"
+                                                           AutomationProperties.Name="Skip forward (seconds)" />
+                                        </controls:SettingRow>
+                                    </StackPanel>
+                                    <StackPanel Classes="settingsSection" IsVisible="{Binding IsControls}" Spacing="8">
+                                        <TextBlock Classes="sectionTitle" Text="Keyboard Shortcuts" />
+                                        <controls:SettingRow Label="Reset all shortcuts">
+                                            <Button Classes="secondary settingAction"
+                                                    Content="Reset"
+                                                    Command="{Binding ResetAllShortcutsCommand}"
+                                                    AutomationProperties.Name="Reset all shortcuts" />
+                                        </controls:SettingRow>
+                                        <TextBox Classes="search"
+                                                 PlaceholderText="Search shortcuts"
+                                                 Text="{Binding ShortcutSearch, Mode=TwoWay}"
+                                                 AutomationProperties.Name="Search shortcuts" />
+                                        <TextBlock Text="Edit a shortcut, then Save. Conflicting shortcuts must be resolved before saving."
+                                                   Classes="settingNote" />
+                                        <ItemsControl ItemsSource="{Binding EditableShortcutRows}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate x:DataType="viewModels:ShortcutRow">
+                                                    <Grid ColumnDefinitions="*,140,Auto,Auto" ColumnSpacing="8" Margin="0,3" Classes="shortcutRow">
+                                                        <StackPanel VerticalAlignment="Center">
+                                                            <TextBlock Classes="shortcutName" Text="{Binding Name}" />
+                                                            <TextBlock Classes="settingNote" Text="{Binding Category}" />
+                                                        </StackPanel>
+                                                        <TextBox Grid.Column="1" Text="{Binding PendingGesture, Mode=TwoWay}" AutomationProperties.Name="{Binding Name, StringFormat='{}{0} shortcut'}" />
+                                                        <Button Grid.Column="2" Classes="secondary settingsSmall" Content="Save" Command="{Binding SaveCommand}" AutomationProperties.Name="{Binding Name, StringFormat='Save {0} shortcut'}" />
+                                                        <Button Grid.Column="3" Classes="secondary settingsSmall" Content="Reset" Command="{Binding ResetCommand}" AutomationProperties.Name="{Binding Name, StringFormat='Reset {0} shortcut'}" />
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                        <TextBlock Text="No shortcuts match your search." IsVisible="{Binding !HasShortcutResults}" Classes="settingNote" />
+                                    </StackPanel>
+
+                                    <!-- Media › Playback -->
+                                    <StackPanel Classes="settingsSection" IsVisible="{Binding IsPlayback}">
+                                        <TextBlock Classes="sectionTitle" Text="Resume" />
+                                        <controls:SettingRow Label="Resume playback" Badge="Next open" Help="Ask to resume eligible media the next time it opens" ControlWidth="68">
+                                            <CheckBox IsChecked="{Binding ResumePlayback, Mode=TwoWay}"
+                                                      AutomationProperties.Name="Resume playback"
+                                                      AutomationProperties.HelpText="Ask to resume eligible media next time it opens" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Resume after (seconds)" Badge="Next open" Help="Positions earlier than this are not saved">
+                                            <NumericUpDown Minimum="0"
+                                                           Maximum="3600"
+                                                           Value="{Binding ResumeMinimumElapsedSeconds, Mode=TwoWay}"
+                                                           AutomationProperties.Name="Resume after (seconds)" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Skip resume near end (seconds)" Badge="Next open" Help="Media this close to its end starts from the beginning">
+                                            <NumericUpDown Minimum="0"
+                                                           Maximum="3600"
+                                                           Value="{Binding ResumeMaximumRemainingSeconds, Mode=TwoWay}"
+                                                           AutomationProperties.Name="Do not resume within (seconds)" />
+                                        </controls:SettingRow>
+                                    </StackPanel>
+                                    <StackPanel Classes="settingsSection" IsVisible="{Binding IsPlayback}">
+                                        <TextBlock Classes="sectionTitle" Text="Speed" />
+                                        <controls:SettingRow Label="Default speed" Badge="Next open">
+                                            <ComboBox ItemsSource="{Binding SpeedOptions}"
+                                                      SelectedItem="{Binding DefaultSpeed, Mode=TwoWay}"
+                                                      AutomationProperties.Name="Default speed" />
+                                        </controls:SettingRow>
+                                    </StackPanel>
+
+                                    <!-- Media › Video -->
+                                    <StackPanel Classes="settingsSection" IsVisible="{Binding IsVideo}">
+                                        <TextBlock Classes="sectionTitle" Text="Video" />
+                                        <controls:SettingRow Label="Video adjustments" Help="Aspect ratio, crop and zoom for the media that is playing">
+                                            <Button Classes="secondary settingAction"
+                                                    Content="Open video adjustments"
+                                                    Command="{Binding OpenVideoControlsCommand}" />
+                                        </controls:SettingRow>
+                                    </StackPanel>
+
+                                    <!-- Media › Audio -->
+                                    <StackPanel Classes="settingsSection" IsVisible="{Binding IsAudio}">
+                                        <TextBlock Classes="sectionTitle" Text="Volume" />
+                                        <controls:SettingRow Label="Remember volume" Badge="Next open" ControlWidth="68">
+                                            <CheckBox IsChecked="{Binding RememberVolume, Mode=TwoWay}"
+                                                      AutomationProperties.Name="Remember volume" />
+                                        </controls:SettingRow>
+                                    </StackPanel>
+                                    <StackPanel Classes="settingsSection" IsVisible="{Binding IsAudio}">
+                                        <TextBlock Classes="sectionTitle" Text="Output" />
+                                        <controls:SettingRow Label="Output module" Badge="Restart" Help="VLC uses this audio output; choosing a device is not available yet">
+                                            <ComboBox ItemsSource="{Binding AudioOutputOptions}"
+                                                      SelectedItem="{Binding AudioOutputModule, Mode=TwoWay}"
+                                                      AutomationProperties.Name="Output module" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Normalization level" Badge="Restart" Help="Maximum volume normalization level; empty turns normalization off">
+                                            <NumericUpDown Minimum="0.5"
+                                                           Maximum="10"
+                                                           Increment="0.5"
+                                                           Value="{Binding NormalizationMaximumLevel, Mode=TwoWay}"
+                                                           AutomationProperties.Name="Normvol max level" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="S/PDIF passthrough" Badge="Restart" ControlWidth="68">
+                                            <CheckBox IsChecked="{Binding AudioPassthrough, Mode=TwoWay}"
+                                                      AutomationProperties.Name="S/PDIF passthrough" />
+                                        </controls:SettingRow>
+                                    </StackPanel>
+                                    <StackPanel Classes="settingsSection" IsVisible="{Binding IsAudio}">
+                                        <TextBlock Classes="sectionTitle" Text="Tracks" />
+                                        <controls:SettingRow Label="Audio tracks and timing">
+                                            <Button Classes="secondary settingAction"
+                                                    Content="Audio tracks and timing"
+                                                    Command="{Binding OpenAudioControlsCommand}" />
+                                        </controls:SettingRow>
+                                    </StackPanel>
+
+                                    <!-- Media › Subtitles -->
+                                    <StackPanel Classes="settingsSection" IsVisible="{Binding IsSubtitles}">
+                                        <TextBlock Classes="sectionTitle" Text="Tracks" />
+                                        <controls:SettingRow Label="Subtitle tracks and timing" Help="Choose tracks and adjust timing during playback">
+                                            <Button Classes="secondary settingAction"
+                                                    Content="Subtitle tracks and timing"
+                                                    Command="{Binding OpenSubtitleControlsCommand}" />
+                                        </controls:SettingRow>
+                                    </StackPanel>
+
+                                    <!-- System › Advanced -->
+                                    <StackPanel Classes="settingsSection" IsVisible="{Binding IsAdvanced}">
+                                        <TextBlock Classes="sectionTitle" Text="Diagnostics" />
+                                        <controls:SettingRow Label="Media information" Help="The current media, codec streams and playback diagnostics">
+                                            <Button Classes="secondary settingAction"
+                                                    Content="Media information"
+                                                    Command="{Binding OpenMediaInformationCommand}" />
+                                        </controls:SettingRow>
+                                    </StackPanel>
+
+                                    <WrapPanel x:Name="SettingsResetRow" Orientation="Horizontal" x:FieldModifier="internal">
+                                        <Button Classes="secondary settingsSmall" Content="Reset page" Command="{Binding ResetPageCommand}" AutomationProperties.Name="Reset current settings page" Margin="0,4,8,4" IsVisible="{Binding CanResetPage}" />
+                                        <Button Classes="secondary settingsSmall" Content="Reset all" Command="{Binding ResetAllCommand}" AutomationProperties.Name="Reset all settings" Margin="0,4,8,4" />
+                                        <Button Classes="secondary settingsSmall" Content="Cancel" Command="{Binding CancelResetCommand}" IsVisible="{Binding ConfirmReset}" AutomationProperties.Name="Cancel settings reset" Margin="0,4,8,4" />
+                                        <TextBlock Text="Click Reset all again to confirm" IsVisible="{Binding ConfirmReset}" Classes="settingNote" VerticalAlignment="Center" Margin="0,4,8,4" />
+                                    </WrapPanel>
                                 </StackPanel>
-                            </Border>
-                            <Border Classes="settingsCard" IsVisible="{Binding IsAdvanced}">
-                                <StackPanel Spacing="14">
-                                    <TextBlock Text="View the current media, codec streams and playback diagnostics." Classes="settingHint" TextWrapping="Wrap" />
-                                    <Button Content="Media information" Command="{Binding OpenMediaInformationCommand}" HorizontalAlignment="Left" />
-                                </StackPanel>
-                            </Border>
-                            <WrapPanel x:Name="SettingsResetRow" Orientation="Horizontal" x:FieldModifier="internal">
-                                <Button Content="Reset page" Command="{Binding ResetPageCommand}" AutomationProperties.Name="Reset current settings page" Margin="0,4,8,4" IsVisible="{Binding CanResetPage}" />
-                                <Button Content="Reset all" Command="{Binding ResetAllCommand}" AutomationProperties.Name="Reset all settings" Margin="0,4,8,4" />
-                                <Button Content="Cancel" Command="{Binding CancelResetCommand}" IsVisible="{Binding ConfirmReset}" AutomationProperties.Name="Cancel settings reset" Margin="0,4,8,4" />
-                                <TextBlock Text="Click Reset all again to confirm" IsVisible="{Binding ConfirmReset}" Classes="settingHint" Margin="0,4,8,4" TextWrapping="Wrap" />
-                            </WrapPanel>
-                        </StackPanel>
-                    </ScrollViewer>
+                            </ScrollViewer>
+                        </Grid>
+                    </Grid>
                 </Grid>
             </Border>
-        </Grid>
-    </Grid>
+        </Panel>
+    </Panel>
 </UserControl>

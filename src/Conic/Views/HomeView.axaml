@@ -76,7 +76,7 @@
     <Grid RowDefinitions="52,*,Auto">
         <Grid x:Name="HomeHeader"
               Grid.Row="0"
-              ColumnDefinitions="Auto,Auto,*,Auto,Auto,Auto"
+              ColumnDefinitions="Auto,Auto,*,Auto,Auto,Auto,Auto"
               Margin="12,0"
               PointerPressed="OnHeaderPointerPressed">
             <!-- Shown with the mini player, while something is playing or paused. -->

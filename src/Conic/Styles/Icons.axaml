@@ -2,7 +2,7 @@
      24x24 artwork) by design/figma/gen_icons.py. Regenerate rather than edit.
      Colors are not part of the data: VlcIcon draws every layer in its
      Foreground. "*Active" keys are the design's state=active variants.
-     Icon.Restore and Icon.Skip*Arrow are app additions in the same style. -->
+     Icon.Restore, Icon.Save and Icon.Skip*Arrow are app additions in the same style. -->
 <ResourceDictionary xmlns="https://github.com/avaloniaui"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:controls="clr-namespace:Conic.Controls">
@@ -242,6 +242,10 @@
     <controls:IconData x:Key="Icon.Restore">
         <controls:IconLayer Data="F1 M9 6H18V15" StrokeThickness="1.5" />
         <controls:IconLayer Data="F1 M15 9H6V18H15V9Z" StrokeThickness="1.5" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.Save">
+        <controls:IconLayer Data="F1 M12 4V15M7.5 10.5L12 15L16.5 10.5" StrokeThickness="1.5" />
+        <controls:IconLayer Data="F1 M5 15V18C5 18.55 5.45 19 6 19H18C18.55 19 19 18.55 19 18V15" StrokeThickness="1.5" />
     </controls:IconData>
     <controls:IconData x:Key="Icon.Search">
         <controls:IconLayer Data="F1 M14.84 14.84C15.99 13.69 16.70 12.10 16.70 10.35C16.70 6.84 13.86 4 10.35 4C6.84 4 4 6.84 4 10.35C4 13.86 6.84 16.70 10.35 16.70C12.10 16.70 13.69 15.99 14.84 14.84ZM14.84 14.84L19 19" StrokeThickness="1.5" LineJoin="Miter" />

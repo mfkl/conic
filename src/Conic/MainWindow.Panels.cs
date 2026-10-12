@@ -293,8 +293,15 @@ public partial class MainWindow
             WakeChrome();
             // The view-model notification can precede the visibility binding and layout.
             _focusQueueOnLayout = _presentation.IsQueueOpen;
-            if (!_presentation.IsQueueOpen) Dispatcher.UIThread.Post(() => RestoreRouteFocus(QueueButton));
+            if (!_presentation.IsQueueOpen)
+            {
+                Control target = DrawerReturnTarget();
+                _drawerOpener = null;
+                Dispatcher.UIThread.Post(() => RestoreRouteFocus(target));
+            }
         }
+        if (e.PropertyName == nameof(PlayerPresentationViewModel.DrawerPanel))
+            ApplyDrawerLayout();
         if (e.PropertyName == nameof(PlayerPresentationViewModel.IsLibraryOpen))
         {
             if (_presentation.IsLibraryOpen)
@@ -313,6 +320,48 @@ public partial class MainWindow
             UpdateResumePrompt();
         if (e.PropertyName is nameof(PlayerPresentationViewModel.HasHistoryError) or nameof(PlayerPresentationViewModel.HistoryError) or nameof(PlayerPresentationViewModel.HasRecentItems) or nameof(PlayerPresentationViewModel.HasResumeItems) or nameof(PlayerPresentationViewModel.HasFavoriteItems) or nameof(PlayerPresentationViewModel.HasLibraryItems))
             UpdateHistorySettingsControls();
+    }
+
+    // Bar panels: the bar button that opened the drawer gets focus back when
+    // it closes; without one (shortcut, menu), the open panel's own button,
+    // or the More button when the bar is too narrow to show it.
+    private Control? _drawerOpener;
+
+    private void OnBarPanelButtonClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => _drawerOpener = sender as Control;
+
+    private void OnCloseDrawer(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => CloseDrawer();
+
+    private void CloseDrawer()
+    {
+        Control target = DrawerReturnTarget();
+        _presentation.IsQueueOpen = false;
+        RestoreRouteFocus(target);
+    }
+
+    private Control DrawerReturnTarget()
+    {
+        string panel = _presentation.DrawerPanel;
+        if (_drawerOpener is { IsEffectivelyVisible: true } opener && PanelOfButton(opener) == panel) return opener;
+        Control button = panel switch
+        {
+            PlayerPresentationViewModel.TracksPanel => _presentation.IsSubtitleTab ? SubtitleTracksButton : AudioTracksButton,
+            PlayerPresentationViewModel.PlaybackPanel => PlaybackSettingsButton,
+            _ => QueueButton,
+        };
+        return button.IsEffectivelyVisible ? button : OpenOptionsButton;
+    }
+
+    private string? PanelOfButton(Control button) =>
+        ReferenceEquals(button, QueueButton) ? PlayerPresentationViewModel.QueuePanel :
+        ReferenceEquals(button, AudioTracksButton) || ReferenceEquals(button, SubtitleTracksButton) ? PlayerPresentationViewModel.TracksPanel :
+        ReferenceEquals(button, PlaybackSettingsButton) ? PlayerPresentationViewModel.PlaybackPanel : null;
+
+    // "Show Preferences" opens the Settings page of the tab that is showing.
+    private void OnShowPreferences(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        string page = _presentation.IsSubtitleTab ? "Subtitles" : "Audio";
+        OpenSettings();
+        _settingsViewModel.SelectedPage = _settingsViewModel.Pages.First(candidate => candidate.Name == page);
     }
 
     private void OnSpeedChanged(object? sender, SelectionChangedEventArgs e)

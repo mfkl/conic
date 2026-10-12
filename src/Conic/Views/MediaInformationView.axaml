@@ -9,15 +9,15 @@
             </Grid>
         </DataTemplate>
     </UserControl.DataTemplates>
+    <!-- Shown in the playback settings panel's Info tab, which names it. -->
     <StackPanel Spacing="12">
-        <TextBlock Text="Media information" FontSize="18" FontWeight="SemiBold" />
-        <TextBlock Text="{Binding Name}" TextWrapping="Wrap" />
-        <TextBlock Text="{Binding Summary}" Classes="settingHint" TextWrapping="Wrap" />
+        <TextBlock Text="{Binding Name}" FontSize="14" Foreground="{DynamicResource Vlc.Fg.2}" TextWrapping="Wrap" />
+        <TextBlock Text="{Binding Summary}" Classes="panelHint" />
         <ItemsControl ItemsSource="{Binding MetadataFields}" />
         <ItemsControl ItemsSource="{Binding Streams}">
             <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="app:MediaCodecStream">
-                    <Border Padding="12" Margin="0,4" CornerRadius="6" Background="{DynamicResource Vlc.Bg.A1}">
+                    <Border Padding="12" Margin="0,4" CornerRadius="6" Background="{DynamicResource Vlc.Bg.A4}">
                         <StackPanel Spacing="8">
                             <TextBlock Text="{Binding Heading}" FontWeight="SemiBold" Foreground="{DynamicResource PlayerAccent}" />
                             <ItemsControl ItemsSource="{Binding Details}" />

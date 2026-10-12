@@ -17,7 +17,7 @@
         <ItemsControl ItemsSource="{Binding Streams}">
             <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="app:MediaCodecStream">
-                    <Border Padding="12" Margin="0,4" CornerRadius="6" Background="#292929">
+                    <Border Padding="12" Margin="0,4" CornerRadius="6" Background="{DynamicResource Vlc.Bg.A1}">
                         <StackPanel Spacing="8">
                             <TextBlock Text="{Binding Heading}" FontWeight="SemiBold" Foreground="{DynamicResource PlayerAccent}" />
                             <ItemsControl ItemsSource="{Binding Details}" />

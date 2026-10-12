@@ -2,7 +2,6 @@ using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using Avalonia.Media;
 
 namespace VLCAvalonia.Controls;
 
@@ -39,9 +38,8 @@ public partial class WindowCaptionButtons : UserControl
 
     private void UpdateMaximizeIcon(WindowState state)
     {
-        MaximizeIcon.Data = state == WindowState.Maximized
-            ? Geometry.Parse("M1,1 H6 V3 H3 V6 H1 Z M3,3 H10 V10 H3 Z M4,4 V9 H9 V4 Z")
-            : Geometry.Parse("M0,0 H10 V10 H0 Z M1,1 V9 H9 V1 Z");
+        if (this.TryFindResource(state == WindowState.Maximized ? "Icon.Restore" : "Icon.Maximize", out object? icon))
+            MaximizeIcon.Icon = icon as IconData;
         ToolTip.SetTip(MaximizeButton, state == WindowState.Maximized ? "Restore" : "Maximize");
         AutomationProperties.SetName(MaximizeButton, state == WindowState.Maximized ? "Restore" : "Maximize");
     }

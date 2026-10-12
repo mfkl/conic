@@ -1,0 +1,335 @@
+<!-- Generated from the Figma "VLC Redesign" icon set (design/figma/icons.txt,
+     24x24 artwork) by design/figma/gen_icons.py. Regenerate rather than edit.
+     Colors are not part of the data: VlcIcon draws every layer in its
+     Foreground. "*Active" keys are the design's state=active variants.
+     Icon.Restore and Icon.Skip*Arrow are app additions in the same style. -->
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:controls="clr-namespace:VLCAvalonia.Controls">
+    <controls:IconData x:Key="Icon.Accessibility">
+        <controls:IconLayer Data="F1 M14,6 A2,2 0 1 1 10,6 A2,2 0 1 1 14,6 Z" Fill="True" />
+        <controls:IconLayer Data="F1 M7 9L11 10.29L12 10.61M12 10.61V11.80V13M12 10.61L13 10.29L17 9M12 13L9 19M12 13L15 19" StrokeThickness="1.5" />
+        <controls:IconLayer Data="F1 M23,12 A11,11 0 1 1 1,12 A11,11 0 1 1 23,12 Z" StrokeThickness="1.5" LineCap="Flat" LineJoin="Miter" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.Add">
+        <controls:IconLayer Data="F1 M12 5V19" StrokeThickness="1.5" />
+        <controls:IconLayer Data="F1 M19 12L5 12" StrokeThickness="1.5" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.ArrowLeft">
+        <controls:IconLayer Data="F1 M9.99 17L4.99 12L9.99 7M4.99 12H19" StrokeThickness="1.5" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.ArrowRight">
+        <controls:IconLayer Data="F1 M14 17L19 12L14 7M19 12H5" StrokeThickness="1.5" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.Audio">
+        <controls:IconLayer Data="F1 M12 3V21" StrokeThickness="1.5" />
+        <controls:IconLayer Data="F1 M16 6V18" StrokeThickness="1.5" />
+        <controls:IconLayer Data="F1 M20 9V15" StrokeThickness="1.5" />
+        <controls:IconLayer Data="F1 M8 8V16" StrokeThickness="1.5" />
+        <controls:IconLayer Data="F1 M4 11V13" StrokeThickness="1.5" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.Backward10Sec">
+        <controls:IconLayer Data="F1 M20 10C19.57 8 17.42 4 12.28 4C7.14 4 5.42 8 4.57 10M9.71 8.5L4.57 10L2 6.5" StrokeThickness="1.5" />
+        <controls:IconLayer Data="F1 M10.45 11.72V19H9.35V12.82H9.31L7.57 13.96V12.91L9.38 11.72H10.45ZM14.95 19.12C14.39 19.11 13.91 18.97 13.51 18.67C13.12 18.38 12.81 17.95 12.60 17.39C12.39 16.83 12.29 16.15 12.29 15.36C12.29 14.57 12.39 13.90 12.60 13.34C12.82 12.78 13.12 12.36 13.52 12.06C13.92 11.77 14.40 11.62 14.95 11.62C15.51 11.62 15.99 11.77 16.38 12.07C16.78 12.36 17.09 12.79 17.30 13.35C17.51 13.90 17.62 14.57 17.62 15.36C17.62 16.16 17.51 16.83 17.30 17.39C17.09 17.95 16.79 18.38 16.39 18.68C15.99 18.97 15.51 19.12 14.95 19.12ZM14.95 18.17C15.45 18.17 15.83 17.93 16.11 17.45C16.39 16.97 16.53 16.27 16.53 15.36C16.53 14.76 16.46 14.25 16.33 13.83C16.21 13.41 16.03 13.10 15.79 12.88C15.56 12.66 15.28 12.55 14.95 12.55C14.46 12.55 14.08 12.79 13.80 13.28C13.52 13.76 13.38 14.46 13.38 15.36C13.38 15.97 13.44 16.48 13.56 16.90C13.69 17.32 13.87 17.63 14.11 17.85C14.34 18.06 14.62 18.17 14.95 18.17Z" Fill="True" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.Check">
+        <controls:IconLayer Data="F1 M5 11.5L9.66 17L19 6" StrokeThickness="1.5" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.ChevronDown">
+        <controls:IconLayer Data="F1 M7 10L12 15L17 10" StrokeThickness="1.5" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.ChevronLeft">
+        <controls:IconLayer Data="F1 M14 7L9 12L14 17" StrokeThickness="1.5" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.ChevronRight">
+        <controls:IconLayer Data="F1 M10 7L15 12L10 17" StrokeThickness="1.5" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.ChevronUp">
+        <controls:IconLayer Data="F1 M7 14L12 9L17 14" StrokeThickness="1.5" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.Close">
+        <controls:IconLayer Data="F1 M7 7L17 17" StrokeThickness="1.5" />
+        <controls:IconLayer Data="F1 M17 7L7 17" StrokeThickness="1.5" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.CollapseSidebar">
+        <controls:IconLayer Data="F1 M6 3.75H18C19.24 3.75 20.25 4.75 20.25 6V18C20.25 19.24 19.24 20.25 18 20.25H6C4.75 20.25 3.75 19.24 3.75 18V6C3.75 4.75 4.75 3.75 6 3.75Z" StrokeThickness="1.5" LineCap="Flat" LineJoin="Miter" />
+        <controls:IconLayer Data="F1 M6.5,6 L7.5,6 A0.5,0.5 0 0 1 8,6.5 L8,17.5 A0.5,0.5 0 0 1 7.5,18 L6.5,18 A0.5,0.5 0 0 1 6,17.5 L6,6.5 A0.5,0.5 0 0 1 6.5,6 Z" Fill="True" />
+        <controls:IconLayer Data="F1 M13.14 14L11 12L13.14 10M11 12H17" StrokeThickness="1.5" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.Edit">
+        <controls:IconLayer Data="F1 M7 20H19" StrokeThickness="1.5" />
+        <controls:IconLayer Data="F1 M9.24 15.81L14.97 10.18L17.72 7.47C18.09 7.11 18.09 6.54 17.72 6.18L15.77 4.26C15.41 3.91 14.82 3.91 14.46 4.26L11.71 6.97L5.98 12.60L5.01 16.43C4.92 16.78 5.25 17.08 5.60 16.97L9.24 15.81Z" StrokeThickness="1.5" LineCap="Flat" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.ExpandSidebar">
+        <controls:IconLayer Data="F1 M6 3.75H18C19.24 3.75 20.25 4.75 20.25 6V18C20.25 19.24 19.24 20.25 18 20.25H6C4.75 20.25 3.75 19.24 3.75 18V6C3.75 4.75 4.75 3.75 6 3.75Z" StrokeThickness="1.5" LineCap="Flat" LineJoin="Miter" />
+        <controls:IconLayer Data="F1 M6.5,6 L7.5,6 A0.5,0.5 0 0 1 8,6.5 L8,17.5 A0.5,0.5 0 0 1 7.5,18 L6.5,18 A0.5,0.5 0 0 1 6,17.5 L6,6.5 A0.5,0.5 0 0 1 6.5,6 Z" Fill="True" />
+        <controls:IconLayer Data="F1 M14.85 14L17 12L14.85 10M17 12H11" StrokeThickness="1.5" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.Favorite">
+        <controls:IconLayer Data="F1 M12.06 6.24L13.00 5.29C14.82 3.47 17.78 3.47 19.60 5.29C21.68 7.38 21.68 10.75 19.60 12.84L12.06 20.38L4.52 12.84C2.43 10.75 2.43 7.38 4.52 5.29C6.34 3.47 9.29 3.47 11.12 5.29L12.06 6.24Z" StrokeThickness="1.5" LineCap="Flat" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.FavoriteActive">
+        <controls:IconLayer Data="F1 M12.06 6.24L13.00 5.29C14.82 3.47 17.78 3.47 19.60 5.29C21.68 7.38 21.68 10.75 19.60 12.84L12.06 20.38L4.52 12.84C2.43 10.75 2.43 7.38 4.52 5.29C6.34 3.47 9.29 3.47 11.12 5.29L12.06 6.24Z" Fill="True" StrokeThickness="1" LineCap="Flat" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.File">
+        <controls:IconLayer Data="F1 M9 2.75H17C18.79 2.75 20.25 4.20 20.25 6V18C20.25 19.79 18.79 21.25 17 21.25H7C5.20 21.25 3.75 19.79 3.75 18V8C3.75 5.10 6.10 2.75 9 2.75Z" StrokeThickness="1.5" LineCap="Flat" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.Folder">
+        <controls:IconLayer Data="F1 M21 17V9.54C21 8.13 19.86 7 18.45 7H13.80C12.67 7 11.62 6.43 11 5.5C10.37 4.56 9.32 4 8.19 4H5.59C4.16 4 3 5.16 3 6.59V17C3 18.65 4.34 20 6 20H18C19.65 20 21 18.65 21 17Z" StrokeThickness="1.5" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.FolderActive">
+        <controls:IconLayer Data="F1 M21 17V9.54C21 8.13 19.86 7 18.45 7H13.80C12.67 7 11.62 6.43 11 5.5C10.37 4.56 9.32 4 8.19 4H5.59C4.16 4 3 5.16 3 6.59V17C3 18.65 4.34 20 6 20H18C19.65 20 21 18.65 21 17Z" Fill="True" StrokeThickness="1.5" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.Forward10Sec">
+        <controls:IconLayer Data="F1 M4 10C4.42 8 6.57 4 11.71 4C16.85 4 18.57 8 19.42 10M14.28 8.5L19.42 10L22 6.5" StrokeThickness="1.5" />
+        <controls:IconLayer Data="F1 M9.45 11.72V19H8.35V12.82H8.31L6.57 13.96V12.91L8.38 11.72H9.45ZM13.95 19.12C13.39 19.11 12.91 18.97 12.51 18.67C12.12 18.38 11.81 17.95 11.60 17.39C11.39 16.83 11.29 16.15 11.29 15.36C11.29 14.57 11.39 13.90 11.60 13.34C11.82 12.78 12.12 12.36 12.52 12.06C12.92 11.77 13.40 11.62 13.95 11.62C14.51 11.62 14.99 11.77 15.38 12.07C15.78 12.36 16.09 12.79 16.30 13.35C16.51 13.90 16.62 14.57 16.62 15.36C16.62 16.16 16.51 16.83 16.30 17.39C16.09 17.95 15.79 18.38 15.39 18.68C14.99 18.97 14.51 19.12 13.95 19.12ZM13.95 18.17C14.45 18.17 14.83 17.93 15.11 17.45C15.39 16.97 15.53 16.27 15.53 15.36C15.53 14.76 15.46 14.25 15.33 13.83C15.21 13.41 15.03 13.10 14.79 12.88C14.56 12.66 14.28 12.55 13.95 12.55C13.46 12.55 13.08 12.79 12.80 13.28C12.52 13.76 12.38 14.46 12.38 15.36C12.38 15.97 12.44 16.48 12.56 16.90C12.69 17.32 12.87 17.63 13.11 17.85C13.34 18.06 13.62 18.17 13.95 18.17Z" Fill="True" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.Fullscreen">
+        <controls:IconLayer Data="F1 M9.6 6H6V9.6M14.4 6H18V9.6M18 14.4V18H14.4M9.6 18H6V14.4" StrokeThickness="1.5" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.FullscreenExit">
+        <controls:IconLayer Data="F1 M5.5 9.00L9.1 9.00L9.1 5.40M18.6 8.99H15V5.39M15 18.59V14.99H18.6M5.5 14.99H9.1L9.1 18.59" StrokeThickness="1.5" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.Grid">
+        <controls:IconLayer Data="F1 M3,3.75 L9,3.75 A1.25,1.25 0 0 1 10.25,5 L10.25,9 A1.25,1.25 0 0 1 9,10.25 L3,10.25 A1.25,1.25 0 0 1 1.75,9 L1.75,5 A1.25,1.25 0 0 1 3,3.75 Z" StrokeThickness="1.5" LineCap="Flat" />
+        <controls:IconLayer Data="F1 M3,13.75 L9,13.75 A1.25,1.25 0 0 1 10.25,15 L10.25,19 A1.25,1.25 0 0 1 9,20.25 L3,20.25 A1.25,1.25 0 0 1 1.75,19 L1.75,15 A1.25,1.25 0 0 1 3,13.75 Z" StrokeThickness="1.5" LineCap="Flat" />
+        <controls:IconLayer Data="F1 M15,3.75 L21,3.75 A1.25,1.25 0 0 1 22.25,5 L22.25,9 A1.25,1.25 0 0 1 21,10.25 L15,10.25 A1.25,1.25 0 0 1 13.75,9 L13.75,5 A1.25,1.25 0 0 1 15,3.75 Z" StrokeThickness="1.5" LineCap="Flat" />
+        <controls:IconLayer Data="F1 M15,13.75 L21,13.75 A1.25,1.25 0 0 1 22.25,15 L22.25,19 A1.25,1.25 0 0 1 21,20.25 L15,20.25 A1.25,1.25 0 0 1 13.75,19 L13.75,15 A1.25,1.25 0 0 1 15,13.75 Z" StrokeThickness="1.5" LineCap="Flat" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.Home">
+        <controls:IconLayer Data="F1 M10.75 4.73C11.50 4.22 12.49 4.22 13.24 4.73L19.24 8.73C19.87 9.15 20.25 9.85 20.25 10.60V18C20.25 19.24 19.24 20.25 18 20.25H6C4.75 20.25 3.75 19.24 3.75 18V10.60C3.75 9.85 4.12 9.15 4.75 8.73L10.75 4.73Z" StrokeThickness="1.5" LineCap="Flat" LineJoin="Miter" />
+        <controls:IconLayer Data="F1 M11,12 L13,12 A1,1 0 0 1 14,13 L14,17 A1,1 0 0 1 13,18 L11,18 A1,1 0 0 1 10,17 L10,13 A1,1 0 0 1 11,12 Z" Fill="True" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.HomeActive">
+        <controls:IconLayer Data="F1 M13.66 4.10C12.65 3.43 11.34 3.43 10.33 4.10L4.33 8.10C3.50 8.66 3 9.60 3 10.60V18C3.00 19.65 4.34 21 6 21H18C19.65 21 21 19.65 21 18V10.60C21 9.60 20.49 8.66 19.66 8.10L13.66 4.10ZM13 12C13.55 12 14 12.44 14 13V17C14 17.55 13.55 18 13 18H11C10.44 18 10 17.55 10 17V13C10 12.44 10.44 12 11 12H13Z" Fill="True" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.Hotkeys">
+        <controls:IconLayer Data="F1 M9 16H15" StrokeThickness="1.5" />
+        <controls:IconLayer Data="F1 M6 9H6.00" StrokeThickness="1.5" />
+        <controls:IconLayer Data="F1 M6 12H6.00" StrokeThickness="1.5" />
+        <controls:IconLayer Data="F1 M10 9H10.00" StrokeThickness="1.5" />
+        <controls:IconLayer Data="F1 M10 12H10.00" StrokeThickness="1.5" />
+        <controls:IconLayer Data="F1 M14 9H14.00" StrokeThickness="1.5" />
+        <controls:IconLayer Data="F1 M14 12H14.00" StrokeThickness="1.5" />
+        <controls:IconLayer Data="F1 M18 9H18.00" StrokeThickness="1.5" />
+        <controls:IconLayer Data="F1 M18 12H18.00" StrokeThickness="1.5" />
+        <controls:IconLayer Data="F1 M5,4.75 L19,4.75 A3.25,3.25 0 0 1 22.25,8 L22.25,16 A3.25,3.25 0 0 1 19,19.25 L5,19.25 A3.25,3.25 0 0 1 1.75,16 L1.75,8 A3.25,3.25 0 0 1 5,4.75 Z" StrokeThickness="1.5" LineCap="Flat" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.Info">
+        <controls:IconLayer Data="F1 M22,12 A10,10 0 1 1 2,12 A10,10 0 1 1 22,12 Z" StrokeThickness="1.5" LineCap="Flat" LineJoin="Miter" />
+        <controls:IconLayer Data="F1 M12 11V17" StrokeThickness="2" />
+        <controls:IconLayer Data="F1 M12 7V7.00" StrokeThickness="2" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.Interface">
+        <controls:IconLayer Data="F1 M6 17.52V2L18 11.88L14 15L15.89 18.92C16.28 19.71 15.95 20.66 15.17 21.06C14.39 21.45 13.43 21.14 13.03 20.37L11 16.5L6 17.52Z" StrokeThickness="1.5" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.Link">
+        <controls:IconLayer Data="F1 M14.5 7H17C19.76 7 22 9.23 22 12C22 14.76 19.76 17 17 17H14.5M9.5 17H7C4.23 17 2 14.76 2 12C2 9.23 4.23 7 7 7H9.5" StrokeThickness="1.5" LineJoin="Miter" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.List">
+        <controls:IconLayer Data="F1 M4,4.75 L6,4.75 A1.25,1.25 0 0 1 7.25,6 L7.25,8 A1.25,1.25 0 0 1 6,9.25 L4,9.25 A1.25,1.25 0 0 1 2.75,8 L2.75,6 A1.25,1.25 0 0 1 4,4.75 Z" StrokeThickness="1.5" LineCap="Flat" />
+        <controls:IconLayer Data="F1 M4,14.75 L6,14.75 A1.25,1.25 0 0 1 7.25,16 L7.25,18 A1.25,1.25 0 0 1 6,19.25 L4,19.25 A1.25,1.25 0 0 1 2.75,18 L2.75,16 A1.25,1.25 0 0 1 4,14.75 Z" StrokeThickness="1.5" LineCap="Flat" />
+        <controls:IconLayer Data="F1 M10 7H21" StrokeThickness="1.28" />
+        <controls:IconLayer Data="F1 M10 17H21" StrokeThickness="1.28" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.Lists">
+        <controls:IconLayer Data="F1 M8 12H20" StrokeThickness="1.5" />
+        <controls:IconLayer Data="F1 M4 12H5" StrokeThickness="1.5" />
+        <controls:IconLayer Data="F1 M8 7H20" StrokeThickness="1.5" />
+        <controls:IconLayer Data="F1 M4 7H5" StrokeThickness="1.5" />
+        <controls:IconLayer Data="F1 M8 17H20" StrokeThickness="1.5" />
+        <controls:IconLayer Data="F1 M4 17H5" StrokeThickness="1.5" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.Maximize">
+        <controls:IconLayer Data="F1 M18 6H6V18H18V6Z" StrokeThickness="1.5" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.Minimize">
+        <controls:IconLayer Data="F1 M6 12H18" StrokeThickness="1.5" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.More">
+        <controls:IconLayer Data="F1 M18.00 11.99L18.00 11.99" StrokeThickness="3" LineJoin="Miter" />
+        <controls:IconLayer Data="F1 M12.00 11.99L12.00 11.99" StrokeThickness="3" LineJoin="Miter" />
+        <controls:IconLayer Data="F1 M6.00 11.99L6.00 11.99" StrokeThickness="3" LineJoin="Miter" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.Music">
+        <controls:IconLayer Data="F1 M18 6H13.66V13.5M13.66 13.5C13.66 13.5 13.66 18 9.16 18C6.75 18 5.41 15.75 6.24 14.09C7.88 10.81 13.66 13.5 13.66 13.5Z" StrokeThickness="1.5" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.NewFolder">
+        <controls:IconLayer Data="F1 M21 17V9.54C21 8.13 19.86 7 18.45 7H13.80C12.67 7 11.62 6.43 11 5.5C10.37 4.56 9.32 4 8.19 4H5.59C4.16 4 3 5.16 3 6.59V17C3 18.65 4.34 20 6 20H18C19.65 20 21 18.65 21 17Z" StrokeThickness="1.5" />
+        <controls:IconLayer Data="F1 M12 10V16" StrokeThickness="1.5" />
+        <controls:IconLayer Data="F1 M15 13L9 13" StrokeThickness="1.5" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.Next">
+        <controls:IconLayer Data="F1 M8 17V7L14 12L8 17Z" Fill="True" StrokeThickness="1.5" />
+        <controls:IconLayer Data="F1 M15 17V7H17V17H15Z" Fill="True" StrokeThickness="1.5" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.Open">
+        <controls:IconLayer Data="F1 M19 9.66V5H14.33M19 5L12 12M19 13.75V15.5V16.66C19 17.95 17.95 19 16.66 19H7.33C6.04 19 5 17.95 5 16.66V7.33C5 6.04 6.04 5 7.33 5H8.5H10.25" StrokeThickness="1.5" LineJoin="Miter" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.Paint">
+        <controls:IconLayer Data="F1 M10.79,9.37 L17.876,2.284 A1.74,1.74 0 0 1 20.336,2.284 L20.336,2.284 A1.74,1.74 0 0 1 20.336,4.745 L13.251,11.83 A1.74,1.74 0 0 1 10.79,11.83 L10.79,11.83 A1.74,1.74 0 0 1 10.79,9.37 Z" StrokeThickness="1.5" LineCap="Flat" LineJoin="Miter" />
+        <controls:IconLayer Data="F1 M7.44 19.60C10.64 19.60 10.71 16.3 9.44 14.60C7.94 12.60 5 13.5 3.5 15C0.58 17.91 2.66 21.66 3.5 22.5C3.49 21.5 4.24 19.60 7.44 19.60Z" StrokeThickness="1.5" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.Pause">
+        <controls:IconLayer Data="F1 M8 17V7H10V17H8Z" Fill="True" StrokeThickness="1.5" />
+        <controls:IconLayer Data="F1 M14 17V7H16V17H14Z" Fill="True" StrokeThickness="1.5" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.Pip">
+        <controls:IconLayer Data="F1 M18 6H6V18H18V6Z" StrokeThickness="1.5" />
+        <controls:IconLayer Data="F1 M18 13H13V18H18V13Z" Fill="True" StrokeThickness="1.5" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.Play">
+        <controls:IconLayer Data="F1 M8 16.95V7.04C8 6.21 8.95 5.74 9.61 6.25L15.98 11.21C16.49 11.61 16.49 12.38 15.98 12.78L9.61 17.74C8.95 18.25 8 17.78 8 16.95Z" Fill="True" StrokeThickness="1.5" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.Playback">
+        <controls:IconLayer Data="F1 M8 18V6L16 12L8 18Z" StrokeThickness="1.5" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.Playlist">
+        <controls:IconLayer Data="F1 M3 12H11.64" StrokeThickness="1.5" />
+        <controls:IconLayer Data="F1 M3 17H11.64" StrokeThickness="1.5" />
+        <controls:IconLayer Data="F1 M3 7H21" StrokeThickness="1.5" />
+        <controls:IconLayer Data="F1 M17.18 19V11L21.18 15L17.18 19Z" Fill="True" StrokeThickness="1" LineCap="Flat" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.Plugins">
+        <controls:IconLayer Data="F1 M18.4 6C18.4 5.44 17.95 5 17.4 5H14.8H14C13.44 5 13 5.44 13 6V6.39C13 7.38 12.19 8.19 11.2 8.19C10.20 8.19 9.4 7.38 9.4 6.39V6C9.4 5.44 8.95 5 8.4 5H7.6H5C4.44 5 4 5.44 4 6V8.5V9.25C4 9.80 4.44 10.25 5 10.25H5.85C6.81 10.25 7.6 11.03 7.6 12C7.6 12.96 6.81 13.75 5.85 13.75H5C4.44 13.75 4 14.19 4 14.75V15.5V18C4 18.55 4.44 19 5 19H7.6H8.4C8.95 19 9.4 18.55 9.4 18V17.3C9.4 16.30 10.20 15.5 11.2 15.5C12.19 15.5 13 16.30 13 17.3V18C13 18.55 13.44 19 14 19H14.8H17.4C17.95 19 18.4 18.55 18.4 18V15.5V14.75C18.4 14.19 18.84 13.75 19.4 13.75H20.25C21.21 13.75 22 12.96 22 12C22 11.03 21.21 10.25 20.25 10.25H19.4C18.84 10.25 18.4 9.80 18.4 9.25V8.5V6Z" StrokeThickness="1.5" LineCap="Flat" LineJoin="Miter" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.Preferences">
+        <controls:IconLayer Data="F1 M5 4V20" StrokeThickness="1.5" />
+        <controls:IconLayer Data="F1 M7 8.00L3.00 7.99" StrokeThickness="1.5" />
+        <controls:IconLayer Data="F1 M14 16.00L10 15.99" StrokeThickness="1.5" />
+        <controls:IconLayer Data="F1 M21 12.00L17 11.99" StrokeThickness="1.5" />
+        <controls:IconLayer Data="F1 M12 4V20" StrokeThickness="1.5" />
+        <controls:IconLayer Data="F1 M19 4V20" StrokeThickness="1.5" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.Previous">
+        <controls:IconLayer Data="F1 M10 17V7H8V17H10Z" Fill="True" StrokeThickness="1.5" />
+        <controls:IconLayer Data="F1 M17 17V7L11 12L17 17Z" Fill="True" StrokeThickness="1.5" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.Privacy">
+        <controls:IconLayer Data="F1 M20 8.75V8.07C20 6.82 19.22 5.70 18.05 5.27L17.12 4.92C16.37 4.64 15.65 4.28 14.97 3.86L13.59 2.99C12.61 2.38 11.38 2.38 10.41 2.99L9.02 3.86C8.34 4.28 7.62 4.64 6.87 4.92L5.94 5.27C4.77 5.70 4 6.82 4 8.07V8.75C4 12.88 5.82 16.80 8.98 19.46L9.42 19.83C10.91 21.08 13.08 21.08 14.57 19.83L15.01 19.46C18.17 16.80 20 12.88 20 8.75Z" StrokeThickness="1.5" LineCap="Flat" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.Profile">
+        <controls:IconLayer Data="F1 M15.25,7 A3.25,3.25 0 1 1 8.75,7 A3.25,3.25 0 1 1 15.25,7 Z" StrokeThickness="1.5" LineCap="Flat" LineJoin="Miter" />
+        <controls:IconLayer Data="F1 M5 20C5.31 18 7.14 14 12 14C16.85 14 18.84 18 19 20" StrokeThickness="1.5" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.Queue">
+        <controls:IconLayer Data="F1 M5 14H19" StrokeThickness="1.5" />
+        <controls:IconLayer Data="F1 M5 19H19" StrokeThickness="1.5" />
+        <controls:IconLayer Data="F1 M6,4.75 L18,4.75 A2.25,2.25 0 0 1 20.25,7 L20.25,7 A2.25,2.25 0 0 1 18,9.25 L6,9.25 A2.25,2.25 0 0 1 3.75,7 L3.75,7 A2.25,2.25 0 0 1 6,4.75 Z" StrokeThickness="1.5" LineCap="Flat" LineJoin="Miter" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.Quit">
+        <controls:IconLayer Data="F1 M12 3H6C4.34 3 3 4.34 3 6V18C3 19.65 4.34 21 6 21H12" StrokeThickness="1.5" LineJoin="Miter" />
+        <controls:IconLayer Data="F1 M16 17L21 12L16 7M21 12H9" StrokeThickness="1.5" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.Recent">
+        <controls:IconLayer Data="F1 M13.14 5C16.92 5 19.99 8.13 19.99 12C19.99 15.86 16.92 19 13.14 19C9.35 19 6.28 15.86 6.28 12V10.44M3.57 13.15L6.28 10.44L8.99 13.15" StrokeThickness="1.5" />
+        <controls:IconLayer Data="F1 M13 8V11.14C13 11.61 13.38 12 13.85 12H15.5" StrokeThickness="1.5" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.Refresh">
+        <controls:IconLayer Data="F1 M20 10C19.57 8 17.42 4 12.28 4C7.14 4 5.42 8 4.57 10M9.71 8.5L4.57 10L2 6.5" StrokeThickness="1.5" />
+        <controls:IconLayer Data="F1 M4 14C4.42 16 6.57 20 11.71 20C16.85 20 18.57 16 19.42 14M14.28 15.5L19.42 14L22 17.5" StrokeThickness="1.5" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.Remove">
+        <controls:IconLayer Data="F1 M19 12L5 12" StrokeThickness="1.5" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.Repeat">
+        <controls:IconLayer Data="F1 M16 10.00L19 7.00L16 3.99M19 7.00H8.00C6.34 7.00 5 8.34 5 10.00" StrokeThickness="1.5" />
+        <controls:IconLayer Data="F1 M8 13.99L4.99 16.99L8 20M4.99 16.99L16 16.99C17.65 16.99 19 15.65 19 13.99" StrokeThickness="1.5" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.Replay">
+        <controls:IconLayer Data="F1 M13.14 19C16.93 19 20 15.86 20 12C20 8.13 16.93 5 13.14 5C9.35 5 6.28 8.13 6.28 12V13.55M3 10L6.28 13.55L10 10.5" StrokeThickness="1.5" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.Restore">
+        <controls:IconLayer Data="F1 M9 6H18V15" StrokeThickness="1.5" />
+        <controls:IconLayer Data="F1 M15 9H6V18H15V9Z" StrokeThickness="1.5" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.Search">
+        <controls:IconLayer Data="F1 M14.84 14.84C15.99 13.69 16.70 12.10 16.70 10.35C16.70 6.84 13.86 4 10.35 4C6.84 4 4 6.84 4 10.35C4 13.86 6.84 16.70 10.35 16.70C12.10 16.70 13.69 15.99 14.84 14.84ZM14.84 14.84L19 19" StrokeThickness="1.5" LineJoin="Miter" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.Settings">
+        <controls:IconLayer Data="F1 M11.59 21H12.50C13.39 21 14.11 20.27 14.11 19.38C14.11 18.81 14.41 18.28 14.91 17.99L15.87 17.42C16.38 17.12 17.01 17.12 17.52 17.41C18.30 17.85 19.29 17.59 19.75 16.81L20.16 16.11C20.62 15.33 20.35 14.33 19.56 13.89C19.06 13.60 18.75 13.08 18.74 12.50L18.72 11.42C18.71 10.84 19.02 10.30 19.53 10.01C20.31 9.57 20.57 8.58 20.12 7.81L19.71 7.11C19.25 6.33 18.24 6.06 17.45 6.51C16.95 6.79 16.33 6.80 15.83 6.52L14.84 5.98C14.33 5.70 14.01 5.17 14.01 4.58C14.01 3.71 13.30 3 12.42 3H11.49C10.60 3 9.88 3.72 9.88 4.61C9.88 5.18 9.58 5.71 9.08 6.00L8.12 6.57C7.61 6.87 6.98 6.87 6.47 6.58C5.69 6.14 4.70 6.40 4.24 7.18L3.83 7.88C3.37 8.66 3.64 9.66 4.43 10.10C4.93 10.39 5.24 10.91 5.25 11.49L5.27 12.57C5.28 13.15 4.97 13.69 4.46 13.98C3.68 14.42 3.42 15.41 3.87 16.18L4.26 16.85C4.73 17.65 5.76 17.91 6.55 17.44C7.07 17.13 7.72 17.13 8.25 17.44L9.19 17.99C9.68 18.28 9.98 18.81 9.98 19.38C9.98 20.27 10.70 21 11.59 21Z" StrokeThickness="1.5" LineCap="Flat" LineJoin="Miter" />
+        <controls:IconLayer Data="F1 M14.25,12 A2.25,2.25 0 1 1 9.75,12 A2.25,2.25 0 1 1 14.25,12 Z" StrokeThickness="1.5" LineCap="Flat" LineJoin="Miter" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.SettingsActive">
+        <controls:IconLayer Data="F1 M12.42 2.5C13.57 2.50 14.51 3.43 14.51 4.58C14.51 4.98 14.73 5.35 15.08 5.54L16.07 6.08C16.42 6.27 16.85 6.27 17.20 6.07C18.23 5.49 19.54 5.84 20.14 6.86L20.55 7.56C21.15 8.57 20.80 9.87 19.78 10.44C19.43 10.64 19.22 11.01 19.22 11.41L19.24 12.50C19.25 12.89 19.47 13.25 19.81 13.45C20.84 14.03 21.19 15.35 20.59 16.37L20.18 17.07C19.59 18.07 18.29 18.42 17.27 17.84C16.92 17.64 16.48 17.65 16.13 17.85L15.16 18.42C14.82 18.62 14.61 18.99 14.61 19.38C14.61 20.55 13.67 21.49 12.50 21.5H11.59C10.43 21.5 9.48 20.55 9.48 19.38C9.48 18.99 9.27 18.62 8.93 18.42L7.99 17.87C7.63 17.66 7.17 17.66 6.80 17.87C5.77 18.48 4.44 18.14 3.83 17.11L3.44 16.43C2.84 15.42 3.19 14.12 4.21 13.55C4.56 13.35 4.77 12.98 4.77 12.58L4.75 11.49C4.74 11.10 4.52 10.74 4.18 10.54C3.15 9.96 2.80 8.64 3.40 7.62L3.81 6.92C4.40 5.92 5.70 5.57 6.72 6.15C7.07 6.35 7.51 6.34 7.86 6.14L8.83 5.57C9.17 5.37 9.38 5.00 9.38 4.61C9.38 3.44 10.32 2.5 11.49 2.5H12.42ZM12.00 9C10.34 9 9.00 10.34 9.00 12C9.00 13.65 10.34 15 12.00 15C13.65 14.99 15.00 13.65 15.00 12C15.00 10.34 13.65 9.00 12.00 9Z" Fill="True" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.Shuffle">
+        <controls:IconLayer Data="F1 M17.5 10L20 7.50L17.5 5M20 7.50H15.36C12.80 7.50 10.58 9.25 10 11.75C9.41 14.24 7.19 16 4.63 16H3" StrokeThickness="1.5" />
+        <controls:IconLayer Data="F1 M17.5 13.5L20 16.00L17.5 18.5M20 16.00L15.36 16.00C12.80 16.00 10.58 14.24 10 11.75C9.41 9.25 7.19 7.5 4.63 7.5L3 7.5" StrokeThickness="1.5" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.Sidebar">
+        <controls:IconLayer Data="F1 M6 3.75H18C19.24 3.75 20.25 4.75 20.25 6V18C20.25 19.24 19.24 20.25 18 20.25H6C4.75 20.25 3.75 19.24 3.75 18V6C3.75 4.75 4.75 3.75 6 3.75Z" StrokeThickness="1.5" LineCap="Flat" LineJoin="Miter" />
+        <controls:IconLayer Data="F1 M6.5,6 L7.5,6 A0.5,0.5 0 0 1 8,6.5 L8,17.5 A0.5,0.5 0 0 1 7.5,18 L6.5,18 A0.5,0.5 0 0 1 6,17.5 L6,6.5 A0.5,0.5 0 0 1 6.5,6 Z" Fill="True" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.SidebarActive">
+        <controls:IconLayer Data="F1 M6 3.75H18C19.24 3.75 20.25 4.75 20.25 6V18C20.25 19.24 19.24 20.25 18 20.25H6C4.75 20.25 3.75 19.24 3.75 18V6C3.75 4.75 4.75 3.75 6 3.75Z" StrokeThickness="1.5" LineCap="Flat" LineJoin="Miter" />
+        <controls:IconLayer Data="F1 M6.5,6 L12.5,6 A0.5,0.5 0 0 1 13,6.5 L13,17.5 A0.5,0.5 0 0 1 12.5,18 L6.5,18 A0.5,0.5 0 0 1 6,17.5 L6,6.5 A0.5,0.5 0 0 1 6.5,6 Z" Fill="True" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.SkipBackwardArrow">
+        <controls:IconLayer Data="F1 M20 10C19.57 8 17.42 4 12.28 4C7.14 4 5.42 8 4.57 10M9.71 8.5L4.57 10L2 6.5" StrokeThickness="1.5" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.SkipForwardArrow">
+        <controls:IconLayer Data="F1 M4 10C4.42 8 6.57 4 11.71 4C16.85 4 18.57 8 19.42 10M14.28 8.5L19.42 10L22 6.5" StrokeThickness="1.5" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.Sort">
+        <controls:IconLayer Data="F1 M17.5 18L17.5 5M14 8.5L17.5 5L21 8.5" StrokeThickness="1.5" />
+        <controls:IconLayer Data="F1 M6.5 6L6.5 19M10 15.5L6.5 19L3 15.5" StrokeThickness="1.5" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.Speed">
+        <controls:IconLayer Data="F1 M21 12C21 16.97 16.97 21 12 21C7.02 21 3 16.97 3 12C3 7.02 7.02 3 12 3" StrokeThickness="1.5" LineJoin="Miter" />
+        <controls:IconLayer Data="F1 M11.16 9.41L18 6L14.58 12.83C13.80 14.39 11.72 14.72 10.5 13.5C9.27 12.27 9.60 10.19 11.16 9.41Z" Fill="True" StrokeThickness="1.28" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.Stop">
+        <controls:IconLayer Data="F1 M8 17V7H16V17H8Z" Fill="True" StrokeThickness="1.5" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.SubtitleFile">
+        <controls:IconLayer Data="F1 M8 13H16" StrokeThickness="1.5" />
+        <controls:IconLayer Data="F1 M8 16H12" StrokeThickness="1.5" />
+        <controls:IconLayer Data="F1 M9 2.75H17C18.79 2.75 20.25 4.20 20.25 6V18C20.25 19.79 18.79 21.25 17 21.25H7C5.20 21.25 3.75 19.79 3.75 18V8C3.75 5.10 6.10 2.75 9 2.75Z" StrokeThickness="1.5" LineCap="Flat" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.Subtitles">
+        <controls:IconLayer Data="F1 M5 13H13M15.5 13H19" StrokeThickness="1.5" />
+        <controls:IconLayer Data="F1 M5 16H8M14 16H19M11.5 16H10.5" StrokeThickness="1.5" />
+        <controls:IconLayer Data="F1 M5,4.75 L19,4.75 A3.25,3.25 0 0 1 22.25,8 L22.25,16 A3.25,3.25 0 0 1 19,19.25 L5,19.25 A3.25,3.25 0 0 1 1.75,16 L1.75,8 A3.25,3.25 0 0 1 5,4.75 Z" StrokeThickness="1.5" LineCap="Flat" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.SubtitlesActive">
+        <controls:IconLayer Data="F1 M19 4C21.20 4 23 5.79 23 8V16C23 18.20 21.20 20 19 20H5C2.79 20 1 18.20 1 16V8C1 5.79 2.79 4 5 4H19ZM5 15C4.44 15 4 15.44 4 16C4 16.55 4.44 17 5 17H8C8.55 17 9 16.55 9 16C9 15.44 8.55 15 8 15H5ZM10.5 15C9.94 15 9.5 15.44 9.5 16C9.5 16.55 9.94 17 10.5 17H11.5C12.05 17 12.5 16.55 12.5 16C12.5 15.44 12.05 15 11.5 15H10.5ZM14 15C13.44 15 13 15.44 13 16C13 16.55 13.44 17 14 17H19C19.55 17 20 16.55 20 16C20 15.44 19.55 15 19 15H14ZM5 12C4.44 12 4 12.44 4 13C4 13.55 4.44 14 5 14H13C13.55 14 14 13.55 14 13C14 12.44 13.55 12 13 12H5ZM15.5 12C14.94 12 14.5 12.44 14.5 13C14.5 13.55 14.94 14 15.5 14H19C19.55 14 20 13.55 20 13C20 12.44 19.55 12 19 12H15.5Z" Fill="True" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.Video">
+        <controls:IconLayer Data="F1 M6 4.75H18C19.24 4.75 20.25 5.75 20.25 7V17C20.25 18.24 19.24 19.25 18 19.25H6C4.75 19.25 3.75 18.24 3.75 17V7C3.75 5.75 4.75 4.75 6 4.75Z" StrokeThickness="1.5" LineCap="Flat" LineJoin="Miter" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.Videos">
+        <controls:IconLayer Data="F1 M10 16V10L15 13L10 16Z" Fill="True" StrokeThickness="1.5" />
+        <controls:IconLayer Data="F1 M21 18V8.80C21 7.46 19.91 6.37 18.57 6.37H13.96C12.74 6.37 11.61 5.73 11 4.68C10.38 3.64 9.25 3 8.03 3H5.49C4.11 3 3 4.11 3 5.49V18C3 19.65 4.34 21 6 21H18C19.65 21 21 19.65 21 18Z" StrokeThickness="1.5" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.VideosActive">
+        <controls:IconLayer Data="F1 M5.49 2.25C3.70 2.25 2.25 3.70 2.25 5.49V18C2.25 20.07 3.92 21.75 6 21.75H18C20.07 21.75 21.75 20.07 21.75 18V8.80C21.74 7.04 20.32 5.62 18.57 5.62H13.96C13.01 5.62 12.13 5.12 11.64 4.30C10.89 3.03 9.51 2.25 8.03 2.25H5.49ZM9.63 9.34C9.86 9.21 10.15 9.21 10.38 9.35L15.38 12.35C15.61 12.49 15.75 12.73 15.75 13C15.75 13.26 15.61 13.50 15.38 13.64L10.38 16.64C10.15 16.78 9.86 16.78 9.63 16.65C9.39 16.51 9.25 16.27 9.25 16V10C9.25 9.72 9.39 9.48 9.63 9.34Z" Fill="True" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.Vlc">
+        <controls:IconLayer Data="F1 M16.79 14.41L17.17 15.57C16.01 16.43 14.22 17.21 12.05 17.21C9.79 17.21 8.08 16.43 6.92 15.57L7.30 14.41H5.52C5.13 14.41 4.89 14.64 4.74 14.95L3.03 21.48C2.87 21.95 3.26 22.5 3.81 22.5H20.21C20.75 22.5 21.06 22.03 20.98 21.48L19.20 14.95C19.12 14.64 18.81 14.41 18.42 14.41H16.79Z" Fill="True" />
+        <controls:IconLayer Data="F1 M7.85 12.15C8.78 12.85 10.18 13.47 11.97 13.47C13.76 13.47 15.15 12.77 16.09 12.15L15.00 8.42C14.30 8.88 13.29 9.19 11.97 9.19C10.65 9.19 9.64 8.81 8.94 8.42L7.85 12.15Z" Fill="True" />
+        <controls:IconLayer Data="F1 M9.95 4.84L10.65 2.43C11.03 1.18 12.82 1.18 13.21 2.43L13.91 4.84C13.37 5 12.74 5.15 11.97 5.15C11.19 5.15 10.57 5 9.95 4.84Z" Fill="True" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.VolumeHigh">
+        <controls:IconLayer Data="F1 M11.54 4.73L4.54 8.29C4.21 8.46 4 8.80 4 9.18V12V14.81C4 15.19 4.21 15.53 4.54 15.70L11.54 19.26C12.21 19.59 13 19.11 13 18.37V12V5.62C13 4.88 12.21 4.40 11.54 4.73Z" StrokeThickness="1.5" />
+        <controls:IconLayer Data="F1 M16 11L16 13" StrokeThickness="1.5" />
+        <controls:IconLayer Data="F1 M19 10L19 14" StrokeThickness="1.5" />
+        <controls:IconLayer Data="F1 M22 8L22 16" StrokeThickness="1.5" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.VolumeLow">
+        <controls:IconLayer Data="F1 M11.54 4.73L4.54 8.29C4.21 8.46 4 8.80 4 9.18V12V14.81C4 15.19 4.21 15.53 4.54 15.70L11.54 19.26C12.21 19.59 13 19.11 13 18.37V12V5.62C13 4.88 12.21 4.40 11.54 4.73Z" StrokeThickness="1.5" />
+        <controls:IconLayer Data="F1 M16 11L16 13" StrokeThickness="1.5" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.VolumeMedium">
+        <controls:IconLayer Data="F1 M11.54 4.73L4.54 8.29C4.21 8.46 4 8.80 4 9.18V12V14.81C4 15.19 4.21 15.53 4.54 15.70L11.54 19.26C12.21 19.59 13 19.11 13 18.37V12V5.62C13 4.88 12.21 4.40 11.54 4.73Z" StrokeThickness="1.5" />
+        <controls:IconLayer Data="F1 M16 11L16 13" StrokeThickness="1.5" />
+        <controls:IconLayer Data="F1 M19 10L19 14" StrokeThickness="1.5" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.VolumeMute">
+        <controls:IconLayer Data="F1 M11.54 4.73L4.54 8.29C4.21 8.46 4 8.80 4 9.18V12V14.81C4 15.19 4.21 15.53 4.54 15.70L11.54 19.26C12.21 19.59 13 19.11 13 18.37V12V5.62C13 4.88 12.21 4.40 11.54 4.73Z" StrokeThickness="1.5" />
+        <controls:IconLayer Data="F1 M16 10L18 12M20 14L18 12M18 12L20 10L16 14" StrokeThickness="1.5" />
+    </controls:IconData>
+    <controls:IconData x:Key="Icon.Window">
+        <controls:IconLayer Data="F1 M6 4.75H18C19.24 4.75 20.25 5.75 20.25 7V17C20.25 18.24 19.24 19.25 18 19.25H6C4.75 19.25 3.75 18.24 3.75 17V7C3.75 5.75 4.75 4.75 6 4.75Z" StrokeThickness="1.5" LineCap="Flat" LineJoin="Miter" />
+    </controls:IconData>
+</ResourceDictionary>

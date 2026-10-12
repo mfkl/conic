@@ -1,8 +1,8 @@
-<UserControl xmlns="https://github.com/avaloniaui" xmlns:controls="clr-namespace:VLCAvalonia.Controls" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="VLCAvalonia.Views.SettingsView" x:DataType="viewModels:SettingsViewModel" Classes.dense="{Binding IsCompactDensity}" Background="Black" xmlns:viewModels="clr-namespace:VLCAvalonia.ViewModels">
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:controls="clr-namespace:VLCAvalonia.Controls" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="VLCAvalonia.Views.SettingsView" x:DataType="viewModels:SettingsViewModel" Classes.dense="{Binding IsCompactDensity}" Background="{DynamicResource Vlc.Bg.B2}" xmlns:viewModels="clr-namespace:VLCAvalonia.ViewModels">
     <UserControl.Styles>
         <Style Selector="Border.settingsCard">
             <Setter Property="Padding" Value="20" />
-            <Setter Property="Background" Value="#292929" />
+            <Setter Property="Background" Value="{DynamicResource Vlc.Bg.A1}" />
             <Setter Property="CornerRadius" Value="6" />
         </Style>
         <Style Selector="Button">
@@ -46,7 +46,8 @@
     <Grid RowDefinitions="52,*">
         <Grid ColumnDefinitions="Auto,Auto,*,Auto" Margin="12,0">
             <Button Classes="iconChrome" Click="OnSettingsClose" AutomationProperties.Name="Close settings" ToolTip.Tip="Return (Escape)">
-                <PathIcon Width="20" Height="20" Data="M10,3 L1,12 L10,21 L12,19 L6,13 H23 V11 H6 L12,5 Z" />
+                <controls:VlcIcon Width="24" Height="24" Margin="-2"
+                                  Icon="{StaticResource Icon.ArrowLeft}" />
             </Button>
             <controls:VlcCone Grid.Column="1" Width="30" Height="34" Margin="12,0" />
             <TextBlock Grid.Column="2" Text="Preferences" FontSize="18" VerticalAlignment="Center" />
@@ -59,7 +60,7 @@
                     </DataTemplate>
                 </ListBox.ItemTemplate>
             </ListBox>
-            <Border x:Name="SettingsBody" Grid.Column="1" Background="#212121" CornerRadius="8,0,0,0" Padding="24" x:FieldModifier="internal">
+            <Border x:Name="SettingsBody" Grid.Column="1" Background="{DynamicResource Vlc.Bg.A4}" CornerRadius="8,0,0,0" Padding="24" x:FieldModifier="internal">
                 <Grid RowDefinitions="Auto,Auto,Auto,*">
                     <TextBox x:Name="SettingsSearch" Margin="0,0,0,16" Text="{Binding Search, Mode=TwoWay}" PlaceholderText="Search settings" AutomationProperties.Name="Search settings" x:FieldModifier="internal" />
                     <ComboBox x:Name="CompactSettingsPages" Grid.Row="1" Margin="0,0,0,16" IsVisible="False" HorizontalAlignment="Stretch" ItemsSource="{Binding FilteredPages}" SelectedItem="{Binding SelectedPage}" AutomationProperties.Name="Settings pages" x:FieldModifier="internal">
@@ -69,7 +70,7 @@
                             </DataTemplate>
                         </ComboBox.ItemTemplate>
                     </ComboBox>
-                    <TextBlock Grid.Row="2" Margin="0,0,0,16" Text="{Binding ErrorMessage}" IsVisible="{Binding HasError}" Foreground="#FF9A55" TextWrapping="Wrap" AutomationProperties.Name="Settings error" />
+                    <TextBlock Grid.Row="2" Margin="0,0,0,16" Text="{Binding ErrorMessage}" IsVisible="{Binding HasError}" Foreground="{DynamicResource Vlc.Accent.Bright}" TextWrapping="Wrap" AutomationProperties.Name="Settings error" />
                     <TextBlock Grid.Row="3" IsVisible="{Binding !HasSettingsResults}" Text="No settings match your search." HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource PlayerSecondaryText}" />
                     <ScrollViewer x:Name="SettingsContent" Grid.Row="3" IsVisible="{Binding HasSettingsResults}" HorizontalScrollBarVisibility="Disabled" x:FieldModifier="internal">
                         <StackPanel Spacing="16" MaxWidth="880" HorizontalAlignment="Stretch">
@@ -105,7 +106,7 @@
                                             </StackPanel>
                                         </StackPanel>
                                     </StackPanel>
-                                    <TextBlock x:Name="SettingsHistoryError" IsVisible="False" Foreground="#FFD6CE" TextWrapping="Wrap" AutomationProperties.Name="Media history error" x:FieldModifier="internal" />
+                                    <TextBlock x:Name="SettingsHistoryError" IsVisible="False" Foreground="{DynamicResource PlayerErrorText}" TextWrapping="Wrap" AutomationProperties.Name="Media history error" x:FieldModifier="internal" />
                                     <WrapPanel Orientation="Horizontal">
                                         <TextBlock Text="Resume after (seconds)" Width="155" VerticalAlignment="Center" Margin="0,4,12,4" TextWrapping="Wrap" />
                                         <NumericUpDown Minimum="0" Maximum="3600" Value="{Binding ResumeMinimumElapsedSeconds, Mode=TwoWay}" Margin="0,4,12,4" AutomationProperties.Name="Resume after (seconds)" />

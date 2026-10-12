@@ -17,6 +17,7 @@
         MinWidth="480"
         MinHeight="360"
         Background="{DynamicResource PlayerCanvas}"
+        Foreground="{DynamicResource PlayerText}"
         RequestedThemeVariant="Dark"
         Topmost="{Binding IsAlwaysOnTop}"
         WindowDecorations="BorderOnly"
@@ -90,22 +91,22 @@
                             Command="{Binding TogglePictureInPictureCommand}"
                             ToolTip.Tip="Return to main window (Escape)"
                             AutomationProperties.Name="Return from picture in picture">
-                        <PathIcon Width="20" Height="20"
-                                  Data="M3,3 H12 V5 H6 L13,12 L11,14 L4,7 V13 H2 V3 Z M15,4 H22 V22 H4 V16 H6 V20 H20 V6 H15 Z" />
+                        <controls:VlcIcon Width="24" Height="24" Margin="-2"
+                                          Icon="{StaticResource Icon.Pip}" />
                     </Button>
                     <TextBlock Grid.Column="1"
                                Text="{Binding MediaTitle}"
                                TextTrimming="CharacterEllipsis"
                                VerticalAlignment="Center"
                                Margin="8,0"
-                               Foreground="White" />
+                               Foreground="{DynamicResource PlayerText}" />
                     <Button Grid.Column="2"
                             Classes="iconChrome"
                             Click="OnPictureInPictureClose"
                             ToolTip.Tip="Close VLC"
                             AutomationProperties.Name="Close VLC">
-                        <PathIcon Width="18" Height="18"
-                                  Data="M5,3 L12,10 L19,3 L21,5 L14,12 L21,19 L19,21 L12,14 L5,21 L3,19 L10,12 L3,5 Z" />
+                        <controls:VlcIcon Width="24" Height="24" Margin="-3"
+                                          Icon="{StaticResource Icon.Close}" />
                     </Button>
                 </Grid>
             </Border>
@@ -121,12 +122,12 @@
                     ToolTip.Tip="{Binding PlayPauseToolTip}"
                     AutomationProperties.Name="{Binding PlayPauseName}">
                 <Grid>
-                    <PathIcon Width="24" Height="24"
-                              IsVisible="{Binding !IsPlaying}"
-                              Data="M8,5 L19,12 L8,19 Z" />
-                    <PathIcon Width="24" Height="24"
-                              IsVisible="{Binding IsPlaying}"
-                              Data="M7,5 H11 V19 H7 Z M14,5 H18 V19 H14 Z" />
+                    <controls:VlcIcon Width="24" Height="24"
+                                      IsVisible="{Binding !IsPlaying}"
+                                      Icon="{StaticResource Icon.Play}" />
+                    <controls:VlcIcon Width="24" Height="24"
+                                      IsVisible="{Binding IsPlaying}"
+                                      Icon="{StaticResource Icon.Pause}" />
                 </Grid>
             </Button>
             <Border VerticalAlignment="Bottom"
@@ -136,12 +137,12 @@
                     <TextBlock Text="{Binding ElapsedText}"
                                FontSize="11"
                                FontFeatures="tnum"
-                               Foreground="White" />
+                               Foreground="{DynamicResource PlayerText}" />
                     <TextBlock Grid.Column="1"
                                Text="{Binding DurationText}"
                                FontSize="11"
                                FontFeatures="tnum"
-                               Foreground="#CCCCCC" />
+                               Foreground="{DynamicResource Vlc.Fg.2}" />
                     <controls:PlayerTimeline x:Name="PictureInPictureTimeline"
                                              Grid.Row="1"
                                              Grid.ColumnSpan="2"
@@ -173,12 +174,12 @@
             <Border Width="72"
                     Height="72"
                     CornerRadius="36"
-                    Background="#16FFFFFF"
-                    BorderBrush="#32FFFFFF"
+                    Background="{DynamicResource PlayerCard}"
+                    BorderBrush="{DynamicResource PlayerBorder}"
                     BorderThickness="1">
-                <PathIcon Width="32" Height="32"
-                          Foreground="#AEB3BD"
-                          Data="M7,5 L19,12 L7,19 Z" />
+                <controls:VlcIcon Width="32" Height="32"
+                                  Foreground="{DynamicResource PlayerSecondaryText}"
+                                  Icon="{StaticResource Icon.Play}" />
             </Border>
             <TextBlock Text="Ready to play"
                        FontSize="20"
@@ -203,7 +204,7 @@
                          Height="4"
                          IsIndeterminate="True" />
             <TextBlock Text="{Binding MediaTitle, StringFormat='Opening {0}…'}"
-                       Foreground="#D7DBE2" />
+                       Foreground="{DynamicResource Vlc.Fg.2}" />
         </StackPanel>
 
         <StackPanel IsVisible="{Binding IsFaulted}"
@@ -213,7 +214,7 @@
             <TextBlock Text="Media could not be played"
                        FontSize="18"
                        FontWeight="SemiBold"
-                       Foreground="#FFD6CE" />
+                       Foreground="{DynamicResource PlayerErrorText}" />
             <Button Classes="openMedia"
                     Content="Open another file"
                     Command="{Binding OpenMediaCommand}" />
@@ -242,15 +243,15 @@
                             Command="{Binding ShowHomeCommand}"
                             ToolTip.Tip="Home (Alt+Home)"
                             AutomationProperties.Name="Home">
-                        <PathIcon Width="18" Height="18"
-                                  Data="M10,3 L1,12 L10,21 L12,19 L6,13 H23 V11 H6 L12,5 Z" />
+                        <controls:VlcIcon Width="24" Height="24" Margin="-3"
+                                          Icon="{StaticResource Icon.ArrowLeft}" />
                     </Button>
                     <Viewbox x:Name="ProductMark"
                              Width="34"
                              Height="34"
                              HorizontalAlignment="Left">
                         <Canvas Width="130" Height="130">
-                            <Path Fill="{DynamicResource PlayerAccent}"
+                            <Path Fill="{DynamicResource Vlc.Accent.Logo}"
                                   Data="M65 8.76c-1.511 0-3.023.369-4.219 1.108-2.675 1.654-4.219 8.438-4.219 8.438L54.031 25.9c7.312
                                           4.599 14.625 4.647 21.938 0l-2.532-7.594s-1.543-6.784-4.218-8.438C68.022 9.129 66.511 8.761 65
                                           8.761zM47.281 46.15l-8.437 25.312c17.304 11.16 34.739 11.376 52.312 0L82.72 46.15c-11.912
@@ -283,21 +284,16 @@
                             CommandParameter="Queue"
                             ToolTip.Tip="Playback queue (Ctrl+J)"
                             AutomationProperties.Name="Open playback queue">
-                        <PathIcon Width="20" Height="20"
-                                  Data="M4,5 H20 V7 H4 Z M4,11 H20 V13 H4 Z M4,17 H16 V19 H4 Z" />
+                        <controls:VlcIcon Width="24" Height="24" Margin="-2"
+                                          Icon="{StaticResource Icon.Lists}" />
                     </Button>
                     <Button x:Name="OpenOptionsButton"
                             Classes="iconChrome"
                             Click="OnOpenOptions"
                             ToolTip.Tip="More playback controls"
                             AutomationProperties.Name="More playback controls">
-                        <Viewbox Width="20" Height="20">
-                            <Canvas Width="24" Height="24">
-                                <Ellipse Width="3" Height="3" Canvas.Left="10.5" Canvas.Top="3" Fill="{DynamicResource PlayerSecondaryText}" />
-                                <Ellipse Width="3" Height="3" Canvas.Left="10.5" Canvas.Top="10.5" Fill="{DynamicResource PlayerSecondaryText}" />
-                                <Ellipse Width="3" Height="3" Canvas.Left="10.5" Canvas.Top="18" Fill="{DynamicResource PlayerSecondaryText}" />
-                            </Canvas>
-                        </Viewbox>
+                        <controls:VlcIcon Width="24" Height="24" Margin="-2"
+                                          Icon="{StaticResource Icon.More}" />
                     </Button>
                     <controls:WindowCaptionButtons Margin="12,2,0,0" VerticalAlignment="Center" />
                 </StackPanel>
@@ -425,8 +421,8 @@
                                                 AutomationProperties.Name="Remove recent media"
                                                 Command="{Binding DataContext.RemoveRecentCommand, ElementName=VideoArea}"
                                                 CommandParameter="{Binding Source}">
-                                            <PathIcon Width="12" Height="12"
-                                                      Data="M2,1 L5.9,5 L9.8,1 L11,2.2 L7.1,6.1 L11,10 L9.8,11.2 L5.9,7.3 L2,11.2 L0.8,10 L4.7,6.1 L0.8,2.2 Z" />
+                                            <controls:VlcIcon Width="24" Height="24" Margin="-6"
+                                                              Icon="{StaticResource Icon.Close}" />
                                         </Button>
                                     </Grid>
                                 </DataTemplate>
@@ -440,7 +436,7 @@
                                Margin="12,2" />
                     <TextBlock IsVisible="{Binding HasHistoryError}"
                                Text="{Binding HistoryError}"
-                               Foreground="#FFD6CE"
+                               Foreground="{DynamicResource PlayerErrorText}"
                                TextWrapping="Wrap"
                                AutomationProperties.Name="Recent history error" />
                     <StackPanel x:Name="ClearRecentPrompt"
@@ -496,8 +492,8 @@
                             Click="OnCloseLibrary"
                             ToolTip.Tip="{Binding LibraryCloseToolTip}"
                             AutomationProperties.Name="{Binding LibraryCloseAutomationName}">
-                        <PathIcon Width="14" Height="14"
-                                  Data="M5,3 L12,10 L19,3 L21,5 L14,12 L21,19 L19,21 L12,14 L5,21 L3,19 L10,12 L3,5 Z" />
+                        <controls:VlcIcon Width="24" Height="24" Margin="-5"
+                                          Icon="{StaticResource Icon.Close}" />
                     </Button>
                 </Grid>
                 <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="5">
@@ -544,8 +540,8 @@
                                                     Command="{Binding DataContext.RemoveRecentCommand, ElementName=VideoArea}"
                                                     CommandParameter="{Binding Source}"
                                                     AutomationProperties.Name="{Binding DataContext.LibraryRemoveRecentAutomationName, ElementName=VideoArea}">
-                                                <PathIcon Width="12" Height="12"
-                                                          Data="M2,1 L5.9,5 L9.8,1 L11,2.2 L7.1,6.1 L11,10 L9.8,11.2 L5.9,7.3 L2,11.2 L0.8,10 L4.7,6.1 L0.8,2.2 Z" />
+                                                <controls:VlcIcon Width="24" Height="24" Margin="-6"
+                                                                  Icon="{StaticResource Icon.Close}" />
                                             </Button>
                                         </Grid>
                                     </DataTemplate>
@@ -575,8 +571,8 @@
                                                     Command="{Binding DataContext.RemoveFavoriteCommand, ElementName=VideoArea}"
                                                     CommandParameter="{Binding Source}"
                                                     AutomationProperties.Name="{Binding DataContext.LibraryRemoveFavoriteAutomationName, ElementName=VideoArea}">
-                                                <PathIcon Width="12" Height="12"
-                                                          Data="M2,1 L5.9,5 L9.8,1 L11,2.2 L7.1,6.1 L11,10 L9.8,11.2 L5.9,7.3 L2,11.2 L0.8,10 L4.7,6.1 L0.8,2.2 Z" />
+                                                <controls:VlcIcon Width="24" Height="24" Margin="-6"
+                                                                  Icon="{StaticResource Icon.Close}" />
                                             </Button>
                                         </Grid>
                                     </DataTemplate>
@@ -610,8 +606,8 @@
                                                     Command="{Binding DataContext.RemoveResumeCommand, ElementName=VideoArea}"
                                                     CommandParameter="{Binding Source}"
                                                     AutomationProperties.Name="{Binding DataContext.LibraryRemoveResumeAutomationName, ElementName=VideoArea}">
-                                                <PathIcon Width="12" Height="12"
-                                                          Data="M2,1 L5.9,5 L9.8,1 L11,2.2 L7.1,6.1 L11,10 L9.8,11.2 L5.9,7.3 L2,11.2 L0.8,10 L4.7,6.1 L0.8,2.2 Z" />
+                                                <controls:VlcIcon Width="24" Height="24" Margin="-6"
+                                                                  Icon="{StaticResource Icon.Close}" />
                                             </Button>
                                         </Grid>
                                     </DataTemplate>
@@ -662,8 +658,8 @@
                 Margin="24,82,24,0"
                 Padding="16"
                 CornerRadius="16"
-                Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
-                BorderBrush="#45FF9A55"
+                Background="{DynamicResource Vlc.Bg.B1Transparent}"
+                BorderBrush="{DynamicResource Vlc.Accent.Dim}"
                 BorderThickness="1"
                 BoxShadow="0 12 32 0 #80000000">
             <StackPanel Spacing="10">
@@ -682,7 +678,7 @@
                 <TextBlock x:Name="UrlOpenError"
                            IsVisible="{Binding HasOpenError}"
                            Text="{Binding OpenError}"
-                           Foreground="#FFD6CE"
+                           Foreground="{DynamicResource PlayerErrorText}"
                            TextWrapping="Wrap"
                            AutomationProperties.Name="URL open error" />
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
@@ -707,8 +703,8 @@
                 Margin="24"
                 Padding="20"
                 CornerRadius="18"
-                Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
-                BorderBrush="#FFFF9A55"
+                Background="{DynamicResource Vlc.Bg.B1Transparent}"
+                BorderBrush="{DynamicResource PlayerAccent}"
                 BorderThickness="1"
                 BoxShadow="0 16 42 0 #90000000">
             <StackPanel Spacing="10">
@@ -721,7 +717,7 @@
                            TextWrapping="Wrap" />
                 <TextBlock IsVisible="{Binding HasHistoryError}"
                            Text="{Binding HistoryError}"
-                           Foreground="#FFD6CE"
+                           Foreground="{DynamicResource PlayerErrorText}"
                            TextWrapping="Wrap"
                            AutomationProperties.Name="Resume history error" />
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
@@ -752,10 +748,10 @@
                 VerticalAlignment="Top"
                 Margin="24,90,24,0"
                 Padding="10"
-                Background="#E02B1717"
+                Background="{DynamicResource PlayerErrorSurface}"
                 CornerRadius="10">
             <TextBlock Text="{Binding OpenError}"
-                       Foreground="#FFD6CE"
+                       Foreground="{DynamicResource PlayerErrorText}"
                        TextWrapping="Wrap" />
         </Border>
 
@@ -788,8 +784,8 @@
                             Command="{Binding ToggleQueueCommand}"
                             ToolTip.Tip="Close playback drawer"
                             AutomationProperties.Name="Close playback drawer">
-                        <PathIcon Width="14" Height="14"
-                                  Data="M5,3 L12,10 L19,3 L21,5 L14,12 L21,19 L19,21 L12,14 L5,21 L3,19 L10,12 L3,5 Z" />
+                        <controls:VlcIcon Width="24" Height="24" Margin="-5"
+                                          Icon="{StaticResource Icon.Close}" />
                     </Button>
                 </Grid>
                 <WrapPanel x:Name="DrawerTabs"
@@ -883,8 +879,8 @@
                                                         Click="OnMoveQueueItemUp"
                                                         ToolTip.Tip="Move earlier"
                                                         AutomationProperties.Name="{Binding Name, StringFormat='Move {0} earlier in queue'}">
-                                                    <PathIcon Width="14" Height="14"
-                                                              Data="M4,12 L12,4 L20,12 L16,12 L16,20 L8,20 L8,12 Z" />
+                                                    <controls:VlcIcon Width="24" Height="24" Margin="-5"
+                                                                      Icon="{StaticResource Icon.ChevronUp}" />
                                                 </Button>
                                                 <Button Grid.Column="2"
                                                         Classes="transport"
@@ -894,8 +890,8 @@
                                                         Click="OnMoveQueueItemDown"
                                                         ToolTip.Tip="Move later"
                                                         AutomationProperties.Name="{Binding Name, StringFormat='Move {0} later in queue'}">
-                                                    <PathIcon Width="14" Height="14"
-                                                              Data="M12,20 L4,12 L8,12 L8,4 L16,4 L16,12 L20,12 Z" />
+                                                    <controls:VlcIcon Width="24" Height="24" Margin="-5"
+                                                                      Icon="{StaticResource Icon.ChevronDown}" />
                                                 </Button>
                                                 <Button Grid.Column="3"
                                                         Classes="transport"
@@ -906,8 +902,8 @@
                                                         CommandParameter="{Binding Token}"
                                                         ToolTip.Tip="Remove from queue"
                                                         AutomationProperties.Name="{Binding Name, StringFormat='Remove {0} from queue'}">
-                                                    <PathIcon Width="11" Height="11"
-                                                              Data="M2,1 L5.9,5 L9.8,1 L11,2.2 L7.1,6.1 L11,10 L9.8,11.2 L5.9,7.3 L2,11.2 L0.8,10 L4.7,6.1 L0.8,2.2 Z" />
+                                                    <controls:VlcIcon Width="24" Height="24" Margin="-6.5"
+                                                                      Icon="{StaticResource Icon.Close}" />
                                                 </Button>
                                             </Grid>
                                         </DataTemplate>
@@ -922,7 +918,7 @@
                                        TextWrapping="Wrap" />
                             <TextBlock IsVisible="{Binding HasQueueError}"
                                        Text="{Binding QueueError}"
-                                       Foreground="#FFD6CE"
+                                       Foreground="{DynamicResource PlayerErrorText}"
                                        TextWrapping="Wrap" />
                         </StackPanel>
                     </Grid>
@@ -1126,11 +1122,11 @@
                     <StackPanel Spacing="4">
                         <TextBlock IsVisible="{Binding HasMediaCapabilitiesError}"
                                    Text="{Binding MediaCapabilitiesError}"
-                                   Foreground="#FFD6CE"
+                                   Foreground="{DynamicResource PlayerErrorText}"
                                    TextWrapping="Wrap" />
                         <TextBlock IsVisible="{Binding HasMediaControlsNotice}"
                                    Text="{Binding MediaControlsNotice}"
-                                   Foreground="#FFFF9A55"
+                                   Foreground="{DynamicResource Vlc.Accent.Bright}"
                                    TextWrapping="Wrap" />
                     </StackPanel>
                 </ScrollViewer>
@@ -1185,7 +1181,7 @@
                             Margin="0,-24,0,0"
                             Padding="7,3"
                             CornerRadius="6"
-                            Background="#E5121418">
+                            Background="{DynamicResource Vlc.Bg.B1Transparent}">
                         <TextBlock Text="{Binding SeekPreviewText}"
                                    FontSize="11"
                                    FontFeatures="tnum" />
@@ -1227,9 +1223,9 @@
                             AutomationProperties.Name="Skip backward"
                             ToolTip.Tip="{Binding SkipBackwardLabel, StringFormat='Back {0} seconds (Alt+Left)'}">
                         <Grid Width="26" Height="30">
-                            <Path Stroke="{DynamicResource PlayerSecondaryText}"
-                                  StrokeThickness="1.5"
-                                  Data="M4,12 A10,10 0 0 1 23,12 M4,5 V12 H11" />
+                            <controls:VlcIcon Width="26" Height="26"
+                                              VerticalAlignment="Top"
+                                              Icon="{StaticResource Icon.SkipBackwardArrow}" />
                             <TextBlock Text="{Binding SkipBackwardLabel}"
                                        FontSize="10"
                                        HorizontalAlignment="Center"
@@ -1241,20 +1237,20 @@
                             Command="{Binding PreviousCommand}"
                             AutomationProperties.Name="Previous queue item"
                             ToolTip.Tip="Previous queue item">
-                        <PathIcon Width="19" Height="19"
-                                  Data="M5,5 L8,5 L8,19 L5,19 Z M19,5 L19,19 L9,12 Z" />
+                        <controls:VlcIcon Width="24" Height="24" Margin="-2.5"
+                                          Icon="{StaticResource Icon.Previous}" />
                     </Button>
                     <Button Classes="play"
                             Command="{Binding TogglePauseCommand}"
                             AutomationProperties.Name="{Binding PlayPauseName}"
                             ToolTip.Tip="{Binding PlayPauseToolTip}">
                         <Grid>
-                            <PathIcon Width="22" Height="22"
-                                      IsVisible="{Binding !IsPlaying}"
-                                      Data="M8,5 L19,12 L8,19 Z" />
-                            <PathIcon Width="22" Height="22"
-                                      IsVisible="{Binding IsPlaying}"
-                                      Data="M7,5 L11,5 L11,19 L7,19 Z M14,5 L18,5 L18,19 L14,19 Z" />
+                            <controls:VlcIcon Width="24" Height="24" Margin="-1"
+                                              IsVisible="{Binding !IsPlaying}"
+                                              Icon="{StaticResource Icon.Play}" />
+                            <controls:VlcIcon Width="24" Height="24" Margin="-1"
+                                              IsVisible="{Binding IsPlaying}"
+                                              Icon="{StaticResource Icon.Pause}" />
                         </Grid>
                     </Button>
                     <Button x:Name="StopButton"
@@ -1262,25 +1258,25 @@
                             Command="{Binding StopCommand}"
                             AutomationProperties.Name="Stop playback"
                             ToolTip.Tip="Stop playback">
-                        <PathIcon Width="17" Height="17"
-                                  Data="M4,4 H20 V20 H4 Z" />
+                        <controls:VlcIcon Width="24" Height="24" Margin="-3.5"
+                                          Icon="{StaticResource Icon.Stop}" />
                     </Button>
                     <Button x:Name="NextButton"
                             Classes="transport"
                             Command="{Binding NextCommand}"
                             AutomationProperties.Name="Next queue item"
                             ToolTip.Tip="Next queue item">
-                        <PathIcon Width="19" Height="19"
-                                  Data="M5,5 L5,19 L15,12 Z M16,5 L19,5 L19,19 L16,19 Z" />
+                        <controls:VlcIcon Width="24" Height="24" Margin="-2.5"
+                                          Icon="{StaticResource Icon.Next}" />
                     </Button>
                     <Button Classes="transport"
                             Command="{Binding SkipForwardCommand}"
                             AutomationProperties.Name="Skip forward"
                             ToolTip.Tip="{Binding SkipForwardLabel, StringFormat='Forward {0} seconds (Alt+Right)'}">
                         <Grid Width="26" Height="30">
-                            <Path Stroke="{DynamicResource PlayerSecondaryText}"
-                                  StrokeThickness="1.5"
-                                  Data="M3,12 A10,10 0 0 1 22,12 M22,5 V12 H15" />
+                            <controls:VlcIcon Width="26" Height="26"
+                                              VerticalAlignment="Top"
+                                              Icon="{StaticResource Icon.SkipForwardArrow}" />
                             <TextBlock Text="{Binding SkipForwardLabel}"
                                        FontSize="10"
                                        HorizontalAlignment="Center"
@@ -1304,12 +1300,12 @@
                             AutomationProperties.Name="{Binding MuteName}"
                             ToolTip.Tip="{Binding MuteName}">
                         <Grid>
-                            <PathIcon Width="20" Height="20"
-                                      Data="M3,9 H7 L12,5 V19 L7,15 H3 Z M15,8 Q20,12 15,16 L14,14.5 Q17,12 14,9.5 Z M18,5 Q26,12 18,19 L17,17.5 Q23,12 17,6.5 Z"
-                                      IsVisible="{Binding !IsMuted}" />
-                            <PathIcon Width="20" Height="20"
-                                      Data="M3,9 H7 L12,5 V19 L7,15 H3 Z M15,8 L18,11 L21,8 L22,9 L19,12 L22,15 L21,16 L18,13 L15,16 L14,15 L17,12 L14,9 Z"
-                                      IsVisible="{Binding IsMuted}" />
+                            <controls:VlcIcon Width="24" Height="24" Margin="-2"
+                                              IsVisible="{Binding !IsMuted}"
+                                              Icon="{StaticResource Icon.VolumeHigh}" />
+                            <controls:VlcIcon Width="24" Height="24" Margin="-2"
+                                              IsVisible="{Binding IsMuted}"
+                                              Icon="{StaticResource Icon.VolumeMute}" />
                         </Grid>
                     </Button>
                     <controls:PlayerVolumeSlider x:Name="PlayerVolume"
@@ -1330,7 +1326,7 @@
                     <TextBlock Text="{Binding Volume, StringFormat='{}{0:0}%'}"
                                MinWidth="38"
                                FontSize="12"
-                               Foreground="#DDE0E5"
+                               Foreground="{DynamicResource Vlc.Fg.2}"
                                VerticalAlignment="Center"
                                ToolTip.Tip="{Binding VolumeText}" />
                     <Button x:Name="FullscreenButton"
@@ -1339,12 +1335,12 @@
                             Command="{Binding ToggleFullscreenCommand}"
                             AutomationProperties.Name="{Binding FullscreenName}">
                         <Grid>
-                            <PathIcon Width="18" Height="18"
-                                      IsVisible="{Binding !IsFullscreen}"
-                                      Data="M3,3 H9 V5 H5 V9 H3 Z M15,3 H21 V9 H19 V5 H15 Z M19,15 H21 V21 H15 V19 H19 Z M3,15 H5 V19 H9 V21 H3 Z" />
-                            <PathIcon Width="18" Height="18"
-                                      IsVisible="{Binding IsFullscreen}"
-                                      Data="M7,3 H9 V9 H3 V7 H7 Z M15,3 H17 V7 H21 V9 H15 Z M15,15 H21 V17 H17 V21 H15 Z M3,15 H9 V21 H7 V17 H3 Z" />
+                            <controls:VlcIcon Width="24" Height="24" Margin="-3"
+                                              IsVisible="{Binding !IsFullscreen}"
+                                              Icon="{StaticResource Icon.Fullscreen}" />
+                            <controls:VlcIcon Width="24" Height="24" Margin="-3"
+                                              IsVisible="{Binding IsFullscreen}"
+                                              Icon="{StaticResource Icon.FullscreenExit}" />
                         </Grid>
                     </Button>
                 </StackPanel>

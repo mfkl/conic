@@ -5,6 +5,7 @@ using Avalonia.Interactivity;
 using Avalonia.Threading;
 using VLCAvalonia.Controls;
 using VLCAvalonia.Interop;
+using Player.Application;
 using Player.Contracts;
 using VLCLR;
 
@@ -215,25 +216,42 @@ public partial class MainWindow
         timer.Start(); timeout.Start();
     }
 
+    // The control bar is one 54 px row (phase 4a): docked at the bottom in a
+    // window with the video between it and the title bar, groups left to
+    // right, the timeline filling the room between transport and volume, and
+    // secondary controls dropped by PlayerLayoutPolicy as the window narrows.
     private void ValidateLayout(double width, bool compact)
     {
-        Rect dock = PlayerDock.Bounds;
-        Control[] required = compact ? [CenterTransport, RightTransport, PlayerTimeline] : [CenterTransport, RightTransport, PlayerTimeline, PlayerVolume];
-        Rect ToDock(Control control)
-        {
-            Point origin = control.TranslatePoint(default, PlayerDock) ?? default;
-            return new Rect(origin, control.Bounds.Size);
-        }
+        PlayerLayoutResult layout = PlayerLayoutPolicy.ForWidth(ClientSize.Width);
+        Rect dock = GetClientRect(PlayerDock);
+        Rect top = GetClientRect(TopChrome);
+        Rect video = GetClientRect(VideoSurface);
+        Rect transport = GetClientRect(TransportGroup), timeline = GetClientRect(TimelineGroup);
+        Rect volume = GetClientRect(VolumeGroup), tools = GetClientRect(ToolsGroup);
+        Control[] required = layout.ShowVolumeSlider
+            ? [TransportGroup, StopButton, PlayerTimeline, MuteButton, PlayerVolume, QueueButton]
+            : [TransportGroup, StopButton, PlayerTimeline, MuteButton, QueueButton];
         bool contained = required.All(control =>
         {
-            Rect rect = ToDock(control);
-            return rect.Width > 0 && rect.Height > 0 && rect.Left >= 0 && rect.Top >= 0 && rect.Right <= dock.Width && rect.Bottom <= dock.Height;
+            Rect rect = GetClientRect(control);
+            return control.IsEffectivelyVisible && rect.Width > 0 && rect.Height > 0 &&
+                rect.Left >= dock.Left && rect.Top >= dock.Top && rect.Right <= dock.Right + .5 && rect.Bottom <= dock.Bottom + .5;
         });
-        bool rows = compact ? Grid.GetRow(RightTransport) == 2 : Grid.GetRow(RightTransport) == 1;
-        bool separate = compact ? ToDock(RightTransport).Top >= ToDock(CenterTransport).Bottom : !ToDock(RightTransport).Intersects(ToDock(CenterTransport));
-        Console.WriteLine($"[layout-smoke] width={width} dock={dock} center={ToDock(CenterTransport)} right={ToDock(RightTransport)} timeline={ToDock(PlayerTimeline)} volume={ToDock(PlayerVolume)} rows={rows} contained={contained} separate={separate}");
-        if (!contained || !rows || !separate || (!compact && Math.Abs(PlayerVolume.Bounds.Width - 120) > 0.1))
-            throw new InvalidOperationException("[layout-smoke] FAIL bounds or row policy");
+        bool docked = Math.Abs(dock.Height - PlayerBarHeight) < .5 && Math.Abs(dock.Bottom - ClientSize.Height) < .5 &&
+            Math.Abs(dock.Width - ClientSize.Width) < .5 && Math.Abs(top.Top) < .5 && Math.Abs(top.Height - PlatformChrome.TitleBarHeight) < .5;
+        bool videoBetweenBars = Math.Abs(video.Top - top.Bottom) < .5 && Math.Abs(video.Bottom - dock.Top) < .5 &&
+            Math.Abs(video.Width - ClientSize.Width) < .5 && ReferenceEquals(VideoSurface.Parent, VideoArea) &&
+            Grid.GetRow(SubtitleLayer) == Grid.GetRow(VideoSurface) && Grid.GetRowSpan(SubtitleLayer) == Grid.GetRowSpan(VideoSurface);
+        double spacing = DockGrid.ColumnSpacing;
+        bool ordered = transport.Right <= timeline.Left && timeline.Right <= volume.Left && volume.Right <= tools.Left;
+        bool fills = Math.Abs(timeline.Left - transport.Right - spacing) < 1 && Math.Abs(volume.Left - timeline.Right - spacing) < 1 &&
+            GetClientRect(PlayerTimeline).Width > 40;
+        bool policy = layout.IsCompact == compact && ElapsedLabel.IsVisible == layout.ShowTimeLabels &&
+            PlayerVolume.IsVisible == layout.ShowVolumeSlider && AudioTracksButton.IsVisible == layout.ShowTrackButtons &&
+            (!layout.ShowVolumeSlider || Math.Abs(PlayerVolume.Bounds.Width - 88) < 0.1);
+        Console.WriteLine($"[layout-smoke] width={width} dock={dock} top={top} video={video} transport={transport} timeline={timeline} volume={volume} tools={tools} contained={contained} docked={docked} video-between={videoBetweenBars} ordered={ordered} fills={fills} policy={policy}");
+        if (!contained || !docked || !videoBetweenBars || !ordered || !fills || !policy)
+            throw new InvalidOperationException("[layout-smoke] FAIL bar bounds or layout policy");
     }
 
     private void ShowOpenMenuForSmoke()
@@ -247,12 +265,15 @@ public partial class MainWindow
 
     private void ValidateTopChrome(double width)
     {
-        Control[] controls = [QueueButton, OpenOptionsButton];
-        bool contained = controls.All(control => IsContained(control));
-        Rect open = GetClientRect(QueueButton);
-        Rect settings = GetClientRect(OpenOptionsButton);
-        bool separate = !open.Intersects(settings);
-        Console.WriteLine($"[layout-smoke] top width={width} queue={open} more={settings} title-visible={TopChromeTitle.IsVisible} contained={contained} separate={separate}");
+        Control[] controls = [OpenOptionsButton, HomeButton, FullscreenButton];
+        bool contained = controls.All(control => IsContained(control) && control.IsEffectivelyVisible);
+        Rect title = GetClientRect(TopChromeTitle);
+        Rect more = GetClientRect(OpenOptionsButton);
+        Rect home = GetClientRect(HomeButton);
+        Rect fullscreen = GetClientRect(FullscreenButton);
+        bool separate = !more.Intersects(home) && !home.Intersects(fullscreen) &&
+            (title.Width == 0 || (!title.Intersects(home) && !title.Intersects(fullscreen)));
+        Console.WriteLine($"[layout-smoke] top width={width} more={more} home={home} fullscreen={fullscreen} title={title} contained={contained} separate={separate}");
         if (!contained || !separate)
             throw new InvalidOperationException("[layout-smoke] FAIL top chrome bounds");
     }

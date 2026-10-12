@@ -79,12 +79,16 @@ public partial class MainWindow
                 MacEventInjection.Move(handle.Handle, isView, Bounds.Width / 2, Bounds.Height / 2);
                 await Task.Delay(200);
                 Console.WriteLine($"[caption-click-smoke] window at {Position} size {Bounds.Size}; topOver after moving to the video={TopChrome.IsPointerOver}");
-                // Let the playing chrome hide before the user reaches for it.
-                if (!await WaitFor(() => !TopChrome.IsVisible, 10))
-                    throw new InvalidOperationException($"playing chrome did not auto-hide: timer={_autoHideTimer.IsEnabled} topOver={TopChrome.IsPointerOver} dockOver={PlayerDock.IsPointerOver} focus={TopChrome.IsKeyboardFocusWithin || PlayerDock.IsKeyboardFocusWithin} keyboard={_keyboardNavigation}");
-                bool lightsWithHiddenChrome = MacWindowButtons.IsVisible(handle.Handle, isView);
-                Console.WriteLine($"[caption-click-smoke] {(lightsWithHiddenChrome ? "FAIL" : "PASS")} traffic lights hide with the playing chrome");
-                if (lightsWithHiddenChrome) failures.Add("traffic lights hide with the chrome");
+                // Windowed, the title bar is docked above the video and stays
+                // through the auto-hide delay; the traffic lights stay with it.
+                // (Before phase 4a it hid over playing video and the lights
+                // hid with it.)
+                await Task.Delay(TimeSpan.FromSeconds(_settings.Current.ControlTimeoutSeconds + 1));
+                if (!TopChrome.IsVisible)
+                    throw new InvalidOperationException($"docked title bar hid while playing: timer={_autoHideTimer.IsEnabled} topOver={TopChrome.IsPointerOver} dockOver={PlayerDock.IsPointerOver}");
+                bool lightsWithDockedChrome = MacWindowButtons.IsVisible(handle.Handle, isView);
+                Console.WriteLine($"[caption-click-smoke] {(lightsWithDockedChrome ? "PASS" : "FAIL")} traffic lights stay with the docked title bar");
+                if (!lightsWithDockedChrome) failures.Add("traffic lights stay with the docked title bar");
                 await Click(HomeButton, "player back arrow while playing", () => _presentation.IsHomeOpen);
                 if (!_presentation.IsHomeOpen) _presentation.IsHomeOpen = true;
                 // Playback continues under Home, which must cover the video.

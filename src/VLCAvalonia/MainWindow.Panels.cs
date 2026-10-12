@@ -267,6 +267,11 @@ public partial class MainWindow
                 if (_presentation.IsHomeOpen) HomeScreen.FocusPrimary(); else HomeButton.Focus();
             });
         }
+        if (e.PropertyName == nameof(PlayerPresentationViewModel.IsPictureInPicture))
+        {
+            _chromeVisibility.SetPictureInPicture(_presentation.IsPictureInPicture);
+            ApplyVideoLayout();
+        }
         if (e.PropertyName == nameof(PlayerPresentationViewModel.PlaybackRate))
             UpdatePlaybackRateSelection();
         if (e.PropertyName is nameof(PlayerPresentationViewModel.IsPlaying) or nameof(PlayerPresentationViewModel.PlaybackStatus))

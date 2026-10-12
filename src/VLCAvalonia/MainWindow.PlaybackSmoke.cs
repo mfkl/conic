@@ -87,12 +87,14 @@ public partial class MainWindow
                 Press(VideoArea, new Point(ClientSize.Width / 2, ClientSize.Height / 2));
                 Require(!OpenMenu.IsVisible, "outside pointer press dismisses menu");
 
+                // Windowed, the bars are docked around the video and never hide
+                // (phase 4a); inactivity hiding is checked in fullscreen below.
                 MuteButton.Focus(NavigationMethod.Pointer);
                 _autoHideTimer.Start();
                 await Task.Delay(400);
-                Require(!PlayerDock.IsVisible && !TopChrome.IsVisible, "mouse focus does not block inactivity hiding");
+                Require(PlayerDock.IsVisible && TopChrome.IsVisible, "docked bars stay visible while playing windowed");
                 WakeChrome();
-                Require(PlayerDock.IsVisible, "interaction reveals controls");
+                Require(PlayerDock.IsVisible, "interaction keeps controls visible");
                 PlayerTimeline.Focus(NavigationMethod.Tab);
                 PlayerTimeline.RaiseEvent(new KeyEventArgs { RoutedEvent = KeyDownEvent, Key = Key.Right });
                 await Task.Delay(400);
@@ -102,10 +104,9 @@ public partial class MainWindow
                 Require(PlayerDock.IsVisible, "paused controls stay visible");
 
                 SavePlaybackCapture("playback-controls-wide.png");
-                Require(Math.Abs(GetClientRect(CenterTransport).Center.X - ClientSize.Width / 2) < 1,
-                    "primary transport remains centered on the window");
-                Require(GetClientRect(PlayerTimeline).Width > ClientSize.Width * .9,
-                    "timeline spans the player independently of the time labels");
+                // Design bar: 54 tall at the bottom, video between the bars,
+                // the timeline filling the room between transport and volume.
+                ValidateLayout(ClientSize.Width, false);
                 foreach (double level in new[] { 0d, 100d, 200d })
                 {
                     _presentation.ApplyEngineState(playing with { Status = PlaybackStatus.Paused, Volume = level / 100 });
@@ -125,12 +126,30 @@ public partial class MainWindow
                 await Task.Delay(80);
                 SavePlaybackCapture("playback-audio.png");
                 _presentation.IsQueueOpen = false;
-                WindowState = WindowState.FullScreen;
-                await Task.Delay(200);
+                // Fullscreen: the video spans the window, the bars overlay it
+                // and hide after inactivity, even with mouse focus on a bar.
+                _presentation.ApplyEngineState(playing with { Position = .4 });
+                ToggleFullscreen();
+                await Task.Delay(300);
+                WakeChrome();
+                Rect video = GetClientRect(VideoSurface);
+                Require(WindowState == WindowState.FullScreen && video.Top < .5 && Math.Abs(video.Height - ClientSize.Height) < .5 &&
+                    Grid.GetRowSpan(SubtitleLayer) == 3 && PlayerDock.IsVisible && TopChrome.IsVisible &&
+                    Math.Abs(GetClientRect(PlayerDock).Bottom - ClientSize.Height) < .5 && FullscreenButton.IsEffectivelyVisible,
+                    "fullscreen video spans the window under the bars, with an exit button");
                 SavePlaybackCapture("playback-fullscreen.png");
-                SetChromeVisibility(false);
+                _keyboardNavigation = false;
+                MuteButton.Focus(NavigationMethod.Pointer);
+                await Task.Delay(400);
+                Require(!PlayerDock.IsVisible && !TopChrome.IsVisible, "fullscreen bars hide after inactivity; mouse focus does not block it");
                 SavePlaybackCapture("playback-hidden.png");
-                WindowState = WindowState.Normal;
+                WakeChrome();
+                Require(PlayerDock.IsVisible && TopChrome.IsVisible, "interaction reveals the fullscreen bars");
+                _presentation.ApplyEngineState(playing with { Status = PlaybackStatus.Paused, Position = .4 });
+                ToggleFullscreen();
+                await Task.Delay(200);
+                Require(WindowState == WindowState.Normal && Grid.GetRow(VideoSurface) == 1 && PlayerDock.IsVisible && TopChrome.IsVisible,
+                    "leaving fullscreen docks the bars again");
                 WakeChrome();
                 Width = 900;
                 await Task.Delay(200);
@@ -142,8 +161,8 @@ public partial class MainWindow
                 Height = 360;
                 await Task.Delay(200);
                 ValidateLayout(480, true);
-                RequireTrack(PlayerVolume);
-                Require(PlayerVolume.IsVisible && IsContained(PlayerVolume), "compact volume remains visible");
+                Require(MuteButton.IsEffectivelyVisible && IsContained(MuteButton) && !PlayerVolume.IsVisible,
+                    "narrow bar keeps mute and drops the volume slider");
                 SavePlaybackCapture("playback-controls-compact.png");
                 _presentation.ApplyEngineState(playing with { Status = PlaybackStatus.Paused,
                     Title = "A very long media title that must remain inside the header beside queue and More controls" });
@@ -159,7 +178,7 @@ public partial class MainWindow
                     await Task.Delay(80);
                     SavePlaybackCapture($"playback-{status.ToString().ToLowerInvariant()}.png");
                 }
-                Console.WriteLine("[playback-controls-smoke] PASS sliders, seeking, volume, title alignment, menu placement/dismissal, inactivity, keyboard focus, compact layout");
+                Console.WriteLine("[playback-controls-smoke] PASS sliders, seeking, volume, title alignment, menu placement/dismissal, docked bars, fullscreen inactivity, keyboard focus, compact layout");
                 desktop.Shutdown(0);
             }
             catch (Exception exception)

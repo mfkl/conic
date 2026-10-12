@@ -107,7 +107,7 @@ public partial class MainWindow
                     _presentation.IsHomeOpen = false;
                     _presentation.ApplyEngineState(MediaEngineState.Initial with { Generation = 1, Status = PlaybackStatus.Paused, CanSeek = true });
                     await Task.Delay(100);
-                    Require(IsContained(CenterTransport) && IsContained(RightTransport), "Playback controls fit the scaled logical viewport");
+                    Require(new Control[] { TransportGroup, PlayerTimeline, VolumeGroup, ToolsGroup }.All(IsContained), "Playback controls fit the scaled logical viewport");
                     Audit(PlayerDock); Audit(TopChrome); Capture("playback", scale, font);
                     _presentation.DrawerTab = "Audio"; _presentation.IsQueueOpen = true;
                     await Task.Delay(100);

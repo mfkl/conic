@@ -73,6 +73,8 @@ public partial class MainWindow : Window
         SetChromeVisibility(false);
         _autoHideTimer.Tick += (_, _) =>
         {
+            // Docked (windowed) chrome never hides; stop polling until it overlays the video again.
+            if (!_chromeVisibility.HidesAutomatically) { _autoHideTimer.Stop(); return; }
             bool menuOpen = (VideoArea.ContextMenu?.IsOpen ?? false) || SettingsPanel.IsVisible || OpenMenu.IsVisible || UrlPanel.IsVisible || ResumePanel.IsVisible || QueueDrawer.IsVisible || LibraryPanel.IsVisible;
             bool chromeFocused = _keyboardNavigation && (PlayerDock.IsKeyboardFocusWithin || TopChrome.IsKeyboardFocusWithin || PictureInPictureChrome.IsKeyboardFocusWithin);
             bool chromePointerOver = TopChrome.IsPointerOver || PlayerDock.IsPointerOver || PictureInPictureHeader.IsPointerOver || PictureInPicturePlay.IsPointerOver || PictureInPictureTimeline.IsPointerOver;
@@ -91,6 +93,7 @@ public partial class MainWindow : Window
         Opened += (_, _) => PlaceCaptionButtons();
         PropertyChanged += (_, e) =>
         {
+            if (e.Property == WindowStateProperty) OnWindowStateChanged();
             if (e.Property == WindowStateProperty || e.Property == WindowDecorationsProperty) PlaceCaptionButtons();
         };
     }
@@ -132,17 +135,27 @@ public partial class MainWindow : Window
         Classes.Set("reduced-motion", settings.ReduceMotion);
         if (settings.ReduceMotion) SetChromeVisibility(true);
         Classes.Set("compact-density", settings.Density == "Compact");
+        ApplyResponsiveChrome();
     }
 
+    /// <summary>
+    /// Shows or hides the playback chrome. <paramref name="visible"/> only
+    /// hides the bars where they overlay the video (fullscreen); docked
+    /// around the video in a window they always show. Home covers them and
+    /// picture in picture has its own overlay.
+    /// </summary>
     private void SetChromeVisibility(bool visible)
     {
-        PlayerDock.IsVisible = visible && !_presentation.IsHomeOpen && !_presentation.IsPictureInPicture;
-        TopChrome.IsVisible = visible && !_presentation.IsHomeOpen && !_presentation.IsPictureInPicture;
+        bool bars = !_presentation.IsHomeOpen && !_presentation.IsPictureInPicture &&
+            (visible || !_chromeVisibility.OverlaysVideo);
+        PlayerDock.IsVisible = bars;
+        TopChrome.IsVisible = bars;
         PictureInPictureChrome.IsVisible = visible && _presentation.IsPictureInPicture;
-        // The traffic lights belong to the top chrome: they hide with it over
-        // playing video and stay on Home.
+        // The traffic lights belong to the title bar: they show whenever it
+        // does (always while docked), hide with it over fullscreen video and
+        // stay on Home.
         if (PlatformChrome.UsesSystemCaptionButtons)
-            PlatformChrome.SetCaptionButtonsVisible(this, visible || _presentation.IsHomeOpen);
+            PlatformChrome.SetCaptionButtonsVisible(this, _presentation.IsPictureInPicture ? visible : bars || _presentation.IsHomeOpen);
     }
 
     private void OnEngineStateChanged(object? sender, MediaEngineState state) =>

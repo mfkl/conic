@@ -1,16 +1,34 @@
 namespace Player.Application;
 
-/// <summary>Pure playback chrome visibility policy, driven by UI interaction state.</summary>
+/// <summary>
+/// Pure playback chrome visibility policy, driven by UI interaction state.
+/// In a normal window the title bar and control bar are docked around the
+/// video and never hide. They only overlay the video, and so auto-hide, in
+/// fullscreen and picture in picture.
+/// </summary>
 public sealed class ChromeVisibilityController
 {
     public bool IsFullscreen { get; private set; }
+    public bool IsPictureInPicture { get; private set; }
     public bool IsPlaying { get; private set; }
     public bool ReduceMotion { get; private set; }
     public bool IsVisible { get; private set; } = true;
 
+    /// <summary>The chrome is drawn over the video instead of beside it.</summary>
+    public bool OverlaysVideo => IsFullscreen || IsPictureInPicture;
+
+    /// <summary>The chrome hides after inactivity when nothing holds it.</summary>
+    public bool HidesAutomatically => OverlaysVideo && IsPlaying && !ReduceMotion;
+
     public void SetFullscreen(bool fullscreen)
     {
         IsFullscreen = fullscreen;
+        IsVisible = true;
+    }
+
+    public void SetPictureInPicture(bool pictureInPicture)
+    {
+        IsPictureInPicture = pictureInPicture;
         IsVisible = true;
     }
 
@@ -20,11 +38,11 @@ public sealed class ChromeVisibilityController
     {
         IsPlaying = isPlaying;
         ReduceMotion = reduceMotion;
-        if (!isPlaying || reduceMotion) IsVisible = true;
+        if (!HidesAutomatically) IsVisible = true;
     }
 
     public bool CanHide(bool seekDragging, bool menuOpen, bool chromePointerOver, bool chromeFocused) =>
-        IsPlaying && !ReduceMotion && !seekDragging && !menuOpen && !chromePointerOver && !chromeFocused;
+        HidesAutomatically && !seekDragging && !menuOpen && !chromePointerOver && !chromeFocused;
 
     public bool TryHide(bool seekDragging, bool menuOpen, bool chromePointerOver, bool chromeFocused)
     {

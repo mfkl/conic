@@ -55,7 +55,7 @@ public sealed class SettingsViewModelTests
         Assert.NotNull(viewModel.SelectedPage);
         viewModel.Search = "skip";
         Assert.True(viewModel.HasSettingsResults);
-        Assert.True(viewModel.IsPlayback);
+        Assert.True(viewModel.IsControls);
     }
 
     [Fact]
@@ -78,9 +78,15 @@ public sealed class SettingsViewModelTests
     }
 
     [Theory]
-    [InlineData("theme", "Appearance")]
-    [InlineData("skip", "Playback")]
-    [InlineData("volume", "General")]
+    [InlineData("theme", "General")]
+    [InlineData("accent", "General")]
+    [InlineData("skip", "Controls")]
+    [InlineData("keyboard", "Controls")]
+    [InlineData("volume", "Audio")]
+    [InlineData("history", "Privacy")]
+    [InlineData("reduce motion", "Interface")]
+    [InlineData("speed", "Playback")]
+    [InlineData("diagnostics", "Advanced")]
     public void SearchSelectsTheMatchingPage(string query, string page)
     {
         SettingsViewModel viewModel = Create(out _);
@@ -100,6 +106,119 @@ public sealed class SettingsViewModelTests
         Assert.Equal("Live", viewModel.LabelFor(nameof(PlayerSettings.Theme)));
         Assert.Equal("Next open", viewModel.LabelFor(nameof(PlayerSettings.DefaultSpeed)));
         Assert.Equal("Restart", viewModel.LabelFor("Unknown"));
+    }
+
+    [Fact]
+    public void PagesAreTheDesignCategoriesWithWorkingSettings()
+    {
+        SettingsViewModel viewModel = Create(out _);
+
+        Assert.Equal(["General", "Interface", "Privacy", "Controls", "Playback", "Video", "Audio", "Subtitles", "Advanced"], viewModel.Pages.Select(page => page.Name));
+        Assert.Equal(["App", "App", "App", "App", "Media", "Media", "Media", "Media", "System"], viewModel.Pages.Select(page => page.Group));
+        Assert.Equal(["General", "Playback", "Advanced"], viewModel.Pages.Where(page => page.ShowsGroupHeader).Select(page => page.Name));
+        Assert.Equal("General Settings", viewModel.DialogTitle);
+        viewModel.SelectedPage = viewModel.Pages[6];
+        Assert.True(viewModel.IsAudio);
+        Assert.Equal("Audio Settings", viewModel.DialogTitle);
+    }
+
+    [Fact]
+    public void GroupHeadersMoveToTheFirstPageThatMatchesTheSearch()
+    {
+        SettingsViewModel viewModel = Create(out _);
+
+        viewModel.Search = "tracks";
+
+        Assert.Equal(["Audio", "Subtitles"], viewModel.FilteredPages.Select(page => page.Name));
+        Assert.Equal(["Audio"], viewModel.Pages.Where(page => page.ShowsGroupHeader).Select(page => page.Name));
+        viewModel.Search = "";
+        Assert.Equal(["General", "Playback", "Advanced"], viewModel.Pages.Where(page => page.ShowsGroupHeader).Select(page => page.Name));
+    }
+
+    [Fact]
+    public void ThemeAndAccentChoicesApplyAndMirrorTheSettings()
+    {
+        SettingsViewModel viewModel = Create(out PlayerSettingsService service);
+
+        Assert.Equal(["Theme Dark", "Theme Light", "Theme System"], viewModel.ThemeChoices.Select(choice => choice.AutomationName));
+        Assert.Equal(AccentPalette.Colors.Select(color => $"Accent color {color.Name}"), viewModel.AccentChoices.Select(choice => choice.AutomationName));
+        Assert.Equal("System", Assert.Single(viewModel.ThemeChoices, choice => choice.IsSelected).Value);
+        Assert.Equal(AccentPalette.DefaultHex, Assert.Single(viewModel.AccentChoices, choice => choice.IsSelected).Value);
+
+        viewModel.ThemeChoices[1].IsSelected = true;
+        viewModel.AccentChoices[5].IsSelected = true;
+        // A radio button that is unchecked writes false; that changes nothing.
+        viewModel.ThemeChoices[1].IsSelected = false;
+
+        Assert.Equal("Light", service.Current.Theme);
+        Assert.Equal(AccentPalette.Colors[5].Hex, service.Current.Accent);
+        Assert.Equal("Light", Assert.Single(viewModel.ThemeChoices, choice => choice.IsSelected).Value);
+        Assert.Equal(AccentPalette.Colors[5].Hex, Assert.Single(viewModel.AccentChoices, choice => choice.IsSelected).Value);
+
+        service.Update(s => s with { Theme = "Dark", Accent = AccentPalette.Colors[2].Hex });
+        viewModel.Refresh();
+        Assert.Equal("Dark", Assert.Single(viewModel.ThemeChoices, choice => choice.IsSelected).Value);
+        Assert.Equal(AccentPalette.Colors[2].Hex, Assert.Single(viewModel.AccentChoices, choice => choice.IsSelected).Value);
+    }
+
+    [Fact]
+    public void FailedChoiceWriteKeepsTheCheckedChoiceInEffect()
+    {
+        SettingsViewModel viewModel = new(new PlayerSettingsService(new ThrowingStorage()));
+
+        viewModel.AccentChoices[3].IsSelected = true;
+
+        Assert.True(viewModel.HasError);
+        Assert.Equal(AccentPalette.DefaultHex, Assert.Single(viewModel.AccentChoices, choice => choice.IsSelected).Value);
+    }
+
+    [Fact]
+    public void EachPageResetsOnlyItsOwnSettings()
+    {
+        SettingsViewModel viewModel = Create(out PlayerSettingsService service);
+        PlayerSettings changed = PlayerSettings.Default with
+        {
+            Theme = "Light", Accent = "#1B5DD3", Density = "Compact", ReduceMotion = true, RememberRecentMedia = false,
+            SkipForwardSeconds = 30, ResumePlayback = false, DefaultSpeed = 2, RememberVolume = false, AudioOutputModule = "waveout",
+        };
+        void Reset(string page)
+        {
+            service.Update(_ => changed);
+            viewModel.SelectedPage = viewModel.Pages.Single(candidate => candidate.Name == page);
+            Assert.True(viewModel.CanResetPage);
+            viewModel.ResetPageCommand.Execute(null);
+        }
+
+        Reset("General");
+        Assert.Equal(("System", AccentPalette.DefaultHex, "Compact"), (service.Current.Theme, service.Current.Accent, service.Current.Density));
+        Reset("Interface");
+        Assert.Equal(("Comfortable", false, "Light"), (service.Current.Density, service.Current.ReduceMotion, service.Current.Theme));
+        Reset("Privacy");
+        Assert.Equal((true, 30), (service.Current.RememberRecentMedia, service.Current.SkipForwardSeconds));
+        Reset("Controls");
+        Assert.Equal((10, false), (service.Current.SkipForwardSeconds, service.Current.ResumePlayback));
+        Reset("Playback");
+        Assert.Equal((true, 1d, false), (service.Current.ResumePlayback, service.Current.DefaultSpeed, service.Current.RememberVolume));
+        Reset("Audio");
+        Assert.Equal((true, "Default", 2d), (service.Current.RememberVolume, service.Current.AudioOutputModule, service.Current.DefaultSpeed));
+        foreach (string page in new[] { "Video", "Subtitles", "Advanced" })
+        {
+            viewModel.SelectedPage = viewModel.Pages.Single(candidate => candidate.Name == page);
+            Assert.False(viewModel.CanResetPage);
+        }
+    }
+
+    [Fact]
+    public void VideoAdjustmentsOpenTheVideoTab()
+    {
+        PlayerCommandRegistry registry = new();
+        object? openedTab = null;
+        registry.Register(new(PlayerCommandId.ToggleMediaControls, "Tracks and synchronization", "Playback"), p => openedTab = p);
+        SettingsViewModel viewModel = new(new PlayerSettingsService(new MemoryStorage()), registry);
+
+        viewModel.OpenVideoControlsCommand.Execute(null);
+
+        Assert.Equal("Video", openedTab);
     }
 
     [Fact]

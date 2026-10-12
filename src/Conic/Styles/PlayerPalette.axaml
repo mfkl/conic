@@ -50,6 +50,8 @@
                  as over the greys, and status colors. -->
             <SolidColorBrush x:Key="Vlc.Overlay.Hover" Color="#20FFFFFF" />
             <SolidColorBrush x:Key="Vlc.Overlay.Pressed" Color="#30FFFFFF" />
+            <!-- Behind modal dialogs (Settings). -->
+            <SolidColorBrush x:Key="Vlc.Overlay.Scrim" Color="#99000000" />
             <SolidColorBrush x:Key="Vlc.Status.Danger" Color="#E81123" />
             <SolidColorBrush x:Key="Vlc.Status.ErrorText" Color="#FFD6CE" />
             <SolidColorBrush x:Key="Vlc.Status.ErrorSurface" Color="#E02B1717" />

@@ -3,8 +3,10 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Media.Imaging;
 using Avalonia.VisualTree;
+using Conic.Controls;
 using Conic.Interop;
 using Conic.ViewModels;
 
@@ -33,6 +35,7 @@ public partial class MainWindow
                     Width = compact ? 480 : 1280;
                     Height = compact ? 360 : 720;
                     await Task.Delay(200);
+                    ValidateSettingsDialog(compact);
                     foreach (SettingsPage page in _settingsViewModel.Pages)
                     {
                         _settingsViewModel.SelectedPage = page;
@@ -55,13 +58,19 @@ public partial class MainWindow
                 CaptureSettings("settings-no-results");
                 _settingsViewModel.Search = "keyboard";
                 await Task.Delay(100);
-                Require(_settingsViewModel.IsHotkeys && SettingsPanel.SettingsContent.IsVisible, "search selects matching category");
+                Require(_settingsViewModel.IsControls && SettingsPanel.SettingsContent.IsVisible, "search selects matching category");
                 _settingsViewModel.ShortcutSearch = "no-such-shortcut-abcdef";
                 Require(!_settingsViewModel.HasShortcutResults, "shortcut empty result");
                 _settingsViewModel.ShortcutSearch = "";
                 _settingsViewModel.Search = "";
-                _settingsViewModel.SelectedPage = _settingsViewModel.Pages[2];
+                await ValidateAppearanceChoicesAsync();
+                // Privacy scrolls in the compact dialog, and the confirmation
+                // wraps the reset row: let both lay out before scrolling it
+                // into view.
+                _settingsViewModel.SelectedPage = _settingsViewModel.Pages.First(page => page.Name == "Privacy");
+                await Task.Delay(100);
                 _settingsViewModel.ResetAllCommand.Execute(null);
+                await Task.Delay(100);
                 SettingsPanel.SettingsResetRow.BringIntoView();
                 await Task.Delay(150);
                 Require(_settingsViewModel.ConfirmReset && IsContained(SettingsPanel.SettingsResetRow), "reset confirmation fits compact viewport");
@@ -77,11 +86,51 @@ public partial class MainWindow
                 KeyEventArgs escape = new() { Key = Key.Escape };
                 OnPlayerKeyDown(this, escape);
                 Require(escape.Handled && !SettingsPanel.IsVisible, "Escape closes Settings");
-                Console.WriteLine("[settings-smoke] PASS all eight categories, 1280x720 and 480x360, editors, search/no results, reset confirmation, Home focus, Media information and Escape");
+                Console.WriteLine("[settings-smoke] PASS all nine categories, dialog bounds, theme and accent radio groups, 1280x720 and 480x360, editors, search/no results, reset confirmation, Home focus, Media information and Escape");
                 desktop.Shutdown(0);
             }
             catch (Exception error) { Console.Error.WriteLine($"[settings-smoke] FAIL {error}"); desktop.Shutdown(1); }
         };
+    }
+
+    // The dialog: at most 1048 wide, centered, below the title bar; compact,
+    // it fills the window and the ComboBox replaces the category pane.
+    private void ValidateSettingsDialog(bool compact)
+    {
+        Rect dialog = GetClientRect(SettingsPanel.SettingsDialog);
+        Size client = ClientSize;
+        if (compact)
+            Require(dialog.Left <= 0.5 && dialog.Top <= 0.5 && dialog.Right >= client.Width - 0.5 && dialog.Bottom >= client.Height - 0.5, $"compact Settings fills the window: {dialog}");
+        else
+            Require(dialog.Width <= 1048.5 && dialog.Height <= 865.5 && dialog.Top >= PlatformChrome.TitleBarHeight && Math.Abs(dialog.Left - (client.Width - dialog.Right)) <= 1 && IsContained(SettingsPanel.SettingsDialog), $"Settings dialog is centered below the title bar: {dialog}");
+        Require(SettingsPanel.SettingsCategoryPane.IsVisible != compact, "category pane only in the wide dialog");
+    }
+
+    // Theme and accent are radio groups: named options, one checked, only the
+    // checked one is a tab stop, and arrow keys move and apply the choice.
+    private async Task ValidateAppearanceChoicesAsync()
+    {
+        _settingsViewModel.SelectedPage = _settingsViewModel.Pages.First(page => page.Name == "General");
+        await Task.Delay(100);
+        RadioButton[] themes = SettingsPanel.ThemeSegments.GetVisualDescendants().OfType<RadioButton>().ToArray();
+        RadioButton[] accents = SettingsPanel.AccentSwatches.GetVisualDescendants().OfType<RadioButton>().ToArray();
+        Require(themes.Select(AutomationName).SequenceEqual(new[] { "Theme Dark", "Theme Light", "Theme System" }), "theme segments are named");
+        Require(accents.Length == 9 && accents.All(option => AutomationName(option).StartsWith("Accent color ", StringComparison.Ordinal)), "nine named accent swatches");
+        foreach (RadioButton[] group in new[] { themes, accents })
+            Require(group.Count(option => option.IsChecked == true) == 1 && group.All(option => option.IsTabStop == (option.IsChecked == true)), "one checked option and tab stop per group");
+        string accent = _settingsViewModel.Accent;
+        RadioButton selected = accents.Single(option => option.IsChecked == true);
+        selected.Focus(NavigationMethod.Tab);
+        selected.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Right, Source = selected });
+        await Task.Delay(100);
+        Require(_settingsViewModel.Accent != accent && accents.Single(option => option.IsChecked == true).IsFocused, "Right arrow checks and focuses the next accent");
+        RadioButton next = accents.Single(option => option.IsChecked == true);
+        next.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Left, Source = next });
+        await Task.Delay(100);
+        Require(_settingsViewModel.Accent == accent, "Left arrow returns to the previous accent");
+        CaptureSettings("settings-general-focus");
+
+        static string AutomationName(Control control) => Avalonia.Automation.AutomationProperties.GetName(control) ?? "";
     }
 
     private void CaptureSettings(string name)

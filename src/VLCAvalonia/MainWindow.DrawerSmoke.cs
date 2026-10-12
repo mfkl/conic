@@ -143,6 +143,16 @@ public partial class MainWindow
                 CloseQueueButton.RaiseEvent(new KeyEventArgs { RoutedEvent = KeyDownEvent, Key = Key.Escape });
                 await Task.Delay(150);
                 Require(!_presentation.IsQueueOpen && OpenOptionsButton.IsFocused, "narrow Escape returns focus to More");
+                // The library drawer shares the bar panels' surface and tab row.
+                foreach (int width in new[] { 1280, 480 })
+                {
+                    Width = width; Height = width == 480 ? 360 : 720;
+                    _presentation.IsLibraryOpen = true;
+                    await Task.Delay(150);
+                    Require(IsContained(LibraryPanel) && IsContained(LibraryRecentTab) && IsContained(CloseLibraryButton), "library drawer and its tabs are contained");
+                    CaptureHome($"drawer-Library-{width}");
+                    CloseLibrary();
+                }
                 Console.WriteLine("[drawer-smoke] PASS per-button tab sets and active states, long labels/lists, compact scrolling, reachable delays, tab arrows, focus cycle and Escape focus return");
                 desktop.Shutdown(0);
             }

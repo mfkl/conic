@@ -168,8 +168,8 @@ public partial class MainWindow
 
     /// <summary>
     /// Bar panels (design: anchored to the right edge between the title bar
-    /// and the control bar, 400 wide). The queue and playback panels fill
-    /// that height; the tracks panel fits its content. Where the bar is
+    /// and the control bar, 400 wide). The queue, playback and library panels
+    /// fill that height; the tracks panel fits its content. Where the bar is
     /// too narrow for the track buttons the panels become a sheet above the
     /// bar, inset 16 from the sides. Fullscreen uses the same room: the bars
     /// overlay the video there and stay up while a panel is open.
@@ -181,9 +181,9 @@ public partial class MainWindow
         double gap = sheet ? 8 : 20;
         double top = PlatformChrome.TitleBarHeight + gap, bottom = PlayerBarHeight + gap;
         double room = Math.Max(160, Bounds.Height - top - bottom);
-        foreach (Border panel in new[] { QueueDrawer })
+        foreach (Border panel in new[] { QueueDrawer, LibraryPanel })
         {
-            bool fitsContent = _presentation.IsTracksPanel;
+            bool fitsContent = ReferenceEquals(panel, QueueDrawer) && _presentation.IsTracksPanel;
             panel.Classes.Set("docked", !sheet);
             panel.Width = sheet ? double.NaN : 400;
             panel.MaxWidth = sheet ? double.PositiveInfinity : Math.Max(320, Bounds.Width - 32);

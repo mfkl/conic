@@ -6,7 +6,7 @@ using VLCAvalonia.Commands;
 namespace VLCAvalonia.ViewModels;
 
 internal sealed record HomeMediaItem(string Source, string Title, string Detail,
-    double Progress, bool HasProgress, PlayerCommandId RemoveCommand);
+    double Progress, bool HasProgress, PlayerCommandId RemoveCommand, bool IsFavorite = false);
 
 internal sealed partial class PlayerPresentationViewModel
 {
@@ -16,6 +16,10 @@ internal sealed partial class PlayerPresentationViewModel
     private string _homeSearch = string.Empty;
     private long _homeMediaGeneration = -1;
     private readonly ObservableCollection<HomeMediaItem> _homeItems = [];
+    private readonly ObservableCollection<HomeMediaItem> _homeContinueItems = [];
+    private readonly ObservableCollection<HomeMediaItem> _homeRecentItems = [];
+    private readonly ObservableCollection<HomeMediaItem> _homeFavoriteItems = [];
+    private int _homeSectionCardLimit = 5;
     public ICommand ShowHomeCommand { get; private set; } = null!;
     public ICommand ShowPlayerCommand { get; private set; } = null!;
     public ICommand SelectHomeSectionCommand { get; private set; } = null!;
@@ -52,6 +56,7 @@ internal sealed partial class PlayerPresentationViewModel
         ToggleHomeLayoutCommand = new RegistryCommand(registry, PlayerCommandId.ToggleHomeLayout);
         _homeItems.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HomeItemCountText));
         SyncHomeItems();
+        SyncHomeSections();
     }
 
     public bool IsHomeOpen
@@ -82,6 +87,25 @@ internal sealed partial class PlayerPresentationViewModel
         _ => "Open a file or drop media anywhere to get started."
     };
     public bool HomeHasItems => HomeItems.Count != 0;
+    /// <summary>The Home route shows its sections (Continue watching, Recently played, Favorites) unless a search is active.</summary>
+    public bool ShowHomeSections => IsHomeSection && string.IsNullOrWhiteSpace(HomeSearch) && HomeHasItems;
+    /// <summary>Section routes and search results show every card in one grid or list.</summary>
+    public bool ShowHomeGrid => HomeHasItems && !ShowHomeSections;
+    /// <summary>The grid's cards; empty while the sections are shown, so the hidden grid holds no thumbnails.</summary>
+    public IReadOnlyList<HomeMediaItem> HomeGridItems => ShowHomeSections ? [] : _homeItems;
+    /// <summary>The first cards of each Home section, as many as fit (set by the view); empty while the sections are hidden. Updated in place like <see cref="HomeItems"/>.</summary>
+    public IReadOnlyList<HomeMediaItem> HomeContinueItems => _homeContinueItems;
+    public IReadOnlyList<HomeMediaItem> HomeRecentItems => _homeRecentItems;
+    public IReadOnlyList<HomeMediaItem> HomeFavoriteItems => _homeFavoriteItems;
+    public bool HasHomeContinueItems => _homeContinueItems.Count != 0;
+    public bool HasHomeRecentItems => _homeRecentItems.Count != 0;
+    public bool HasHomeFavoriteItems => _homeFavoriteItems.Count != 0;
+    /// <summary>How many cards each Home section shows; the view sets it from the width it has.</summary>
+    public int HomeSectionCardLimit
+    {
+        get => _homeSectionCardLimit;
+        set { if (Set(ref _homeSectionCardLimit, Math.Max(1, value))) SyncHomeSections(); }
+    }
     /// <summary>The content header's count of the cards shown (after search).</summary>
     public string HomeItemCountText => HomeItems.Count == 1 ? "1 item" : $"{HomeItems.Count} items";
     public bool ShowHomeWelcome => !HasLibraryItems && IsHomeSection && string.IsNullOrWhiteSpace(HomeSearch);
@@ -92,35 +116,60 @@ internal sealed partial class PlayerPresentationViewModel
     {
         IEnumerable<HomeMediaItem> items = HomeSection switch
         {
-            "Favorites" => FavoriteItems.Select(x => new HomeMediaItem(x.Source, x.DisplayName, "Favorite", 0, false, PlayerCommandId.RemoveFavorite)),
+            "Favorites" => FavoriteItems.Select(FavoriteCard),
             "Continue watching" => ResumeItems.Select(ResumeCard),
             "Recent" => RecentItems.Select(RecentCard),
             _ => ResumeItems.Select(ResumeCard).Concat(RecentItems.Select(RecentCard))
-                .Concat(FavoriteItems.Select(x => new HomeMediaItem(x.Source, x.DisplayName, "Favorite", 0, false, PlayerCommandId.RemoveFavorite)))
+                .Concat(FavoriteItems.Select(FavoriteCard))
                 .DistinctBy(x => MediaHistoryService.KeyFromCanonicalSource(x.Source))
         };
         string query = HomeSearch.Trim();
-        HomeMediaItem[] next = items.Where(x => query.Length == 0 || x.Title.Contains(query, StringComparison.OrdinalIgnoreCase)).ToArray();
-        if (next.Length == _homeItems.Count && next.Select(x => x.Source).SequenceEqual(_homeItems.Select(x => x.Source)))
-        {
-            for (int i = 0; i < next.Length; i++)
-                if (next[i] != _homeItems[i]) _homeItems[i] = next[i];
-            return;
-        }
-        _homeItems.Clear();
-        foreach (HomeMediaItem item in next) _homeItems.Add(item);
+        SyncInPlace(_homeItems, items.Where(x => query.Length == 0 || x.Title.Contains(query, StringComparison.OrdinalIgnoreCase)).ToArray());
     }
-    private static HomeMediaItem RecentCard(RecentMediaEntry entry) => new(entry.Source, entry.DisplayName, "Recently played", 0, false, PlayerCommandId.RemoveRecent);
+    private void SyncHomeSections()
+    {
+        // Off the Home route (or while searching) the sections are hidden; empty them so they hold no thumbnails.
+        int limit = ShowHomeSections ? HomeSectionCardLimit : 0;
+        SyncInPlace(_homeContinueItems, ResumeItems.Take(limit).Select(ResumeCard).ToArray());
+        SyncInPlace(_homeRecentItems, RecentItems.Take(limit).Select(RecentCard).ToArray());
+        SyncInPlace(_homeFavoriteItems, FavoriteItems.Take(limit).Select(FavoriteCard).ToArray());
+        OnPropertyChanged(nameof(HasHomeContinueItems)); OnPropertyChanged(nameof(HasHomeRecentItems)); OnPropertyChanged(nameof(HasHomeFavoriteItems));
+    }
+    /// <summary>
+    /// Makes <paramref name="target"/> equal <paramref name="next"/> with few changes: cards that stay keep their
+    /// instance (and their loaded thumbnail) unless their record changed, so a checkpoint, a narrowing search or a
+    /// reorder does not recreate every card.
+    /// </summary>
+    internal static void SyncInPlace(ObservableCollection<HomeMediaItem> target, IReadOnlyList<HomeMediaItem> next)
+    {
+        HashSet<string> keep = next.Select(x => x.Source).ToHashSet(StringComparer.Ordinal);
+        for (int i = target.Count - 1; i >= 0; i--)
+            if (!keep.Contains(target[i].Source)) target.RemoveAt(i);
+        for (int i = 0; i < next.Count; i++)
+        {
+            int existing = -1;
+            for (int j = i; j < target.Count; j++)
+                if (string.Equals(target[j].Source, next[i].Source, StringComparison.Ordinal)) { existing = j; break; }
+            if (existing < 0) { target.Insert(i, next[i]); continue; }
+            if (existing != i) target.Move(existing, i);
+            if (target[i] != next[i]) target[i] = next[i];
+        }
+        while (target.Count > next.Count) target.RemoveAt(target.Count - 1);
+    }
+    private bool IsFavoriteSource(string source) => _history?.IsFavorite(source) ?? false;
+    private HomeMediaItem RecentCard(RecentMediaEntry entry) => new(entry.Source, entry.DisplayName, "Recently played", 0, false, PlayerCommandId.RemoveRecent, IsFavoriteSource(entry.Source));
+    private static HomeMediaItem FavoriteCard(FavoriteMediaEntry entry) => new(entry.Source, entry.DisplayName, "Favorite", 0, false, PlayerCommandId.RemoveFavorite, true);
     private HomeMediaItem ResumeCard(ResumeEntry entry)
     {
         string title = RecentItems.FirstOrDefault(x => x.Source == entry.Source)?.DisplayName
             ?? FavoriteItems.FirstOrDefault(x => x.Source == entry.Source)?.DisplayName
             ?? (Uri.TryCreate(entry.Source, UriKind.Absolute, out Uri? uri) && !uri.IsFile ? uri.Host : Path.GetFileName(entry.Source));
-        return new(entry.Source, title, $"Continue from {FormatTime(entry.Position)}", entry.Duration > TimeSpan.Zero ? Math.Clamp(entry.Position / entry.Duration, 0, 1) : 0, true, PlayerCommandId.RemoveResume);
+        return new(entry.Source, title, $"Continue from {FormatTime(entry.Position)}", entry.Duration > TimeSpan.Zero ? Math.Clamp(entry.Position / entry.Duration, 0, 1) : 0, true, PlayerCommandId.RemoveResume, IsFavoriteSource(entry.Source));
     }
     private void NotifyHome()
     {
         SyncHomeItems();
-        foreach (string property in new[] { nameof(HomeHasItems), nameof(HomeEmptyMessage), nameof(ShowHomeWelcome), nameof(ShowHomeEmpty), nameof(HomeHistoryPrivate), nameof(IsHomeSection), nameof(IsRecentSection), nameof(IsFavoritesSection), nameof(IsContinueSection) }) OnPropertyChanged(property);
+        SyncHomeSections();
+        foreach (string property in new[] { nameof(HomeHasItems), nameof(HomeEmptyMessage), nameof(ShowHomeWelcome), nameof(ShowHomeEmpty), nameof(ShowHomeSections), nameof(ShowHomeGrid), nameof(HomeGridItems), nameof(HomeHistoryPrivate), nameof(IsHomeSection), nameof(IsRecentSection), nameof(IsFavoritesSection), nameof(IsContinueSection) }) OnPropertyChanged(property);
     }
 }

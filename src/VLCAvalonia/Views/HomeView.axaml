@@ -82,32 +82,258 @@
         <Style Selector=":is(UserControl).compact Grid#ContentHeader">
             <Setter Property="ColumnSpacing" Value="12" />
         </Style>
-        <Style Selector="Border.mediaCard">
-            <Setter Property="Width" Value="232" />
-            <Setter Property="Margin" Value="0,0,16,16" />
+        <!-- Home sections (design 6261:15078): a 20 px FG/A1 title with a
+             chevron that opens the section's route, then one row of cards. -->
+        <Style Selector="StackPanel.homeSection">
+            <Setter Property="Spacing" Value="20" />
+            <Setter Property="Margin" Value="0,20" />
         </Style>
+        <Style Selector="Button.sectionTitle">
+            <Setter Property="HorizontalAlignment" Value="Left" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="2" />
+            <Setter Property="CornerRadius" Value="4" />
+            <Setter Property="Foreground" Value="{DynamicResource Vlc.Fg.A1}" />
+        </Style>
+        <Style Selector="Button.sectionTitle:pointerover /template/ ContentPresenter#PART_ContentPresenter, Button.sectionTitle:pressed /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource Vlc.Fg.1}" />
+        </Style>
+        <Style Selector="Button.sectionTitle:focus-visible">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+        <!-- Media cards (design 970:4028): a 16:9 thumbnail (radius 6) with
+             the title (14, FG/A2) and detail (12, FG/A3) below, no chrome.
+             Saved progress is a thin accent line along the thumbnail's
+             bottom. The actions (queue, favorite, remove) appear over the
+             thumbnail on hover or keyboard focus, and in the context menu. -->
         <Style Selector="ItemsControl.mediaItems">
             <Setter Property="ItemsPanel">
                 <ItemsPanelTemplate>
-                    <WrapPanel />
+                    <controls:MediaGridPanel />
                 </ItemsPanelTemplate>
             </Setter>
         </Style>
-        <Style Selector=":is(UserControl).list ItemsControl.mediaItems">
-            <Setter Property="ItemsPanel">
-                <ItemsPanelTemplate>
-                    <StackPanel />
-                </ItemsPanelTemplate>
-            </Setter>
+        <Style Selector="Button.mediaTile">
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="VerticalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="VerticalContentAlignment" Value="Stretch" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="2" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Foreground" Value="{DynamicResource PlayerSecondaryText}" />
         </Style>
-        <Style Selector=":is(UserControl).list Border.mediaCard">
-            <Setter Property="Width" Value="NaN" />
-            <Setter Property="Margin" Value="0,0,0,8" />
+        <Style Selector="Button.mediaTile:pointerover /template/ ContentPresenter#PART_ContentPresenter, Button.mediaTile:pressed /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+        </Style>
+        <Style Selector="Button.mediaTile:focus-visible">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+        <Style Selector="Button.mediaTile:pointerover TextBlock.cardTitle, Button.mediaTile:focus-visible TextBlock.cardTitle">
+            <Setter Property="Foreground" Value="{DynamicResource Vlc.Fg.1}" />
+        </Style>
+        <Style Selector="controls|AspectRatioDecorator.thumbnailBox">
+            <Setter Property="DockPanel.Dock" Value="Top" />
+            <Setter Property="Margin" Value="0,0,0,10" />
+        </Style>
+        <Style Selector="Border.artwork">
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="ClipToBounds" Value="True" />
+            <Setter Property="Background" Value="{DynamicResource PlayerCardArtwork}" />
+        </Style>
+        <Style Selector="ProgressBar.cardProgress">
+            <Setter Property="VerticalAlignment" Value="Bottom" />
+            <Setter Property="MinWidth" Value="0" />
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="Height" Value="3" />
+            <Setter Property="CornerRadius" Value="0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Minimum" Value="0" />
+            <Setter Property="Maximum" Value="1" />
+        </Style>
+        <Style Selector="TextBlock.cardTitle">
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+            <Setter Property="VerticalAlignment" Value="Top" />
+        </Style>
+        <Style Selector="TextBlock.cardDetail">
+            <Setter Property="DockPanel.Dock" Value="Bottom" />
+            <Setter Property="Margin" Value="0,2,0,0" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+            <Setter Property="Foreground" Value="{DynamicResource Vlc.Fg.A3}" />
+        </Style>
+        <Style Selector="StackPanel.cardActions">
+            <Setter Property="Orientation" Value="Horizontal" />
+            <Setter Property="Spacing" Value="4" />
+            <Setter Property="HorizontalAlignment" Value="Right" />
+            <Setter Property="VerticalAlignment" Value="Top" />
+            <Setter Property="Margin" Value="8" />
+            <Setter Property="Opacity" Value="0" />
+        </Style>
+        <Style Selector="Panel.mediaCard:pointerover StackPanel.cardActions, Panel.mediaCard:focus-within StackPanel.cardActions">
+            <Setter Property="Opacity" Value="1" />
+        </Style>
+        <Style Selector="Button.cardAction">
+            <Setter Property="Background" Value="{DynamicResource Vlc.Bg.B2Transparent}" />
+            <Setter Property="Foreground" Value="{DynamicResource Vlc.Fg.2}" />
+        </Style>
+        <Style Selector="Button.cardAction.active /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource Vlc.Bg.B2Transparent}" />
+        </Style>
+        <Style Selector="Button.cardAction:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource Vlc.Bg.A1}" />
+        </Style>
+        <!-- List view (design 970:3792): rows in columns, a 32 px thumbnail and
+             the title; hover shows a background. -->
+        <Style Selector=":is(UserControl).list controls|MediaGridPanel">
+            <Setter Property="ItemMinWidth" Value="{x:Static controls:MediaGridPanel.RowMinWidth}" />
+            <Setter Property="ItemMaxWidth" Value="{x:Static controls:MediaGridPanel.RowMaxWidth}" />
+            <Setter Property="RowSpacing" Value="2" />
+        </Style>
+        <Style Selector=":is(UserControl).list Button.mediaTile">
+            <Setter Property="Height" Value="40" />
+            <Setter Property="Padding" Value="2,2,8,2" />
+            <Setter Property="CornerRadius" Value="6" />
+        </Style>
+        <Style Selector=":is(UserControl).list Button.mediaTile:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource Vlc.Overlay.Hover}" />
+        </Style>
+        <Style Selector=":is(UserControl).list Button.mediaTile:pressed /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource Vlc.Overlay.Pressed}" />
+        </Style>
+        <Style Selector=":is(UserControl).list controls|AspectRatioDecorator.thumbnailBox">
+            <Setter Property="DockPanel.Dock" Value="Left" />
+            <Setter Property="Ratio" Value="1" />
+            <Setter Property="Width" Value="32" />
+            <Setter Property="Height" Value="32" />
+            <Setter Property="Margin" Value="0,0,10,0" />
         </Style>
         <Style Selector=":is(UserControl).list Border.artwork">
-            <Setter Property="IsVisible" Value="False" />
+            <Setter Property="CornerRadius" Value="4" />
+        </Style>
+        <Style Selector=":is(UserControl).list controls|MediaThumbnail">
+            <Setter Property="PlaceholderSize" Value="18" />
+        </Style>
+        <Style Selector=":is(UserControl).list ProgressBar.cardProgress">
+            <Setter Property="Height" Value="2" />
+        </Style>
+        <Style Selector=":is(UserControl).list TextBlock.cardTitle">
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector=":is(UserControl).list TextBlock.cardDetail">
+            <Setter Property="DockPanel.Dock" Value="Right" />
+            <Setter Property="Margin" Value="10,0,0,0" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector=":is(UserControl).list Panel.mediaCard:pointerover TextBlock.cardDetail, :is(UserControl).list Panel.mediaCard:focus-within TextBlock.cardDetail">
+            <Setter Property="Opacity" Value="0" />
+        </Style>
+        <Style Selector=":is(UserControl).list StackPanel.cardActions">
+            <Setter Property="Spacing" Value="0" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Margin" Value="0,0,4,0" />
+        </Style>
+        <Style Selector=":is(UserControl).list Button.cardAction">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+        <Style Selector=":is(UserControl).list Button.cardAction.active /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+        <Style Selector=":is(UserControl).list Button.cardAction:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource Vlc.Overlay.Hover}" />
         </Style>
     </UserControl.Styles>
+    <UserControl.Resources>
+        <!-- One template for grid and list; the .list styles above rearrange it,
+             so switching layouts keeps each card and its loaded thumbnail. -->
+        <DataTemplate x:Key="MediaCardTemplate" x:DataType="vm:HomeMediaItem">
+            <Panel Classes="mediaCard">
+                <Panel.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="Play"
+                                  Command="{Binding DataContext.OpenRecentCommand, ElementName=HomeRoot}"
+                                  CommandParameter="{Binding Source}" />
+                        <MenuItem Header="Add to queue"
+                                  Command="{Binding DataContext.EnqueueHomeItemCommand, ElementName=HomeRoot}"
+                                  CommandParameter="{Binding Source}" />
+                        <MenuItem Header="Add to favorites"
+                                  IsVisible="{Binding !IsFavorite}"
+                                  Command="{Binding DataContext.AddFavoriteCommand, ElementName=HomeRoot}"
+                                  CommandParameter="{Binding Source}" />
+                        <MenuItem Header="Remove from favorites"
+                                  IsVisible="{Binding IsFavorite}"
+                                  Command="{Binding DataContext.RemoveFavoriteCommand, ElementName=HomeRoot}"
+                                  CommandParameter="{Binding Source}" />
+                        <Separator />
+                        <MenuItem Header="Remove from this section"
+                                  Command="{Binding DataContext.RemoveHomeItemCommand, ElementName=HomeRoot}"
+                                  CommandParameter="{Binding}" />
+                    </ContextMenu>
+                </Panel.ContextMenu>
+                <Button Classes="mediaTile"
+                        Command="{Binding DataContext.OpenRecentCommand, ElementName=HomeRoot}"
+                        CommandParameter="{Binding Source}"
+                        ToolTip.Tip="{Binding Title}"
+                        AutomationProperties.Name="{Binding Title}">
+                    <DockPanel>
+                        <controls:AspectRatioDecorator Classes="thumbnailBox">
+                            <Border Classes="artwork">
+                                <Panel>
+                                    <controls:MediaThumbnail Source="{Binding Source}" />
+                                    <ProgressBar Classes="cardProgress"
+                                                 IsVisible="{Binding HasProgress}"
+                                                 Value="{Binding Progress}" />
+                                </Panel>
+                            </Border>
+                        </controls:AspectRatioDecorator>
+                        <DockPanel>
+                            <TextBlock Classes="cardDetail" Text="{Binding Detail}" />
+                            <TextBlock Classes="cardTitle" Text="{Binding Title}" />
+                        </DockPanel>
+                    </DockPanel>
+                </Button>
+                <StackPanel Classes="cardActions">
+                    <Button Classes="icon cardAction"
+                            Command="{Binding DataContext.EnqueueHomeItemCommand, ElementName=HomeRoot}"
+                            CommandParameter="{Binding Source}"
+                            ToolTip.Tip="Add to queue"
+                            AutomationProperties.Name="{Binding Title, StringFormat='Add {0} to queue'}">
+                        <controls:VlcIcon Width="24" Height="24" Icon="{StaticResource Icon.Add}" />
+                    </Button>
+                    <Button Classes="icon cardAction"
+                            IsVisible="{Binding !IsFavorite}"
+                            Command="{Binding DataContext.AddFavoriteCommand, ElementName=HomeRoot}"
+                            CommandParameter="{Binding Source}"
+                            ToolTip.Tip="Add to favorites"
+                            AutomationProperties.Name="{Binding Title, StringFormat='Add {0} to favorites'}">
+                        <controls:VlcIcon Width="24" Height="24" Icon="{StaticResource Icon.Favorite}" />
+                    </Button>
+                    <Button Classes="icon cardAction active"
+                            IsVisible="{Binding IsFavorite}"
+                            Command="{Binding DataContext.RemoveFavoriteCommand, ElementName=HomeRoot}"
+                            CommandParameter="{Binding Source}"
+                            ToolTip.Tip="Remove from favorites"
+                            AutomationProperties.Name="{Binding Title, StringFormat='Remove {0} from favorites'}">
+                        <controls:VlcIcon Width="24" Height="24" Icon="{StaticResource Icon.FavoriteActive}" />
+                    </Button>
+                    <Button Classes="icon cardAction"
+                            Command="{Binding DataContext.RemoveHomeItemCommand, ElementName=HomeRoot}"
+                            CommandParameter="{Binding}"
+                            ToolTip.Tip="Remove from this section"
+                            AutomationProperties.Name="{Binding Title, StringFormat='Remove {0} from this section'}">
+                        <controls:VlcIcon Width="24" Height="24" Icon="{StaticResource Icon.Close}" />
+                    </Button>
+                </StackPanel>
+            </Panel>
+        </DataTemplate>
+    </UserControl.Resources>
     <Grid RowDefinitions="40,*,Auto">
         <!-- The design's title bar; it doubles as the window caption on Home. -->
         <Border x:Name="HomeHeader"
@@ -260,7 +486,8 @@
             <!-- Content area (design: BG/B1, padding 20): a 34 tall header with
                  the section, item count, layout toggle, search and more, then a
                  Divider/Dim line. No back/forward or sort (not supported). -->
-            <Border Grid.Column="1"
+            <Border x:Name="ContentPanel"
+                    Grid.Column="1"
                     Background="{DynamicResource Vlc.Bg.B1}"
                     Padding="20">
                 <Grid RowDefinitions="Auto,*">
@@ -364,71 +591,64 @@
                     <ScrollViewer Grid.Row="1"
                                   IsVisible="{Binding HomeHasItems}"
                                   HorizontalScrollBarVisibility="Disabled">
-                        <ItemsControl Classes="mediaItems" ItemsSource="{Binding HomeItems}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate x:DataType="vm:HomeMediaItem">
-                                    <Border Classes="mediaCard"
-                                            Background="{DynamicResource PlayerCard}"
-                                            CornerRadius="6"
-                                            ClipToBounds="True">
-                                        <StackPanel>
-                                            <Button Classes="menuAction"
-                                                    Padding="0"
-                                                    HorizontalAlignment="Stretch"
-                                                    HorizontalContentAlignment="Stretch"
-                                                    Command="{Binding DataContext.OpenRecentCommand, ElementName=HomeRoot}"
-                                                    CommandParameter="{Binding Source}"
-                                                    AutomationProperties.Name="{Binding Title}">
-                                                <StackPanel>
-                                                    <Border Classes="artwork"
-                                                            Height="116"
-                                                            Background="{DynamicResource PlayerCardArtwork}">
-                                                        <controls:MediaThumbnail Source="{Binding Source}" />
-                                                    </Border>
-                                                    <StackPanel Margin="12" Spacing="6">
-                                                        <TextBlock Text="{Binding Title}"
-                                                                   TextTrimming="CharacterEllipsis"
-                                                                   FontWeight="SemiBold" />
-                                                        <TextBlock Text="{Binding Detail}"
-                                                                   Foreground="{DynamicResource PlayerSecondaryText}"
-                                                                   FontSize="12" />
-                                                        <ProgressBar IsVisible="{Binding HasProgress}"
-                                                                     Minimum="0"
-                                                                     Maximum="1"
-                                                                     Value="{Binding Progress}"
-                                                                     Height="3"
-                                                                     Foreground="{DynamicResource PlayerAccent}" />
-                                                    </StackPanel>
-                                                </StackPanel>
-                                            </Button>
-                                            <StackPanel Orientation="Horizontal" Spacing="4" Margin="4,0,4,4">
-                                                <Button Classes="playbackAction"
-                                                        Content="+ Queue"
-                                                        Command="{Binding DataContext.EnqueueHomeItemCommand, ElementName=HomeRoot}"
-                                                        CommandParameter="{Binding Source}"
-                                                        AutomationProperties.Name="{Binding Title, StringFormat='Add {0} to queue'}" />
-                                                <Button Classes="playbackAction"
-                                                        Command="{Binding DataContext.AddFavoriteCommand, ElementName=HomeRoot}"
-                                                        CommandParameter="{Binding Source}"
-                                                        ToolTip.Tip="Add to favorites"
-                                                        AutomationProperties.Name="{Binding Title, StringFormat='Add {0} to favorites'}">
-                                                    <controls:VlcIcon Width="24" Height="24" Margin="-5"
-                                                                      Icon="{StaticResource Icon.Favorite}" />
-                                                </Button>
-                                                <Button Classes="playbackAction"
-                                                        Command="{Binding DataContext.RemoveHomeItemCommand, ElementName=HomeRoot}"
-                                                        CommandParameter="{Binding}"
-                                                        ToolTip.Tip="Remove from this section"
-                                                        AutomationProperties.Name="{Binding Title, StringFormat='Remove {0} from this section'}">
-                                                    <controls:VlcIcon Width="24" Height="24" Margin="-6"
-                                                                      Icon="{StaticResource Icon.Close}" />
-                                                </Button>
-                                            </StackPanel>
+                        <Panel>
+                            <!-- Home: one row per section (history-only library, D1);
+                                 empty sections are hidden. -->
+                            <StackPanel x:Name="HomeSections" IsVisible="{Binding ShowHomeSections}">
+                                <StackPanel Classes="homeSection" IsVisible="{Binding HasHomeContinueItems}">
+                                    <Button Classes="sectionTitle"
+                                            Command="{Binding SelectHomeSectionCommand}"
+                                            CommandParameter="Continue watching"
+                                            ToolTip.Tip="Show all"
+                                            AutomationProperties.Name="Continue watching, show all">
+                                        <StackPanel Orientation="Horizontal" Spacing="5">
+                                            <TextBlock Text="Continue Watching" FontSize="20" VerticalAlignment="Center" />
+                                            <controls:VlcIcon Width="24" Height="24" Icon="{StaticResource Icon.ChevronRight}" />
                                         </StackPanel>
-                                    </Border>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
+                                    </Button>
+                                    <ItemsControl Classes="mediaItems"
+                                                  ItemsSource="{Binding HomeContinueItems}"
+                                                  ItemTemplate="{StaticResource MediaCardTemplate}" />
+                                </StackPanel>
+                                <StackPanel Classes="homeSection" IsVisible="{Binding HasHomeRecentItems}">
+                                    <Button Classes="sectionTitle"
+                                            Command="{Binding SelectHomeSectionCommand}"
+                                            CommandParameter="Recent"
+                                            ToolTip.Tip="Show all"
+                                            AutomationProperties.Name="Recently played, show all">
+                                        <StackPanel Orientation="Horizontal" Spacing="5">
+                                            <TextBlock Text="Recently Played" FontSize="20" VerticalAlignment="Center" />
+                                            <controls:VlcIcon Width="24" Height="24" Icon="{StaticResource Icon.ChevronRight}" />
+                                        </StackPanel>
+                                    </Button>
+                                    <ItemsControl Classes="mediaItems"
+                                                  ItemsSource="{Binding HomeRecentItems}"
+                                                  ItemTemplate="{StaticResource MediaCardTemplate}" />
+                                </StackPanel>
+                                <StackPanel Classes="homeSection" IsVisible="{Binding HasHomeFavoriteItems}">
+                                    <Button Classes="sectionTitle"
+                                            Command="{Binding SelectHomeSectionCommand}"
+                                            CommandParameter="Favorites"
+                                            ToolTip.Tip="Show all"
+                                            AutomationProperties.Name="Favorites, show all">
+                                        <StackPanel Orientation="Horizontal" Spacing="5">
+                                            <TextBlock Text="Favorites" FontSize="20" VerticalAlignment="Center" />
+                                            <controls:VlcIcon Width="24" Height="24" Icon="{StaticResource Icon.ChevronRight}" />
+                                        </StackPanel>
+                                    </Button>
+                                    <ItemsControl Classes="mediaItems"
+                                                  ItemsSource="{Binding HomeFavoriteItems}"
+                                                  ItemTemplate="{StaticResource MediaCardTemplate}" />
+                                </StackPanel>
+                            </StackPanel>
+                            <!-- Section routes and search results: every card in one grid or list. -->
+                            <ItemsControl x:Name="HomeGrid"
+                                          Classes="mediaItems"
+                                          Margin="0,0,0,20"
+                                          IsVisible="{Binding ShowHomeGrid}"
+                                          ItemsSource="{Binding HomeGridItems}"
+                                          ItemTemplate="{StaticResource MediaCardTemplate}" />
+                        </Panel>
                     </ScrollViewer>
                 </Grid>
             </Border>

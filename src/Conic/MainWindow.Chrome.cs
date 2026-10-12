@@ -162,28 +162,36 @@ public partial class MainWindow
         PlayerDock.Padding = new Thickness(denseBar ? Math.Min(layout.Padding, 12) : layout.Padding, 11);
 
         // Panels open between the title bar and the control bar.
-        double top = PlatformChrome.TitleBarHeight;
         OpenMenu.MaxHeight = Math.Max(160, Bounds.Height - OpenMenu.Margin.Top - PlayerBarHeight - 8);
-        if (layout.IsCompact)
+        ApplyDrawerLayout();
+    }
+
+    /// <summary>
+    /// Bar panels (design: anchored to the right edge between the title bar
+    /// and the control bar, 400 wide). The queue and playback panels fill
+    /// that height; the tracks panel fits its content. Where the bar is
+    /// too narrow for the track buttons the panels become a sheet above the
+    /// bar, inset 16 from the sides. Fullscreen uses the same room: the bars
+    /// overlay the video there and stay up while a panel is open.
+    /// </summary>
+    private void ApplyDrawerLayout()
+    {
+        PlayerLayoutResult layout = PlayerLayoutPolicy.ForWidth(Bounds.Width);
+        bool sheet = !layout.ShowTrackButtons;
+        double gap = sheet ? 8 : 20;
+        double top = PlatformChrome.TitleBarHeight + gap, bottom = PlayerBarHeight + gap;
+        double room = Math.Max(160, Bounds.Height - top - bottom);
+        foreach (Border panel in new[] { QueueDrawer })
         {
-            const double gap = 8;
-            double room = Math.Max(160, Bounds.Height - top - PlayerBarHeight - 2 * gap);
-            QueueDrawer.Width = double.NaN;
-            QueueDrawer.MaxWidth = double.PositiveInfinity;
-            QueueDrawer.Height = Math.Min(Math.Min(Math.Max(260, Bounds.Height * .72), 520), room);
-            QueueDrawer.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch;
-            QueueDrawer.VerticalAlignment = Avalonia.Layout.VerticalAlignment.Bottom;
-            QueueDrawer.Margin = new Thickness(12, top + gap, 12, PlayerBarHeight + gap);
-        }
-        else
-        {
-            const double gap = 12;
-            QueueDrawer.Width = 400;
-            QueueDrawer.MaxWidth = Math.Max(320, Bounds.Width * .42);
-            QueueDrawer.Height = double.NaN;
-            QueueDrawer.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right;
-            QueueDrawer.VerticalAlignment = Avalonia.Layout.VerticalAlignment.Stretch;
-            QueueDrawer.Margin = new Thickness(0, top + gap, 16, PlayerBarHeight + gap);
+            bool fitsContent = _presentation.IsTracksPanel;
+            panel.Classes.Set("docked", !sheet);
+            panel.Width = sheet ? double.NaN : 400;
+            panel.MaxWidth = sheet ? double.PositiveInfinity : Math.Max(320, Bounds.Width - 32);
+            panel.HorizontalAlignment = sheet ? Avalonia.Layout.HorizontalAlignment.Stretch : Avalonia.Layout.HorizontalAlignment.Right;
+            panel.Margin = sheet ? new Thickness(16, top, 16, bottom) : new Thickness(0, top, 0, bottom);
+            panel.MaxHeight = room;
+            panel.Height = sheet && !fitsContent ? Math.Min(Math.Min(Math.Max(260, Bounds.Height * .72), 520), room) : double.NaN;
+            panel.VerticalAlignment = sheet || fitsContent ? Avalonia.Layout.VerticalAlignment.Bottom : Avalonia.Layout.VerticalAlignment.Stretch;
         }
     }
 

@@ -17,6 +17,9 @@
            Button.secondary                 the plain button look, explicitly
            TextBox.search                   search field with a leading icon
            Slider.timeline, Slider.volume   player sliders
+           Slider.speed                     0.25-2 speed slider with ticks
+           Border.barPanel, Button.panelTab bar panel surface and tabs
+           Button.panelRow, Border.panelItem 30-tall panel rows
            CheckBox                         every CheckBox is an ON/OFF toggle -->
     <Styles.Resources>
         <CornerRadius x:Key="ControlCornerRadius">6</CornerRadius>
@@ -201,7 +204,7 @@
         <Setter Property="BorderThickness" Value="0" />
         <Setter Property="Foreground" Value="{DynamicResource PlayerSecondaryText}" />
     </Style>
-    <!-- Current tab, track or queue item: accent label on BG/Accent Bright,
+    <!-- Current library tab or menu row: accent label on BG/Accent Bright,
          kept under the pointer. -->
     <Style Selector="Button.drawerTab.selected, Button.menuAction.selected, Button.recentItem.selected">
         <Setter Property="Background" Value="{DynamicResource PlayerSelection}" />
@@ -211,6 +214,207 @@
         <Setter Property="Background" Value="{DynamicResource PlayerSelection}" />
         <Setter Property="Foreground" Value="{DynamicResource Vlc.Accent.Bright}" />
     </Style>
+
+    <!-- Bar panels .......................................................... -->
+
+    <!-- Design: the panels the control bar's tools open (queue, tracks,
+         playback settings). A solid BG/B1 surface with
+         a Divider/Dim rim; .docked (right-anchored) keeps only the left
+         corners round. -->
+    <Style Selector="Border.barPanel">
+        <Setter Property="Background" Value="{DynamicResource Vlc.Bg.B1}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Vlc.Divider.Dim}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="6" />
+        <Setter Property="ClipToBounds" Value="True" />
+        <Setter Property="BoxShadow" Value="0 8 15 0 #75000000" />
+    </Style>
+    <Style Selector="Border.barPanel.docked">
+        <Setter Property="BorderThickness" Value="1,1,0,1" />
+        <Setter Property="CornerRadius" Value="6,0,0,6" />
+    </Style>
+    <!-- Tab row: icon + label tabs sharing the width, a Divider/Dim line
+         below; the selected tab is accent with a 2 px accent underline. -->
+    <Style Selector="Border.panelTabs">
+        <Setter Property="Padding" Value="8,0,6,0" />
+        <Setter Property="BorderThickness" Value="0,0,0,1" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Vlc.Divider.Dim}" />
+    </Style>
+    <Style Selector="Button.panelTab">
+        <Setter Property="Height" Value="40" />
+        <Setter Property="MinWidth" Value="0" />
+        <Setter Property="Padding" Value="6,0" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0,0,0,2" />
+        <Setter Property="CornerRadius" Value="0" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Foreground" Value="{DynamicResource Vlc.Fg.A2}" />
+    </Style>
+    <Style Selector="Button.panelTab:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Vlc.Divider.Bright}" />
+        <Setter Property="Foreground" Value="{DynamicResource Vlc.Fg.1}" />
+    </Style>
+    <Style Selector="Button.panelTab.selected">
+        <Setter Property="BorderBrush" Value="{DynamicResource PlayerAccent}" />
+        <Setter Property="Foreground" Value="{DynamicResource PlayerAccent}" />
+    </Style>
+    <Style Selector="Button.panelTab.selected:pointerover /template/ ContentPresenter#PART_ContentPresenter, Button.panelTab.selected:pressed /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="BorderBrush" Value="{DynamicResource PlayerAccent}" />
+        <Setter Property="Foreground" Value="{DynamicResource Vlc.Accent.Bright}" />
+    </Style>
+    <Style Selector="Button.panelTab:focus-visible">
+        <Setter Property="BorderThickness" Value="2" />
+    </Style>
+    <Style Selector="StackPanel.panelTab">
+        <Setter Property="Orientation" Value="Horizontal" />
+        <Setter Property="Spacing" Value="6" />
+    </Style>
+    <Style Selector="StackPanel.panelTab > controls|VlcIcon">
+        <Setter Property="Width" Value="20" />
+        <Setter Property="Height" Value="20" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="StackPanel.panelTab > TextBlock">
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+    </Style>
+    <!-- Content: pages padded 16,12; FG/A3 section captions, FG/A2 labels,
+         hints and dividers between sections. -->
+    <Style Selector="StackPanel.panelPage">
+        <Setter Property="Margin" Value="16,12,12,12" />
+        <Setter Property="Spacing" Value="4" />
+    </Style>
+    <Style Selector="TextBlock.panelCaption">
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Margin" Value="0,2,0,4" />
+        <Setter Property="Foreground" Value="{DynamicResource Vlc.Fg.A3}" />
+    </Style>
+    <Style Selector="TextBlock.panelLabel">
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Foreground" Value="{DynamicResource Vlc.Fg.A2}" />
+    </Style>
+    <Style Selector="TextBlock.panelHint">
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+        <Setter Property="Foreground" Value="{DynamicResource Vlc.Fg.A3}" />
+    </Style>
+    <Style Selector="TextBlock.rowDetail">
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="Foreground" Value="{DynamicResource Vlc.Fg.A3}" />
+    </Style>
+    <Style Selector="Border.panelDivider">
+        <Setter Property="Height" Value="1" />
+        <Setter Property="Margin" Value="0,8" />
+        <Setter Property="Background" Value="{DynamicResource Vlc.Divider.Dim}" />
+    </Style>
+    <!-- 30-tall rows (queue items, tracks, chapters). The
+         selected track shows the accent check; the current queue item is
+         accent. -->
+    <Style Selector="Button.panelRow">
+        <Setter Property="MinHeight" Value="30" />
+        <Setter Property="Padding" Value="8,4" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="CornerRadius" Value="4" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Foreground" Value="{DynamicResource Vlc.Fg.2}" />
+    </Style>
+    <Style Selector="Button.panelRow.selected">
+        <Setter Property="Foreground" Value="{DynamicResource Vlc.Fg.1}" />
+    </Style>
+    <Style Selector="Button.panelRow.current">
+        <Setter Property="Foreground" Value="{DynamicResource PlayerAccent}" />
+    </Style>
+    <Style Selector="Button.panelRow.current:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Foreground" Value="{DynamicResource Vlc.Accent.Bright}" />
+    </Style>
+    <Style Selector="controls|VlcIcon.rowCheck">
+        <Setter Property="Width" Value="20" />
+        <Setter Property="Height" Value="20" />
+        <Setter Property="Foreground" Value="{DynamicResource PlayerAccent}" />
+    </Style>
+    <Style Selector="Path.dragHandle">
+        <Setter Property="Width" Value="10" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="Stroke" Value="{DynamicResource Vlc.Fg.A3}" />
+        <Setter Property="StrokeThickness" Value="1.25" />
+    </Style>
+    <!-- A row with actions (queue items): the whole row highlights and
+         the actions show on hover or keyboard focus, like Home's cards. -->
+    <Style Selector="Border.panelItem">
+        <Setter Property="CornerRadius" Value="4" />
+        <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="Border.panelItem:pointerover">
+        <Setter Property="Background" Value="{DynamicResource Vlc.Overlay.Hover}" />
+    </Style>
+    <Style Selector="Border.panelItem Button.panelRow:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="StackPanel.rowActions">
+        <Setter Property="Orientation" Value="Horizontal" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="Opacity" Value="0" />
+    </Style>
+    <Style Selector="Border.panelItem:pointerover StackPanel.rowActions, Border.panelItem:focus-within StackPanel.rowActions">
+        <Setter Property="Opacity" Value="1" />
+    </Style>
+    <Style Selector="Button.icon.rowAction">
+        <Setter Property="Width" Value="28" />
+        <Setter Property="Height" Value="28" />
+        <Setter Property="Padding" Value="4" />
+    </Style>
+    <!-- Repeat one: a small "1" on the repeat icon. -->
+    <Style Selector="TextBlock.repeatOne">
+        <Setter Property="FontSize" Value="9" />
+        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="HorizontalAlignment" Value="Center" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <!-- Delay steps, the value field and the full-width footer button. -->
+    <Style Selector="Button.panelStep">
+        <Setter Property="Margin" Value="0,0,6,6" />
+        <Setter Property="MinHeight" Value="32" />
+        <Setter Property="Padding" Value="10,4" />
+        <Setter Property="FontSize" Value="13" />
+    </Style>
+    <Style Selector="Border.panelValue">
+        <Setter Property="MinWidth" Value="96" />
+        <Setter Property="Padding" Value="10,6" />
+        <Setter Property="CornerRadius" Value="6" />
+        <Setter Property="Background" Value="{DynamicResource Vlc.Bg.B2}" />
+    </Style>
+    <Style Selector="Border.panelValue > TextBlock">
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="FontFeatures" Value="tnum" />
+        <Setter Property="Foreground" Value="{DynamicResource Vlc.Fg.2}" />
+    </Style>
+    <Style Selector="Button.panelFooter">
+        <Setter Property="Margin" Value="12,0,12,12" />
+        <Setter Property="Height" Value="32" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Background" Value="{DynamicResource Vlc.Bg.A5}" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="CornerRadius" Value="4" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Foreground" Value="{DynamicResource Vlc.Fg.A2}" />
+    </Style>
+    <Style Selector="TextBlock.tickLabel">
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="FontFeatures" Value="tnum" />
+        <Setter Property="Foreground" Value="{DynamicResource Vlc.Fg.A3}" />
+    </Style>
+
 
     <!-- Control bar (design: 54 tall, BG/A3, padding 11 vertical; the
          horizontal padding and the group gap follow PlayerLayoutPolicy). -->
@@ -574,8 +778,69 @@
     <Style Selector="Slider.volume:disabled /template/ Thumb">
         <Setter Property="Background" Value="{DynamicResource Vlc.Fg.A3}" />
     </Style>
+    <!-- Playback speed (design: Playback panel): an 8-tall BG/B2 track with a
+         tick every 0.25, the part up to the value in BG/Accent Bright and an
+         8x20 accent handle. The TickPanel inset is the Track margin plus half
+         the handle, so the ticks sit under the handle's stops. -->
+    <Style Selector="Slider.speed">
+        <Setter Property="Height" Value="24" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="Background" Value="{DynamicResource Vlc.Bg.B2}" />
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Grid Margin="{TemplateBinding Padding}">
+                    <Border x:Name="TrackBackground"
+                            Height="8"
+                            VerticalAlignment="Center"
+                            CornerRadius="4"
+                            BorderThickness="1"
+                            BorderBrush="Transparent"
+                            Background="{TemplateBinding Background}" />
+                    <controls:TickPanel Inset="6" Height="4" VerticalAlignment="Center" IsHitTestVisible="False">
+                        <Border Classes="speedTick" />
+                        <Border Classes="speedTick" />
+                        <Border Classes="speedTick" />
+                        <Border Classes="speedTick" />
+                        <Border Classes="speedTick" />
+                        <Border Classes="speedTick" />
+                        <Border Classes="speedTick" />
+                        <Border Classes="speedTick" />
+                    </controls:TickPanel>
+                    <Track Name="PART_Track" Orientation="Horizontal" Margin="2,0"
+                           Minimum="{TemplateBinding Minimum}" Maximum="{TemplateBinding Maximum}"
+                           Value="{TemplateBinding Value}">
+                        <Track.DecreaseButton>
+                            <RepeatButton Name="PART_DecreaseButton" Theme="{StaticResource PlayerSliderFill}" Padding="0,8" CornerRadius="4" />
+                        </Track.DecreaseButton>
+                        <Track.Thumb>
+                            <Thumb Theme="{StaticResource PlayerSliderThumb}" Width="8" Height="20" CornerRadius="3" />
+                        </Track.Thumb>
+                        <Track.IncreaseButton>
+                            <RepeatButton Name="PART_IncreaseButton" Theme="{StaticResource PlayerSliderFill}" />
+                        </Track.IncreaseButton>
+                    </Track>
+                </Grid>
+            </ControlTemplate>
+        </Setter>
+    </Style>
+    <Style Selector="Slider.speed /template/ Border.speedTick">
+        <Setter Property="Width" Value="1" />
+        <Setter Property="Background" Value="{DynamicResource Vlc.Fg.A4}" />
+    </Style>
+    <Style Selector="Slider.speed /template/ RepeatButton#PART_DecreaseButton, Slider.speed:pointerover /template/ RepeatButton#PART_DecreaseButton, Slider.speed:pressed /template/ RepeatButton#PART_DecreaseButton">
+        <Setter Property="Background" Value="{DynamicResource Vlc.Bg.AccentBright}" />
+    </Style>
+    <Style Selector="Slider.speed /template/ RepeatButton#PART_IncreaseButton, Slider.speed:pointerover /template/ RepeatButton#PART_IncreaseButton, Slider.speed:pressed /template/ RepeatButton#PART_IncreaseButton">
+        <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="Slider.speed /template/ Thumb">
+        <Setter Property="Background" Value="{DynamicResource PlayerAccent}" />
+    </Style>
+    <Style Selector="Slider.speed:pointerover /template/ Thumb, Slider.speed:pressed /template/ Thumb">
+        <Setter Property="Background" Value="{DynamicResource PlayerAccentHover}" />
+    </Style>
     <!-- Keyboard focus outlines the track in accent. -->
-    <Style Selector="Slider.timeline:focus-visible /template/ Border#TrackBackground, Slider.volume:focus-visible /template/ Border#TrackBackground">
+    <Style Selector="Slider.timeline:focus-visible /template/ Border#TrackBackground, Slider.volume:focus-visible /template/ Border#TrackBackground, Slider.speed:focus-visible /template/ Border#TrackBackground">
         <Setter Property="BorderBrush" Value="{DynamicResource PlayerAccent}" />
     </Style>
 

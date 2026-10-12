@@ -1299,14 +1299,8 @@
                             Command="{Binding ToggleMuteCommand}"
                             AutomationProperties.Name="{Binding MuteName}"
                             ToolTip.Tip="{Binding MuteName}">
-                        <Grid>
-                            <controls:VlcIcon Width="24" Height="24"
-                                              IsVisible="{Binding !IsMuted}"
-                                              Icon="{StaticResource Icon.VolumeHigh}" />
-                            <controls:VlcIcon Width="24" Height="24"
-                                              IsVisible="{Binding IsMuted}"
-                                              Icon="{StaticResource Icon.VolumeMute}" />
-                        </Grid>
+                        <controls:VlcIcon Width="24" Height="24"
+                                          Icon="{Binding VolumeLevel, Converter={x:Static controls:VolumeIconConverter.Instance}}" />
                     </Button>
                     <controls:PlayerVolumeSlider x:Name="PlayerVolume"
                                                  Width="120"

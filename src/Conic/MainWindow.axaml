@@ -477,171 +477,191 @@
         </Border>
 
         <!-- Drawers and panels open below the title bar and above the
-             control bar (40 + 12 and 54 + 12). -->
+             control bar (ApplyDrawerLayout). The library drawer shares the
+             bar panels' surface and tab row. -->
         <Border x:Name="LibraryPanel"
                 Grid.RowSpan="3"
                 ZIndex="30"
+                Classes="barPanel"
                 IsVisible="{Binding IsLibraryOpen}"
                 Focusable="True"
-                Width="430"
-                MaxWidth="430"
+                Width="400"
                 HorizontalAlignment="Right"
                 VerticalAlignment="Stretch"
-                Margin="0,52,16,66"
-                Padding="16"
-                CornerRadius="6"
-                Background="{DynamicResource PlayerSurface}"
-                BorderBrush="{DynamicResource PlayerBorder}"
-                BorderThickness="1"
-                BoxShadow="0 12 32 0 #80000000"
                 AutomationProperties.Name="{Binding LibraryPanelAutomationName}">
-            <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="10">
-                <Grid ColumnDefinitions="*,Auto">
-                    <StackPanel>
-                        <TextBlock Text="{Binding LibraryTitle}"
-                                   FontSize="17"
-                                   FontWeight="SemiBold" />
-                        <TextBlock Text="{Binding LibraryDescription}"
-                                   Classes="settingHint"
-                                   TextWrapping="Wrap" />
-                    </StackPanel>
-                    <Button x:Name="CloseLibraryButton"
-                            Grid.Column="1"
-                            Classes="iconChrome"
-                            Click="OnCloseLibrary"
-                            ToolTip.Tip="{Binding LibraryCloseToolTip}"
-                            AutomationProperties.Name="{Binding LibraryCloseAutomationName}">
-                        <controls:VlcIcon Width="24" Height="24"
-                                          Icon="{StaticResource Icon.Close}" />
-                    </Button>
-                </Grid>
-                <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="5">
-                    <Button x:Name="LibraryRecentTab"
-                            Classes="drawerTab"
-                            Content="{Binding LibraryRecentTabText}"
-                            Click="OnLibraryTab"
-                            Tag="Recent"
-                            AutomationProperties.Name="{Binding LibraryRecentTabAutomationName}" />
-                    <Button Classes="drawerTab"
-                            Content="{Binding LibraryFavoritesTabText}"
-                            Click="OnLibraryTab"
-                            Tag="Favorites"
-                            AutomationProperties.Name="{Binding LibraryFavoritesTabAutomationName}" />
-                    <Button Classes="drawerTab"
-                            Content="{Binding LibraryResumeTabText}"
-                            Click="OnLibraryTab"
-                            Tag="Resume"
-                            AutomationProperties.Name="{Binding LibraryResumeTabAutomationName}" />
-                    <Button Classes="drawerTab"
-                            Content="{Binding LibraryFavoriteCurrent}"
-                            Command="{Binding AddFavoriteCommand}"
-                            IsVisible="{Binding !IsCurrentFavorite}"
-                            ToolTip.Tip="{Binding LibraryFavoriteCurrentToolTip}"
-                            AutomationProperties.Name="{Binding LibraryFavoriteCurrentAutomationName}" />
-                </StackPanel>
-                <Grid Grid.Row="2">
-                    <StackPanel IsVisible="{Binding IsLibraryRecentTab}" Spacing="6">
-                        <TextBlock Text="{Binding LibraryRecentTitle}" FontWeight="SemiBold" />
-                        <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+            <Grid RowDefinitions="Auto,*,Auto">
+                <Border Classes="panelTabs">
+                    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="4">
+                        <UniformGrid Rows="1">
+                            <Button x:Name="LibraryRecentTab"
+                                    Classes="panelTab"
+                                    Classes.selected="{Binding IsLibraryRecentTab}"
+                                    Click="OnLibraryTab"
+                                    Tag="Recent"
+                                    AutomationProperties.Name="{Binding LibraryRecentTabAutomationName}">
+                                <StackPanel Classes="panelTab">
+                                    <controls:VlcIcon Icon="{StaticResource Icon.Recent}" />
+                                    <TextBlock Text="{Binding LibraryRecentTabText}" />
+                                </StackPanel>
+                            </Button>
+                            <Button Classes="panelTab"
+                                    Classes.selected="{Binding IsLibraryFavoritesTab}"
+                                    Click="OnLibraryTab"
+                                    Tag="Favorites"
+                                    AutomationProperties.Name="{Binding LibraryFavoritesTabAutomationName}">
+                                <StackPanel Classes="panelTab">
+                                    <controls:VlcIcon Icon="{StaticResource Icon.Favorite}" />
+                                    <TextBlock Text="{Binding LibraryFavoritesTabText}" />
+                                </StackPanel>
+                            </Button>
+                            <Button Classes="panelTab"
+                                    Classes.selected="{Binding IsLibraryResumeTab}"
+                                    Click="OnLibraryTab"
+                                    Tag="Resume"
+                                    AutomationProperties.Name="{Binding LibraryResumeTabAutomationName}">
+                                <StackPanel Classes="panelTab">
+                                    <controls:VlcIcon Icon="{StaticResource Icon.Replay}" />
+                                    <TextBlock Text="{Binding LibraryResumeTabText}" />
+                                </StackPanel>
+                            </Button>
+                        </UniformGrid>
+                        <Button Grid.Column="1"
+                                Classes="icon"
+                                Command="{Binding AddFavoriteCommand}"
+                                IsVisible="{Binding !IsCurrentFavorite}"
+                                ToolTip.Tip="{Binding LibraryFavoriteCurrentToolTip}"
+                                AutomationProperties.Name="{Binding LibraryFavoriteCurrentAutomationName}">
+                            <controls:VlcIcon Width="24" Height="24"
+                                              Icon="{StaticResource Icon.FavoriteActive}" />
+                        </Button>
+                        <Button x:Name="CloseLibraryButton"
+                                Grid.Column="2"
+                                Classes="icon"
+                                Click="OnCloseLibrary"
+                                ToolTip.Tip="{Binding LibraryCloseToolTip}"
+                                AutomationProperties.Name="{Binding LibraryCloseAutomationName}">
+                            <controls:VlcIcon Width="20" Height="20"
+                                              Icon="{StaticResource Icon.Close}" />
+                        </Button>
+                    </Grid>
+                </Border>
+                <Grid Grid.Row="1" Margin="16,8,12,8">
+                    <Grid IsVisible="{Binding IsLibraryRecentTab}" RowDefinitions="Auto,*,Auto" RowSpacing="4">
+                        <TextBlock Classes="panelCaption" Text="{Binding LibraryRecentTitle}" />
+                        <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled">
                             <ItemsControl ItemsSource="{Binding RecentItems}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate x:DataType="application:RecentMediaEntry">
-                                        <Grid ColumnDefinitions="*,Auto" Margin="0,2">
-                                            <Button Classes="recentItem"
-                                                    Click="OnOpenLibraryEntry"
-                                                    ToolTip.Tip="{Binding DataContext.LibraryOpenRecentToolTip, ElementName=VideoArea}"
-                                                    AutomationProperties.Name="{Binding DataContext.LibraryOpenRecentAutomationName, ElementName=VideoArea}">
-                                                <TextBlock Text="{Binding DisplayName}"
-                                                           TextTrimming="CharacterEllipsis" />
-                                            </Button>
-                                            <Button Grid.Column="1"
-                                                    Classes="recentRemove"
-                                                    Command="{Binding DataContext.RemoveRecentCommand, ElementName=VideoArea}"
-                                                    CommandParameter="{Binding Source}"
-                                                    AutomationProperties.Name="{Binding DataContext.LibraryRemoveRecentAutomationName, ElementName=VideoArea}">
-                                                <controls:VlcIcon Width="24" Height="24"
-                                                                  Icon="{StaticResource Icon.Close}" />
-                                            </Button>
-                                        </Grid>
+                                        <Border Classes="panelItem">
+                                            <Grid ColumnDefinitions="*,Auto">
+                                                <Button Classes="panelRow"
+                                                        Click="OnOpenLibraryEntry"
+                                                        ToolTip.Tip="{Binding DataContext.LibraryOpenRecentToolTip, ElementName=VideoArea}"
+                                                        AutomationProperties.Name="{Binding DataContext.LibraryOpenRecentAutomationName, ElementName=VideoArea}">
+                                                    <TextBlock Text="{Binding DisplayName}"
+                                                               TextTrimming="CharacterEllipsis" />
+                                                </Button>
+                                                <StackPanel Grid.Column="1" Classes="rowActions">
+                                                    <Button Classes="icon rowAction"
+                                                            Command="{Binding DataContext.RemoveRecentCommand, ElementName=VideoArea}"
+                                                            CommandParameter="{Binding Source}"
+                                                            AutomationProperties.Name="{Binding DataContext.LibraryRemoveRecentAutomationName, ElementName=VideoArea}">
+                                                        <controls:VlcIcon Width="20" Height="20"
+                                                                          Icon="{StaticResource Icon.Close}" />
+                                                    </Button>
+                                                </StackPanel>
+                                            </Grid>
+                                        </Border>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
                         </ScrollViewer>
-                        <TextBlock Text="{Binding LibraryNoRecent}"
+                        <TextBlock Grid.Row="2"
+                                   Text="{Binding LibraryNoRecent}"
                                    IsVisible="{Binding HasNoRecentItems}"
-                                   Classes="settingHint" />
-                    </StackPanel>
-                    <StackPanel IsVisible="{Binding IsLibraryFavoritesTab}" Spacing="6">
-                        <TextBlock Text="{Binding LibraryFavoritesTitle}" FontWeight="SemiBold" />
-                        <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+                                   Classes="panelHint" />
+                    </Grid>
+                    <Grid IsVisible="{Binding IsLibraryFavoritesTab}" RowDefinitions="Auto,*,Auto" RowSpacing="4">
+                        <TextBlock Classes="panelCaption" Text="{Binding LibraryFavoritesTitle}" />
+                        <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled">
                             <ItemsControl ItemsSource="{Binding FavoriteItems}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate x:DataType="application:FavoriteMediaEntry">
-                                        <Grid ColumnDefinitions="*,Auto" Margin="0,2">
-                                            <Button Classes="recentItem"
-                                                    Click="OnOpenLibraryEntry"
-                                                    ToolTip.Tip="{Binding DataContext.LibraryOpenFavoriteToolTip, ElementName=VideoArea}"
-                                                    AutomationProperties.Name="{Binding DataContext.LibraryOpenFavoriteAutomationName, ElementName=VideoArea}">
-                                                <TextBlock Text="{Binding DisplayName}"
-                                                           TextTrimming="CharacterEllipsis" />
-                                            </Button>
-                                            <Button Grid.Column="1"
-                                                    Classes="recentRemove"
-                                                    Command="{Binding DataContext.RemoveFavoriteCommand, ElementName=VideoArea}"
-                                                    CommandParameter="{Binding Source}"
-                                                    AutomationProperties.Name="{Binding DataContext.LibraryRemoveFavoriteAutomationName, ElementName=VideoArea}">
-                                                <controls:VlcIcon Width="24" Height="24"
-                                                                  Icon="{StaticResource Icon.Close}" />
-                                            </Button>
-                                        </Grid>
+                                        <Border Classes="panelItem">
+                                            <Grid ColumnDefinitions="*,Auto">
+                                                <Button Classes="panelRow"
+                                                        Click="OnOpenLibraryEntry"
+                                                        ToolTip.Tip="{Binding DataContext.LibraryOpenFavoriteToolTip, ElementName=VideoArea}"
+                                                        AutomationProperties.Name="{Binding DataContext.LibraryOpenFavoriteAutomationName, ElementName=VideoArea}">
+                                                    <TextBlock Text="{Binding DisplayName}"
+                                                               TextTrimming="CharacterEllipsis" />
+                                                </Button>
+                                                <StackPanel Grid.Column="1" Classes="rowActions">
+                                                    <Button Classes="icon rowAction"
+                                                            Command="{Binding DataContext.RemoveFavoriteCommand, ElementName=VideoArea}"
+                                                            CommandParameter="{Binding Source}"
+                                                            AutomationProperties.Name="{Binding DataContext.LibraryRemoveFavoriteAutomationName, ElementName=VideoArea}">
+                                                        <controls:VlcIcon Width="20" Height="20"
+                                                                          Icon="{StaticResource Icon.Close}" />
+                                                    </Button>
+                                                </StackPanel>
+                                            </Grid>
+                                        </Border>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
                         </ScrollViewer>
-                        <TextBlock Text="{Binding LibraryNoFavorites}"
+                        <TextBlock Grid.Row="2"
+                                   Text="{Binding LibraryNoFavorites}"
                                    IsVisible="{Binding !HasFavoriteItems}"
-                                   Classes="settingHint" />
-                    </StackPanel>
-                    <StackPanel IsVisible="{Binding IsLibraryResumeTab}" Spacing="6">
-                        <TextBlock Text="{Binding LibraryResumeTitle}" FontWeight="SemiBold" />
-                        <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+                                   Classes="panelHint" />
+                    </Grid>
+                    <Grid IsVisible="{Binding IsLibraryResumeTab}" RowDefinitions="Auto,*,Auto" RowSpacing="4">
+                        <TextBlock Classes="panelCaption" Text="{Binding LibraryResumeTitle}" />
+                        <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled">
                             <ItemsControl ItemsSource="{Binding ResumeItems}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate x:DataType="application:ResumeEntry">
-                                        <Grid ColumnDefinitions="*,Auto" Margin="0,2">
-                                            <Button Classes="recentItem"
-                                                    Click="OnOpenLibraryEntry"
-                                                    ToolTip.Tip="{Binding DataContext.LibraryOpenResumeToolTip, ElementName=VideoArea}"
-                                                    AutomationProperties.Name="{Binding DataContext.LibraryOpenResumeAutomationName, ElementName=VideoArea}">
-                                                <StackPanel>
-                                                    <TextBlock Text="{Binding Source}"
-                                                               TextTrimming="CharacterEllipsis" />
-                                                    <TextBlock Text="{Binding Position}"
-                                                               Classes="settingHint" />
+                                        <Border Classes="panelItem">
+                                            <Grid ColumnDefinitions="*,Auto">
+                                                <Button Classes="panelRow"
+                                                        Click="OnOpenLibraryEntry"
+                                                        ToolTip.Tip="{Binding DataContext.LibraryOpenResumeToolTip, ElementName=VideoArea}"
+                                                        AutomationProperties.Name="{Binding DataContext.LibraryOpenResumeAutomationName, ElementName=VideoArea}">
+                                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                                        <TextBlock Text="{Binding Source}"
+                                                                   TextTrimming="CharacterEllipsis" />
+                                                        <TextBlock Grid.Column="1"
+                                                                   Classes="rowDetail"
+                                                                   Text="{Binding Position}" />
+                                                    </Grid>
+                                                </Button>
+                                                <StackPanel Grid.Column="1" Classes="rowActions">
+                                                    <Button Classes="icon rowAction"
+                                                            Command="{Binding DataContext.RemoveResumeCommand, ElementName=VideoArea}"
+                                                            CommandParameter="{Binding Source}"
+                                                            AutomationProperties.Name="{Binding DataContext.LibraryRemoveResumeAutomationName, ElementName=VideoArea}">
+                                                        <controls:VlcIcon Width="20" Height="20"
+                                                                          Icon="{StaticResource Icon.Close}" />
+                                                    </Button>
                                                 </StackPanel>
-                                            </Button>
-                                            <Button Grid.Column="1"
-                                                    Classes="recentRemove"
-                                                    Command="{Binding DataContext.RemoveResumeCommand, ElementName=VideoArea}"
-                                                    CommandParameter="{Binding Source}"
-                                                    AutomationProperties.Name="{Binding DataContext.LibraryRemoveResumeAutomationName, ElementName=VideoArea}">
-                                                <controls:VlcIcon Width="24" Height="24"
-                                                                  Icon="{StaticResource Icon.Close}" />
-                                            </Button>
-                                        </Grid>
+                                            </Grid>
+                                        </Border>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
                         </ScrollViewer>
-                        <TextBlock Text="{Binding LibraryNoResume}"
+                        <TextBlock Grid.Row="2"
+                                   Text="{Binding LibraryNoResume}"
                                    IsVisible="{Binding !HasResumeItems}"
-                                   Classes="settingHint" />
-                    </StackPanel>
+                                   Classes="panelHint" />
+                    </Grid>
                 </Grid>
-                <StackPanel Grid.Row="3" Spacing="6">
+                <StackPanel Grid.Row="2" Spacing="6" Margin="16,0,16,12">
+                    <TextBlock Text="{Binding LibraryDescription}"
+                               Classes="panelHint" />
                     <TextBlock Text="{Binding LibraryPrivacy}"
-                               Classes="settingHint"
-                               TextWrapping="Wrap" />
+                               Classes="panelHint" />
                     <StackPanel x:Name="ClearLibraryPrompt"
                                 Orientation="Horizontal"
                                 HorizontalAlignment="Right"
@@ -649,7 +669,7 @@
                                 IsVisible="False">
                         <TextBlock Text="{Binding LibraryClearPrompt}"
                                    VerticalAlignment="Center"
-                                   Classes="settingHint" />
+                                   Classes="panelHint" />
                         <Button x:Name="CancelClearLibraryButton"
                                 Content="{Binding LibraryCancel}"
                                 Click="OnCancelClearLibrary" />

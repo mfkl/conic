@@ -55,6 +55,9 @@ public partial class MainWindow
                 await Task.Delay(150);
                 await Capture("default");
                 var video = _presentation.VideoAdjustments;
+                // VLC translates its labels; the app is English whatever LANG says.
+                string defaultAspect = video.Aspects.Single(x => x.Value == "").Label;
+                Require(OperatingSystem.IsWindows() || defaultAspect == "Default", $"VLC labels are English (default aspect '{defaultAspect}')");
                 video.Aspect = video.Aspects.Single(x => x.Value == "4:3");
                 await WaitFor(() => video.Aspect?.Value == "4:3" && Math.Abs(VideoSurface.CurrentVideoLayout.Destination.Width / VideoSurface.CurrentVideoLayout.Destination.Height - 4d / 3) < .01, "aspect readback and display geometry agree");
                 await Capture("aspect-4-3");

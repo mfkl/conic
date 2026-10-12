@@ -129,9 +129,14 @@ public partial class MainWindow : Window
     private void ApplyLiveSettings(PlayerSettings settings)
     {
         _chromeVisibility.SetPlaybackState(_presentation.IsPlaying, settings.ReduceMotion);
-        // Theme: Dark, Light or System (follows the OS). The video and the
-        // controls drawn over it stay dark (Styles/PlayerPalette.axaml).
-        if (Avalonia.Application.Current is { } application) Theming.AppTheme.Apply(application, settings.Theme);
+        // Theme: Dark, Light or System (follows the OS); the accent family
+        // follows the Accent color. The video and the controls drawn over it
+        // stay dark (Styles/PlayerPalette.axaml).
+        if (Avalonia.Application.Current is { } application)
+        {
+            Theming.AppTheme.Apply(application, settings.Theme);
+            Theming.AccentTheme.Apply(application, settings.Accent);
+        }
         _autoHideTimer.Interval = TimeSpan.FromSeconds(settings.ControlTimeoutSeconds);
         Classes.Set("reduced-motion", settings.ReduceMotion);
         if (settings.ReduceMotion) SetChromeVisibility(true);

@@ -86,7 +86,7 @@ public partial class MainWindow
                 KeyEventArgs escape = new() { Key = Key.Escape };
                 OnPlayerKeyDown(this, escape);
                 Require(escape.Handled && !SettingsPanel.IsVisible, "Escape closes Settings");
-                Console.WriteLine("[settings-smoke] PASS all nine categories, dialog bounds, theme and accent radio groups, 1280x720 and 480x360, editors, search/no results, reset confirmation, Home focus, Media information and Escape");
+                Console.WriteLine("[settings-smoke] PASS all nine categories, dialog bounds, theme and accent radio groups applied live, 1280x720 and 480x360, editors, search/no results, reset confirmation, Home focus, Media information and Escape");
                 desktop.Shutdown(0);
             }
             catch (Exception error) { Console.Error.WriteLine($"[settings-smoke] FAIL {error}"); desktop.Shutdown(1); }
@@ -143,6 +143,18 @@ public partial class MainWindow
         themes.Single(option => AutomationName(option) == $"Theme {theme}").IsChecked = true;
         await Task.Delay(150);
         Require(_settingsViewModel.Theme == theme, "theme restored");
+
+        // The accent applies live to every accent brush, in both themes.
+        Avalonia.Media.Color? orange = BrushColor(SettingsPanel, "PlayerAccent");
+        accents.Single(option => AutomationName(option) == "Accent color Blue").IsChecked = true;
+        await Task.Delay(150);
+        Theming.AccentFamily blue = Theming.AccentTheme.Derive(Avalonia.Media.Color.Parse("#1B5DD3"), light: ActualThemeVariant == Avalonia.Styling.ThemeVariant.Light);
+        Require(_settingsViewModel.Accent == "#1B5DD3" && BrushColor(SettingsPanel, "PlayerAccent") == blue.Main &&
+            BrushColor(SettingsPanel, "Vlc.Bg.AccentBright") == blue.BackgroundBright && BrushColor(PlayButton, "Vlc.Fg.OnAccent") == blue.OnAccent, "accent applies live");
+        CaptureSettings("settings-general-blue");
+        accents.Single(option => AutomationName(option) == "Accent color Orange").IsChecked = true;
+        await Task.Delay(150);
+        Require(BrushColor(SettingsPanel, "PlayerAccent") == orange, "accent restored");
 
         static string AutomationName(Control control) => Avalonia.Automation.AutomationProperties.GetName(control) ?? "";
         static Avalonia.Media.Color? BrushColor(Control control, string key) =>

@@ -91,7 +91,7 @@
                             Command="{Binding TogglePictureInPictureCommand}"
                             ToolTip.Tip="Return to main window (Escape)"
                             AutomationProperties.Name="Return from picture in picture">
-                        <controls:VlcIcon Width="24" Height="24" Margin="-2"
+                        <controls:VlcIcon Width="24" Height="24"
                                           Icon="{StaticResource Icon.Pip}" />
                     </Button>
                     <TextBlock Grid.Column="1"
@@ -105,7 +105,7 @@
                             Click="OnPictureInPictureClose"
                             ToolTip.Tip="Close VLC"
                             AutomationProperties.Name="Close VLC">
-                        <controls:VlcIcon Width="24" Height="24" Margin="-3"
+                        <controls:VlcIcon Width="24" Height="24"
                                           Icon="{StaticResource Icon.Close}" />
                     </Button>
                 </Grid>
@@ -243,7 +243,7 @@
                             Command="{Binding ShowHomeCommand}"
                             ToolTip.Tip="Home (Alt+Home)"
                             AutomationProperties.Name="Home">
-                        <controls:VlcIcon Width="24" Height="24" Margin="-3"
+                        <controls:VlcIcon Width="24" Height="24"
                                           Icon="{StaticResource Icon.ArrowLeft}" />
                     </Button>
                     <Viewbox x:Name="ProductMark"
@@ -284,7 +284,7 @@
                             CommandParameter="Queue"
                             ToolTip.Tip="Playback queue (Ctrl+J)"
                             AutomationProperties.Name="Open playback queue">
-                        <controls:VlcIcon Width="24" Height="24" Margin="-2"
+                        <controls:VlcIcon Width="24" Height="24"
                                           Icon="{StaticResource Icon.Lists}" />
                     </Button>
                     <Button x:Name="OpenOptionsButton"
@@ -292,7 +292,7 @@
                             Click="OnOpenOptions"
                             ToolTip.Tip="More playback controls"
                             AutomationProperties.Name="More playback controls">
-                        <controls:VlcIcon Width="24" Height="24" Margin="-2"
+                        <controls:VlcIcon Width="24" Height="24"
                                           Icon="{StaticResource Icon.More}" />
                     </Button>
                     <controls:WindowCaptionButtons Margin="12,2,0,0" VerticalAlignment="Center" />
@@ -421,7 +421,7 @@
                                                 AutomationProperties.Name="Remove recent media"
                                                 Command="{Binding DataContext.RemoveRecentCommand, ElementName=VideoArea}"
                                                 CommandParameter="{Binding Source}">
-                                            <controls:VlcIcon Width="24" Height="24" Margin="-6"
+                                            <controls:VlcIcon Width="24" Height="24"
                                                               Icon="{StaticResource Icon.Close}" />
                                         </Button>
                                     </Grid>
@@ -492,7 +492,7 @@
                             Click="OnCloseLibrary"
                             ToolTip.Tip="{Binding LibraryCloseToolTip}"
                             AutomationProperties.Name="{Binding LibraryCloseAutomationName}">
-                        <controls:VlcIcon Width="24" Height="24" Margin="-5"
+                        <controls:VlcIcon Width="24" Height="24"
                                           Icon="{StaticResource Icon.Close}" />
                     </Button>
                 </Grid>
@@ -540,7 +540,7 @@
                                                     Command="{Binding DataContext.RemoveRecentCommand, ElementName=VideoArea}"
                                                     CommandParameter="{Binding Source}"
                                                     AutomationProperties.Name="{Binding DataContext.LibraryRemoveRecentAutomationName, ElementName=VideoArea}">
-                                                <controls:VlcIcon Width="24" Height="24" Margin="-6"
+                                                <controls:VlcIcon Width="24" Height="24"
                                                                   Icon="{StaticResource Icon.Close}" />
                                             </Button>
                                         </Grid>
@@ -571,7 +571,7 @@
                                                     Command="{Binding DataContext.RemoveFavoriteCommand, ElementName=VideoArea}"
                                                     CommandParameter="{Binding Source}"
                                                     AutomationProperties.Name="{Binding DataContext.LibraryRemoveFavoriteAutomationName, ElementName=VideoArea}">
-                                                <controls:VlcIcon Width="24" Height="24" Margin="-6"
+                                                <controls:VlcIcon Width="24" Height="24"
                                                                   Icon="{StaticResource Icon.Close}" />
                                             </Button>
                                         </Grid>
@@ -606,7 +606,7 @@
                                                     Command="{Binding DataContext.RemoveResumeCommand, ElementName=VideoArea}"
                                                     CommandParameter="{Binding Source}"
                                                     AutomationProperties.Name="{Binding DataContext.LibraryRemoveResumeAutomationName, ElementName=VideoArea}">
-                                                <controls:VlcIcon Width="24" Height="24" Margin="-6"
+                                                <controls:VlcIcon Width="24" Height="24"
                                                                   Icon="{StaticResource Icon.Close}" />
                                             </Button>
                                         </Grid>
@@ -784,7 +784,7 @@
                             Command="{Binding ToggleQueueCommand}"
                             ToolTip.Tip="Close playback drawer"
                             AutomationProperties.Name="Close playback drawer">
-                        <controls:VlcIcon Width="24" Height="24" Margin="-5"
+                        <controls:VlcIcon Width="24" Height="24"
                                           Icon="{StaticResource Icon.Close}" />
                     </Button>
                 </Grid>
@@ -1237,7 +1237,7 @@
                             Command="{Binding PreviousCommand}"
                             AutomationProperties.Name="Previous queue item"
                             ToolTip.Tip="Previous queue item">
-                        <controls:VlcIcon Width="24" Height="24" Margin="-2.5"
+                        <controls:VlcIcon Width="24" Height="24"
                                           Icon="{StaticResource Icon.Previous}" />
                     </Button>
                     <Button Classes="play"
@@ -1245,10 +1245,10 @@
                             AutomationProperties.Name="{Binding PlayPauseName}"
                             ToolTip.Tip="{Binding PlayPauseToolTip}">
                         <Grid>
-                            <controls:VlcIcon Width="24" Height="24" Margin="-1"
+                            <controls:VlcIcon Width="24" Height="24"
                                               IsVisible="{Binding !IsPlaying}"
                                               Icon="{StaticResource Icon.Play}" />
-                            <controls:VlcIcon Width="24" Height="24" Margin="-1"
+                            <controls:VlcIcon Width="24" Height="24"
                                               IsVisible="{Binding IsPlaying}"
                                               Icon="{StaticResource Icon.Pause}" />
                         </Grid>
@@ -1258,7 +1258,7 @@
                             Command="{Binding StopCommand}"
                             AutomationProperties.Name="Stop playback"
                             ToolTip.Tip="Stop playback">
-                        <controls:VlcIcon Width="24" Height="24" Margin="-3.5"
+                        <controls:VlcIcon Width="24" Height="24"
                                           Icon="{StaticResource Icon.Stop}" />
                     </Button>
                     <Button x:Name="NextButton"
@@ -1266,7 +1266,7 @@
                             Command="{Binding NextCommand}"
                             AutomationProperties.Name="Next queue item"
                             ToolTip.Tip="Next queue item">
-                        <controls:VlcIcon Width="24" Height="24" Margin="-2.5"
+                        <controls:VlcIcon Width="24" Height="24"
                                           Icon="{StaticResource Icon.Next}" />
                     </Button>
                     <Button Classes="transport"
@@ -1300,10 +1300,10 @@
                             AutomationProperties.Name="{Binding MuteName}"
                             ToolTip.Tip="{Binding MuteName}">
                         <Grid>
-                            <controls:VlcIcon Width="24" Height="24" Margin="-2"
+                            <controls:VlcIcon Width="24" Height="24"
                                               IsVisible="{Binding !IsMuted}"
                                               Icon="{StaticResource Icon.VolumeHigh}" />
-                            <controls:VlcIcon Width="24" Height="24" Margin="-2"
+                            <controls:VlcIcon Width="24" Height="24"
                                               IsVisible="{Binding IsMuted}"
                                               Icon="{StaticResource Icon.VolumeMute}" />
                         </Grid>
@@ -1335,10 +1335,10 @@
                             Command="{Binding ToggleFullscreenCommand}"
                             AutomationProperties.Name="{Binding FullscreenName}">
                         <Grid>
-                            <controls:VlcIcon Width="24" Height="24" Margin="-3"
+                            <controls:VlcIcon Width="24" Height="24"
                                               IsVisible="{Binding !IsFullscreen}"
                                               Icon="{StaticResource Icon.Fullscreen}" />
-                            <controls:VlcIcon Width="24" Height="24" Margin="-3"
+                            <controls:VlcIcon Width="24" Height="24"
                                               IsVisible="{Binding IsFullscreen}"
                                               Icon="{StaticResource Icon.FullscreenExit}" />
                         </Grid>

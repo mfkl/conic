@@ -59,10 +59,8 @@ pinned native/framework inputs are recorded in [`eng/versions.json`](eng/version
 The [CI workflow](https://github.com/mfkl/conic/actions/workflows/ci.yml)
 runs Core tests across all three desktop OSes and full Windows build/test/AOT jobs.
 The [CI guide](docs/CI.md) documents coverage.
-The dispatch-ready Windows work packages, validation gates, and commit
-boundaries are in [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md).
 
-The active [VLC 4 UI fidelity plan](docs/VLC4_SCREEN_BY_SCREEN_PLAN.md) covers
+The VLC 4 UI fidelity work covers
 the visual redesign in Avalonia while keeping VLCLR/VLC 3: Playback and the
 Home/navigation shell, PiP and Settings are implemented and qualified on Windows.
 The [integration report](docs/WINDOWS_UI_INTEGRATION_2026-09-10.md) records the
@@ -77,7 +75,7 @@ the latest implementation, validation results, captures and review launcher.
 | --- | --- | --- |
 | Windows x64 | D3D11 hardware decoding and GPU presentation implemented | Full solution tests in Debug/Release; Release Native AOT publish |
 | Linux x64 | Engine runs on the distribution's VLC 3 (queue, transport, tracks, lifecycle); GPU video output still to be implemented | App build, managed UI tests, Core tests, and engine smokes against Ubuntu's VLC |
-| macOS arm64/x64 | VideoToolbox decoding and IOSurface presentation implemented; real-Mac qualification pending ([TODO](docs/MACOS_HOST_TODO.md)) | App build, managed UI tests, Core tests; engine, IOSurface and window smokes against VLC 3.0.24 on arm64 and x64 runners |
+| macOS arm64/x64 | VideoToolbox decoding and IOSurface presentation implemented; qualified on an M1 Pro | App build, managed UI tests, Core tests; engine, IOSurface and window smokes against VLC 3.0.24 on arm64 and x64 runners |
 
 Hardware decoding and GPU presentation are required for the Linux/macOS ports.
 On Linux the engine is native, but the app still reports playback as

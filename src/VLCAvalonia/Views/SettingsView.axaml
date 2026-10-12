@@ -166,7 +166,7 @@
                                     </WrapPanel>
                                     <CheckBox Content="S/PDIF passthrough" IsChecked="{Binding AudioPassthrough, Mode=TwoWay}" AutomationProperties.Name="S/PDIF passthrough" />
                                     <TextBlock Text="Audio device selection is not available yet. VLC uses the selected output module." Classes="settingHint" TextWrapping="Wrap" />
-                                    <Button Content="Audio tracks and timing" Command="{Binding OpenAudioControlsCommand}" CommandParameter="Audio" HorizontalAlignment="Left" />
+                                    <Button Content="Audio tracks and timing" Command="{Binding OpenAudioControlsCommand}" HorizontalAlignment="Left" />
                                 </StackPanel>
                             </Border>
                             <Border Classes="settingsCard" IsVisible="{Binding IsVideo}">
@@ -177,7 +177,7 @@
                             <Border Classes="settingsCard" IsVisible="{Binding IsSubtitles}">
                                 <StackPanel Spacing="14">
                                     <TextBlock Text="Choose tracks and adjust timing during playback." Classes="settingHint" TextWrapping="Wrap" />
-                                    <Button Content="Subtitle tracks and timing" Command="{Binding OpenSubtitleControlsCommand}" CommandParameter="Subtitles" HorizontalAlignment="Left" />
+                                    <Button Content="Subtitle tracks and timing" Command="{Binding OpenSubtitleControlsCommand}" HorizontalAlignment="Left" />
                                 </StackPanel>
                             </Border>
                             <Border Classes="settingsCard" IsVisible="{Binding IsHotkeys}">

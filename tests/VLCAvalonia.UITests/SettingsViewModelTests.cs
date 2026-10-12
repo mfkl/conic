@@ -33,6 +33,19 @@ public sealed class SettingsViewModelTests
     }
 
     [Fact]
+    public void TrackShortcutsOpenTheirOwnDrawerTab()
+    {
+        PlayerCommandRegistry registry = new();
+        object? openedTab = null;
+        registry.Register(new(PlayerCommandId.ToggleMediaControls, "Tracks and synchronization", "Playback"), p => openedTab = p);
+        SettingsViewModel viewModel = new(new PlayerSettingsService(new MemoryStorage()), registry);
+        viewModel.OpenSubtitleControlsCommand.Execute(null);
+        Assert.Equal("Subtitles", openedTab);
+        viewModel.OpenAudioControlsCommand.Execute(null);
+        Assert.Equal("Audio", openedTab);
+    }
+
+    [Fact]
     public void EmptySearchHasNoCategoryContentAndNullSelectionKeepsAValidPage()
     {
         SettingsViewModel viewModel = Create(out _);

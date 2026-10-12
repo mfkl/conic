@@ -192,6 +192,38 @@ public sealed class PlayerPresentationViewModelTests
         Assert.Equal(new[] { 1.5, 2, 0 }, transport.Volumes);
     }
 
+    [Theory]
+    [InlineData(0, false, VolumeLevel.Mute)]
+    [InlineData(20, false, VolumeLevel.Low)]
+    [InlineData(50, false, VolumeLevel.Medium)]
+    [InlineData(80, false, VolumeLevel.High)]
+    [InlineData(150, false, VolumeLevel.High)]
+    [InlineData(80, true, VolumeLevel.Mute)]
+    public void VolumeIconLevelFollowsVolumeAndMute(double volume, bool muted, VolumeLevel expected)
+    {
+        PlayerPresentationViewModel viewModel = CreateViewModel(new RecordingTransport());
+
+        viewModel.ApplyEngineState(State(0, PlaybackStatus.Playing, false) with { Volume = volume / 100, IsMuted = muted });
+
+        Assert.Equal(expected, viewModel.VolumeLevel);
+    }
+
+    [Fact]
+    public void VolumeIconLevelIsRaisedWhenVolumeOrMuteChanges()
+    {
+        PlayerPresentationViewModel viewModel = CreateViewModel(new RecordingTransport());
+        MediaEngineState playing = State(0, PlaybackStatus.Playing, false) with { Volume = .2 };
+        viewModel.ApplyEngineState(playing);
+        int raised = 0;
+        viewModel.PropertyChanged += (_, e) => raised += e.PropertyName == nameof(PlayerPresentationViewModel.VolumeLevel) ? 1 : 0;
+
+        viewModel.ApplyEngineState(playing with { Volume = .9 });
+        viewModel.ApplyEngineState(playing with { Volume = .9, IsMuted = true });
+
+        Assert.Equal(2, raised);
+        Assert.Equal(VolumeLevel.Mute, viewModel.VolumeLevel);
+    }
+
     [Fact]
     public void TransportCommandsReflectEngineStateAndDispatchSharedOperations()
     {

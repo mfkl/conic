@@ -168,15 +168,12 @@
     </Style>
 
     <!-- Text buttons: secondary labels in FG/A2 that brighten on hover. -->
-    <Style Selector="Button.playbackAction, Button.drawerTab">
+    <Style Selector="Button.playbackAction">
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="BorderThickness" Value="0" />
         <Setter Property="CornerRadius" Value="4" />
         <Setter Property="Padding" Value="10,8" />
         <Setter Property="Foreground" Value="{DynamicResource PlayerSecondaryText}" />
-    </Style>
-    <Style Selector="Button.drawerTab">
-        <Setter Property="Margin" Value="0,0,4,4" />
     </Style>
     <!-- Menu rows (More menu, track lists, media cards). -->
     <Style Selector="Button.menuAction">
@@ -204,13 +201,13 @@
         <Setter Property="BorderThickness" Value="0" />
         <Setter Property="Foreground" Value="{DynamicResource PlayerSecondaryText}" />
     </Style>
-    <!-- Current library tab or menu row: accent label on BG/Accent Bright,
-         kept under the pointer. -->
-    <Style Selector="Button.drawerTab.selected, Button.menuAction.selected, Button.recentItem.selected">
+    <!-- Current menu row: accent label on BG/Accent Bright, kept under the
+         pointer. -->
+    <Style Selector="Button.menuAction.selected, Button.recentItem.selected">
         <Setter Property="Background" Value="{DynamicResource PlayerSelection}" />
         <Setter Property="Foreground" Value="{DynamicResource PlayerAccent}" />
     </Style>
-    <Style Selector="Button.drawerTab.selected:pointerover /template/ ContentPresenter#PART_ContentPresenter, Button.menuAction.selected:pointerover /template/ ContentPresenter#PART_ContentPresenter, Button.recentItem.selected:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Style Selector="Button.menuAction.selected:pointerover /template/ ContentPresenter#PART_ContentPresenter, Button.recentItem.selected:pointerover /template/ ContentPresenter#PART_ContentPresenter">
         <Setter Property="Background" Value="{DynamicResource PlayerSelection}" />
         <Setter Property="Foreground" Value="{DynamicResource Vlc.Accent.Bright}" />
     </Style>
@@ -218,7 +215,7 @@
     <!-- Bar panels .......................................................... -->
 
     <!-- Design: the panels the control bar's tools open (queue, tracks,
-         playback settings). A solid BG/B1 surface with
+         playback settings) and the library drawer. A solid BG/B1 surface with
          a Divider/Dim rim; .docked (right-anchored) keeps only the left
          corners round. -->
     <Style Selector="Border.barPanel">
@@ -312,7 +309,7 @@
         <Setter Property="Margin" Value="0,8" />
         <Setter Property="Background" Value="{DynamicResource Vlc.Divider.Dim}" />
     </Style>
-    <!-- 30-tall rows (queue items, tracks, chapters). The
+    <!-- 30-tall rows (queue items, tracks, chapters, library entries). The
          selected track shows the accent check; the current queue item is
          accent. -->
     <Style Selector="Button.panelRow">
@@ -347,7 +344,7 @@
         <Setter Property="Stroke" Value="{DynamicResource Vlc.Fg.A3}" />
         <Setter Property="StrokeThickness" Value="1.25" />
     </Style>
-    <!-- A row with actions (queue items): the whole row highlights and
+    <!-- A row with actions (queue, library): the whole row highlights and
          the actions show on hover or keyboard focus, like Home's cards. -->
     <Style Selector="Border.panelItem">
         <Setter Property="CornerRadius" Value="4" />

@@ -80,9 +80,10 @@ public partial class MainWindow
                 OpenOptionsButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                 await Task.Delay(50);
                 Require(OpenMenu.IsVisible && GetClientRect(OpenMenu).Right <= ClientSize.Width &&
-                    GetClientRect(OpenMenu).Left > ClientSize.Width / 2 &&
+                    GetClientRect(OpenMenu).Left >= 0 &&
+                    GetClientRect(OpenMenu).Left <= GetClientRect(OpenOptionsButton).Left &&
                     GetClientRect(OpenMenu).Top >= GetClientRect(OpenOptionsButton).Bottom,
-                    "More menu is anchored below the right button");
+                    "More menu is anchored below the title bar's More button");
                 Press(VideoArea, new Point(ClientSize.Width / 2, ClientSize.Height / 2));
                 Require(!OpenMenu.IsVisible, "outside pointer press dismisses menu");
 

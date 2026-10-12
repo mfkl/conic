@@ -22,7 +22,7 @@
         Topmost="{Binding IsAlwaysOnTop}"
         WindowDecorations="BorderOnly"
         ExtendClientAreaToDecorationsHint="True"
-        ExtendClientAreaTitleBarHeightHint="44">
+        ExtendClientAreaTitleBarHeightHint="40">
 
     <Grid x:Name="VideoArea"
           Background="{DynamicResource PlayerCanvas}"
@@ -220,36 +220,24 @@
                     Command="{Binding OpenMediaCommand}" />
         </StackPanel>
 
-        <!-- The top chrome doubles as the caption: with the client area
-             extended over the decorations, dragging it moves the window and
-             the in-app buttons replace the light system caption (macOS keeps
-             its traffic lights; see PlatformChrome). -->
+        <!-- The design's title bar doubles as the caption: with the client
+             area extended over the decorations, dragging it moves the window
+             and the in-app buttons replace the light system caption (macOS
+             keeps its traffic lights; see PlatformChrome). It still overlays
+             the video and hides with the dock while playing. -->
         <Border x:Name="TopChrome"
-                Height="124"
+                Classes="titleBar"
                 VerticalAlignment="Top"
-                Padding="26,8,8,0"
+                Background="{DynamicResource Vlc.Bg.A3}"
                 PointerPressed="OnCaptionPointerPressed">
-            <Border.Background>
-                <LinearGradientBrush StartPoint="50%,100%" EndPoint="50%,0%">
-                    <GradientStop Offset="0" Color="#00000000" />
-                    <GradientStop Offset="1" Color="#D2000000" />
-                </LinearGradientBrush>
-            </Border.Background>
-            <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="44">
-                <!-- VLC cone vector from VideoLAN's vlc/modules/gui/qt/pixmaps/misc/cone.svg. -->
-                <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="8">
-                    <Button x:Name="HomeButton"
-                            Classes="iconChrome"
-                            Command="{Binding ShowHomeCommand}"
-                            ToolTip.Tip="Home (Alt+Home)"
-                            AutomationProperties.Name="Home">
-                        <controls:VlcIcon Width="24" Height="24"
-                                          Icon="{StaticResource Icon.ArrowLeft}" />
-                    </Button>
+            <controls:TitleBarPanel>
+                <StackPanel Orientation="Horizontal" Spacing="7">
+                    <!-- VLC cone vector from VideoLAN's vlc/modules/gui/qt/pixmaps/misc/cone.svg. -->
                     <Viewbox x:Name="ProductMark"
-                             Width="34"
-                             Height="34"
-                             HorizontalAlignment="Left">
+                             Width="24"
+                             Height="24"
+                             Margin="7,2"
+                             VerticalAlignment="Center">
                         <Canvas Width="130" Height="130">
                             <Path Fill="{DynamicResource Vlc.Accent.Logo}"
                                   Data="M65 8.76c-1.511 0-3.023.369-4.219 1.108-2.675 1.654-4.219 8.438-4.219 8.438L54.031 25.9c7.312
@@ -264,22 +252,33 @@
                                           0z" />
                         </Canvas>
                     </Viewbox>
+                    <Button x:Name="OpenOptionsButton"
+                            Classes="titleBar"
+                            Click="OnOpenOptions"
+                            ToolTip.Tip="More playback controls"
+                            AutomationProperties.Name="More playback controls">
+                        <controls:VlcIcon Width="24" Height="24"
+                                          Icon="{StaticResource Icon.More}" />
+                    </Button>
+                    <Border Classes="titleDivider" />
+                    <!-- Where the library screens show their location. -->
+                    <Button x:Name="HomeButton"
+                            Classes="titleBar"
+                            Command="{Binding ShowHomeCommand}"
+                            ToolTip.Tip="Home (Alt+Home)"
+                            AutomationProperties.Name="Home">
+                        <controls:VlcIcon Width="24" Height="24"
+                                          Icon="{StaticResource Icon.ArrowLeft}" />
+                    </Button>
                 </StackPanel>
                 <TextBlock x:Name="TopChromeTitle"
-                           Grid.Column="1"
+                           Classes="windowTitle"
                            Text="{Binding MediaTitle}"
-                           Foreground="{DynamicResource PlayerText}"
-                           FontSize="18"
-                           FontWeight="SemiBold"
-                           MaxWidth="1100"
-                           Margin="12,0,16,0"
-                           VerticalAlignment="Center"
-                           HorizontalAlignment="Left"
-                           TextTrimming="CharacterEllipsis"
                            ToolTip.Tip="{Binding MediaTitle}" />
-                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4">
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                    <!-- Phase 4 moves the queue into the control bar. -->
                     <Button x:Name="QueueButton"
-                            Classes="iconChrome"
+                            Classes="titleBar"
                             Command="{Binding ToggleQueueCommand}"
                             CommandParameter="Queue"
                             ToolTip.Tip="Playback queue (Ctrl+J)"
@@ -287,20 +286,12 @@
                         <controls:VlcIcon Width="24" Height="24"
                                           Icon="{StaticResource Icon.Lists}" />
                     </Button>
-                    <Button x:Name="OpenOptionsButton"
-                            Classes="iconChrome"
-                            Click="OnOpenOptions"
-                            ToolTip.Tip="More playback controls"
-                            AutomationProperties.Name="More playback controls">
-                        <controls:VlcIcon Width="24" Height="24"
-                                          Icon="{StaticResource Icon.More}" />
-                    </Button>
-                    <controls:WindowCaptionButtons Margin="12,2,0,0" VerticalAlignment="Center" />
+                    <controls:WindowCaptionButtons />
+                    <Button x:Name="LibraryButton"
+                            IsVisible="False"
+                            Command="{Binding OpenLibraryCommand}" />
                 </StackPanel>
-                <Button x:Name="LibraryButton"
-                        IsVisible="False"
-                        Command="{Binding OpenLibraryCommand}" />
-            </Grid>
+            </controls:TitleBarPanel>
         </Border>
 
         <Border x:Name="OpenMenu"
@@ -310,9 +301,9 @@
                 Width="360"
                 MaxWidth="420"
                 MaxHeight="380"
-                HorizontalAlignment="Right"
+                HorizontalAlignment="Left"
                 VerticalAlignment="Top"
-                Margin="20,60,20,0"
+                Margin="6,44,20,0"
                 Padding="8"
                 CornerRadius="6"
                 Background="{DynamicResource PlayerSurface}"

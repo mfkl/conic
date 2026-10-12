@@ -303,6 +303,7 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
                 return;
             OnPropertyChanged(nameof(IsVolumeAmplified));
             OnPropertyChanged(nameof(VolumeText));
+            OnPropertyChanged(nameof(VolumeLevel));
             if (!_isUpdatingFromEngine) Registry.Execute(PlayerCommandId.SetVolume, value);
         }
     }
@@ -349,13 +350,16 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
     public string FavoriteName => IsCurrentFavorite ? "Remove from favorites" : "Add to favorites";
     public bool IsVolumeAmplified => Volume > 100;
     public string VolumeText => IsVolumeAmplified ? $"Volume {Volume:0}% · Amplified" : $"Volume {Volume:0}%";
+    public VolumeLevel VolumeLevel => VolumeLevels.For(IsMuted, Volume);
     public bool IsAlwaysOnTop { get => _isAlwaysOnTop; set => Set(ref _isAlwaysOnTop, value); }
     public bool IsMuted
     {
         get => _isMuted;
         private set
         {
-            if (Set(ref _isMuted, value)) OnPropertyChanged(nameof(MuteName));
+            if (!Set(ref _isMuted, value)) return;
+            OnPropertyChanged(nameof(MuteName));
+            OnPropertyChanged(nameof(VolumeLevel));
         }
     }
     public double PlaybackRate { get => _playbackRate; private set => Set(ref _playbackRate, value); }

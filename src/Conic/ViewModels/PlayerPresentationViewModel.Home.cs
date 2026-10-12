@@ -50,6 +50,7 @@ internal sealed partial class PlayerPresentationViewModel
         RemoveHomeItemCommand = new RegistryCommand(registry, PlayerCommandId.RemoveHomeItem);
         EnqueueHomeItemCommand = new RegistryCommand(registry, PlayerCommandId.Enqueue);
         ToggleHomeLayoutCommand = new RegistryCommand(registry, PlayerCommandId.ToggleHomeLayout);
+        _homeItems.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HomeItemCountText));
         SyncHomeItems();
     }
 
@@ -81,6 +82,8 @@ internal sealed partial class PlayerPresentationViewModel
         _ => "Open a file or drop media anywhere to get started."
     };
     public bool HomeHasItems => HomeItems.Count != 0;
+    /// <summary>The content header's count of the cards shown (after search).</summary>
+    public string HomeItemCountText => HomeItems.Count == 1 ? "1 item" : $"{HomeItems.Count} items";
     public bool ShowHomeWelcome => !HasLibraryItems && IsHomeSection && string.IsNullOrWhiteSpace(HomeSearch);
     public bool ShowHomeEmpty => !HomeHasItems && !ShowHomeWelcome;
     /// <summary>Updated in place, so a playback checkpoint replaces only the cards that changed instead of recreating every card and thumbnail.</summary>

@@ -8,25 +8,35 @@
              x:DataType="vm:PlayerPresentationViewModel"
              Classes.list="{Binding HomeListLayout}">
     <UserControl.Styles>
+        <!-- Sidebar (design: rail container BG/B1 around a BG/A4 panel). Items
+             are 32 tall: a 30x32 icon box and a 14 px label. The selected item
+             has an FG/2 label and the accent icon; the others stay FG/A2. -->
+        <Style Selector="Border#SidebarRail">
+            <Setter Property="Background" Value="{DynamicResource Vlc.Bg.B1}" />
+            <Setter Property="Padding" Value="8" />
+        </Style>
+        <Style Selector="Border#SidebarPanel">
+            <Setter Property="Background" Value="{DynamicResource Vlc.Bg.A4}" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="16,12" />
+        </Style>
         <Style Selector="Button.navigation">
             <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
             <Setter Property="HorizontalAlignment" Value="Stretch" />
-            <Setter Property="Height" Value="44" />
-            <Setter Property="Padding" Value="12,0" />
-            <Setter Property="Margin" Value="4,2" />
+            <Setter Property="Height" Value="32" />
+            <Setter Property="Padding" Value="0" />
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="CornerRadius" Value="4" />
+            <Setter Property="FontSize" Value="14" />
             <Setter Property="Foreground" Value="{DynamicResource PlayerSecondaryText}" />
         </Style>
-        <!-- A slim accent bar plus a soft tint replaces the previous solid
-             selection block, matching the reference navigation. -->
         <Style Selector="Button.navigation.selected">
-            <Setter Property="Foreground" Value="{DynamicResource PlayerAccent}" />
-            <Setter Property="Background" Value="{DynamicResource PlayerSelection}" />
+            <Setter Property="Foreground" Value="{DynamicResource Vlc.Fg.2}" />
         </Style>
-        <Style Selector="Button.navigation.selected Border.navAccent">
-            <Setter Property="Background" Value="{DynamicResource PlayerAccent}" />
+        <Style Selector="Button.navigation.selected controls|VlcIcon">
+            <Setter Property="Foreground" Value="{DynamicResource PlayerAccent}" />
         </Style>
         <!-- Items with a design "state=active" icon swap to it when selected. -->
         <Style Selector="Button.navigation controls|VlcIcon.active">
@@ -38,14 +48,39 @@
         <Style Selector="Button.navigation.selected controls|VlcIcon.inactive">
             <Setter Property="IsVisible" Value="False" />
         </Style>
-        <Style Selector=":is(UserControl).compact TextBlock.navLabel">
+        <!-- Icon rail: below 720 DIPs, or when the title bar toggle collapses
+             the sidebar. One BG/A4 strip, icons only (tooltips name them). -->
+        <Style Selector=":is(UserControl).rail Border#SidebarRail">
+            <Setter Property="Background" Value="{DynamicResource Vlc.Bg.A4}" />
+            <Setter Property="Padding" Value="0" />
+        </Style>
+        <Style Selector=":is(UserControl).rail Border#SidebarPanel">
+            <Setter Property="CornerRadius" Value="0" />
+            <Setter Property="Padding" Value="10,12" />
+        </Style>
+        <Style Selector=":is(UserControl).rail TextBlock.navLabel">
             <Setter Property="IsVisible" Value="False" />
         </Style>
-        <Style Selector=":is(UserControl).compact Button.navigation">
-            <Setter Property="Padding" Value="10,0" />
+        <Style Selector=":is(UserControl).rail Button.navigation">
+            <Setter Property="Width" Value="30" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
         </Style>
-        <Style Selector=":is(UserControl).compact Button.headerOpen">
+        <!-- Narrow window: the sidebar is always a rail, so its toggle goes,
+             and the title bar and content header drop what does not fit. -->
+        <Style Selector=":is(UserControl).compact Button#SidebarToggle, :is(UserControl).compact TextBlock#HomeTitle, :is(UserControl).compact TextBlock#HomeItemCount">
             <Setter Property="IsVisible" Value="False" />
+        </Style>
+        <Style Selector="Grid#ContentHeader">
+            <Setter Property="ColumnSpacing" Value="20" />
+        </Style>
+        <Style Selector="TextBox#HomeSearchBox">
+            <Setter Property="Width" Value="240" />
+        </Style>
+        <Style Selector=":is(UserControl).compact TextBox#HomeSearchBox">
+            <Setter Property="Width" Value="140" />
+        </Style>
+        <Style Selector=":is(UserControl).compact Grid#ContentHeader">
+            <Setter Property="ColumnSpacing" Value="12" />
         </Style>
         <Style Selector="Border.mediaCard">
             <Setter Property="Width" Value="232" />
@@ -73,203 +108,229 @@
             <Setter Property="IsVisible" Value="False" />
         </Style>
     </UserControl.Styles>
-    <Grid RowDefinitions="52,*,Auto">
-        <Grid x:Name="HomeHeader"
-              Grid.Row="0"
-              ColumnDefinitions="Auto,Auto,*,Auto,Auto,Auto,Auto"
-              Margin="12,0"
-              PointerPressed="OnHeaderPointerPressed">
-            <!-- Shown with the mini player, while something is playing or paused. -->
-            <Button Classes="iconChrome"
-                    Command="{Binding ShowPlayerCommand}"
-                    IsVisible="{Binding ShowMiniPlayer}"
-                    ToolTip.Tip="Return to player"
-                    AutomationProperties.Name="Return to player">
-                <controls:VlcIcon Width="24" Height="24"
-                                  Icon="{StaticResource Icon.ArrowLeft}" />
-            </Button>
-            <controls:VlcCone Grid.Column="1"
-                              Width="30"
-                              Height="34"
-                              Margin="12,0" />
-            <TextBlock Grid.Column="2"
-                       Text="VLC"
-                       FontSize="18"
-                       VerticalAlignment="Center"
-                       Foreground="{DynamicResource PlayerText}" />
-            <Button Grid.Column="3"
-                    Classes="playbackAction headerOpen"
-                    Content="Open file"
-                    Command="{Binding OpenMediaCommand}" />
-            <Button Grid.Column="4"
-                    Classes="iconChrome"
-                    Command="{Binding ToggleQueueCommand}"
-                    ToolTip.Tip="Playback queue"
-                    AutomationProperties.Name="Playback queue">
-                <controls:VlcIcon Width="24" Height="24"
-                                  Icon="{StaticResource Icon.Lists}" />
-            </Button>
-            <Button Grid.Column="5"
-                    Classes="iconChrome"
-                    Click="OnMore"
-                    ToolTip.Tip="Open options"
-                    AutomationProperties.Name="Open options">
-                <controls:VlcIcon Width="24" Height="24"
-                                  Icon="{StaticResource Icon.More}" />
-            </Button>
-            <controls:WindowCaptionButtons Grid.Column="6"
-                                           Margin="12,2,0,0"
-                                           VerticalAlignment="Center" />
-        </Grid>
+    <Grid RowDefinitions="40,*,Auto">
+        <!-- The design's title bar; it doubles as the window caption on Home. -->
+        <Border x:Name="HomeHeader"
+                Classes="titleBar"
+                Background="{DynamicResource Vlc.Bg.A3Transparent}"
+                PointerPressed="OnHeaderPointerPressed">
+            <controls:TitleBarPanel>
+                <StackPanel Orientation="Horizontal" Spacing="7">
+                    <controls:VlcCone Width="24"
+                                      Height="24"
+                                      Margin="7,2"
+                                      VerticalAlignment="Center" />
+                    <Button Classes="titleBar"
+                            Click="OnMore"
+                            ToolTip.Tip="Open options"
+                            AutomationProperties.Name="Open options">
+                        <controls:VlcIcon Width="24" Height="24"
+                                          Icon="{StaticResource Icon.More}" />
+                    </Button>
+                    <Button x:Name="SidebarToggle"
+                            Classes="titleBar"
+                            Click="OnToggleSidebar"
+                            ToolTip.Tip="Collapse sidebar"
+                            AutomationProperties.Name="Collapse sidebar">
+                        <controls:VlcIcon Width="24" Height="24"
+                                          Icon="{StaticResource Icon.Sidebar}" />
+                    </Button>
+                    <Border Classes="titleDivider" />
+                    <!-- Shown with the mini player, while something is playing or paused. -->
+                    <Button Classes="titleBar"
+                            Command="{Binding ShowPlayerCommand}"
+                            IsVisible="{Binding ShowMiniPlayer}"
+                            ToolTip.Tip="Return to player"
+                            AutomationProperties.Name="Return to player">
+                        <controls:VlcIcon Width="24" Height="24"
+                                          Icon="{StaticResource Icon.ArrowLeft}" />
+                    </Button>
+                    <StackPanel x:Name="HomeLocation"
+                                Orientation="Horizontal"
+                                Spacing="4"
+                                VerticalAlignment="Center">
+                        <controls:VlcIcon Width="24" Height="24"
+                                          Foreground="{DynamicResource PlayerSecondaryText}"
+                                          Icon="{StaticResource Icon.Folder}" />
+                        <TextBlock Text="{Binding HomeSection}"
+                                   FontSize="14"
+                                   VerticalAlignment="Center"
+                                   Foreground="{DynamicResource PlayerSecondaryText}" />
+                    </StackPanel>
+                </StackPanel>
+                <TextBlock x:Name="HomeTitle"
+                           Classes="windowTitle"
+                           Text="VLC Media Player" />
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                    <Button Classes="titleBar"
+                            Command="{Binding ToggleQueueCommand}"
+                            ToolTip.Tip="Playback queue"
+                            AutomationProperties.Name="Playback queue">
+                        <controls:VlcIcon Width="24" Height="24"
+                                          Icon="{StaticResource Icon.Lists}" />
+                    </Button>
+                    <controls:WindowCaptionButtons />
+                </StackPanel>
+            </controls:TitleBarPanel>
+        </Border>
         <Grid Grid.Row="1"
              x:Name="HomeColumns"
-             ColumnDefinitions="176,*">
-            <Grid RowDefinitions="*,Auto">
-                <StackPanel Margin="0,8,0,0">
-                    <Button Classes="navigation"
-                            Classes.selected="{Binding IsHomeSection}"
-                            Command="{Binding SelectHomeSectionCommand}"
-                            CommandParameter="Home"
-                            ToolTip.Tip="Home"
-                            AutomationProperties.Name="Home">
-                        <StackPanel Orientation="Horizontal">
-                            <Border Classes="navAccent"
-                                    Width="3"
-                                    Height="20"
-                                    CornerRadius="1.5"
-                                    Margin="0,0,12,0"
-                                    VerticalAlignment="Center" />
-                            <controls:VlcIcon Classes="inactive" Width="24" Height="24" Margin="-1"
-                                              Icon="{StaticResource Icon.Home}" />
-                            <controls:VlcIcon Classes="active" Width="24" Height="24" Margin="-1"
-                                              Icon="{StaticResource Icon.HomeActive}" />
-                            <TextBlock Classes="navLabel"
-                                       Text="Home"
-                                       VerticalAlignment="Center"
-                                       Margin="14,0,0,0" />
+             ColumnDefinitions="217,*">
+            <Border x:Name="SidebarRail">
+                <Border x:Name="SidebarPanel">
+                    <Grid RowDefinitions="*,Auto">
+                        <StackPanel Spacing="14">
+                            <Button Classes="navigation"
+                                    Classes.selected="{Binding IsHomeSection}"
+                                    Command="{Binding SelectHomeSectionCommand}"
+                                    CommandParameter="Home"
+                                    ToolTip.Tip="Home"
+                                    AutomationProperties.Name="Home">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Panel Width="30" Height="32">
+                                        <controls:VlcIcon Classes="inactive" Width="24" Height="24"
+                                                          Icon="{StaticResource Icon.Home}" />
+                                        <controls:VlcIcon Classes="active" Width="24" Height="24"
+                                                          Icon="{StaticResource Icon.HomeActive}" />
+                                    </Panel>
+                                    <TextBlock Classes="navLabel" Text="Home" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                            <Button Classes="navigation"
+                                    Classes.selected="{Binding IsRecentSection}"
+                                    Command="{Binding SelectHomeSectionCommand}"
+                                    CommandParameter="Recent"
+                                    ToolTip.Tip="Recent"
+                                    AutomationProperties.Name="Recent">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Panel Width="30" Height="32">
+                                        <controls:VlcIcon Width="24" Height="24"
+                                                          Icon="{StaticResource Icon.Recent}" />
+                                    </Panel>
+                                    <TextBlock Classes="navLabel" Text="Recent" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                            <Button Classes="navigation"
+                                    Classes.selected="{Binding IsFavoritesSection}"
+                                    Command="{Binding SelectHomeSectionCommand}"
+                                    CommandParameter="Favorites"
+                                    ToolTip.Tip="Favorites"
+                                    AutomationProperties.Name="Favorites">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Panel Width="30" Height="32">
+                                        <controls:VlcIcon Classes="inactive" Width="24" Height="24"
+                                                          Icon="{StaticResource Icon.Favorite}" />
+                                        <controls:VlcIcon Classes="active" Width="24" Height="24"
+                                                          Icon="{StaticResource Icon.FavoriteActive}" />
+                                    </Panel>
+                                    <TextBlock Classes="navLabel" Text="Favorites" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                            <Button Classes="navigation"
+                                    Classes.selected="{Binding IsContinueSection}"
+                                    Command="{Binding SelectHomeSectionCommand}"
+                                    CommandParameter="Continue watching"
+                                    ToolTip.Tip="Continue watching"
+                                    AutomationProperties.Name="Continue watching">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Panel Width="30" Height="32">
+                                        <controls:VlcIcon Width="24" Height="24"
+                                                          Icon="{StaticResource Icon.Playback}" />
+                                    </Panel>
+                                    <TextBlock Classes="navLabel" Text="Continue" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
                         </StackPanel>
-                    </Button>
-                    <Button Classes="navigation"
-                            Classes.selected="{Binding IsRecentSection}"
-                            Command="{Binding SelectHomeSectionCommand}"
-                            CommandParameter="Recent"
-                            ToolTip.Tip="Recent"
-                            AutomationProperties.Name="Recent">
-                        <StackPanel Orientation="Horizontal">
-                            <Border Classes="navAccent"
-                                    Width="3"
-                                    Height="20"
-                                    CornerRadius="1.5"
-                                    Margin="0,0,12,0"
-                                    VerticalAlignment="Center" />
-                            <controls:VlcIcon Width="24" Height="24" Margin="-1"
-                                              Icon="{StaticResource Icon.Recent}" />
-                            <TextBlock Classes="navLabel"
-                                       Text="Recent"
-                                       VerticalAlignment="Center"
-                                       Margin="14,0,0,0" />
-                        </StackPanel>
-                    </Button>
-                    <Button Classes="navigation"
-                            Classes.selected="{Binding IsFavoritesSection}"
-                            Command="{Binding SelectHomeSectionCommand}"
-                            CommandParameter="Favorites"
-                            ToolTip.Tip="Favorites"
-                            AutomationProperties.Name="Favorites">
-                        <StackPanel Orientation="Horizontal">
-                            <Border Classes="navAccent"
-                                    Width="3"
-                                    Height="20"
-                                    CornerRadius="1.5"
-                                    Margin="0,0,12,0"
-                                    VerticalAlignment="Center" />
-                            <controls:VlcIcon Classes="inactive" Width="24" Height="24" Margin="-1"
-                                              Icon="{StaticResource Icon.Favorite}" />
-                            <controls:VlcIcon Classes="active" Width="24" Height="24" Margin="-1"
-                                              Icon="{StaticResource Icon.FavoriteActive}" />
-                            <TextBlock Classes="navLabel"
-                                       Text="Favorites"
-                                       VerticalAlignment="Center"
-                                       Margin="14,0,0,0" />
-                        </StackPanel>
-                    </Button>
-                    <Button Classes="navigation"
-                            Classes.selected="{Binding IsContinueSection}"
-                            Command="{Binding SelectHomeSectionCommand}"
-                            CommandParameter="Continue watching"
-                            ToolTip.Tip="Continue watching"
-                            AutomationProperties.Name="Continue watching">
-                        <StackPanel Orientation="Horizontal">
-                            <Border Classes="navAccent"
-                                    Width="3"
-                                    Height="20"
-                                    CornerRadius="1.5"
-                                    Margin="0,0,12,0"
-                                    VerticalAlignment="Center" />
-                            <controls:VlcIcon Width="24" Height="24" Margin="-1"
-                                              Icon="{StaticResource Icon.Playback}" />
-                            <TextBlock Classes="navLabel"
-                                       Text="Continue"
-                                       VerticalAlignment="Center"
-                                       Margin="14,0,0,0" />
-                        </StackPanel>
-                    </Button>
-                </StackPanel>
-                <Button Grid.Row="1"
-                        Classes="navigation"
-                        Command="{Binding OpenSettingsCommand}"
-                        ToolTip.Tip="Preferences"
-                        AutomationProperties.Name="Preferences">
-                    <StackPanel Orientation="Horizontal">
-                        <Border Classes="navAccent"
-                                Width="3"
-                                Height="20"
-                                CornerRadius="1.5"
-                                Margin="0,0,12,0"
-                                VerticalAlignment="Center" />
-                        <controls:VlcIcon Width="24" Height="24" Margin="-1"
-                                          Icon="{StaticResource Icon.Settings}" />
-                        <TextBlock Classes="navLabel"
-                                   Text="Preferences"
-                                   VerticalAlignment="Center"
-                                   Margin="14,0,0,0" />
-                    </StackPanel>
-                </Button>
-            </Grid>
-            <!-- The content panel floats over the canvas with all corners
-                 rounded, matching the reference layout. -->
-            <Border Grid.Column="1"
-                    Background="{DynamicResource PlayerSurface}"
-                    CornerRadius="8"
-                    Margin="0,4,8,8">
-                <Grid Margin="24" RowDefinitions="Auto,Auto,*">
-                    <Grid IsVisible="{Binding !ShowHomeWelcome}" ColumnDefinitions="*,Auto" Margin="0,0,0,16">
-                        <TextBlock Text="{Binding HomeSection}"
-                                   FontSize="24"
-                                   FontWeight="SemiBold"
-                                   TextTrimming="CharacterEllipsis" />
-                        <Button Grid.Column="1"
-                                Classes="playbackAction"
-                                Content="{Binding HomeLayoutLabel}"
-                                Command="{Binding ToggleHomeLayoutCommand}" />
+                        <Button Grid.Row="1"
+                                Classes="navigation"
+                                Command="{Binding OpenSettingsCommand}"
+                                ToolTip.Tip="Preferences"
+                                AutomationProperties.Name="Preferences">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Panel Width="30" Height="32">
+                                    <controls:VlcIcon Width="24" Height="24"
+                                                      Icon="{StaticResource Icon.Settings}" />
+                                </Panel>
+                                <TextBlock Classes="navLabel" Text="Preferences" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
                     </Grid>
-                    <StackPanel Grid.Row="1" Spacing="8" Margin="0,0,0,16" IsVisible="{Binding !ShowHomeWelcome}">
-                        <TextBox x:Name="HomeSearchBox"
-                                 Classes="search"
-                                 Text="{Binding HomeSearch}"
-                                 PlaceholderText="Search your media"
-                                 AutomationProperties.Name="Search your media" />
+                </Border>
+            </Border>
+            <!-- Content area (design: BG/B1, padding 20): a 34 tall header with
+                 the section, item count, layout toggle, search and more, then a
+                 Divider/Dim line. No back/forward or sort (not supported). -->
+            <Border Grid.Column="1"
+                    Background="{DynamicResource Vlc.Bg.B1}"
+                    Padding="20">
+                <Grid RowDefinitions="Auto,*">
+                    <StackPanel IsVisible="{Binding !ShowHomeWelcome}" Margin="0,0,0,17">
+                        <Grid x:Name="ContentHeader"
+                              ColumnDefinitions="*,Auto,Auto,Auto,Auto"
+                              MinHeight="34">
+                            <TextBlock Text="{Binding HomeSection}"
+                                       FontSize="16"
+                                       VerticalAlignment="Center"
+                                       Foreground="{DynamicResource PlayerSecondaryText}"
+                                       TextTrimming="CharacterEllipsis" />
+                            <TextBlock x:Name="HomeItemCount"
+                                       Grid.Column="1"
+                                       Text="{Binding HomeItemCountText}"
+                                       FontSize="14"
+                                       VerticalAlignment="Center"
+                                       Foreground="{DynamicResource Vlc.Fg.A3}" />
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4">
+                                <Button Classes="icon"
+                                        Classes.active="{Binding !HomeListLayout}"
+                                        Click="OnGridLayout"
+                                        ToolTip.Tip="Grid view"
+                                        AutomationProperties.Name="Grid view">
+                                    <controls:VlcIcon Width="24" Height="24"
+                                                      Icon="{StaticResource Icon.Grid}" />
+                                </Button>
+                                <Button Classes="icon"
+                                        Classes.active="{Binding HomeListLayout}"
+                                        Click="OnListLayout"
+                                        ToolTip.Tip="List view"
+                                        AutomationProperties.Name="List view">
+                                    <controls:VlcIcon Width="24" Height="24"
+                                                      Icon="{StaticResource Icon.List}" />
+                                </Button>
+                            </StackPanel>
+                            <TextBox x:Name="HomeSearchBox"
+                                     Grid.Column="3"
+                                     Classes="search"
+                                     VerticalAlignment="Center"
+                                     Text="{Binding HomeSearch}"
+                                     PlaceholderText="Search your media"
+                                     AutomationProperties.Name="Search your media" />
+                            <Button Grid.Column="4"
+                                    Classes="icon"
+                                    ToolTip.Tip="Library options"
+                                    AutomationProperties.Name="Library options">
+                                <controls:VlcIcon Width="24" Height="24"
+                                                  Icon="{StaticResource Icon.More}" />
+                                <Button.Flyout>
+                                    <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                        <MenuItem Header="Open file…" Command="{Binding OpenMediaCommand}" />
+                                        <MenuItem Header="Open folder…" Command="{Binding OpenFolderCommand}" />
+                                        <Separator />
+                                        <MenuItem Header="Manage library…" Command="{Binding OpenLibraryCommand}" />
+                                    </MenuFlyout>
+                                </Button.Flyout>
+                            </Button>
+                        </Grid>
+                        <Border Height="1"
+                                Margin="0,17,0,0"
+                                Background="{DynamicResource Vlc.Divider.Dim}" />
                         <TextBlock IsVisible="{Binding HomeHistoryPrivate}"
+                                   Margin="0,12,0,0"
                                    Text="Some history is turned off in Preferences."
                                    TextWrapping="Wrap"
-                                   Foreground="{DynamicResource PlayerSecondaryText}"
+                                   Foreground="{DynamicResource Vlc.Fg.A3}"
                                    FontSize="12" />
-                        <Button Classes="playbackAction"
-                                Content="Manage library"
-                                Command="{Binding OpenLibraryCommand}"
-                                HorizontalAlignment="Left" />
                     </StackPanel>
-                    <Grid Grid.RowSpan="3" IsVisible="{Binding ShowHomeWelcome}">
+                    <Grid Grid.RowSpan="2" IsVisible="{Binding ShowHomeWelcome}">
                         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="24">
                             <controls:VlcCone Width="108" Height="108" HorizontalAlignment="Center" />
                             <StackPanel Orientation="Horizontal" Spacing="16" HorizontalAlignment="Center">
@@ -293,14 +354,14 @@
                                        HorizontalAlignment="Center" />
                         </StackPanel>
                     </Grid>
-                    <TextBlock Grid.Row="2"
+                    <TextBlock Grid.Row="1"
                                IsVisible="{Binding ShowHomeEmpty}"
                                Text="{Binding HomeEmptyMessage}"
                                TextWrapping="Wrap"
                                HorizontalAlignment="Center"
                                VerticalAlignment="Center"
                                Foreground="{DynamicResource PlayerSecondaryText}" />
-                    <ScrollViewer Grid.Row="2"
+                    <ScrollViewer Grid.Row="1"
                                   IsVisible="{Binding HomeHasItems}"
                                   HorizontalScrollBarVisibility="Disabled">
                         <ItemsControl Classes="mediaItems" ItemsSource="{Binding HomeItems}">

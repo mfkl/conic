@@ -75,6 +75,174 @@
             <StaticResource x:Key="PlayerDanger" ResourceKey="Vlc.Status.Danger" />
             <StaticResource x:Key="PlayerErrorText" ResourceKey="Vlc.Status.ErrorText" />
             <StaticResource x:Key="PlayerErrorSurface" ResourceKey="Vlc.Status.ErrorSurface" />
+
+            <!-- Fluent control resources, so stock controls take the design's
+                 colors without restyling each one. Shapes and sizes are in
+                 Styles/PlayerChrome.axaml. Transparent is the Fluent-free
+                 "no fill" for states that must not paint. -->
+            <SolidColorBrush x:Key="Vlc.None" Color="Transparent" />
+
+            <!-- Button: a secondary look for plain buttons; buttons with a
+                 transparent background (icon and text buttons) get the shared
+                 hover/pressed overlays. -->
+            <StaticResource x:Key="ButtonBackground" ResourceKey="Vlc.Bg.A1" />
+            <StaticResource x:Key="ButtonBackgroundPointerOver" ResourceKey="Vlc.Overlay.Hover" />
+            <StaticResource x:Key="ButtonBackgroundPressed" ResourceKey="Vlc.Overlay.Pressed" />
+            <StaticResource x:Key="ButtonBackgroundDisabled" ResourceKey="Vlc.None" />
+            <StaticResource x:Key="ButtonBorderBrush" ResourceKey="Vlc.Divider.Bright" />
+            <StaticResource x:Key="ButtonBorderBrushPointerOver" ResourceKey="Vlc.Divider.Bright" />
+            <StaticResource x:Key="ButtonBorderBrushPressed" ResourceKey="Vlc.Divider.Bright" />
+            <StaticResource x:Key="ButtonBorderBrushDisabled" ResourceKey="Vlc.Divider.Dim" />
+            <StaticResource x:Key="ButtonForeground" ResourceKey="Vlc.Fg.2" />
+            <StaticResource x:Key="ButtonForegroundPointerOver" ResourceKey="Vlc.Fg.1" />
+            <StaticResource x:Key="ButtonForegroundPressed" ResourceKey="Vlc.Fg.1" />
+            <StaticResource x:Key="ButtonForegroundDisabled" ResourceKey="Vlc.Fg.A3" />
+            <StaticResource x:Key="RepeatButtonBackground" ResourceKey="Vlc.None" />
+            <StaticResource x:Key="RepeatButtonBackgroundPointerOver" ResourceKey="Vlc.Overlay.Hover" />
+            <StaticResource x:Key="RepeatButtonBackgroundPressed" ResourceKey="Vlc.Overlay.Pressed" />
+            <StaticResource x:Key="RepeatButtonBackgroundDisabled" ResourceKey="Vlc.None" />
+            <StaticResource x:Key="RepeatButtonBorderBrush" ResourceKey="Vlc.None" />
+            <StaticResource x:Key="RepeatButtonBorderBrushPointerOver" ResourceKey="Vlc.None" />
+            <StaticResource x:Key="RepeatButtonBorderBrushPressed" ResourceKey="Vlc.None" />
+            <StaticResource x:Key="RepeatButtonBorderBrushDisabled" ResourceKey="Vlc.None" />
+            <StaticResource x:Key="RepeatButtonForeground" ResourceKey="Vlc.Fg.A2" />
+            <StaticResource x:Key="RepeatButtonForegroundPointerOver" ResourceKey="Vlc.Fg.1" />
+            <StaticResource x:Key="RepeatButtonForegroundPressed" ResourceKey="Vlc.Fg.1" />
+            <StaticResource x:Key="RepeatButtonForegroundDisabled" ResourceKey="Vlc.Fg.A4" />
+
+            <!-- TextBox, NumericUpDown: BG/A5 field, dark rim, accent when
+                 focused. Placeholders use FG/A3 rather than the design's FG/A4,
+                 which is unreadable on BG/A5. -->
+            <StaticResource x:Key="TextControlForeground" ResourceKey="Vlc.Fg.1" />
+            <StaticResource x:Key="TextControlForegroundPointerOver" ResourceKey="Vlc.Fg.1" />
+            <StaticResource x:Key="TextControlForegroundFocused" ResourceKey="Vlc.Fg.1" />
+            <StaticResource x:Key="TextControlForegroundDisabled" ResourceKey="Vlc.Fg.A3" />
+            <StaticResource x:Key="TextControlBackground" ResourceKey="Vlc.Bg.A5" />
+            <StaticResource x:Key="TextControlBackgroundPointerOver" ResourceKey="Vlc.Bg.A5" />
+            <StaticResource x:Key="TextControlBackgroundFocused" ResourceKey="Vlc.Bg.A5" />
+            <StaticResource x:Key="TextControlBackgroundDisabled" ResourceKey="Vlc.Bg.A4" />
+            <StaticResource x:Key="TextControlBorderBrush" ResourceKey="Vlc.Divider.Bright" />
+            <StaticResource x:Key="TextControlBorderBrushPointerOver" ResourceKey="Vlc.Fg.A4" />
+            <StaticResource x:Key="TextControlBorderBrushFocused" ResourceKey="Vlc.Accent.Main" />
+            <StaticResource x:Key="TextControlBorderBrushDisabled" ResourceKey="Vlc.Divider.Dim" />
+            <StaticResource x:Key="TextControlPlaceholderForeground" ResourceKey="Vlc.Fg.A3" />
+            <StaticResource x:Key="TextControlPlaceholderForegroundPointerOver" ResourceKey="Vlc.Fg.A3" />
+            <StaticResource x:Key="TextControlPlaceholderForegroundFocused" ResourceKey="Vlc.Fg.A3" />
+            <StaticResource x:Key="TextControlPlaceholderForegroundDisabled" ResourceKey="Vlc.Fg.A4" />
+            <StaticResource x:Key="TextControlSelectionHighlightColor" ResourceKey="Vlc.Accent.Dim" />
+            <StaticResource x:Key="TextControlButtonBackground" ResourceKey="Vlc.None" />
+            <StaticResource x:Key="TextControlButtonBackgroundPointerOver" ResourceKey="Vlc.Overlay.Hover" />
+            <StaticResource x:Key="TextControlButtonBackgroundPressed" ResourceKey="Vlc.Overlay.Pressed" />
+            <StaticResource x:Key="TextControlButtonBorderBrush" ResourceKey="Vlc.None" />
+            <StaticResource x:Key="TextControlButtonBorderBrushPointerOver" ResourceKey="Vlc.None" />
+            <StaticResource x:Key="TextControlButtonBorderBrushPressed" ResourceKey="Vlc.None" />
+            <StaticResource x:Key="TextControlButtonForeground" ResourceKey="Vlc.Fg.A2" />
+            <StaticResource x:Key="TextControlButtonForegroundPointerOver" ResourceKey="Vlc.Fg.1" />
+            <StaticResource x:Key="TextControlButtonForegroundPressed" ResourceKey="Vlc.Fg.1" />
+
+            <!-- ComboBox: BG/B2 dropdown; items select to BG/A1 + FG/1. The
+                 placeholder doubles as the current value (speed selector), so it
+                 stays readable. -->
+            <StaticResource x:Key="ComboBoxBackground" ResourceKey="Vlc.Bg.B2" />
+            <StaticResource x:Key="ComboBoxBackgroundPointerOver" ResourceKey="Vlc.Bg.A5" />
+            <StaticResource x:Key="ComboBoxBackgroundPressed" ResourceKey="Vlc.Bg.B2" />
+            <StaticResource x:Key="ComboBoxBackgroundDisabled" ResourceKey="Vlc.Bg.A4" />
+            <StaticResource x:Key="ComboBoxBorderBrush" ResourceKey="Vlc.Divider.Dim" />
+            <StaticResource x:Key="ComboBoxBorderBrushPointerOver" ResourceKey="Vlc.Divider.Bright" />
+            <StaticResource x:Key="ComboBoxBorderBrushPressed" ResourceKey="Vlc.Accent.Dim" />
+            <StaticResource x:Key="ComboBoxBorderBrushDisabled" ResourceKey="Vlc.Divider.Dim" />
+            <StaticResource x:Key="ComboBoxForeground" ResourceKey="Vlc.Fg.2" />
+            <StaticResource x:Key="ComboBoxForegroundDisabled" ResourceKey="Vlc.Fg.A3" />
+            <StaticResource x:Key="ComboBoxForegroundFocused" ResourceKey="Vlc.Fg.1" />
+            <StaticResource x:Key="ComboBoxForegroundFocusedPressed" ResourceKey="Vlc.Fg.1" />
+            <StaticResource x:Key="ComboBoxPlaceHolderForeground" ResourceKey="Vlc.Fg.2" />
+            <StaticResource x:Key="ComboBoxPlaceHolderForegroundFocusedPressed" ResourceKey="Vlc.Fg.1" />
+            <StaticResource x:Key="ComboBoxDropDownGlyphForeground" ResourceKey="Vlc.Fg.A2" />
+            <StaticResource x:Key="ComboBoxDropDownGlyphForegroundDisabled" ResourceKey="Vlc.Fg.A4" />
+            <StaticResource x:Key="ComboBoxDropDownGlyphForegroundFocused" ResourceKey="Vlc.Fg.1" />
+            <StaticResource x:Key="ComboBoxDropDownGlyphForegroundFocusedPressed" ResourceKey="Vlc.Fg.1" />
+            <StaticResource x:Key="ComboBoxDropDownBackground" ResourceKey="Vlc.Bg.A3" />
+            <StaticResource x:Key="ComboBoxDropDownBorderBrush" ResourceKey="Vlc.Divider.Bright" />
+            <StaticResource x:Key="ComboBoxItemBackground" ResourceKey="Vlc.None" />
+            <StaticResource x:Key="ComboBoxItemBackgroundPointerOver" ResourceKey="Vlc.Overlay.Hover" />
+            <StaticResource x:Key="ComboBoxItemBackgroundPressed" ResourceKey="Vlc.Overlay.Pressed" />
+            <StaticResource x:Key="ComboBoxItemBackgroundDisabled" ResourceKey="Vlc.None" />
+            <StaticResource x:Key="ComboBoxItemBackgroundSelected" ResourceKey="Vlc.Bg.A1" />
+            <StaticResource x:Key="ComboBoxItemBackgroundSelectedPointerOver" ResourceKey="Vlc.Divider.Bright" />
+            <StaticResource x:Key="ComboBoxItemBackgroundSelectedPressed" ResourceKey="Vlc.Bg.A1" />
+            <StaticResource x:Key="ComboBoxItemBackgroundSelectedDisabled" ResourceKey="Vlc.None" />
+            <StaticResource x:Key="ComboBoxItemBorderBrushPointerOver" ResourceKey="Vlc.None" />
+            <StaticResource x:Key="ComboBoxItemBorderBrushPressed" ResourceKey="Vlc.None" />
+            <StaticResource x:Key="ComboBoxItemBorderBrushDisabled" ResourceKey="Vlc.None" />
+            <StaticResource x:Key="ComboBoxItemBorderBrushSelected" ResourceKey="Vlc.None" />
+            <StaticResource x:Key="ComboBoxItemBorderBrushSelectedPointerOver" ResourceKey="Vlc.None" />
+            <StaticResource x:Key="ComboBoxItemBorderBrushSelectedPressed" ResourceKey="Vlc.None" />
+            <StaticResource x:Key="ComboBoxItemBorderBrushSelectedDisabled" ResourceKey="Vlc.None" />
+            <StaticResource x:Key="ComboBoxItemForeground" ResourceKey="Vlc.Fg.2" />
+            <StaticResource x:Key="ComboBoxItemForegroundPointerOver" ResourceKey="Vlc.Fg.1" />
+            <StaticResource x:Key="ComboBoxItemForegroundPressed" ResourceKey="Vlc.Fg.1" />
+            <StaticResource x:Key="ComboBoxItemForegroundDisabled" ResourceKey="Vlc.Fg.A4" />
+            <StaticResource x:Key="ComboBoxItemForegroundSelected" ResourceKey="Vlc.Fg.1" />
+            <StaticResource x:Key="ComboBoxItemForegroundSelectedPointerOver" ResourceKey="Vlc.Fg.1" />
+            <StaticResource x:Key="ComboBoxItemForegroundSelectedPressed" ResourceKey="Vlc.Fg.1" />
+            <StaticResource x:Key="ComboBoxItemForegroundSelectedDisabled" ResourceKey="Vlc.Fg.A3" />
+
+            <!-- Context menus and menu flyouts. -->
+            <StaticResource x:Key="MenuFlyoutPresenterBackground" ResourceKey="Vlc.Bg.A3" />
+            <StaticResource x:Key="MenuFlyoutPresenterBorderBrush" ResourceKey="Vlc.Divider.Bright" />
+            <StaticResource x:Key="MenuFlyoutItemBackground" ResourceKey="Vlc.None" />
+            <StaticResource x:Key="MenuFlyoutItemBackgroundPointerOver" ResourceKey="Vlc.Overlay.Hover" />
+            <StaticResource x:Key="MenuFlyoutItemBackgroundPressed" ResourceKey="Vlc.Overlay.Pressed" />
+            <StaticResource x:Key="MenuFlyoutItemBackgroundDisabled" ResourceKey="Vlc.None" />
+            <StaticResource x:Key="MenuFlyoutItemForeground" ResourceKey="Vlc.Fg.2" />
+            <StaticResource x:Key="MenuFlyoutItemForegroundPointerOver" ResourceKey="Vlc.Fg.1" />
+            <StaticResource x:Key="MenuFlyoutItemForegroundPressed" ResourceKey="Vlc.Fg.1" />
+            <StaticResource x:Key="MenuFlyoutItemForegroundDisabled" ResourceKey="Vlc.Fg.A3" />
+            <StaticResource x:Key="MenuFlyoutItemKeyboardAcceleratorTextForeground" ResourceKey="Vlc.Fg.A3" />
+            <StaticResource x:Key="MenuFlyoutItemKeyboardAcceleratorTextForegroundPointerOver" ResourceKey="Vlc.Fg.A2" />
+            <StaticResource x:Key="MenuFlyoutItemKeyboardAcceleratorTextForegroundPressed" ResourceKey="Vlc.Fg.A2" />
+            <StaticResource x:Key="MenuFlyoutItemKeyboardAcceleratorTextForegroundDisabled" ResourceKey="Vlc.Fg.A4" />
+            <StaticResource x:Key="MenuFlyoutSubItemChevron" ResourceKey="Vlc.Fg.A2" />
+            <StaticResource x:Key="MenuFlyoutSubItemChevronPointerOver" ResourceKey="Vlc.Fg.1" />
+            <StaticResource x:Key="MenuFlyoutSubItemChevronPressed" ResourceKey="Vlc.Fg.1" />
+            <StaticResource x:Key="MenuFlyoutSubItemChevronSubMenuOpened" ResourceKey="Vlc.Fg.1" />
+            <StaticResource x:Key="MenuFlyoutSubItemChevronDisabled" ResourceKey="Vlc.Fg.A4" />
+
+            <StaticResource x:Key="ToolTipBackground" ResourceKey="Vlc.Bg.A1" />
+            <StaticResource x:Key="ToolTipBorderBrush" ResourceKey="Vlc.Divider.Bright" />
+            <StaticResource x:Key="ToolTipForeground" ResourceKey="Vlc.Fg.2" />
+
+            <!-- Scroll bars: a quiet thumb that brightens under the pointer. -->
+            <StaticResource x:Key="ScrollBarPanningThumbBackground" ResourceKey="Vlc.Fg.A4" />
+            <StaticResource x:Key="ScrollBarThumbFillPointerOver" ResourceKey="Vlc.Fg.A2" />
+            <StaticResource x:Key="ScrollBarThumbFillPressed" ResourceKey="Vlc.Fg.2" />
+            <StaticResource x:Key="ScrollBarThumbFillDisabled" ResourceKey="Vlc.Fg.A4" />
+            <StaticResource x:Key="ScrollBarTrackFill" ResourceKey="Vlc.None" />
+            <StaticResource x:Key="ScrollBarTrackFillPointerOver" ResourceKey="Vlc.Bg.A3Transparent" />
+            <StaticResource x:Key="ScrollBarTrackStroke" ResourceKey="Vlc.None" />
+            <StaticResource x:Key="ScrollBarTrackStrokePointerOver" ResourceKey="Vlc.None" />
+            <StaticResource x:Key="ScrollBarButtonArrowForeground" ResourceKey="Vlc.Fg.A2" />
+            <StaticResource x:Key="ScrollBarButtonArrowForegroundPointerOver" ResourceKey="Vlc.Fg.1" />
+            <StaticResource x:Key="ScrollBarButtonArrowForegroundPressed" ResourceKey="Vlc.Fg.1" />
+            <StaticResource x:Key="ScrollBarButtonArrowForegroundDisabled" ResourceKey="Vlc.Fg.A4" />
+            <StaticResource x:Key="ScrollBarButtonBackgroundPointerOver" ResourceKey="Vlc.Overlay.Hover" />
+            <StaticResource x:Key="ScrollBarButtonBackgroundPressed" ResourceKey="Vlc.Overlay.Pressed" />
+            <!-- A Color, not a brush: FG/A3 (Vlc.Fg.A3). -->
+            <Color x:Key="ScrollBarThumbBackgroundColor">#6B6B6B</Color>
+
+            <!-- Sliders without one of the player classes. -->
+            <StaticResource x:Key="SliderTrackFill" ResourceKey="Vlc.Bg.B2" />
+            <StaticResource x:Key="SliderTrackFillPointerOver" ResourceKey="Vlc.Bg.B2" />
+            <StaticResource x:Key="SliderTrackFillPressed" ResourceKey="Vlc.Bg.B2" />
+            <StaticResource x:Key="SliderTrackFillDisabled" ResourceKey="Vlc.Bg.A4" />
+            <StaticResource x:Key="SliderTrackValueFill" ResourceKey="Vlc.Accent.Main" />
+            <StaticResource x:Key="SliderTrackValueFillPointerOver" ResourceKey="Vlc.Accent.Bright" />
+            <StaticResource x:Key="SliderTrackValueFillPressed" ResourceKey="Vlc.Accent.Dim" />
+            <StaticResource x:Key="SliderTrackValueFillDisabled" ResourceKey="Vlc.Fg.A4" />
+            <StaticResource x:Key="SliderThumbBackground" ResourceKey="Vlc.Accent.Main" />
+            <StaticResource x:Key="SliderThumbBackgroundPointerOver" ResourceKey="Vlc.Accent.Bright" />
+            <StaticResource x:Key="SliderThumbBackgroundPressed" ResourceKey="Vlc.Accent.Dim" />
+            <StaticResource x:Key="SliderThumbBackgroundDisabled" ResourceKey="Vlc.Fg.A4" />
         </ResourceDictionary>
     </ResourceDictionary.ThemeDictionaries>
 </ResourceDictionary>

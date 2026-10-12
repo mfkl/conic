@@ -95,6 +95,7 @@ public partial class MainWindow
                 TogglePictureInPicture();
                 await Task.Delay(200);
                 Require(WindowState == WindowState.Normal && _presentation.IsPictureInPicture, "fullscreen enters PiP");
+                await RequireCompact("PiP entered from fullscreen is compact");
                 TogglePictureInPicture();
                 await Task.Delay(200);
                 Require(WindowState == WindowState.FullScreen && _presentation.IsFullscreen, "fullscreen state restored");
@@ -124,6 +125,7 @@ public partial class MainWindow
                 before = presented;
                 TogglePictureInPicture();
                 await Until(() => presented > before + 3);
+                await RequireCompact("PiP after rapid transitions is compact");
                 Console.WriteLine($"[pip-smoke] PASS GPU frames={presented}, same engine/generation, pause/seek, resize, Escape, fullscreen, topmost binding, Home, Settings, URL, open error; closing PiP");
                 // Exercise the actual close path and normal desktop lifetime shutdown.
                 OnPictureInPictureClose(null, new Avalonia.Interactivity.RoutedEventArgs());
@@ -136,6 +138,15 @@ public partial class MainWindow
                 desktop.Shutdown(1);
             }
         };
+
+        // Frame changes settle asynchronously on macOS; CI once saw PiP left at
+        // 480x2645370 after leaving fullscreen.
+        async Task RequireCompact(string message)
+        {
+            bool Compact() => Math.Abs(ClientSize.Width - 480) < 2 && Math.Abs(ClientSize.Height - 270) < 2;
+            for (DateTime settle = DateTime.UtcNow.AddSeconds(3); !Compact() && DateTime.UtcNow < settle;) await Task.Delay(50);
+            Require(Compact(), $"{message} (got {ClientSize.Width}x{ClientSize.Height} at {Position})");
+        }
 
         static async Task Until(Func<bool> predicate)
         {

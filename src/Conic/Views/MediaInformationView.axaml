@@ -19,7 +19,7 @@
                 <DataTemplate x:DataType="app:MediaCodecStream">
                     <Border Padding="12" Margin="0,4" CornerRadius="6" Background="{DynamicResource Vlc.Bg.A4}">
                         <StackPanel Spacing="8">
-                            <TextBlock Text="{Binding Heading}" FontWeight="SemiBold" Foreground="{DynamicResource PlayerAccent}" />
+                            <TextBlock Text="{Binding Heading}" FontWeight="SemiBold" Foreground="{DynamicResource PlayerAccentText}" />
                             <ItemsControl ItemsSource="{Binding Details}" />
                         </StackPanel>
                     </Border>

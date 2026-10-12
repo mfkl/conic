@@ -36,7 +36,7 @@
             <Setter Property="Foreground" Value="{DynamicResource Vlc.Fg.2}" />
         </Style>
         <Style Selector="Button.navigation.selected controls|VlcIcon">
-            <Setter Property="Foreground" Value="{DynamicResource PlayerAccent}" />
+            <Setter Property="Foreground" Value="{DynamicResource PlayerAccentIcon}" />
         </Style>
         <!-- Items with a design "state=active" icon swap to it when selected. -->
         <Style Selector="Button.navigation controls|VlcIcon.active">
@@ -180,15 +180,26 @@
         <Style Selector="Panel.mediaCard:pointerover StackPanel.cardActions, Panel.mediaCard:focus-within StackPanel.cardActions">
             <Setter Property="Opacity" Value="1" />
         </Style>
+        <!-- Over the thumbnail the actions are light on a dark scrim in both
+             themes (Vlc.OnMedia.*); in the list they follow the theme. -->
         <Style Selector="Button.cardAction">
-            <Setter Property="Background" Value="{DynamicResource Vlc.Bg.B2Transparent}" />
-            <Setter Property="Foreground" Value="{DynamicResource Vlc.Fg.2}" />
+            <Setter Property="Background" Value="{DynamicResource Vlc.OnMedia.Scrim}" />
+            <Setter Property="Foreground" Value="{DynamicResource Vlc.OnMedia.FgDim}" />
         </Style>
         <Style Selector="Button.cardAction.active /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="{DynamicResource Vlc.Bg.B2Transparent}" />
+            <Setter Property="Background" Value="{DynamicResource Vlc.OnMedia.Scrim}" />
+            <Setter Property="Foreground" Value="{DynamicResource PlayerAccent}" />
         </Style>
         <Style Selector="Button.cardAction:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="{DynamicResource Vlc.Bg.A1}" />
+            <Setter Property="Background" Value="{DynamicResource Vlc.OnMedia.Surface}" />
+            <Setter Property="Foreground" Value="{DynamicResource Vlc.OnMedia.Fg}" />
+        </Style>
+        <Style Selector="Button.cardAction:pressed /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource Vlc.OnMedia.Surface}" />
+            <Setter Property="Foreground" Value="{DynamicResource Vlc.OnMedia.Fg}" />
+        </Style>
+        <Style Selector="Button.cardAction:focus-visible">
+            <Setter Property="Background" Value="{DynamicResource Vlc.OnMedia.Scrim}" />
         </Style>
         <!-- List view (design 970:3792): rows in columns, a 32 px thumbnail and
              the title; hover shows a background. -->
@@ -242,12 +253,18 @@
         </Style>
         <Style Selector=":is(UserControl).list Button.cardAction">
             <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource PlayerSecondaryText}" />
         </Style>
         <Style Selector=":is(UserControl).list Button.cardAction.active /template/ ContentPresenter#PART_ContentPresenter">
             <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource PlayerAccentIcon}" />
         </Style>
-        <Style Selector=":is(UserControl).list Button.cardAction:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Style Selector=":is(UserControl).list Button.cardAction:pointerover /template/ ContentPresenter#PART_ContentPresenter, :is(UserControl).list Button.cardAction:pressed /template/ ContentPresenter#PART_ContentPresenter">
             <Setter Property="Background" Value="{DynamicResource Vlc.Overlay.Hover}" />
+            <Setter Property="Foreground" Value="{DynamicResource Vlc.Fg.1}" />
+        </Style>
+        <Style Selector=":is(UserControl).list Button.cardAction:focus-visible">
+            <Setter Property="Background" Value="{DynamicResource PlayerSelection}" />
         </Style>
         <!-- Mini player card (design 970:3091): BG/A3 with the design's
              "bg blur + shadow" effect approximated by its drop shadow. There
@@ -279,7 +296,7 @@
             <Setter Property="Background" Value="{DynamicResource PlayerCardArtwork}" />
         </Style>
         <Style Selector="Border.miniScrim">
-            <Setter Property="Background" Value="{DynamicResource Vlc.Bg.B2Transparent}" />
+            <Setter Property="Background" Value="{DynamicResource Vlc.OnMedia.Scrim}" />
             <Setter Property="Opacity" Value="0" />
         </Style>
         <!-- Cells of the card's grid (columns Auto,*,Auto,Auto,Auto; rows
@@ -313,7 +330,14 @@
              appear with the scrim on hover, keyboard focus or pause (opacity
              only, so Tab still reaches them). -->
         <Style Selector="Button.miniControl">
-            <Setter Property="Foreground" Value="{DynamicResource Vlc.Fg.1}" />
+            <Setter Property="Foreground" Value="{DynamicResource Vlc.OnMedia.Fg}" />
+        </Style>
+        <Style Selector="Panel.miniPlayer:not(.compact) Button.miniControl:pointerover /template/ ContentPresenter#PART_ContentPresenter, Panel.miniPlayer:not(.compact) Button.miniControl:pressed /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource Vlc.OnMedia.Hover}" />
+            <Setter Property="Foreground" Value="{DynamicResource Vlc.OnMedia.Fg}" />
+        </Style>
+        <Style Selector="Panel.miniPlayer:not(.compact) Button.miniControl:focus-visible">
+            <Setter Property="Background" Value="{DynamicResource Vlc.OnMedia.Scrim}" />
         </Style>
         <Style Selector="Button.miniPlay">
             <Setter Property="Width" Value="40" />

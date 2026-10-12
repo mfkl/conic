@@ -1,5 +1,8 @@
+using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using Player.Application;
 using Player.Contracts;
+using Conic.Controls;
 using Conic.ViewModels;
 using Xunit;
 
@@ -122,6 +125,97 @@ public sealed class HomeNavigationTests
         vm.HomeSearch = "missing";
         Assert.Equal("0 items", vm.HomeItemCountText);
     }
+
+    [Fact]
+    public void HomeSectionsSplitHistoryAndHideEmptyOnes()
+    {
+        MediaHistoryService history = new(new Storage());
+        MediaSource[] sources = new[] { "a.mp4", "b.mp4", "c.mp4" }.Select(x => new MediaSource(Path.GetFullPath(x), MediaSourceKind.File, x)).ToArray();
+        foreach (MediaSource source in sources.Reverse()) history.RecordOpened(source, true);
+        history.Checkpoint(sources[1], TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(120), true, 0, 0);
+        PlayerPresentationViewModel vm = Create(new Transport(), history);
+
+        Assert.True(vm.ShowHomeSections);
+        Assert.False(vm.ShowHomeGrid);
+        Assert.Empty(vm.HomeGridItems);
+        HomeMediaItem resume = Assert.Single(vm.HomeContinueItems);
+        Assert.Equal(("b.mp4", true, .25), (resume.Title, resume.HasProgress, resume.Progress));
+        Assert.Equal(["a.mp4", "b.mp4", "c.mp4"], vm.HomeRecentItems.Select(x => x.Title));
+        Assert.True(vm.HasHomeContinueItems && vm.HasHomeRecentItems);
+        Assert.False(vm.HasHomeFavoriteItems);
+
+        vm.AddFavoriteCommand.Execute(sources[2].CanonicalSource);
+        Assert.True(vm.HasHomeFavoriteItems);
+        Assert.True(Assert.Single(vm.HomeFavoriteItems).IsFavorite);
+        Assert.True(vm.HomeRecentItems[2].IsFavorite);
+        Assert.False(vm.HomeRecentItems[0].IsFavorite);
+
+        vm.HomeSearch = "c.mp4";
+        Assert.False(vm.ShowHomeSections);
+        Assert.True(vm.ShowHomeGrid);
+        Assert.Same(vm.HomeItems, vm.HomeGridItems);
+        Assert.Empty(vm.HomeRecentItems);
+        vm.HomeSearch = "";
+        vm.SelectHomeSectionCommand.Execute("Recent");
+        Assert.False(vm.ShowHomeSections);
+        Assert.Equal(3, vm.HomeGridItems.Count);
+        vm.SelectHomeSectionCommand.Execute("Home");
+        Assert.True(vm.ShowHomeSections);
+        Assert.Equal(3, vm.HomeRecentItems.Count);
+    }
+
+    [Fact]
+    public void HomeSectionLimitTrimsAndRestoresCardsInPlace()
+    {
+        MediaHistoryService history = new(new Storage());
+        foreach (string name in new[] { "e.mp4", "d.mp4", "c.mp4", "b.mp4", "a.mp4" })
+            history.RecordOpened(new(Path.GetFullPath(name), MediaSourceKind.File, name), true);
+        PlayerPresentationViewModel vm = Create(new Transport(), history);
+        IReadOnlyList<HomeMediaItem> recent = vm.HomeRecentItems;
+        HomeMediaItem first = recent[0], second = recent[1];
+        List<NotifyCollectionChangedAction> changes = [];
+        ((INotifyCollectionChanged)recent).CollectionChanged += (_, e) => changes.Add(e.Action);
+
+        vm.HomeSectionCardLimit = 2;
+        Assert.Equal(["a.mp4", "b.mp4"], recent.Select(x => x.Title));
+        Assert.All(changes, x => Assert.Equal(NotifyCollectionChangedAction.Remove, x));
+        changes.Clear();
+        vm.HomeSectionCardLimit = 4;
+        Assert.Equal(["a.mp4", "b.mp4", "c.mp4", "d.mp4"], recent.Select(x => x.Title));
+        Assert.All(changes, x => Assert.Equal(NotifyCollectionChangedAction.Add, x));
+        Assert.Same(recent, vm.HomeRecentItems);
+        Assert.Same(first, recent[0]);
+        Assert.Same(second, recent[1]);
+        vm.HomeSectionCardLimit = 0;
+        Assert.Single(recent);
+    }
+
+    [Fact]
+    public void SyncInPlaceKeepsSurvivingCards()
+    {
+        HomeMediaItem Card(string source, string detail = "") => new(source, source, detail, 0, false, PlayerCommandId.RemoveRecent);
+        HomeMediaItem a = Card("a"), b = Card("b"), c = Card("c");
+        ObservableCollection<HomeMediaItem> target = [a, b, c];
+        HomeMediaItem changedA = Card("a", "changed"), d = Card("d");
+
+        PlayerPresentationViewModel.SyncInPlace(target, [c, changedA, d]);
+
+        Assert.Equal([c, changedA, d], target);
+        Assert.Same(c, target[0]);
+        PlayerPresentationViewModel.SyncInPlace(target, []);
+        Assert.Empty(target);
+    }
+
+    [Theory]
+    [InlineData(1663, MediaGridPanel.CardMinWidth, MediaGridPanel.CardMaxWidth, 5)] // the design: 5 x 316 at 1920
+    [InlineData(810, MediaGridPanel.CardMinWidth, MediaGridPanel.CardMaxWidth, 3)]
+    [InlineData(400, MediaGridPanel.CardMinWidth, MediaGridPanel.CardMaxWidth, 2)]
+    [InlineData(300, MediaGridPanel.CardMinWidth, MediaGridPanel.CardMaxWidth, 1)]
+    [InlineData(0, MediaGridPanel.CardMinWidth, MediaGridPanel.CardMaxWidth, 1)]
+    [InlineData(1663, MediaGridPanel.RowMinWidth, MediaGridPanel.RowMaxWidth, 4)]
+    [InlineData(390, MediaGridPanel.RowMinWidth, MediaGridPanel.RowMaxWidth, 1)]
+    public void MediaGridColumnsKeepCardsWithinTheirWidths(double width, double min, double max, int columns) =>
+        Assert.Equal(columns, MediaGridPanel.ColumnCount(width, min, max, MediaGridPanel.DefaultSpacing));
 
     [Fact]
     public void SuccessfulOpenLeavesHomeOnlyAfterValidation()

@@ -14,10 +14,13 @@ public partial class HomeView : UserControl
     private const double CompactWidth = 720;
     private const double SidebarWidth = 217;
     private const double RailWidth = 50;
+    /// <summary>Rows of list items each Home section shows (grid sections show one row of cards).</summary>
+    private const int ListSectionRows = 3;
 
     private Window? _window;
     // The user's choice from the title bar toggle; kept for this session only.
     private bool _sidebarCollapsed;
+    private PlayerPresentationViewModel? _viewModel;
 
     public event EventHandler? MoreRequested;
 
@@ -27,6 +30,31 @@ public partial class HomeView : UserControl
         HomeHeader.Padding = PlatformChrome.ClearOfCaptionButtons(HomeHeader.Padding);
         SizeChanged += (_, _) => ApplySidebarLayout();
         AttachedToVisualTree += (_, _) => _window = TopLevel.GetTopLevel(this) as Window;
+        ContentPanel.SizeChanged += (_, _) => UpdateSectionCardLimit();
+        DataContextChanged += (_, _) =>
+        {
+            if (_viewModel is not null) _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
+            _viewModel = DataContext as PlayerPresentationViewModel;
+            if (_viewModel is not null) _viewModel.PropertyChanged += OnViewModelPropertyChanged;
+            UpdateSectionCardLimit();
+        };
+    }
+
+    private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(PlayerPresentationViewModel.HomeListLayout)) UpdateSectionCardLimit();
+    }
+
+    // Each Home section shows what fits in one row of cards (or a few rows of
+    // the list), computed with the same rule as the section's MediaGridPanel.
+    private void UpdateSectionCardLimit()
+    {
+        if (_viewModel is null) return;
+        double width = ContentPanel.Bounds.Width - ContentPanel.Padding.Left - ContentPanel.Padding.Right;
+        if (width <= 0) return;
+        _viewModel.HomeSectionCardLimit = _viewModel.HomeListLayout
+            ? MediaGridPanel.ColumnCount(width, MediaGridPanel.RowMinWidth, MediaGridPanel.RowMaxWidth, MediaGridPanel.DefaultSpacing) * ListSectionRows
+            : MediaGridPanel.ColumnCount(width, MediaGridPanel.CardMinWidth, MediaGridPanel.CardMaxWidth, MediaGridPanel.DefaultSpacing);
     }
 
     private void ApplySidebarLayout()

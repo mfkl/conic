@@ -2,20 +2,20 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:controls="clr-namespace:VLCAvalonia.Controls"
              x:Class="VLCAvalonia.Controls.WindowCaptionButtons">
-    <!-- Windows-standard 46x34 caption hit targets, drawn in-app so the
-         caption matches the dark chrome instead of the light system one. -->
-    <StackPanel Orientation="Horizontal" VerticalAlignment="Top">
+    <!-- The design's 36x24 caption buttons, drawn in-app so the caption
+         matches the dark chrome instead of the light system one. -->
+    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
         <Button x:Name="MinimizeButton" Classes="caption" Click="OnMinimize" AutomationProperties.Name="Minimize" ToolTip.Tip="Minimize">
-            <controls:VlcIcon Width="24" Height="24" Margin="-7"
+            <controls:VlcIcon Width="24" Height="24"
                               Icon="{StaticResource Icon.Minimize}" />
         </Button>
         <Button x:Name="MaximizeButton" Classes="caption" Click="OnMaximize" AutomationProperties.Name="Maximize" ToolTip.Tip="Maximize">
-            <controls:VlcIcon Width="24" Height="24" Margin="-7"
+            <controls:VlcIcon Width="24" Height="24"
                               x:Name="MaximizeIcon"
                               Icon="{StaticResource Icon.Maximize}" />
         </Button>
         <Button x:Name="CloseButton" Classes="caption close" Click="OnClose" AutomationProperties.Name="Close" ToolTip.Tip="Close">
-            <controls:VlcIcon Width="24" Height="24" Margin="-7"
+            <controls:VlcIcon Width="24" Height="24"
                               Icon="{StaticResource Icon.Close}" />
         </Button>
     </StackPanel>

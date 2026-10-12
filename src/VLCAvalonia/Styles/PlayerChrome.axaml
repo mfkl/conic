@@ -218,15 +218,47 @@
         <Setter Property="Foreground" Value="{DynamicResource Vlc.Accent.Bright}" />
     </Style>
 
-    <!-- Window caption buttons (Windows/Linux). -->
-    <Style Selector="Button.caption">
-        <Setter Property="Width" Value="46" />
-        <Setter Property="Height" Value="34" />
-        <Setter Property="Padding" Value="0" />
-        <Setter Property="CornerRadius" Value="0" />
+    <!-- Title bar (design: 40 tall, padding 6, items centered). The bar's
+         background differs per screen and is set where it is used. -->
+    <Style Selector="Border.titleBar">
+        <Setter Property="Height" Value="40" />
+        <Setter Property="Padding" Value="6,0" />
+    </Style>
+    <!-- Title bar buttons: 28x28 with a 24 icon. -->
+    <Style Selector="Button.titleBar">
+        <Setter Property="Width" Value="28" />
+        <Setter Property="Height" Value="28" />
+        <Setter Property="Padding" Value="2" />
+        <Setter Property="CornerRadius" Value="4" />
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="BorderThickness" Value="0" />
-        <Setter Property="Foreground" Value="{DynamicResource PlayerText}" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="Foreground" Value="{DynamicResource PlayerSecondaryText}" />
+    </Style>
+    <Style Selector="TextBlock.windowTitle">
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+        <Setter Property="Foreground" Value="{DynamicResource PlayerSecondaryText}" />
+    </Style>
+    <!-- 1x16 separator between title bar groups (design "divider" icon). -->
+    <Style Selector="Border.titleDivider">
+        <Setter Property="Width" Value="1" />
+        <Setter Property="Height" Value="16" />
+        <Setter Property="Margin" Value="5,0" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="Background" Value="{DynamicResource Vlc.Divider.Bright}" />
+    </Style>
+
+    <!-- Window caption buttons (Windows/Linux): 36x24, a 24 icon in FG/A2. -->
+    <Style Selector="Button.caption">
+        <Setter Property="Width" Value="36" />
+        <Setter Property="Height" Value="24" />
+        <Setter Property="Padding" Value="6,0" />
+        <Setter Property="CornerRadius" Value="4" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Foreground" Value="{DynamicResource PlayerSecondaryText}" />
     </Style>
     <!-- Close adopts the standard red hover so the affordance stays familiar. -->
     <Style Selector="Button.caption.close:pointerover /template/ ContentPresenter#PART_ContentPresenter, Button.caption.close:pressed /template/ ContentPresenter#PART_ContentPresenter">

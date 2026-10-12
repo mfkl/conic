@@ -34,6 +34,7 @@ public partial class MainWindow : Window
         InitializeComponent();
         PlatformChrome.Apply(this);
         TopChrome.Padding = PlatformChrome.ClearOfCaptionButtons(TopChrome.Padding);
+        OpenMenu.Margin = PlatformChrome.ClearOfCaptionButtons(OpenMenu.Margin);
         _windowGeometry = new WindowGeometryStore(PlayerProfile.FilePath("window.json"));
         RestoreWindowGeometry();
         AddHandler(PointerPressedEvent, OnPlayerPointerPressed, RoutingStrategies.Tunnel, true);
@@ -95,15 +96,14 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// Centers the macOS traffic lights on the visible caption row: Home's
-    /// 52 px header, or the player's 44 px row below the top chrome's padding.
-    /// Posted so it runs after AppKit's own title bar layout.
+    /// Centers the macOS traffic lights on the 40 px title bar, which Home and
+    /// the player share. Posted so it runs after AppKit's own title bar layout.
     /// </summary>
     private void PlaceCaptionButtons()
     {
         if (!PlatformChrome.UsesSystemCaptionButtons) return;
         Dispatcher.UIThread.Post(() =>
-            PlatformChrome.PlaceCaptionButtons(this, _presentation.IsHomeOpen ? 26 : TopChrome.Padding.Top + 22),
+            PlatformChrome.PlaceCaptionButtons(this, PlatformChrome.TitleBarHeight / 2),
             DispatcherPriority.Background);
     }
 

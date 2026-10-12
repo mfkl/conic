@@ -17,6 +17,9 @@ internal static class PlatformChrome
     [SupportedOSPlatformGuard("macos")]
     public static bool UsesSystemCaptionButtons => OperatingSystem.IsMacOS();
 
+    /// <summary>Height of the design's title bar on Home and the player (ExtendClientAreaTitleBarHeightHint).</summary>
+    public const double TitleBarHeight = 40;
+
     /// <summary>Where the first traffic light starts, as in AppKit's own tall title bars.</summary>
     public const double SystemCaptionButtonsLeft = 20;
 

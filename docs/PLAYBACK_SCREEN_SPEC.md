@@ -26,8 +26,7 @@ the existing **VLCLR / VLC 3 engine**. This supersedes the earlier request to us
 VLC 4-targeting VLCLR `main`. Restore an isolated compatible framework/runtime
 baseline from `eng/versions.json` for the pending native checks. The unsuccessful
 main experiment is retained in [VLCLR_MAIN_MIGRATION.md](VLCLR_MAIN_MIGRATION.md)
-as historical evidence. The active source map, visual foundation and delivery
-order are in [VLC4_SCREEN_BY_SCREEN_PLAN.md](VLC4_SCREEN_BY_SCREEN_PLAN.md).
+as historical evidence.
 
 Playback review corrections requested on 2026-09-08 supersede the corresponding
 layout/component details below:
@@ -108,7 +107,7 @@ history, settings, and native composition contracts.
 - the Settings redesign;
 - optical-disc opening;
 - casting/renderers (Home mini-player and desktop PiP are now separate authorized
-  follow-up packages in `VLC4_SCREEN_BY_SCREEN_PLAN.md`);
+  follow-up packages);
 - snapshot capture;
 - aspect ratio, crop, zoom, or deinterlace controls;
 - thumbnail seek previews or cover-art retrieval;

@@ -81,8 +81,7 @@ Homebrew and run `eng/test-macos.ps1` twice:
 
 The runners are virtual machines with a paravirtualized GPU; on arm64 VLC
 selects VideoToolbox there. This qualifies the transport and lifecycle, not
-playback quality, frame pacing or real hardware, which
-[MACOS_HOST_TODO.md](MACOS_HOST_TODO.md) covers. Logs and captures are uploaded
+playback quality, frame pacing or real hardware, which need a real Mac. Logs and captures are uploaded
 even on failure.
 
 `Package / macOS arm64` and `Package / macOS x64` run on `main`, tags and

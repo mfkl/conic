@@ -4,7 +4,7 @@ Updated: 2026-09-10. Status: migration proposal superseded by the user's explici
 VLC 3 engine requirement. Playback result was accepted on 2026-09-10 after
 qualification on the restored VLC 3 baseline.
 
-The active [UI fidelity plan](VLC4_SCREEN_BY_SCREEN_PLAN.md) keeps Avalonia over
+The active UI fidelity work keeps Avalonia over
 VLCLR/VLC 3 and uses VLC 4 only as UI reference. Resume native qualification with
 the compatible framework/runtime pins in `eng/versions.json`, selected through
 an isolated checkout if necessary. No additional engine-direction clarification

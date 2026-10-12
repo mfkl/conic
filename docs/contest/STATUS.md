@@ -23,7 +23,7 @@ end.
 | W05 portable native controls | Passed for Linux x64 (branch) | Managed `va_list` for System V; real VLC 3.0.20 in WSL2 passes queue, capabilities and 25 engine cycles |
 | W06 Linux engine | Passed in WSL2 (branch) | See [CROSS_PLATFORM.md](../CROSS_PLATFORM.md#linux-engine-port-october-8); new CI job runs it against Ubuntu's VLC |
 | W06 Linux GPU video output | Not started | VA-API to DMA-BUF to Avalonia import; needs native Linux with a GPU (maintainer) |
-| W07 macOS | Implemented, CI-checked (branch) | arm64 and x64 runners pass engine, IOSurface (VideoToolbox on arm64) and video/compositor window smokes against VLC 3.0.24; real-Mac checks in [MACOS_HOST_TODO.md](../MACOS_HOST_TODO.md) |
+| W07 macOS | Implemented, CI-checked (branch) | arm64 and x64 runners pass engine, IOSurface (VideoToolbox on arm64) and video/compositor window smokes against VLC 3.0.24; qualified on an M1 Pro (unit tests, every window smoke with VideoToolbox, ABI probe) |
 | W08 daily-use polish | In progress | Fixed: blinking track buttons, Home cards recreated every poll, resume prompt now has Cancel and closes after 8 s. Known: no Home thumbnail for HEVC without Microsoft's HEVC extension |
 | W09 other desktop packages | Not started | Depends on the Linux GPU backend |
 | W10 Windows qualification | Passed locally | [Package matrix](QUALIFICATION.md); additional GPU, clean OS, soak and external testers not done |

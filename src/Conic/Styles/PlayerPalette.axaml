@@ -1,22 +1,80 @@
 <ResourceDictionary xmlns="https://github.com/avaloniaui"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <!-- VLC master 1a853315: modules/gui/qt/style/systempalette.hpp.
-         Semantic playback colors; alpha overlays remain legible over video. -->
-    <SolidColorBrush x:Key="PlayerAccent" Color="#FF8800" />
-    <SolidColorBrush x:Key="PlayerAccentHover" Color="#FFA033" />
-    <SolidColorBrush x:Key="PlayerAccentPressed" Color="#DE7600" />
-    <SolidColorBrush x:Key="PlayerAmplified" Color="#FFB366" />
-    <SolidColorBrush x:Key="PlayerCanvas" Color="Black" />
-    <SolidColorBrush x:Key="PlayerSurface" Color="#F5212121" />
-    <SolidColorBrush x:Key="PlayerCard" Color="#F5292929" />
-    <SolidColorBrush x:Key="PlayerCardArtwork" Color="#F5303030" />
-    <SolidColorBrush x:Key="PlayerWell" Color="#F5181818" />
-    <SolidColorBrush x:Key="PlayerText" Color="#F5F5F5" />
-    <SolidColorBrush x:Key="PlayerSecondaryText" Color="#B3B3B3" />
-    <SolidColorBrush x:Key="PlayerBorder" Color="#30FFFFFF" />
-    <SolidColorBrush x:Key="PlayerHover" Color="#20FFFFFF" />
-    <SolidColorBrush x:Key="PlayerPressed" Color="#30FFFFFF" />
-    <SolidColorBrush x:Key="PlayerTrack" Color="#40FFFFFF" />
-    <SolidColorBrush x:Key="PlayerSelection" Color="#24FF8800" />
-    <SolidColorBrush x:Key="PlayerDanger" Color="#E81123" />
+    <!-- Colors from the Figma "VLC Redesign" paint styles (FG/*, Accent/*, BG/*,
+         Divider/*), as "Vlc.*" design tokens, plus the semantic "Player*" keys
+         the views use, mapped onto them. Reference both with DynamicResource so
+         a theme change reaches every control.
+
+         "Default" answers every theme variant and holds the dark palette, which
+         the app always uses today (MainWindow requests ThemeVariant.Dark). A
+         light palette goes into a sibling dictionary keyed "Light" with the same
+         keys; the semantic aliases below must be repeated there, because a
+         StaticResource alias resolves inside its own dictionary. -->
+    <ResourceDictionary.ThemeDictionaries>
+        <ResourceDictionary x:Key="Default">
+            <!-- Foreground: FG/1, FG/2 (strong text), FG/A1..A4 (labels down to
+                 separators), FG/B1 (text on light fills). -->
+            <SolidColorBrush x:Key="Vlc.Fg.1" Color="#EAEAEA" />
+            <SolidColorBrush x:Key="Vlc.Fg.2" Color="#C6C6C6" />
+            <SolidColorBrush x:Key="Vlc.Fg.A1" Color="#969696" />
+            <SolidColorBrush x:Key="Vlc.Fg.A2" Color="#8F8F8F" />
+            <SolidColorBrush x:Key="Vlc.Fg.A3" Color="#6B6B6B" />
+            <SolidColorBrush x:Key="Vlc.Fg.A4" Color="#404040" />
+            <SolidColorBrush x:Key="Vlc.Fg.B1" Color="#161616" />
+
+            <SolidColorBrush x:Key="Vlc.Accent.Main" Color="#D37918" />
+            <SolidColorBrush x:Key="Vlc.Accent.Bright" Color="#FC9729" />
+            <SolidColorBrush x:Key="Vlc.Accent.Dim" Color="#AB6314" />
+            <SolidColorBrush x:Key="Vlc.Accent.Logo" Color="#D37918" />
+
+            <!-- Backgrounds: A1 (lightest) .. A5, then B1, B2 (darkest). -->
+            <SolidColorBrush x:Key="Vlc.Bg.A1" Color="#222222" />
+            <SolidColorBrush x:Key="Vlc.Bg.A2" Color="#1F1F1F" />
+            <SolidColorBrush x:Key="Vlc.Bg.A3" Color="#1B1B1B" />
+            <SolidColorBrush x:Key="Vlc.Bg.A4" Color="#191919" />
+            <SolidColorBrush x:Key="Vlc.Bg.A5" Color="#151515" />
+            <SolidColorBrush x:Key="Vlc.Bg.B1" Color="#0E0E0E" />
+            <SolidColorBrush x:Key="Vlc.Bg.B2" Color="#090909" />
+            <!-- The design's "Transparent" styles: #191919 and #0E0E0E at 95%,
+                 black at 80%. -->
+            <SolidColorBrush x:Key="Vlc.Bg.A3Transparent" Color="#F2191919" />
+            <SolidColorBrush x:Key="Vlc.Bg.B1Transparent" Color="#F20E0E0E" />
+            <SolidColorBrush x:Key="Vlc.Bg.B2Transparent" Color="#CC000000" />
+            <SolidColorBrush x:Key="Vlc.Bg.AccentBright" Color="#371F06" />
+            <SolidColorBrush x:Key="Vlc.Bg.AccentDark" Color="#1A1611" />
+
+            <SolidColorBrush x:Key="Vlc.Divider.Bright" Color="#373737" />
+            <SolidColorBrush x:Key="Vlc.Divider.Dim" Color="#222222" />
+
+            <!-- Not in the design: state overlays that work over video as well
+                 as over the greys, and status colors. -->
+            <SolidColorBrush x:Key="Vlc.Overlay.Hover" Color="#20FFFFFF" />
+            <SolidColorBrush x:Key="Vlc.Overlay.Pressed" Color="#30FFFFFF" />
+            <SolidColorBrush x:Key="Vlc.Status.Danger" Color="#E81123" />
+            <SolidColorBrush x:Key="Vlc.Status.ErrorText" Color="#FFD6CE" />
+            <SolidColorBrush x:Key="Vlc.Status.ErrorSurface" Color="#E02B1717" />
+
+            <!-- Semantic keys. -->
+            <StaticResource x:Key="PlayerAccent" ResourceKey="Vlc.Accent.Main" />
+            <StaticResource x:Key="PlayerAccentHover" ResourceKey="Vlc.Accent.Bright" />
+            <StaticResource x:Key="PlayerAccentPressed" ResourceKey="Vlc.Accent.Dim" />
+            <StaticResource x:Key="PlayerAmplified" ResourceKey="Vlc.Accent.Bright" />
+            <!-- Behind the video: stays black in every theme. -->
+            <SolidColorBrush x:Key="PlayerCanvas" Color="Black" />
+            <StaticResource x:Key="PlayerSurface" ResourceKey="Vlc.Bg.A3Transparent" />
+            <StaticResource x:Key="PlayerCard" ResourceKey="Vlc.Bg.A1" />
+            <StaticResource x:Key="PlayerCardArtwork" ResourceKey="Vlc.Bg.A5" />
+            <StaticResource x:Key="PlayerWell" ResourceKey="Vlc.Bg.A4" />
+            <StaticResource x:Key="PlayerText" ResourceKey="Vlc.Fg.1" />
+            <StaticResource x:Key="PlayerSecondaryText" ResourceKey="Vlc.Fg.A2" />
+            <StaticResource x:Key="PlayerBorder" ResourceKey="Vlc.Divider.Bright" />
+            <StaticResource x:Key="PlayerHover" ResourceKey="Vlc.Overlay.Hover" />
+            <StaticResource x:Key="PlayerPressed" ResourceKey="Vlc.Overlay.Pressed" />
+            <StaticResource x:Key="PlayerTrack" ResourceKey="Vlc.Fg.A4" />
+            <StaticResource x:Key="PlayerSelection" ResourceKey="Vlc.Bg.AccentBright" />
+            <StaticResource x:Key="PlayerDanger" ResourceKey="Vlc.Status.Danger" />
+            <StaticResource x:Key="PlayerErrorText" ResourceKey="Vlc.Status.ErrorText" />
+            <StaticResource x:Key="PlayerErrorSurface" ResourceKey="Vlc.Status.ErrorSurface" />
+        </ResourceDictionary>
+    </ResourceDictionary.ThemeDictionaries>
 </ResourceDictionary>

@@ -36,22 +36,22 @@
     <Style Selector="Button.openPrimary">
         <Setter Property="CornerRadius" Value="12,0,0,12" />
         <Setter Property="Background" Value="#D724262C" />
-        <Setter Property="BorderBrush" Value="#56FF9A55" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Vlc.Accent.Dim}" />
     </Style>
     <Style Selector="Button.openPrimary:pointerover">
         <Setter Property="Background" Value="#EF353038" />
-        <Setter Property="BorderBrush" Value="#FFFF9A55" />
+        <Setter Property="BorderBrush" Value="{DynamicResource PlayerAccent}" />
     </Style>
     <Style Selector="Button.openOptions">
         <Setter Property="Width" Value="38" />
         <Setter Property="Padding" Value="0" />
         <Setter Property="CornerRadius" Value="0,12,12,0" />
         <Setter Property="Background" Value="#D724262C" />
-        <Setter Property="BorderBrush" Value="#56FF9A55" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Vlc.Accent.Dim}" />
     </Style>
     <Style Selector="Button.openOptions:pointerover">
         <Setter Property="Background" Value="#EF353038" />
-        <Setter Property="Foreground" Value="#FFFF9A55" />
+        <Setter Property="Foreground" Value="{DynamicResource PlayerAccent}" />
     </Style>
     <Style Selector="Button.menuAction">
         <Setter Property="HorizontalContentAlignment" Value="Left" />
@@ -71,7 +71,7 @@
         <Setter Property="CornerRadius" Value="4" />
     </Style>
     <Style Selector="Button.recentItem:pointerover">
-        <Setter Property="Background" Value="#1DFF9A55" />
+        <Setter Property="Background" Value="{DynamicResource PlayerSelection}" />
     </Style>
     <Style Selector="Button.recentRemove">
         <Setter Property="Width" Value="30" />
@@ -271,7 +271,7 @@
         <Setter Property="CornerRadius" Value="16" />
     </Style>
     <Style Selector="Button:focus-visible">
-        <Setter Property="Background" Value="#40FF9A55" />
+        <Setter Property="Background" Value="{DynamicResource PlayerSelection}" />
         <Setter Property="BorderBrush" Value="{DynamicResource PlayerAccent}" />
         <Setter Property="BorderThickness" Value="2" />
     </Style>
@@ -312,7 +312,7 @@
         <Setter Property="HorizontalContentAlignment" Value="Center" />
         <Setter Property="VerticalContentAlignment" Value="Center" />
         <Setter Property="Background" Value="{DynamicResource PlayerAccent}" />
-        <Setter Property="Foreground" Value="#120B07" />
+        <Setter Property="Foreground" Value="{DynamicResource Vlc.Fg.B1}" />
         <Setter Property="FontWeight" Value="SemiBold" />
     </Style>
     <!-- Override Fluent's template states as well as the outer Button so
@@ -344,8 +344,8 @@
         <Setter Property="BorderBrush" Value="{DynamicResource PlayerAccent}" />
     </Style>
     <Style Selector="TextBlock.settingBadge">
-        <Setter Property="Background" Value="#2AFF9A55" />
-        <Setter Property="Foreground" Value="#FFB77D" />
+        <Setter Property="Background" Value="{DynamicResource PlayerSelection}" />
+        <Setter Property="Foreground" Value="{DynamicResource Vlc.Accent.Bright}" />
         <Setter Property="Padding" Value="7,2" />
         <Setter Property="FontSize" Value="11" />
     </Style>

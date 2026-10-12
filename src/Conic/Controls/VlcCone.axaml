@@ -4,7 +4,7 @@
     <!-- VLC cone vector from VideoLAN's vlc/modules/gui/qt/pixmaps/misc/cone.svg. -->
     <Viewbox>
         <Canvas Width="130" Height="130">
-            <Path Fill="#FF8800"
+            <Path Fill="{DynamicResource Vlc.Accent.Logo}"
                   Data="M65 8.76c-1.511 0-3.023.369-4.219 1.108-2.675 1.654-4.219 8.438-4.219 8.438L54.031 25.9c7.312
                           4.599 14.625 4.647 21.938 0l-2.532-7.594s-1.543-6.784-4.218-8.438C68.022 9.129 66.511 8.761 65
                           8.761zM47.281 46.15l-8.437 25.312c17.304 11.16 34.739 11.376 52.312 0L82.72 46.15c-11.912

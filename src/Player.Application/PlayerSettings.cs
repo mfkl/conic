@@ -22,9 +22,11 @@ public sealed record PlayerSettings(
     double? NormalizationMaximumLevel = null,
     bool? AudioPassthrough = null,
     IReadOnlyDictionary<string, string>? ShortcutOverrides = null,
-    bool ReduceMotion = false)
+    bool ReduceMotion = false,
+    string Accent = AccentPalette.DefaultHex)
 {
-    public const int CurrentVersion = 5;
+    public const int CurrentVersion = 6;
+    public static IReadOnlyList<string> Themes { get; } = Array.AsReadOnly(new[] { "Dark", "Light", "System" });
     public static PlayerSettings Default { get; } = new(CurrentVersion, true, true, "System", "Comfortable", 3, 1, 10, 10, true, true, 30, 30, "Default");
 }
 
@@ -78,14 +80,14 @@ public sealed class PlayerSettingsService
         Changed?.Invoke(this, next);
     }
 
-    public void ResetAppearance() => Update(current => current with { Theme = PlayerSettings.Default.Theme, Density = PlayerSettings.Default.Density, ControlTimeoutSeconds = PlayerSettings.Default.ControlTimeoutSeconds, ReduceMotion = PlayerSettings.Default.ReduceMotion });
+    public void ResetAppearance() => Update(current => current with { Theme = PlayerSettings.Default.Theme, Accent = PlayerSettings.Default.Accent, Density = PlayerSettings.Default.Density, ControlTimeoutSeconds = PlayerSettings.Default.ControlTimeoutSeconds, ReduceMotion = PlayerSettings.Default.ReduceMotion });
     public void ResetPlayback() => Update(current => current with { DefaultSpeed = PlayerSettings.Default.DefaultSpeed, SkipBackwardSeconds = PlayerSettings.Default.SkipBackwardSeconds, SkipForwardSeconds = PlayerSettings.Default.SkipForwardSeconds });
     public void ResetGeneral() => Update(current => current with { ResumePlayback = PlayerSettings.Default.ResumePlayback, RememberVolume = PlayerSettings.Default.RememberVolume, RememberRecentMedia = PlayerSettings.Default.RememberRecentMedia, RememberResumeHistory = PlayerSettings.Default.RememberResumeHistory, ResumeMinimumElapsedSeconds = PlayerSettings.Default.ResumeMinimumElapsedSeconds, ResumeMaximumRemainingSeconds = PlayerSettings.Default.ResumeMaximumRemainingSeconds });
     public void ResetAll() => Update(_ => PlayerSettings.Default);
 
     public static SettingApplyMode ApplyMode(string key) => key switch
     {
-        nameof(PlayerSettings.Theme) or nameof(PlayerSettings.Density) or nameof(PlayerSettings.ControlTimeoutSeconds) or nameof(PlayerSettings.ReduceMotion)
+        nameof(PlayerSettings.Theme) or nameof(PlayerSettings.Accent) or nameof(PlayerSettings.Density) or nameof(PlayerSettings.ControlTimeoutSeconds) or nameof(PlayerSettings.ReduceMotion)
             or nameof(PlayerSettings.SkipBackwardSeconds) or nameof(PlayerSettings.SkipForwardSeconds) => SettingApplyMode.Live,
         nameof(PlayerSettings.RememberRecentMedia) or nameof(PlayerSettings.RememberResumeHistory) => SettingApplyMode.Live,
         nameof(PlayerSettings.DefaultSpeed) or nameof(PlayerSettings.ResumePlayback) or nameof(PlayerSettings.RememberVolume)
@@ -95,7 +97,9 @@ public sealed class PlayerSettingsService
 
     private static PlayerSettings Migrate(JsonElement root, int version) => version switch
     {
-        PlayerSettings.CurrentVersion => JsonSerializer.Deserialize<PlayerSettings>(root, JsonOptions) ?? throw new JsonException("Settings document was empty."),
+        // Version 6 added Accent; a version 5 document reads as is and the
+        // missing value takes the record's default.
+        5 or PlayerSettings.CurrentVersion => JsonSerializer.Deserialize<PlayerSettings>(root, JsonOptions) ?? throw new JsonException("Settings document was empty."),
         0 or 1 or 2 or 3 or 4 => PlayerSettings.Default with
         {
             ResumePlayback = Read(root, nameof(PlayerSettings.ResumePlayback), PlayerSettings.Default.ResumePlayback),
@@ -131,7 +135,8 @@ public sealed class PlayerSettingsService
     private static PlayerSettings Normalize(PlayerSettings value) => value with
     {
         Version = PlayerSettings.CurrentVersion,
-        Theme = value.Theme is "Dark" or "System" ? value.Theme : PlayerSettings.Default.Theme,
+        Theme = PlayerSettings.Themes.Contains(value.Theme) ? value.Theme : PlayerSettings.Default.Theme,
+        Accent = AccentPalette.Find(value.Accent) ?? PlayerSettings.Default.Accent,
         Density = value.Density is "Compact" or "Comfortable" ? value.Density : PlayerSettings.Default.Density,
         ControlTimeoutSeconds = Math.Clamp(value.ControlTimeoutSeconds, 1, 15),
         DefaultSpeed = Math.Clamp(value.DefaultSpeed, .25, 4),

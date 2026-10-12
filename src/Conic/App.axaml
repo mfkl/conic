@@ -9,14 +9,16 @@
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <ResourceInclude Source="avares://Conic/Styles/PlayerPalette.axaml" />
+                <ResourceInclude Source="avares://Conic/Styles/Icons.axaml" />
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Application.Resources>
     <Application.Styles>
         <FluentTheme>
             <FluentTheme.Palettes>
-                <ColorPaletteResources x:Key="Dark" Accent="#FF8800" />
-                <ColorPaletteResources x:Key="Light" Accent="#FF8800" />
+                <!-- Accent/Main from Styles/PlayerPalette.axaml (Vlc.Accent.Main). -->
+                <ColorPaletteResources x:Key="Dark" Accent="#D37918" />
+                <ColorPaletteResources x:Key="Light" Accent="#D37918" />
             </FluentTheme.Palettes>
         </FluentTheme>
         <StyleInclude Source="avares://Conic/Styles/PlayerChrome.axaml" />

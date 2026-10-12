@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
+using Conic.Controls;
 using Conic.ViewModels;
 
 namespace Conic.Views;
@@ -13,6 +14,7 @@ public partial class SettingsView : UserControl
     public SettingsView()
     {
         InitializeComponent();
+        SettingsHeader.Margin = PlatformChrome.ClearOfCaptionButtons(SettingsHeader.Margin);
         SizeChanged += (_, _) => ApplyResponsiveLayout();
     }
 

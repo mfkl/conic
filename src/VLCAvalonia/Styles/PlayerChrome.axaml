@@ -212,6 +212,142 @@
         <Setter Property="Foreground" Value="{DynamicResource PlayerAccentTextHover}" />
     </Style>
 
+    <!-- Dialogs .......................................................... -->
+
+    <!-- Controls/ModalDialog, the shell of Settings (999:5047) and Open
+         Network Stream (6216:13614): a dimmed backdrop, a surface of at most
+         1048x865 kept 48 below the top (clear of the title bar), radius 14,
+         the design's shadow, a 50 tall BG/B2 header and an optional footer
+         padded 20. The surface is opaque: without the design's backdrop blur
+         its 95 % (80 % in Light) let the screen behind show through. The
+         shadow is on a childless Border behind the content, because offscreen
+         captures above 100 % scale misplace the children of a shadowed
+         Border. .fit sizes the dialog to its content; :compact (narrower
+         than 720) fills the window. -->
+    <Style Selector="controls|ModalDialog">
+        <Setter Property="Background" Value="{DynamicResource Vlc.Bg.B1}" />
+        <Setter Property="Template">
+            <ControlTemplate TargetType="controls:ModalDialog">
+                <Panel>
+                    <Border Name="PART_Scrim" Background="{DynamicResource Vlc.Overlay.Scrim}" />
+                    <Panel Name="PART_Dialog" KeyboardNavigation.TabNavigation="Cycle">
+                        <Border Name="PART_Surface" Background="{TemplateBinding Background}" />
+                        <Border Name="PART_Frame">
+                            <Grid RowDefinitions="Auto,*,Auto">
+                                <Border Name="PART_Header">
+                                    <ContentPresenter Name="PART_HeaderPresenter"
+                                                      Content="{TemplateBinding Header}"
+                                                      ContentTemplate="{TemplateBinding HeaderTemplate}"
+                                                      HorizontalContentAlignment="Stretch"
+                                                      VerticalContentAlignment="Center" />
+                                </Border>
+                                <ContentPresenter Name="PART_ContentPresenter"
+                                                  Grid.Row="1"
+                                                  Content="{TemplateBinding Content}"
+                                                  ContentTemplate="{TemplateBinding ContentTemplate}"
+                                                  HorizontalContentAlignment="Stretch"
+                                                  VerticalContentAlignment="Stretch" />
+                                <ContentPresenter Name="PART_FooterPresenter"
+                                                  Grid.Row="2"
+                                                  Padding="20"
+                                                  Content="{TemplateBinding Footer}"
+                                                  IsVisible="{TemplateBinding Footer, Converter={x:Static ObjectConverters.IsNotNull}}"
+                                                  HorizontalContentAlignment="Stretch" />
+                            </Grid>
+                        </Border>
+                    </Panel>
+                </Panel>
+            </ControlTemplate>
+        </Setter>
+    </Style>
+    <Style Selector="controls|ModalDialog /template/ Panel#PART_Dialog">
+        <Setter Property="MaxWidth" Value="1048" />
+        <Setter Property="MaxHeight" Value="865" />
+        <Setter Property="Margin" Value="24,48,24,24" />
+    </Style>
+    <Style Selector="controls|ModalDialog.fit /template/ Panel#PART_Dialog">
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="controls|ModalDialog /template/ Border#PART_Surface">
+        <Setter Property="CornerRadius" Value="14" />
+        <Setter Property="BoxShadow" Value="0 8 15 0 #75000000" />
+    </Style>
+    <Style Selector="controls|ModalDialog /template/ Border#PART_Frame">
+        <Setter Property="CornerRadius" Value="14" />
+        <Setter Property="ClipToBounds" Value="True" />
+    </Style>
+    <Style Selector="controls|ModalDialog /template/ Border#PART_Header">
+        <Setter Property="Height" Value="50" />
+        <Setter Property="CornerRadius" Value="14,14,0,0" />
+        <Setter Property="Background" Value="{DynamicResource Vlc.Bg.B2}" />
+    </Style>
+    <Style Selector="controls|ModalDialog:compact /template/ Panel#PART_Dialog">
+        <Setter Property="MaxWidth" Value="Infinity" />
+        <Setter Property="MaxHeight" Value="Infinity" />
+        <Setter Property="Margin" Value="0" />
+        <Setter Property="VerticalAlignment" Value="Stretch" />
+    </Style>
+    <Style Selector="controls|ModalDialog:compact /template/ Border#PART_Surface">
+        <Setter Property="CornerRadius" Value="0" />
+        <Setter Property="BoxShadow" Value="none" />
+    </Style>
+    <Style Selector="controls|ModalDialog:compact /template/ Border#PART_Frame, controls|ModalDialog:compact /template/ Border#PART_Header">
+        <Setter Property="CornerRadius" Value="0" />
+    </Style>
+    <!-- Header: the title (14 FG/A1) and the 32x32 close button. -->
+    <Style Selector="TextBlock.dialogTitle">
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+        <Setter Property="Foreground" Value="{DynamicResource Vlc.Fg.A1}" />
+    </Style>
+    <Style Selector="Button.icon.dialogClose">
+        <Setter Property="Width" Value="32" />
+        <Setter Property="Height" Value="32" />
+        <Setter Property="Padding" Value="4" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <!-- Body: sections padded 20 (22 at the top), a 16 Medium FG/2 heading,
+         a 14 FG/A2 hint, BG/B2 fields and Divider/Dim lines between
+         sections. -->
+    <Style Selector="StackPanel.dialogBody">
+        <Setter Property="Margin" Value="20,22,20,8" />
+        <Setter Property="Spacing" Value="20" />
+    </Style>
+    <Style Selector="TextBlock.dialogHeading">
+        <Setter Property="FontSize" Value="16" />
+        <Setter Property="FontWeight" Value="Medium" />
+        <Setter Property="Foreground" Value="{DynamicResource Vlc.Fg.2}" />
+    </Style>
+    <Style Selector="TextBlock.dialogHint">
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="Margin" Value="0,6,0,0" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+        <Setter Property="Foreground" Value="{DynamicResource Vlc.Fg.A2}" />
+    </Style>
+    <Style Selector="TextBox.dialogField">
+        <Setter Property="MinHeight" Value="37" />
+        <Setter Property="Padding" Value="14,9" />
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="TextBox.dialogField /template/ Border#PART_BorderElement, TextBox.dialogField:pointerover /template/ Border#PART_BorderElement, TextBox.dialogField:focus /template/ Border#PART_BorderElement">
+        <Setter Property="Background" Value="{DynamicResource Vlc.Bg.B2}" />
+    </Style>
+    <Style Selector="Border.dialogDivider">
+        <Setter Property="Height" Value="1" />
+        <Setter Property="Background" Value="{DynamicResource Vlc.Divider.Dim}" />
+    </Style>
+    <!-- Footer: 100x32 actions, Cancel at the start and the action at the
+         end. -->
+    <Style Selector="Button.dialogAction">
+        <Setter Property="MinWidth" Value="100" />
+        <Setter Property="Height" Value="32" />
+        <Setter Property="Padding" Value="16,0" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+
     <!-- Bar panels .......................................................... -->
 
     <!-- Design: the panels the control bar's tools open (queue, tracks,

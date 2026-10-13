@@ -13,37 +13,8 @@
          720 DIPs (.compact, SettingsView.axaml.cs) the dialog fills the
          window and a ComboBox replaces the category pane. -->
     <UserControl.Styles>
-        <!-- Dialog ........................................................ -->
-        <Style Selector="Border#SettingsScrim">
-            <Setter Property="Background" Value="{DynamicResource Vlc.Overlay.Scrim}" />
-        </Style>
-        <Style Selector="Panel#SettingsDialog">
-            <Setter Property="MaxWidth" Value="1048" />
-            <Setter Property="MaxHeight" Value="865" />
-            <!-- Clear of the 40 px title bar, so the dialog never reaches the
-                 window's caption buttons. -->
-            <Setter Property="Margin" Value="24,48,24,24" />
-        </Style>
-        <!-- The surface and its shadow are a childless Border behind the
-             content: offscreen captures above 100 % scale misplace the
-             children of a shadowed Border (as for the mini player). -->
-        <!-- Opaque: without the design's backdrop blur, BG/B1 at 0.95 (0.8
-             in Light) lets the screen behind show through. -->
-        <Style Selector="Border#SettingsSurface">
-            <Setter Property="Background" Value="{DynamicResource Vlc.Bg.B1}" />
-            <Setter Property="CornerRadius" Value="14" />
-            <Setter Property="BoxShadow" Value="0 8 15 0 #75000000" />
-        </Style>
-        <Style Selector="Border#SettingsDialogContent">
-            <Setter Property="CornerRadius" Value="14" />
-            <Setter Property="ClipToBounds" Value="True" />
-        </Style>
-        <Style Selector="Border#SettingsHeader">
-            <Setter Property="Height" Value="50" />
-            <Setter Property="Padding" Value="8,0,14,0" />
-            <Setter Property="CornerRadius" Value="14,14,0,0" />
-            <Setter Property="Background" Value="{DynamicResource Vlc.Bg.B2}" />
-        </Style>
+        <!-- Dialog: the shell (backdrop, surface, header, compact layout) is
+             Controls/ModalDialog; these are the header's own parts. -->
         <Style Selector="TextBox#SettingsSearch">
             <Setter Property="Width" Value="200" />
             <Setter Property="Height" Value="34" />
@@ -62,18 +33,6 @@
             <Setter Property="Width" Value="32" />
             <Setter Property="Height" Value="32" />
             <Setter Property="Padding" Value="4" />
-        </Style>
-        <Style Selector=":is(UserControl).compact Panel#SettingsDialog">
-            <Setter Property="MaxWidth" Value="Infinity" />
-            <Setter Property="MaxHeight" Value="Infinity" />
-            <Setter Property="Margin" Value="0" />
-        </Style>
-        <Style Selector=":is(UserControl).compact Border#SettingsSurface">
-            <Setter Property="CornerRadius" Value="0" />
-            <Setter Property="BoxShadow" Value="none" />
-        </Style>
-        <Style Selector=":is(UserControl).compact Border#SettingsDialogContent, :is(UserControl).compact Border#SettingsHeader">
-            <Setter Property="CornerRadius" Value="0" />
         </Style>
         <Style Selector=":is(UserControl).compact TextBox#SettingsSearch">
             <Setter Property="Width" Value="NaN" />
@@ -322,19 +281,76 @@
             <Setter Property="BorderBrush" Value="{DynamicResource Vlc.Fg.1}" />
         </Style>
 
-        <!-- Keyboard shortcuts editor rows. -->
+        <!-- Keyboard shortcuts editor (2437:14832): column labels 14 FG/A2
+             (FG/A3 is below 4.5:1), Divider/Dim lines between groups, group
+             headings 16 FG/2, rows of the action in 14 FG/A2 and a 270x33
+             BG/B2 hotkey field (140 in the compact dialog) with the key
+             centered and the edit icon. -->
+        <Style Selector="Grid.shortcutColumns">
+            <Setter Property="Margin" Value="0,8,0,0" />
+        </Style>
+        <Style Selector="Grid.shortcutColumns > TextBlock">
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="Foreground" Value="{DynamicResource Vlc.Fg.A2}" />
+        </Style>
+        <Style Selector="TextBlock.hotkeyColumn">
+            <Setter Property="Width" Value="338" />
+            <Setter Property="Padding" Value="0,0,68,0" />
+            <Setter Property="TextAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Border.shortcutDivider">
+            <Setter Property="Height" Value="1" />
+            <Setter Property="Margin" Value="0,6,0,14" />
+            <Setter Property="Background" Value="{DynamicResource Vlc.Divider.Dim}" />
+        </Style>
+        <Style Selector="TextBlock.shortcutGroup">
+            <Setter Property="FontSize" Value="16" />
+            <Setter Property="Margin" Value="0,0,0,10" />
+            <Setter Property="Foreground" Value="{DynamicResource Vlc.Fg.2}" />
+        </Style>
         <Style Selector="Grid.shortcutRow">
             <Setter Property="MinHeight" Value="40" />
-        </Style>
-        <Style Selector="Grid.shortcutRow TextBox">
-            <Setter Property="Height" Value="32" />
-            <Setter Property="MinHeight" Value="32" />
-            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Margin" Value="0,0,0,6" />
         </Style>
         <Style Selector="TextBlock.shortcutName">
             <Setter Property="FontSize" Value="14" />
             <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="VerticalAlignment" Value="Center" />
             <Setter Property="Foreground" Value="{DynamicResource Vlc.Fg.A2}" />
+        </Style>
+        <Style Selector="TextBox.shortcutField">
+            <Setter Property="Width" Value="270" />
+            <Setter Property="Height" Value="33" />
+            <Setter Property="MinHeight" Value="33" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="Padding" Value="32,0,6,0" />
+            <Setter Property="TextAlignment" Value="Center" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="InnerRightContent">
+                <Template>
+                    <controls:VlcIcon Width="20" Height="20" Margin="0,0,8,0"
+                                      VerticalAlignment="Center"
+                                      IsHitTestVisible="False"
+                                      Foreground="{DynamicResource Vlc.Fg.A3}"
+                                      Icon="{DynamicResource Icon.Edit}" />
+                </Template>
+            </Setter>
+        </Style>
+        <Style Selector="TextBox.shortcutField /template/ Border#PART_BorderElement, TextBox.shortcutField:pointerover /template/ Border#PART_BorderElement, TextBox.shortcutField:focus /template/ Border#PART_BorderElement">
+            <Setter Property="Background" Value="{DynamicResource Vlc.Bg.B2}" />
+        </Style>
+        <Style Selector="Button.icon.shortcutAction">
+            <Setter Property="Width" Value="28" />
+            <Setter Property="Height" Value="28" />
+            <Setter Property="Padding" Value="4" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector=":is(UserControl).compact TextBox.shortcutField">
+            <Setter Property="Width" Value="140" />
+        </Style>
+        <Style Selector=":is(UserControl).compact TextBlock.hotkeyColumn">
+            <Setter Property="Width" Value="208" />
         </Style>
 
         <!-- Compact density: tighter rows. -->
@@ -347,38 +363,33 @@
         </Style>
     </UserControl.Styles>
 
-    <Panel>
-        <Border x:Name="SettingsScrim" PointerPressed="OnScrimPointerPressed" />
-        <Panel x:Name="SettingsDialog"
-               KeyboardNavigation.TabNavigation="Cycle"
-               x:FieldModifier="internal">
-            <Border x:Name="SettingsSurface" />
-            <Border x:Name="SettingsDialogContent">
-                <Grid RowDefinitions="Auto,*">
-                    <Border x:Name="SettingsHeader" x:FieldModifier="internal">
-                        <Grid ColumnDefinitions="Auto,*,Auto">
-                            <TextBox x:Name="SettingsSearch"
-                                     Classes="search"
-                                     Text="{Binding Search, Mode=TwoWay}"
-                                     PlaceholderText="Search"
-                                     AutomationProperties.Name="Search settings"
-                                     x:FieldModifier="internal" />
-                            <TextBlock x:Name="SettingsTitle"
-                                       Grid.Column="1"
-                                       Text="{Binding DialogTitle}" />
-                            <Button x:Name="SettingsCloseButton"
-                                    Grid.Column="2"
-                                    Classes="icon"
-                                    Click="OnSettingsClose"
-                                    AutomationProperties.Name="Close settings"
-                                    ToolTip.Tip="Close (Escape)">
-                                <controls:VlcIcon Width="24" Height="24"
-                                                  Icon="{StaticResource Icon.Close}" />
-                            </Button>
-                        </Grid>
-                    </Border>
+    <controls:ModalDialog x:Name="SettingsShell"
+                          HeaderPadding="8,0,14,0"
+                          CloseRequested="OnShellCloseRequested"
+                          AutomationProperties.Name="Settings">
+        <controls:ModalDialog.Header>
+            <Grid x:Name="SettingsHeader" ColumnDefinitions="Auto,*,Auto" x:FieldModifier="internal">
+                <TextBox x:Name="SettingsSearch"
+                         Classes="search"
+                         Text="{Binding Search, Mode=TwoWay}"
+                         PlaceholderText="Search"
+                         AutomationProperties.Name="Search settings"
+                         x:FieldModifier="internal" />
+                <TextBlock x:Name="SettingsTitle"
+                           Grid.Column="1"
+                           Text="{Binding DialogTitle}" />
+                <Button x:Name="SettingsCloseButton"
+                        Grid.Column="2"
+                        Classes="icon"
+                        Click="OnSettingsClose"
+                        AutomationProperties.Name="Close settings"
+                        ToolTip.Tip="Close (Escape)">
+                    <controls:VlcIcon Width="24" Height="24"
+                                      Icon="{StaticResource Icon.Close}" />
+                </Button>
+            </Grid>
+        </controls:ModalDialog.Header>
                     <Grid x:Name="SettingsColumns"
-                          Grid.Row="1"
                           ColumnDefinitions="216,*"
                           x:FieldModifier="internal">
                         <Border x:Name="SettingsCategoryPane" Padding="8" x:FieldModifier="internal">
@@ -598,32 +609,74 @@
                                                            AutomationProperties.Name="Skip forward (seconds)" />
                                         </controls:SettingRow>
                                     </StackPanel>
-                                    <StackPanel Classes="settingsSection" IsVisible="{Binding IsControls}" Spacing="8">
+                                    <!-- The design's Keyboard Shortcuts editor (2437:14832) as
+                                         this page's section: search (with Reset all in place of
+                                         the design's field filter), Action / Hotkey columns, a
+                                         heading per group and 270-wide BG/B2 hotkey fields with
+                                         the edit icon. Each row keeps its Save (also Enter) and
+                                         Reset; the design's Global Hotkey column and dialog-wide
+                                         Cancel / Save are left out (no global hotkeys; edits are
+                                         saved per shortcut, with conflict checks). -->
+                                    <StackPanel x:Name="ShortcutsSection" Classes="settingsSection" IsVisible="{Binding IsControls}" Spacing="8" x:FieldModifier="internal">
                                         <TextBlock Classes="sectionTitle" Text="Keyboard Shortcuts" />
-                                        <controls:SettingRow Label="Reset all shortcuts">
-                                            <Button Classes="secondary settingAction"
-                                                    Content="Reset"
+                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                            <TextBox x:Name="ShortcutSearchBox"
+                                                     Classes="search"
+                                                     MinHeight="34"
+                                                     VerticalContentAlignment="Center"
+                                                     PlaceholderText="Search keyboard shortcuts…"
+                                                     Text="{Binding ShortcutSearch, Mode=TwoWay}"
+                                                     AutomationProperties.Name="Search shortcuts"
+                                                     x:FieldModifier="internal" />
+                                            <Button Grid.Column="1"
+                                                    Classes="secondary settingsSmall"
+                                                    Height="34"
+                                                    Content="Reset All"
                                                     Command="{Binding ResetAllShortcutsCommand}"
+                                                    ToolTip.Tip="Restore every default shortcut"
                                                     AutomationProperties.Name="Reset all shortcuts" />
-                                        </controls:SettingRow>
-                                        <TextBox Classes="search"
-                                                 PlaceholderText="Search shortcuts"
-                                                 Text="{Binding ShortcutSearch, Mode=TwoWay}"
-                                                 AutomationProperties.Name="Search shortcuts" />
-                                        <TextBlock Text="Edit a shortcut, then Save. Conflicting shortcuts must be resolved before saving."
+                                        </Grid>
+                                        <TextBlock Text="Type a shortcut such as Ctrl+O, then press Enter or Save. Conflicting shortcuts must be resolved before saving."
                                                    Classes="settingNote" />
-                                        <ItemsControl ItemsSource="{Binding EditableShortcutRows}">
+                                        <Grid Classes="shortcutColumns" ColumnDefinitions="*,Auto">
+                                            <TextBlock Text="Action" />
+                                            <TextBlock Grid.Column="1" Classes="hotkeyColumn" Text="Hotkey" />
+                                        </Grid>
+                                        <ItemsControl ItemsSource="{Binding EditableShortcutGroups}">
                                             <ItemsControl.ItemTemplate>
-                                                <DataTemplate x:DataType="viewModels:ShortcutRow">
-                                                    <Grid ColumnDefinitions="*,140,Auto,Auto" ColumnSpacing="8" Margin="0,3" Classes="shortcutRow">
-                                                        <StackPanel VerticalAlignment="Center">
-                                                            <TextBlock Classes="shortcutName" Text="{Binding Name}" />
-                                                            <TextBlock Classes="settingNote" Text="{Binding Category}" />
-                                                        </StackPanel>
-                                                        <TextBox Grid.Column="1" Text="{Binding PendingGesture, Mode=TwoWay}" AutomationProperties.Name="{Binding Name, StringFormat='{}{0} shortcut'}" />
-                                                        <Button Grid.Column="2" Classes="secondary settingsSmall" Content="Save" Command="{Binding SaveCommand}" AutomationProperties.Name="{Binding Name, StringFormat='Save {0} shortcut'}" />
-                                                        <Button Grid.Column="3" Classes="secondary settingsSmall" Content="Reset" Command="{Binding ResetCommand}" AutomationProperties.Name="{Binding Name, StringFormat='Reset {0} shortcut'}" />
-                                                    </Grid>
+                                                <DataTemplate x:DataType="viewModels:ShortcutGroup">
+                                                    <StackPanel>
+                                                        <Border Classes="shortcutDivider" />
+                                                        <TextBlock Classes="shortcutGroup" Text="{Binding Category}" />
+                                                        <ItemsControl ItemsSource="{Binding Rows}">
+                                                            <ItemsControl.ItemTemplate>
+                                                                <DataTemplate x:DataType="viewModels:ShortcutRow">
+                                                                    <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="6" Classes="shortcutRow">
+                                                                        <TextBlock Classes="shortcutName" Text="{Binding Name}" />
+                                                                        <TextBox Grid.Column="1"
+                                                                                 Classes="shortcutField"
+                                                                                 Text="{Binding PendingGesture, Mode=TwoWay}"
+                                                                                 KeyDown="OnShortcutFieldKeyDown"
+                                                                                 AutomationProperties.Name="{Binding Name, StringFormat='{}{0} shortcut'}" />
+                                                                        <Button Grid.Column="2"
+                                                                                Classes="icon shortcutAction"
+                                                                                Command="{Binding SaveCommand}"
+                                                                                ToolTip.Tip="Save"
+                                                                                AutomationProperties.Name="{Binding Name, StringFormat='Save {0} shortcut'}">
+                                                                            <controls:VlcIcon Width="20" Height="20" Icon="{StaticResource Icon.Save}" />
+                                                                        </Button>
+                                                                        <Button Grid.Column="3"
+                                                                                Classes="icon shortcutAction"
+                                                                                Command="{Binding ResetCommand}"
+                                                                                ToolTip.Tip="{Binding DefaultGesture, StringFormat='Reset to the default ({0})'}"
+                                                                                AutomationProperties.Name="{Binding Name, StringFormat='Reset {0} shortcut'}">
+                                                                            <controls:VlcIcon Width="20" Height="20" Icon="{StaticResource Icon.Refresh}" />
+                                                                        </Button>
+                                                                    </Grid>
+                                                                </DataTemplate>
+                                                            </ItemsControl.ItemTemplate>
+                                                        </ItemsControl>
+                                                    </StackPanel>
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
                                         </ItemsControl>
@@ -736,8 +789,5 @@
                             </ScrollViewer>
                         </Grid>
                     </Grid>
-                </Grid>
-            </Border>
-        </Panel>
-    </Panel>
+    </controls:ModalDialog>
 </UserControl>

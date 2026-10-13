@@ -59,6 +59,30 @@ public sealed class SettingsViewModelTests
     }
 
     [Fact]
+    public void ShortcutGroupsListPlaybackFirstAndFollowTheSearch()
+    {
+        PlayerCommandRegistry registry = new();
+        registry.Register(new(PlayerCommandId.OpenMedia, "Open media", "Media", "Ctrl+O"), _ => { });
+        registry.Register(new(PlayerCommandId.ToggleFullscreen, "Fullscreen", "Window", "F11"), _ => { });
+        registry.Register(new(PlayerCommandId.Stop, "Stop", "Playback"), _ => { });
+        registry.Register(new(PlayerCommandId.TogglePause, "Play or pause", "Playback", "Space"), _ => { });
+        SettingsViewModel viewModel = new(new PlayerSettingsService(new MemoryStorage()), registry);
+
+        Assert.Equal(["Playback", "Media", "Window"], viewModel.EditableShortcutGroups.Select(group => group.Category));
+        Assert.Equal(["Play or pause", "Stop"], viewModel.EditableShortcutGroups[0].Rows.Select(row => row.Name));
+        Assert.Equal([false, true, true], viewModel.EditableShortcutGroups.Select(group => group.HasDivider));
+        Assert.Equal(viewModel.EditableShortcutRows.Count, viewModel.EditableShortcutGroups.Sum(group => group.Rows.Count));
+
+        List<string?> changed = [];
+        viewModel.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+        viewModel.ShortcutSearch = "full";
+        Assert.Contains(nameof(SettingsViewModel.EditableShortcutGroups), changed);
+        ShortcutGroup only = Assert.Single(viewModel.EditableShortcutGroups);
+        Assert.Equal("Window", only.Category);
+        Assert.False(only.HasDivider);
+    }
+
+    [Fact]
     public void ConfirmedResetRefreshesVisibleShortcutRows()
     {
         PlayerSettingsService service = new(new MemoryStorage());

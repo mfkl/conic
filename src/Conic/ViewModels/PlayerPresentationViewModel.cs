@@ -139,6 +139,7 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
         {
             CheckpointCurrent(true);
             _stoppedSource = QueueItems.FirstOrDefault(item => item.IsCurrent)?.Source ?? _currentSource?.CanonicalSource ?? _lastState?.Source;
+            _stopRequested = true;
             _transport.Stop();
         }, _ => CanStop);
         registry.Register(new(PlayerCommandId.Seek, "Seek", "Playback"), parameter => _transport.Seek(ToDouble(parameter)));
@@ -165,9 +166,21 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
         registry.Register(new(PlayerCommandId.QueueSelect, "Play queue item", "Playback"), p => _queue?.SelectAndPlay(p as string ?? string.Empty), p => p is string token && QueueItems.Any(x => x.Token == token));
         registry.Register(new(PlayerCommandId.QueueMove, "Move queue item", "Playback"), p => { if (p is QueueMove move) _queue?.Move(move.Token, move.DestinationIndex); }, p => p is QueueMove move && QueueItems.Any(x => x.Token == move.Token));
         registry.Register(new(PlayerCommandId.QueueRemove, "Remove queue item", "Playback"), p => _queue?.Remove(p as string ?? string.Empty), p => p is string token && QueueItems.Any(x => x.Token == token));
-        registry.Register(new(PlayerCommandId.QueueClear, "Clear queue", "Playback"), _ => _queue?.ClearQueue(), _ => QueueItems.Count > 0);
-        registry.Register(new(PlayerCommandId.QueueRepeat, "Repeat mode", "Playback"), _ => _queue?.SetRepeatMode(QueueState.Repeat switch { QueueRepeatMode.None => QueueRepeatMode.CurrentItem, QueueRepeatMode.CurrentItem => QueueRepeatMode.All, _ => QueueRepeatMode.None }), _ => _queue is not null);
-        registry.Register(new(PlayerCommandId.QueueShuffle, "Shuffle queue", "Playback"), _ => _queue?.SetOrder(QueueState.Order == QueueOrder.Random ? QueueOrder.Normal : QueueOrder.Random), _ => _queue is not null);
+        registry.Register(new(PlayerCommandId.QueueClear, "Clear queue", "Playback"), _ => { _stopRequested = true; _queue?.ClearQueue(); }, _ => QueueItems.Count > 0);
+        // Repeat and shuffle are remembered (Settings › Playback › Order): the
+        // next queue, and the next run, start in the mode chosen last.
+        registry.Register(new(PlayerCommandId.QueueRepeat, "Repeat mode", "Playback"), _ =>
+        {
+            QueueRepeatMode next = QueueState.Repeat switch { QueueRepeatMode.None => QueueRepeatMode.CurrentItem, QueueRepeatMode.CurrentItem => QueueRepeatMode.All, _ => QueueRepeatMode.None };
+            _queue?.SetRepeatMode(next);
+            RememberQueueModes(s => s with { QueueRepeat = QueueModeSettings.Setting(next) });
+        }, _ => _queue is not null);
+        registry.Register(new(PlayerCommandId.QueueShuffle, "Shuffle queue", "Playback"), _ =>
+        {
+            bool shuffle = QueueState.Order != QueueOrder.Random;
+            _queue?.SetOrder(QueueModeSettings.Order(shuffle));
+            RememberQueueModes(s => s with { QueueShuffle = shuffle });
+        }, _ => _queue is not null);
         registry.Register(new(PlayerCommandId.LoadPlaylist, "Load playlist", "Media"), _ => _ = LoadPlaylistAsync(), _ => _mediaSourcePicker is IPlaylistDocumentPicker && _queue is not null);
         registry.Register(new(PlayerCommandId.SavePlaylist, "Save playlist", "Media"), _ => _ = SavePlaylistAsync(), _ => _mediaSourcePicker is IPlaylistDocumentPicker && QueueItems.Count > 0);
         registry.Register(new(PlayerCommandId.ToggleMediaControls, "Tracks and synchronization", "Playback"), p => { DrawerTab = p as string ?? "Audio"; IsQueueOpen = true; }, _ => _mediaControls is not null);
@@ -240,6 +253,16 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
     }
 
     public IPlayerCommandRegistry Registry { get; }
+
+    /// <summary>Raised when playback stops by itself at the end of the queue (or of an item, with Stop after each item).</summary>
+    public event EventHandler? PlaybackFinished;
+    private bool _stopRequested;
+
+    private void RememberQueueModes(Func<PlayerSettings, PlayerSettings> update)
+    {
+        try { _settings?.Update(update); }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException) { _diagnostic?.Invoke(exception.ToString()); }
+    }
 
     private async Task CopyDiagnosticsAsync()
     {
@@ -615,7 +638,12 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
                 IsHomeOpen = false;
             }
             IsPlaying = state.Status == PlaybackStatus.Playing;
+            PlaybackStatus previousStatus = PlaybackStatus;
             PlaybackStatus = state.Status;
+            // The queue reached its end (or its item, with Stop after each
+            // item) by itself, not through Stop or Clear.
+            if (state.Status == PlaybackStatus.Stopped && previousStatus is PlaybackStatus.Playing or PlaybackStatus.Paused && !_stopRequested && _currentSource is not null)
+                PlaybackFinished?.Invoke(this, EventArgs.Empty);
             OnPropertyChanged(nameof(PlayPauseName));
             OnPropertyChanged(nameof(PlayPauseToolTip));
             if (state.Status == PlaybackStatus.Faulted) { OpenError = "Media could not be opened."; _diagnostic?.Invoke(state.Error ?? "Media engine fault."); return; }
@@ -639,7 +667,12 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
             {
                 if (TryHistory(() => _history?.RecordOpened(_currentSource, _settings?.Current.RememberRecentMedia ?? true))) { _recordedOpenGeneration = state.Generation; NotifyLibrary(); }
                 if (_pendingResume is not null && state.Generation == _activeGeneration && state.CanSeek && state.Duration > TimeSpan.Zero)
-                { _resumeReady = true; NotifyPendingResume(); }
+                {
+                    _resumeReady = true;
+                    // Continue where you left off: Always resumes without asking.
+                    if (_settings?.Current.ResumeAutomatically == true) ApplyResume();
+                    else NotifyPendingResume();
+                }
             }
             if (_currentSource is not null && state.Status is PlaybackStatus.Playing or PlaybackStatus.Paused && _clock() - _lastCheckpointUtc >= TimeSpan.FromSeconds(10))
                 CheckpointCurrent(false);
@@ -670,6 +703,7 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
         if (_queue is not null && QueueState.Status == QueueLoadState.Ready && QueueItems.Count > 0)
         {
             var item = QueueItems.FirstOrDefault(item => item.IsCurrent) ?? QueueItems[0];
+            _stopRequested = false;
             try { _queue.SelectAndPlay(item.Token); OpenError = string.Empty; }
             catch (Exception error) { _diagnostic?.Invoke(error.ToString()); OpenError = "Media could not be restarted."; }
             return;
@@ -690,6 +724,7 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
         if (!result.Succeeded || result.Source is null) { if (kind == MediaSourceKind.Recent && !string.IsNullOrWhiteSpace(rawSource)) TryHistory(() => _history?.RemoveRecent(rawSource)); _diagnostic?.Invoke(result.Diagnostic ?? "Media source validation failed."); OpenError = result.UserMessage ?? "Media could not be opened."; NotifyLibrary(); return; }
         CheckpointCurrent(true);
         _stoppedSource = null;
+        _stopRequested = false;
         _currentSource = result.Source;
         UpdateNowPlaying();
         IsHomeOpen = false;
@@ -735,6 +770,7 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
         if (expansion.Sources.Count == 0) { OpenError = expansion.Failures.FirstOrDefault() ?? "No usable media files were found."; return; }
         if (_queue is null) { OpenError = "The playback queue is not ready yet."; return; }
         _stoppedSource = null;
+        _stopRequested = false;
         _currentSource = expansion.Sources[0]; UpdateNowPlaying(); _generationFloor = _lastObservedGeneration; _activeGeneration = -1; _resumeReady = false; _pendingResume = null; NotifyPendingResume();
         try { if (replace) _queue.OpenQueue(expansion.Sources.Select(x => x.CanonicalSource).ToArray()); else _queue.Enqueue(expansion.Sources.Select(x => x.CanonicalSource)); }
         catch (Exception exception) { _diagnostic?.Invoke(exception.ToString()); OpenError = "Media could not be queued."; return; }

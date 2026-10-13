@@ -30,7 +30,6 @@ internal sealed unsafe partial class VlcCorePlayer : IMediaEngine, IQueueTranspo
     private readonly string _videoOutput;
     private readonly bool _hardwareDecoding;
     private readonly bool _verboseLogging;
-    private readonly IReadOnlyList<string> _audioStartupArguments;
     private Thread? _thread;
     private ManualResetEventSlim? _stop;
     private nint _playlist;
@@ -53,13 +52,12 @@ internal sealed unsafe partial class VlcCorePlayer : IMediaEngine, IQueueTranspo
 
     /// <param name="videoOutput">VLC <c>--vout</c> module. Windows and macOS implement
     /// <see cref="DefaultVideoOutput"/>; headless engine checks pass <c>dummy</c>.</param>
-    public VlcCorePlayer(bool hardwareDecoding = true, bool verboseLogging = false, IReadOnlyList<string>? audioStartupArguments = null, string videoOutput = DefaultVideoOutput)
+    public VlcCorePlayer(bool hardwareDecoding = true, bool verboseLogging = false, string videoOutput = DefaultVideoOutput)
     {
         NativeEngineSupport.RequireAvailable();
         ArgumentException.ThrowIfNullOrWhiteSpace(videoOutput);
         _hardwareDecoding = hardwareDecoding;
         _verboseLogging = verboseLogging;
-        _audioStartupArguments = audioStartupArguments?.ToArray() ?? [];
         _videoOutput = videoOutput;
         _controlHost = new VlcControlHost();
         _controlHost.Connect();
@@ -193,10 +191,11 @@ internal sealed unsafe partial class VlcCorePlayer : IMediaEngine, IQueueTranspo
 
         long generation = _states.BeginOpen(stateSource);
         string[] openArguments = [.. RateArguments(OpenPlaybackRate), .. OpenArguments];
+        LiveAudioSettings? startupAudio = LiveAudio;
         PublishQueue(new PlaybackQueueState(generation, 0, QueueLoadState.Loading, [], -1, _requestedRepeat, _requestedOrder));
         PublishMediaCapabilities(new MediaCapabilitiesState(generation, 0, MediaCapabilityLoadState.Loading, [], [], [], [], new(0, 0)));
         ManualResetEventSlim stop = new(false);
-        Thread thread = new(() => Run(launchSources, initialEnqueueSources, openArguments, generation, stop))
+        Thread thread = new(() => Run(launchSources, initialEnqueueSources, openArguments, startupAudio, generation, stop))
         {
             IsBackground = true,
             Name = "VLCLR composition playback",
@@ -254,7 +253,7 @@ internal sealed unsafe partial class VlcCorePlayer : IMediaEngine, IQueueTranspo
                 return;
             VLCCore.PlaylistVolumeSet(
                 _playlist,
-                (float)Math.Clamp(normalizedVolume, 0, 2));
+                (float)Math.Clamp(normalizedVolume, 0, AudioEngineOptions.MaximumVolumeLimit / 100d));
             generation = _generation;
         }
         PublishSnapshot(generation);
@@ -665,6 +664,7 @@ internal sealed unsafe partial class VlcCorePlayer : IMediaEngine, IQueueTranspo
         IReadOnlyList<string> sources,
         IReadOnlyList<string> initialEnqueueSources,
         IReadOnlyList<string> openArguments,
+        LiveAudioSettings? startupAudio,
         long generation,
         ManualResetEventSlim stop)
     {
@@ -678,7 +678,6 @@ internal sealed unsafe partial class VlcCorePlayer : IMediaEngine, IQueueTranspo
             _hardwareDecoding ? "--avcodec-hw=any" : "--avcodec-hw=none",
             // VideoToolbox is a separate decoder module on macOS, ahead of avcodec.
             .. (!_hardwareDecoding && OperatingSystem.IsMacOS() ? new[] { "--no-videotoolbox" } : []),
-            .. _audioStartupArguments,
             .. openArguments,
             .. sources,
         ];
@@ -734,10 +733,13 @@ internal sealed unsafe partial class VlcCorePlayer : IMediaEngine, IQueueTranspo
                     _mediaGeneration = 0;
                     _lastObservedInputIdentity = 0;
                     _queue = new VLCPlaylistQueue(TryGetPlaylistLease);
+                    // The core started with the audio options of these settings.
+                    ResetAppliedAudio(startupAudio);
                 }
             }
 
             ApplyRequestedModes(generation);
+            ApplyLiveAudio();
 
             VLCCore.libvlc_InternalPlay(core);
             if (initialEnqueueSources.Count != 0)

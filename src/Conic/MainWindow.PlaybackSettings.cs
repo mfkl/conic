@@ -9,7 +9,8 @@ namespace Conic;
 // Settings the app applies itself rather than through VLC's options:
 // Playback › When playback finishes, Video › Start videos in fullscreen and
 // Stop the screensaver during playback. The rest go to each new core
-// (EngineArguments, PlayerEngineOptions).
+// (EngineArguments, PlayerEngineOptions); the audio effects, replay gain and
+// the device also go to the playing one (LiveAudio, AudioEngineOptions).
 public partial class MainWindow
 {
     private long _fullscreenStartGeneration = -1;
@@ -32,6 +33,7 @@ public partial class MainWindow
     private void ApplyEngineSettings(PlayerSettings settings)
     {
         VideoSurface.OpenArguments = EngineArguments(settings);
+        VideoSurface.LiveAudio = AudioEngineOptions.Live(settings);
         VideoSurface.QueueModes = (QueueModeSettings.Repeat(settings.QueueRepeat), QueueModeSettings.Order(settings.QueueShuffle));
         UpdateDisplayRequest();
     }

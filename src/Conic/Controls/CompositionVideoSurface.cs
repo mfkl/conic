@@ -33,11 +33,11 @@ public sealed class CompositionVideoSurface : Control, IDisposable
         TopLevel.GetTopLevel(this)?.RenderScaling ?? 1);
     private bool _attached;
     private IReadOnlyList<string>? _pendingQueueSources;
-    private IReadOnlyList<string> _audioStartupArguments = [];
     private double _openPlaybackRate = 1;
     private IReadOnlyList<string> _openArguments = [];
     private IReadOnlyList<string> _extraOpenArguments = [];
     private (QueueRepeatMode Repeat, QueueOrder Order) _queueModes = (QueueRepeatMode.None, QueueOrder.Normal);
+    private LiveAudioSettings? _liveAudio;
 
     /// <summary>Default speed for the next open (<see cref="VlcCorePlayer.OpenPlaybackRate"/>).</summary>
     internal double OpenPlaybackRate
@@ -63,6 +63,13 @@ public sealed class CompositionVideoSurface : Control, IDisposable
         set { _extraOpenArguments = Array.AsReadOnly((value ?? []).ToArray()); PushOpenArguments(); }
     }
 
+    /// <summary>The audio settings for the playing core (<see cref="VlcCorePlayer.LiveAudio"/>).</summary>
+    internal LiveAudioSettings? LiveAudio
+    {
+        get => _liveAudio;
+        set { _liveAudio = value; if (_player is VlcCorePlayer core) core.LiveAudio = value; }
+    }
+
     /// <summary>The repeat and shuffle modes new queues start with (<see cref="VlcCorePlayer.RequestQueueModes"/>).</summary>
     internal (QueueRepeatMode Repeat, QueueOrder Order) QueueModes
     {
@@ -73,12 +80,6 @@ public sealed class CompositionVideoSurface : Control, IDisposable
     private void PushOpenArguments()
     {
         if (_player is VlcCorePlayer core) core.OpenArguments = [.. _openArguments, .. _extraOpenArguments];
-    }
-
-    internal IReadOnlyList<string> AudioStartupArguments
-    {
-        get => _audioStartupArguments;
-        set => _audioStartupArguments = Array.AsReadOnly((value ?? []).ToArray());
     }
 
     internal bool ForceUnavailableAdapterForSmoke { get; set; }
@@ -236,7 +237,7 @@ public sealed class CompositionVideoSurface : Control, IDisposable
     {
         try
         {
-            IMediaEngine? player = await session.InitializeAsync(_audioStartupArguments);
+            IMediaEngine? player = await session.InitializeAsync();
             if (_attached && ReferenceEquals(_session, session) && player is not null)
                 ConnectPlayer(player, session);
         }
@@ -290,6 +291,7 @@ public sealed class CompositionVideoSurface : Control, IDisposable
                 core.OpenPlaybackRate = _openPlaybackRate;
                 core.OpenArguments = [.. _openArguments, .. _extraOpenArguments];
                 core.RequestQueueModes(_queueModes.Repeat, _queueModes.Order);
+                core.LiveAudio = _liveAudio;
             }
             _player.StateChanged += StateChanged;
             if (_player is IQueueTransport queue)

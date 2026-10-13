@@ -28,6 +28,8 @@ public partial class MainWindow : Window
     private readonly WindowGeometryStore _windowGeometry;
     private readonly StorageMediaSourcePicker _mediaPicker;
     private WindowState _preFullscreenState = WindowState.Normal;
+    private WindowState? _requestedWindowState;
+    private long _windowStateRequestedAt;
     private bool _isSeeking;
     private bool _isVolumeDragging;
     private bool _keyboardNavigation;

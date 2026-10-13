@@ -366,7 +366,7 @@ public partial class MainWindow
             SettingsPanel.IsVisible = false;
             if (_presentation.IsHomeOpen && WindowState == WindowState.FullScreen)
             {
-                WindowState = WindowState.Normal;
+                RequestWindowState(WindowState.Normal);
                 _presentation.IsFullscreen = false;
             }
             SetChromeVisibility(true);

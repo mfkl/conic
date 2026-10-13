@@ -49,6 +49,7 @@ public partial class MainWindow
     // Also runs when the platform changes the state (macOS green button).
     private void OnWindowStateChanged()
     {
+        ReassertRequestedWindowState();
         bool fullscreen = WindowState == WindowState.FullScreen;
         if (_chromeVisibility.IsFullscreen != fullscreen) _chromeVisibility.SetFullscreen(fullscreen);
         _presentation.IsFullscreen = fullscreen;
@@ -93,11 +94,36 @@ public partial class MainWindow
         }
     }
 
+    // macOS animates entering and leaving fullscreen and drops a change asked
+    // for meanwhile, so the window ended the animation in the state it was
+    // heading to (F pressed twice quickly stayed fullscreen). The app's own
+    // fullscreen changes go through here, and OnWindowStateChanged asks again
+    // when AppKit reports the other state soon after.
+    private void RequestWindowState(WindowState state)
+    {
+        _requestedWindowState = state;
+        _windowStateRequestedAt = Environment.TickCount64;
+        WindowState = state;
+    }
+
+    private void ReassertRequestedWindowState()
+    {
+        if (!OperatingSystem.IsMacOS() || _requestedWindowState is not { } requested || WindowState == requested
+            || WindowState is not (WindowState.Normal or WindowState.FullScreen)
+            || Environment.TickCount64 - _windowStateRequestedAt > 2000)
+            return;
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (_requestedWindowState == requested && WindowState is WindowState.Normal or WindowState.FullScreen && WindowState != requested)
+                WindowState = requested;
+        });
+    }
+
     private void ToggleFullscreen()
     {
         ExitPictureInPicture();
         if (WindowState != WindowState.FullScreen) _preFullscreenState = WindowState;
-        WindowState = WindowState == WindowState.FullScreen ? WindowState.Normal : WindowState.FullScreen;
+        RequestWindowState(WindowState == WindowState.FullScreen ? WindowState.Normal : WindowState.FullScreen);
         _presentation.IsFullscreen = WindowState == WindowState.FullScreen;
         _chromeVisibility.SetFullscreen(_presentation.IsFullscreen);
         SetChromeVisibility(true);

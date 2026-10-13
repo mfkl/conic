@@ -65,4 +65,15 @@ public static class MenuShortcuts
         catch (ArgumentException) { return null; }
         catch (FormatException) { return null; }
     }
+
+    /// <summary>The shortcut a key press makes, written as <see cref="PlayerShortcutPolicy"/> writes them ("Ctrl+O", "Alt+Left", "Ctrl+,").</summary>
+    public static string FromKey(Key key, KeyModifiers modifiers)
+    {
+        string name = key == Key.OemComma ? "," : key.ToString();
+        string prefix = (modifiers.HasFlag(KeyModifiers.Control) ? "Ctrl+" : "") +
+            (modifiers.HasFlag(KeyModifiers.Alt) ? "Alt+" : "") +
+            (modifiers.HasFlag(KeyModifiers.Shift) ? "Shift+" : "") +
+            (modifiers.HasFlag(KeyModifiers.Meta) ? "Meta+" : "");
+        return PlayerShortcutPolicy.Normalize(prefix + name);
+    }
 }

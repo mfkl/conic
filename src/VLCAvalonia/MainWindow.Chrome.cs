@@ -157,9 +157,9 @@ public partial class MainWindow
         AudioTracksButton.IsVisible = layout.ShowTrackButtons;
         SubtitleTracksButton.IsVisible = layout.ShowTrackButtons;
         PlaybackSettingsButton.IsVisible = layout.ShowTrackButtons;
-        bool denseBar = Classes.Contains("compact-density");
-        DockGrid.ColumnSpacing = denseBar ? Math.Min(layout.Spacing, 12) : layout.Spacing;
-        PlayerDock.Padding = new Thickness(denseBar ? Math.Min(layout.Padding, 12) : layout.Padding, 11);
+        (double spacing, double padding) = BarSpacing(layout, Classes.Contains("compact-density"));
+        DockGrid.ColumnSpacing = spacing;
+        PlayerDock.Padding = new Thickness(padding, 11);
 
         // Panels open between the title bar and the control bar.
         OpenMenu.MaxHeight = Math.Max(160, Bounds.Height - OpenMenu.Margin.Top - PlayerBarHeight - 8);
@@ -196,4 +196,12 @@ public partial class MainWindow
     }
 
     private void ApplyResponsiveSettings() => SettingsPanel.ApplyResponsiveLayout();
+
+    /// <summary>
+    /// Density: Compact narrows the control bar's gaps between groups and its
+    /// side padding to 12 (what narrow windows use anyway). In Settings it
+    /// tightens the rows (Views/SettingsView.axaml, the dense class).
+    /// </summary>
+    internal static (double Spacing, double Padding) BarSpacing(PlayerLayoutResult layout, bool compact) =>
+        compact ? (Math.Min(layout.Spacing, 12), Math.Min(layout.Padding, 12)) : (layout.Spacing, layout.Padding);
 }

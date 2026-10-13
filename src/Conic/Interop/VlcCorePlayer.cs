@@ -300,7 +300,7 @@ internal sealed unsafe partial class VlcCorePlayer : IMediaEngine, IQueueTranspo
         QueueMediaRequest(() =>
         {
             MediaCapabilitiesState snapshot = MediaCapabilities;
-            _ = _mediaControls.SelectTrack(ToNativeTracks(snapshot), kind == MediaTrackKind.Audio ? VLCTrackKind.Audio : VLCTrackKind.Subtitle, value);
+            _ = _mediaControls.SelectTrack(ToNativeTracks(snapshot, NativeGeneration(snapshot)), kind == MediaTrackKind.Audio ? VLCTrackKind.Audio : VLCTrackKind.Subtitle, value);
             PublishMediaCapabilitiesSnapshot(snapshot.QueueGeneration);
         });
     }
@@ -308,13 +308,13 @@ internal sealed unsafe partial class VlcCorePlayer : IMediaEngine, IQueueTranspo
     public void SelectTitle(string id)
     {
         if (!long.TryParse(id, out long value)) return;
-        QueueMediaRequest(() => { MediaCapabilitiesState snapshot = MediaCapabilities; _ = _mediaControls.SelectTitle(ToNativeTitles(snapshot), value); PublishMediaCapabilitiesSnapshot(snapshot.QueueGeneration); });
+        QueueMediaRequest(() => { MediaCapabilitiesState snapshot = MediaCapabilities; _ = _mediaControls.SelectTitle(ToNativeTitles(snapshot, NativeGeneration(snapshot)), value); PublishMediaCapabilitiesSnapshot(snapshot.QueueGeneration); });
     }
 
     public void SelectChapter(string id)
     {
         if (!long.TryParse(id, out long value)) return;
-        QueueMediaRequest(() => { MediaCapabilitiesState snapshot = MediaCapabilities; _ = _mediaControls.SelectChapter(ToNativeTitles(snapshot), value); PublishMediaCapabilitiesSnapshot(snapshot.QueueGeneration); });
+        QueueMediaRequest(() => { MediaCapabilitiesState snapshot = MediaCapabilities; _ = _mediaControls.SelectChapter(ToNativeTitles(snapshot, NativeGeneration(snapshot)), value); PublishMediaCapabilitiesSnapshot(snapshot.QueueGeneration); });
     }
 
     public void SetDelayMilliseconds(MediaTrackKind kind, int milliseconds)
@@ -555,15 +555,30 @@ internal sealed unsafe partial class VlcCorePlayer : IMediaEngine, IQueueTranspo
         }
     }
 
-    private static VLCTrackSnapshot ToNativeTracks(MediaCapabilitiesState state) => new(
-        new VLCInputGeneration(state.QueueGeneration, state.MediaGeneration),
+    private VLCInputGeneration NativeGeneration(MediaCapabilitiesState state)
+    {
+        lock (_gate) return NativeGeneration(state, _generation, _coreGeneration);
+    }
+
+    /// <summary>
+    /// The VLCLR input generation a capabilities state was read from. The state
+    /// counts opens (<see cref="MediaEngineState.Generation"/>), VLCLR counts the
+    /// cores that reached their playlist, and the two drift apart as soon as an
+    /// open ends before its core starts. A state of an earlier open maps to no
+    /// core, so a choice made from it is refused as stale.
+    /// </summary>
+    internal static VLCInputGeneration NativeGeneration(MediaCapabilitiesState state, long openGeneration, long coreGeneration) =>
+        new(state.QueueGeneration == openGeneration ? coreGeneration : -1, state.MediaGeneration);
+
+    private static VLCTrackSnapshot ToNativeTracks(MediaCapabilitiesState state, VLCInputGeneration generation) => new(
+        generation,
         state.AudioTracks.Select(x => new VLCTrackChoice(long.Parse(x.Id), x.Label, x.IsDisabled)).ToArray(),
         state.SubtitleTracks.Select(x => new VLCTrackChoice(long.Parse(x.Id), x.Label, x.IsDisabled)).ToArray(),
         state.AudioTracks.FirstOrDefault(x => x.IsSelected) is { } audio ? long.Parse(audio.Id) : null,
         state.SubtitleTracks.FirstOrDefault(x => x.IsSelected) is { } subtitle ? long.Parse(subtitle.Id) : null);
 
-    private static VLCTitleChapterSnapshot ToNativeTitles(MediaCapabilitiesState state) => new(
-        new VLCInputGeneration(state.QueueGeneration, state.MediaGeneration),
+    private static VLCTitleChapterSnapshot ToNativeTitles(MediaCapabilitiesState state, VLCInputGeneration generation) => new(
+        generation,
         state.Titles.Select(x => new VLCTitleChoice(long.Parse(x.Id), x.Label)).ToArray(),
         state.Chapters.Select(x => new VLCChapterChoice(long.Parse(x.Id), x.Label)).ToArray(),
         state.Titles.FirstOrDefault(x => x.IsSelected) is { } title ? long.Parse(title.Id) : null,

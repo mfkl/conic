@@ -804,11 +804,32 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
 
     public void OpenSource(string? rawSource, MediaSourceKind kind) => OpenSource(rawSource, kind, offerResume: true);
 
+    /// <summary>
+    /// Settings › Library › Add to the queue instead of replacing it: media
+    /// opened from a file, a folder, a URL or a drop joins the queue that is
+    /// playing. Library, recent and playlist items still replace it.
+    /// </summary>
+    private bool EnqueuesOnOpen(MediaSourceKind kind) =>
+        (_settings?.Current.EnqueueOnOpen ?? false) && kind is MediaSourceKind.File or MediaSourceKind.Folder or MediaSourceKind.NetworkUrl or MediaSourceKind.DragDrop &&
+        _queue is not null && QueueItems.Count > 0 && PlaybackStatus is PlaybackStatus.Playing or PlaybackStatus.Paused;
+
     private void OpenSource(string? rawSource, MediaSourceKind kind, bool offerResume)
     {
         RequestMainLayout();
         MediaOpenResult result = _sourceValidator.Validate(rawSource, kind);
         if (!result.Succeeded || result.Source is null) { if (kind == MediaSourceKind.Recent && !string.IsNullOrWhiteSpace(rawSource)) TryHistory(() => _history?.RemoveRecent(rawSource)); _diagnostic?.Invoke(result.Diagnostic ?? "Media source validation failed."); OpenError = result.UserMessage ?? "Media could not be opened."; NotifyLibrary(); return; }
+        // A dropped folder is read as Open folder reads one (Settings ›
+        // Library: subfolders, hidden files), not by VLC.
+        if (kind == MediaSourceKind.DragDrop && result.Source.Kind == MediaSourceKind.Folder && _queue is not null)
+        {
+            _ = OpenFolderSourcesAsync(result.Source.CanonicalSource);
+            return;
+        }
+        if (offerResume && EnqueuesOnOpen(kind))
+        {
+            OpenExpandedSources(new([result.Source], [], false), replace: false);
+            return;
+        }
         CheckpointCurrent(true);
         _stoppedSource = null;
         _stopRequested = false;
@@ -835,31 +856,45 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
 
     private async Task OpenFolderSourcesAsync(string folder)
     {
-        MediaSourceExpansion expansion = await _sourceExpander.ExpandAsync(folder, MediaSourceKind.Folder);
-        OpenExpandedSources(expansion, replace: true);
+        MediaSourceExpansion expansion = await _sourceExpander.ExpandAsync(folder, MediaSourceKind.Folder, MediaFolderScan.For(_settings?.Current ?? PlayerSettings.Default));
+        OpenExpandedSources(expansion, replace: !EnqueuesOnOpen(MediaSourceKind.Folder));
     }
 
     private async Task OpenMultipleDroppedAsync(IReadOnlyList<string> sources)
     {
         RequestMainLayout();
         await Task.Yield();
-        List<MediaSource> accepted = []; List<string> failures = [];
+        List<MediaSource> accepted = []; List<string> failures = []; bool bounded = false;
+        MediaFolderScan scan = MediaFolderScan.For(_settings?.Current ?? PlayerSettings.Default);
         foreach (string source in sources)
         {
             MediaOpenResult result = _sourceValidator.Validate(source, MediaSourceKind.DragDrop);
-            if (result.Succeeded && result.Source is not null) accepted.Add(result.Source); else failures.Add(result.UserMessage ?? source);
+            if (!result.Succeeded || result.Source is null) { failures.Add(result.UserMessage ?? source); continue; }
+            // Dropped folders are read as Open folder reads one, in drop order.
+            if (result.Source.Kind != MediaSourceKind.Folder || _queue is null) { accepted.Add(result.Source); continue; }
+            MediaSourceExpansion folder = await _sourceExpander.ExpandAsync(result.Source.CanonicalSource, MediaSourceKind.Folder, scan);
+            accepted.AddRange(folder.Sources); failures.AddRange(folder.Failures); bounded |= folder.WasBounded;
         }
-        OpenExpandedSources(new(accepted, failures, false), replace: true);
+        if (accepted.Count > MediaSourceExpander.DefaultMaximumItems) { accepted.RemoveRange(MediaSourceExpander.DefaultMaximumItems, accepted.Count - MediaSourceExpander.DefaultMaximumItems); bounded = true; }
+        OpenExpandedSources(new(accepted, failures, bounded), replace: !EnqueuesOnOpen(MediaSourceKind.DragDrop));
     }
 
     private void OpenExpandedSources(MediaSourceExpansion expansion, bool replace)
     {
         if (expansion.Sources.Count == 0) { OpenError = expansion.Failures.FirstOrDefault() ?? "No usable media files were found."; return; }
         if (_queue is null) { OpenError = "The playback queue is not ready yet."; return; }
+        if (!replace)
+        {
+            // Added after the queue's items; what plays keeps playing.
+            try { _queue.Enqueue(expansion.Sources.Select(x => x.CanonicalSource)); }
+            catch (Exception exception) { _diagnostic?.Invoke(exception.ToString()); OpenError = "Media could not be queued."; return; }
+            OpenError = expansion.Failures.Count > 0 || expansion.WasBounded ? $"Queued {expansion.Sources.Count} item(s). {expansion.Failures.Count} item(s) could not be read{(expansion.WasBounded ? "; folder limit reached" : string.Empty)}." : string.Empty;
+            return;
+        }
         _stoppedSource = null;
         _stopRequested = false;
         _currentSource = expansion.Sources[0]; UpdateNowPlaying(); _generationFloor = _lastObservedGeneration; _activeGeneration = -1; _resumeReady = false; _pendingResume = null; NotifyPendingResume();
-        try { if (replace) _queue.OpenQueue(expansion.Sources.Select(x => x.CanonicalSource).ToArray()); else _queue.Enqueue(expansion.Sources.Select(x => x.CanonicalSource)); }
+        try { _queue.OpenQueue(expansion.Sources.Select(x => x.CanonicalSource).ToArray()); }
         catch (Exception exception) { _diagnostic?.Invoke(exception.ToString()); OpenError = "Media could not be queued."; return; }
         OpenError = expansion.Failures.Count > 0 || expansion.WasBounded ? $"Queued {expansion.Sources.Count} item(s). {expansion.Failures.Count} item(s) could not be read{(expansion.WasBounded ? "; folder limit reached" : string.Empty)}." : string.Empty;
     }

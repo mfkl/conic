@@ -95,7 +95,7 @@ public static class AudioEngineOptions
     {
         nameof(PlayerSettings.AudioDevice), nameof(PlayerSettings.NormalizationMaximumLevel), nameof(PlayerSettings.ReplayGain),
         nameof(PlayerSettings.ReplayGainPreamp), nameof(PlayerSettings.Equalizer), nameof(PlayerSettings.EqualizerPreset),
-        nameof(PlayerSettings.EqualizerPreamp), nameof(PlayerSettings.EqualizerBands), nameof(PlayerSettings.StereoWidening),
+        nameof(PlayerSettings.EqualizerPreamp), nameof(PlayerSettings.EqualizerBands),
         nameof(PlayerSettings.SpatialAudio), nameof(PlayerSettings.SpatialAudioMode), nameof(PlayerSettings.Compressor),
         nameof(PlayerSettings.PitchShift), nameof(PlayerSettings.Karaoke),
     };
@@ -113,8 +113,11 @@ public static class AudioEngineOptions
         if (settings.Equalizer) filters.Add("equalizer");
         if (settings.Compressor) filters.Add("compressor");
         if (settings.SpatialAudio) filters.Add(settings.SpatialAudioMode == "Room" ? "spatializer" : "spatialaudio");
-        if (settings.StereoWidening) filters.Add("stereo_widen");
         if (settings.NormalizationMaximumLevel is not null) filters.Add("normvol");
+        // VLC 3 plays 16-bit sources (WAV, FLAC) through a 16-bit output,
+        // and the equalizer refuses to end a chain that has to produce it;
+        // the gain filter at its neutral 1.0 ends the chain instead.
+        if (filters.Count > 0 && filters[^1] == "equalizer") filters.Add("gain");
         return filters;
     }
 

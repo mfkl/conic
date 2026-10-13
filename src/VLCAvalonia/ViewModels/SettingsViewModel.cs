@@ -74,6 +74,7 @@ internal sealed partial class SettingsViewModel : INotifyPropertyChanged
         new("Video", "Media", "Video", "enable video fullscreen screensaver sleep display picture hue brightness contrast saturation gamma color colour reset deinterlace deinterlacing method aspect ratio crop zoom framing adjustments"),
         new("Audio", "Media", "Audio", "volume output module normalization passthrough spdif device tracks delay"),
         new("Subtitles", "Media", "Subtitles", "render tracks delay synchronization"),
+        new("Network", "System", "Link", "buffering caching cache latency local files network streams proxy http password certificates trust tls ssl cipher security"),
         new("Performance", "System", "Preferences", "hardware accelerated decoding gpu d3d11 direct3d dxva loop filter deblocking h.264 threads drop frames late smooth"),
         new("Advanced", "System", "Info", "engine diagnostics media information codec streams"),
     ];
@@ -95,7 +96,7 @@ internal sealed partial class SettingsViewModel : INotifyPropertyChanged
         {
             if (value is null || !Set(ref _selectedPage, value)) return;
             ConfirmReset = false;
-            foreach (string property in new[] { nameof(IsGeneral), nameof(IsInterface), nameof(IsPrivacy), nameof(IsControls), nameof(IsPlayback), nameof(IsVideo), nameof(IsAudio), nameof(IsSubtitles), nameof(IsPerformance), nameof(IsAdvanced), nameof(DialogTitle), nameof(CanResetPage) })
+            foreach (string property in new[] { nameof(IsGeneral), nameof(IsInterface), nameof(IsPrivacy), nameof(IsControls), nameof(IsPlayback), nameof(IsVideo), nameof(IsAudio), nameof(IsSubtitles), nameof(IsNetwork), nameof(ShowsProxyOnNetwork), nameof(IsPerformance), nameof(IsAdvanced), nameof(DialogTitle), nameof(CanResetPage) })
                 Notify(property);
         }
     }
@@ -108,6 +109,7 @@ internal sealed partial class SettingsViewModel : INotifyPropertyChanged
     public bool IsVideo => SelectedPage.Name == "Video";
     public bool IsAudio => SelectedPage.Name == "Audio";
     public bool IsSubtitles => SelectedPage.Name == "Subtitles";
+    public bool IsNetwork => SelectedPage.Name == "Network";
     public bool IsPerformance => SelectedPage.Name == "Performance";
     public bool IsAdvanced => SelectedPage.Name == "Advanced";
     public string DialogTitle => SelectedPage.Title;
@@ -240,6 +242,7 @@ internal sealed partial class SettingsViewModel : INotifyPropertyChanged
             IsPlayback ? ResetPlaybackPage(s, defaults) :
             IsVideo ? ResetVideoPage(s, defaults) :
             IsAudio ? s with { RememberVolume = defaults.RememberVolume, AudioOutputModule = defaults.AudioOutputModule, NormalizationMaximumLevel = null, AudioPassthrough = null } :
+            IsNetwork ? ResetNetworkPage(s, defaults) :
             IsPerformance ? ResetPerformancePage(s, defaults) :
             s);
     }

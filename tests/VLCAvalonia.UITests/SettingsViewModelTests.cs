@@ -114,6 +114,8 @@ public sealed class SettingsViewModelTests
     [InlineData("shuffle", "Playback")]
     [InlineData("deinterlace", "Video")]
     [InlineData("hardware", "Performance")]
+    [InlineData("proxy", "Network")]
+    [InlineData("caching", "Network")]
     public void SearchSelectsTheMatchingPage(string query, string page)
     {
         SettingsViewModel viewModel = Create(out _);
@@ -140,9 +142,9 @@ public sealed class SettingsViewModelTests
     {
         SettingsViewModel viewModel = Create(out _);
 
-        Assert.Equal(["General", "Interface", "Privacy", "Controls", "Playback", "Video", "Audio", "Subtitles", "Performance", "Advanced"], viewModel.Pages.Select(page => page.Name));
-        Assert.Equal(["App", "App", "App", "App", "Media", "Media", "Media", "Media", "System", "System"], viewModel.Pages.Select(page => page.Group));
-        Assert.Equal(["General", "Playback", "Performance"], viewModel.Pages.Where(page => page.ShowsGroupHeader).Select(page => page.Name));
+        Assert.Equal(["General", "Interface", "Privacy", "Controls", "Playback", "Video", "Audio", "Subtitles", "Network", "Performance", "Advanced"], viewModel.Pages.Select(page => page.Name));
+        Assert.Equal(["App", "App", "App", "App", "Media", "Media", "Media", "Media", "System", "System", "System"], viewModel.Pages.Select(page => page.Group));
+        Assert.Equal(["General", "Playback", "Network"], viewModel.Pages.Where(page => page.ShowsGroupHeader).Select(page => page.Name));
         Assert.Equal("General Settings", viewModel.DialogTitle);
         viewModel.SelectedPage = viewModel.Pages[6];
         Assert.True(viewModel.IsAudio);
@@ -159,7 +161,7 @@ public sealed class SettingsViewModelTests
         Assert.Equal(["Audio", "Subtitles"], viewModel.FilteredPages.Select(page => page.Name));
         Assert.Equal(["Audio"], viewModel.Pages.Where(page => page.ShowsGroupHeader).Select(page => page.Name));
         viewModel.Search = "";
-        Assert.Equal(["General", "Playback", "Performance"], viewModel.Pages.Where(page => page.ShowsGroupHeader).Select(page => page.Name));
+        Assert.Equal(["General", "Playback", "Network"], viewModel.Pages.Where(page => page.ShowsGroupHeader).Select(page => page.Name));
     }
 
     [Fact]
@@ -265,6 +267,68 @@ public sealed class SettingsViewModelTests
 
         Assert.True(PlayerEngineOptions.IsNeutralPicture(service.Current));
         Assert.Equal("Off", service.Current.HardwareDecoding);
+    }
+
+    [Fact]
+    public void BufferingFieldsShowThePresetAndEditOnlyWithCustom()
+    {
+        SettingsViewModel viewModel = Create(out PlayerSettingsService service);
+
+        viewModel.Buffering = viewModel.BufferingPresets.Single(option => option.Value == "High");
+        Assert.Equal((2000m, 2000m, false), (viewModel.FileCaching, viewModel.NetworkCaching, viewModel.IsCustomBuffering));
+        viewModel.FileCaching = 700;
+        Assert.Equal(PlayerSettings.Default.FileCaching, service.Current.FileCaching);
+
+        viewModel.Buffering = viewModel.BufferingPresets.Single(option => option.Value == "Custom");
+        viewModel.FileCaching = 700;
+        viewModel.NetworkCaching = 4500;
+
+        Assert.True(viewModel.IsCustomBuffering);
+        Assert.Equal((700, 4500), (service.Current.FileCaching, service.Current.NetworkCaching));
+        Assert.Equal(["--file-caching=700", "--network-caching=4500"], PlayerEngineOptions.Arguments(service.Current, windows: true, macOS: false));
+    }
+
+    [Fact]
+    public void ProxyPasswordIsStoredProtected()
+    {
+        SettingsViewModel viewModel = Create(out PlayerSettingsService service);
+        viewModel.HttpProxy = "user@proxy.example:3128";
+
+        viewModel.HttpProxyPassword = "pa55 word";
+
+        Assert.Equal("pa55 word", viewModel.HttpProxyPassword);
+        Assert.NotNull(service.Current.HttpProxyPasswordProtected);
+        Assert.DoesNotContain("pa55", service.Current.HttpProxyPasswordProtected, StringComparison.Ordinal);
+        Assert.Contains("--http-proxy-pwd=pa55 word", VLCAvalonia.MainWindow.EngineArguments(service.Current));
+        viewModel.HttpProxyPassword = "";
+        Assert.Null(service.Current.HttpProxyPasswordProtected);
+    }
+
+    [Fact]
+    public void NewPagesResetOnlyTheirOwnSettings()
+    {
+        SettingsViewModel viewModel = Create(out PlayerSettingsService service);
+        PlayerSettings changed = PlayerSettings.Default with
+        {
+            AutoPlay = false, QueueRepeat = "All", Hue = 90, Deinterlace = "On", HardwareDecoding = "Off", DecodingThreads = 4,
+            Buffering = "High", HttpProxy = "proxy:1", VerifyCertificates = false, Theme = "Light",
+        };
+        void Reset(string page)
+        {
+            service.Update(_ => changed);
+            viewModel.SelectedPage = viewModel.Pages.Single(candidate => candidate.Name == page);
+            Assert.True(viewModel.CanResetPage);
+            viewModel.ResetPageCommand.Execute(null);
+        }
+
+        Reset("Playback");
+        Assert.Equal((true, "Off", 90d), (service.Current.AutoPlay, service.Current.QueueRepeat, service.Current.Hue));
+        Reset("Video");
+        Assert.Equal((0d, "Automatic", "Off"), (service.Current.Hue, service.Current.Deinterlace, service.Current.HardwareDecoding));
+        Reset("Performance");
+        Assert.Equal(("Automatic", 0, "High"), (service.Current.HardwareDecoding, service.Current.DecodingThreads, service.Current.Buffering));
+        Reset("Network");
+        Assert.Equal(("Normal", "", true, "Light"), (service.Current.Buffering, service.Current.HttpProxy, service.Current.VerifyCertificates, service.Current.Theme));
     }
 
     [Fact]

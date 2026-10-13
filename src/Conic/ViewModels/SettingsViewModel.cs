@@ -70,7 +70,7 @@ internal sealed partial class SettingsViewModel : INotifyPropertyChanged
         new("Interface", "App", "Interface", "density compact comfortable controls hide timeout reduce motion accessibility animation"),
         new("Privacy", "App", "Privacy", "history recent media resume positions clear remember forget"),
         new("Controls", "App", "Hotkeys", "keyboard shortcuts hotkeys commands skip backward forward seconds"),
-        new("Playback", "Media", "Playback", "resume position near end speed default rate"),
+        new("Playback", "Media", "Playback", "continue resume left off position near end start playing autoplay paused speed default rate language audio subtitle repeat loop shuffle random order stop after each item finishes quit home seek precisely fast avi repair index"),
         new("Video", "Media", "Video", "aspect crop zoom adjustments deinterlace snapshot"),
         new("Audio", "Media", "Audio", "volume output module normalization passthrough spdif device tracks delay"),
         new("Subtitles", "Media", "Subtitles", "render tracks delay synchronization"),
@@ -198,6 +198,8 @@ internal sealed partial class SettingsViewModel : INotifyPropertyChanged
     {
         foreach (string name in new[] { nameof(ResumePlayback), nameof(RememberVolume), nameof(RememberRecentMedia), nameof(RememberResumeHistory), nameof(ResumeMinimumElapsedSeconds), nameof(ResumeMaximumRemainingSeconds), nameof(Theme), nameof(Accent), nameof(Density), nameof(IsCompactDensity), nameof(ControlTimeoutSeconds), nameof(ReduceMotion), nameof(DefaultSpeed), nameof(SkipBackwardSeconds), nameof(SkipForwardSeconds), nameof(AudioOutputModule), nameof(NormalizationMaximumLevel), nameof(AudioPassthrough) })
             Notify(name);
+        foreach (string name in EngineRowProperties)
+            Notify(name);
         RefreshChoices();
     }
 
@@ -233,7 +235,7 @@ internal sealed partial class SettingsViewModel : INotifyPropertyChanged
             IsGeneral ? s with { Theme = defaults.Theme, Accent = defaults.Accent } :
             IsInterface ? s with { Density = defaults.Density, ControlTimeoutSeconds = defaults.ControlTimeoutSeconds, ReduceMotion = defaults.ReduceMotion } :
             IsPrivacy ? s with { RememberRecentMedia = defaults.RememberRecentMedia, RememberResumeHistory = defaults.RememberResumeHistory } :
-            IsPlayback ? s with { ResumePlayback = defaults.ResumePlayback, ResumeMinimumElapsedSeconds = defaults.ResumeMinimumElapsedSeconds, ResumeMaximumRemainingSeconds = defaults.ResumeMaximumRemainingSeconds, DefaultSpeed = defaults.DefaultSpeed } :
+            IsPlayback ? ResetPlaybackPage(s, defaults) :
             IsAudio ? s with { RememberVolume = defaults.RememberVolume, AudioOutputModule = defaults.AudioOutputModule, NormalizationMaximumLevel = null, AudioPassthrough = null } :
             s);
     }

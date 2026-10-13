@@ -47,8 +47,10 @@ try {
     Invoke-Ffmpeg -f lavfi -i 'aevalsrc=0.3*sin(2*PI*440*t)|0.3*sin(2*PI*660*t):s=48000:d=20' '-c:a' pcm_s16le audio-lr.wav
     # A loud second, then a quiet one: compressor, normalization.
     Invoke-Ffmpeg -f lavfi -i 'aevalsrc=if(lt(mod(t\,2)\,1)\,0.8\,0.02)*sin(2*PI*440*t)|if(lt(mod(t\,2)\,1)\,0.8\,0.02)*sin(2*PI*440*t):s=48000:d=20' '-c:a' pcm_s16le audio-dynamics.wav
-    # Replay gain tags: track -10 dB, album -4 dB.
-    Invoke-Ffmpeg -f lavfi -i 'aevalsrc=0.3*sin(2*PI*440*t)|0.3*sin(2*PI*440*t):s=48000:d=20' '-c:a' libvorbis '-q:a' 4 `
+    # Replay gain tags: track -10 dB, album -4 dB. Homebrew's ffmpeg has no
+    # libvorbis; FFmpeg's own Vorbis encoder is experimental but enough here.
+    $vorbis = if ((& ffmpeg -hide_banner -encoders 2>$null) -match '\blibvorbis\b') { @('-c:a', 'libvorbis', '-q:a', '4') } else { @('-c:a', 'vorbis', '-strict', 'experimental') }
+    Invoke-Ffmpeg -f lavfi -i 'aevalsrc=0.3*sin(2*PI*440*t)|0.3*sin(2*PI*440*t):s=48000:d=20' @vorbis `
         -metadata 'REPLAYGAIN_TRACK_GAIN=-10.00 dB' -metadata 'REPLAYGAIN_TRACK_PEAK=0.3' -metadata 'REPLAYGAIN_ALBUM_GAIN=-4.00 dB' -metadata 'REPLAYGAIN_ALBUM_PEAK=0.3' audio-replaygain.ogg
     # AC-3 with the Dolby Surround flag set.
     Invoke-Ffmpeg -f lavfi -i 'aevalsrc=0.3*sin(2*PI*440*t)|0.3*sin(2*PI*660*t):s=48000:d=20' '-c:a' ac3 -dsur_mode on audio-dolby.ac3

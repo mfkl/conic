@@ -18,9 +18,12 @@ namespace Conic;
 // VLC played: levels, the stereo image, the tones in it. The live rows are
 // changed while the fixture plays, and the first part of the file is
 // compared with the last. VLC's log (written when the core stops) and the
-// engine state cover the rest. Windows only.
+// engine state cover the rest. The output module and device cases are
+// Windows only (DirectSound, MMDevice endpoints).
 public partial class MainWindow
 {
+    [System.Runtime.Versioning.SupportedOSPlatform("windows")]
+    [System.Runtime.Versioning.SupportedOSPlatform("macos")]
     internal void EnableAudioSettingsSmoke(IClassicDesktopStyleApplicationLifetime desktop)
     {
         Opened += async (_, _) =>
@@ -28,7 +31,7 @@ public partial class MainWindow
             List<string> passed = [];
             try
             {
-                if (!OperatingSystem.IsWindows()) throw new PlatformNotSupportedException("The audio settings smoke checks the Windows audio output.");
+                if (!OperatingSystem.IsWindows() && !OperatingSystem.IsMacOS()) throw new PlatformNotSupportedException("The audio settings smoke runs on Windows and macOS.");
                 string fixtures = Path.Combine(RepositoryPaths.ArtifactsDirectory, "settings-fixtures");
                 string Fixture(string name)
                 {
@@ -101,8 +104,9 @@ public partial class MainWindow
                 // A live case: plays, changes a setting while playing, plays on.
                 // A changed filter chain restarts VLC's output, and afile then
                 // starts its file again: the sound before the change is a copy
-                // of the file taken just before it, the sound after is the end
-                // of the final file.
+                // of the file taken just before it, the sound after is what the
+                // file gained once the core thread applied the change (it runs
+                // later on a busy machine).
                 async Task<(Sound Before, Sound After)> Changed(string name, Func<PlayerSettings, PlayerSettings> start, Action change, string media)
                 {
                     await Open(name, start, media);
@@ -112,9 +116,16 @@ public partial class MainWindow
                     using (FileStream copy = File.Create(before))
                         playing.CopyTo(copy);
                     change();
+                    await WaitFor(() => Core().LiveAudioAppliedForSmoke, $"{name}: the playing core applies the change", 5);
+                    long applied = new FileInfo(currentWav!).Length;
                     await Task.Delay(3000);
                     await Close();
-                    return (Sound.Read(before).Part(.3, .95), Sound.Read(currentWav!).Part(.6, .95));
+                    // A restarted output started a new, shorter file: all of it
+                    // comes after the change. Otherwise what the file gained,
+                    // less a quarter for the samples already in the output.
+                    long final = new FileInfo(currentWav!).Length;
+                    double from = final > applied ? (double)applied / final : 0;
+                    return (Sound.Read(before).Part(.3, .95), Sound.Read(currentWav!).Part(Math.Max(.3, from + (1 - from) / 4), .97));
                 }
 
                 string mix = Fixture("audio-mix.wav"), stereo = Fixture("audio-lr.wav"), dynamics = Fixture("audio-dynamics.wav");
@@ -230,6 +241,8 @@ public partial class MainWindow
                 Require(!File.Exists(currentWav) || new FileInfo(currentWav!).Length < 100, "and VLC plays no sound");
                 Pass("Enable audio off");
 
+                if (OperatingSystem.IsWindows())
+                {
                 await Open("module-directsound", s => s with { AudioOutputModule = "directsound" }, mix, toFile: false);
                 await Task.Delay(1000);
                 await RequireLog("using audio output module \"directsound\"", "Output module DirectSound");
@@ -252,6 +265,7 @@ public partial class MainWindow
                 await WaitFor(() => Output().Device == "", "and System default switches it back", 5);
                 await Close();
                 Pass($"Output device \"{devices[^1].Label}\" (next open and live)");
+                }
 
                 await Open("passthrough", s => s with { AudioPassthrough = true }, mix, toFile: false);
                 await WaitFor(() => Output().Passthrough, "the output is asked to pass compressed audio through", 5);
@@ -261,14 +275,16 @@ public partial class MainWindow
                 Pass("Pass compressed audio to the receiver reaches the output (no receiver here to accept it)");
 
                 // The effects on the device output too, kept silent by VLC's
-                // gain: a 16-bit WAV plays through a 16-bit output, where the
-                // gain filter ends the equalizer's chain; a 44.1 kHz AAC track
-                // plays through the 48 kHz float output, every effect at once.
+                // gain: a 16-bit WAV plays through a 16-bit output (Windows;
+                // macOS's auhal output is always float), where the gain filter
+                // ends the equalizer's chain; a 44.1 kHz AAC track plays
+                // through the float output (48 kHz on Windows; the device's
+                // rate on macOS), every effect at once.
                 static string[] Skipped(string log) => Regex.Matches(log, "cannot add user audio filter \"([^\"]+)\"").Select(m => m.Groups[1].Value).ToArray();
                 await Open("effects-device-16bit", s => s with { Equalizer = true }, mix, false, "--gain=0.001");
                 await WaitFor(() => Output().Filters == "equalizer:gain", "the device output has the equalizer's chain", 5);
                 await Task.Delay(1000);
-                await RequireLog("main debug: output 's16l'", "a 16-bit WAV plays through a 16-bit output");
+                if (OperatingSystem.IsWindows()) await RequireLog("main debug: output 's16l'", "a 16-bit WAV plays through a 16-bit output");
                 await RequireLog("using audio filter module \"equalizer\"", "the equalizer runs on a 16-bit device output");
                 Require(Skipped(await Close()).Length == 0, "and no effect is skipped");
                 foreach ((string name, Func<PlayerSettings, PlayerSettings> effects, string[] filters) in new (string, Func<PlayerSettings, PlayerSettings>, string[])[]
@@ -281,13 +297,13 @@ public partial class MainWindow
                     await Open(name, effects, Fixture("languages.mkv"), false, "--gain=0.001");
                     await Task.Delay(1000);
                     await RequireLog("main debug: input 'f32l' 44100 Hz", "the AAC track is 44.1 kHz");
-                    await RequireLog("main debug: output 'f32l' 48000 Hz", "the device output is 48 kHz");
+                    await RequireLog(OperatingSystem.IsWindows() ? "main debug: output 'f32l' 48000 Hz" : "main debug: output 'f32l'", "the device output is float (48 kHz on Windows)");
                     foreach (string filter in filters)
                         await RequireLog($"using audio filter module \"{filter}\"", $"{filter} runs on the device output");
                     string[] skipped = Skipped(await Close());
                     Require(skipped.Length == 0, $"no effect is skipped ({string.Join(", ", skipped)})");
                 }
-                Pass("Effects on the device output (the equalizer with a 16-bit WAV; every effect with 44.1 kHz AAC on the 48 kHz output)");
+                Pass("Effects on the device output (the equalizer with a 16-bit WAV; every effect with 44.1 kHz AAC on the float output)");
 
                 // ---- Tracks: default delay ----
                 await Open("delay", s => s with { AudioDelay = 500 }, mix);

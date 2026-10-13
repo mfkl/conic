@@ -10,8 +10,9 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Player.Application;
 using Player.Contracts;
 using Conic.Interop;
+using Conic.Interop.MacOS;
 using Conic.Interop.Windows;
-using Sample = Conic.Interop.Windows.ScreenSampler.Sample;
+using Sample = Conic.Interop.ScreenSample;
 
 namespace Conic;
 
@@ -21,9 +22,13 @@ namespace Conic;
 // artifacts/settings-fixtures (eng/make-settings-fixtures.ps1) and checks
 // the result where it shows: VLC's own log of that core (--file-logging),
 // the engine state, the window, or the pixels on screen (the composed GPU
-// video, sampled with GDI). Windows only.
+// video, sampled with GDI on Windows and screencapture on macOS). Direct3D
+// 11 decoding, the display request and the DPAPI proxy password are Windows
+// only.
 public partial class MainWindow
 {
+    [System.Runtime.Versioning.SupportedOSPlatform("windows")]
+    [System.Runtime.Versioning.SupportedOSPlatform("macos")]
     internal void EnableEngineSettingsSmoke(IClassicDesktopStyleApplicationLifetime desktop)
     {
         WindowState = WindowState.Normal; Width = 1280; Height = 720;
@@ -32,7 +37,6 @@ public partial class MainWindow
             List<string> passed = [];
             try
             {
-                if (!OperatingSystem.IsWindows()) throw new PlatformNotSupportedException("The engine settings smoke samples the Windows desktop.");
                 string fixtures = Path.Combine(RepositoryPaths.ArtifactsDirectory, "settings-fixtures");
                 string Fixture(string name)
                 {
@@ -114,7 +118,9 @@ public partial class MainWindow
                     await Task.Delay(600);
                     PixelRect area = VideoArea();
                     Require(area.Width > 50 && area.Height > 50, $"video area on screen ({area})");
-                    return ScreenSampler.Capture(area.X, area.Y, area.Width, area.Height, columns, rows);
+                    return OperatingSystem.IsMacOS() ? MacScreenSampler.Capture(area, RenderScaling, columns, rows)
+                        : OperatingSystem.IsWindows() ? ScreenSampler.Capture(area.X, area.Y, area.Width, area.Height, columns, rows)
+                        : throw new PlatformNotSupportedException("The engine settings smoke samples the screen on Windows and macOS.");
                 }
                 // How much media VLC buffered before it started, as its log
                 // reports it: "Stream buffering done (4250 ms in 3 ms)". It is
@@ -127,7 +133,11 @@ public partial class MainWindow
                     Require(match.Success, $"{name}: VLC reports its buffering (log {currentLog})");
                     return int.Parse(match.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
                 }
-                const string HardwareDecoder = "using hw decoder module \"d3d11va\"";
+                bool windows = OperatingSystem.IsWindows();
+                // VideoToolbox is a decoder module of its own on macOS, ahead of avcodec.
+                string HardwareDecoder = windows ? "using hw decoder module \"d3d11va\"" : "using video decoder module \"videotoolbox\"";
+                // VLC logs pointers as "0x11ef77460" on macOS, "000001F3A2B4" on Windows.
+                const string Pointer = "[(](0x)?[0-9a-fA-F]+[)]";
                 string still = Fixture("still-lowq.mp4");
 
                 // ---- Video › Picture, with hardware decoding (Direct3D 11 adjust filter, zero copy kept) ----
@@ -139,8 +149,12 @@ public partial class MainWindow
                 await OpenPlaying("picture-brightness", s => s with { Brightness = 1.5 }, still);
                 Sample bright = await SampleVideo();
                 await WaitForLog(Regex.Escape(HardwareDecoder), "brightness keeps hardware decoding");
-                await WaitForLog("Filter 'adjust' [(][0-9a-fA-F]+[)] appended to chain", "brightness adds the adjust filter to the chain");
-                await WaitForLog("using video filter module \"d3d11_filters\"", "the adjust filter runs on the GPU (Direct3D 11), so frames stay there");
+                await WaitForLog($"Filter 'adjust' {Pointer} appended to chain", "brightness adds the adjust filter to the chain");
+                // On Windows the adjust filter runs on the GPU (Direct3D 11), so frames stay there.
+                // On macOS VLC's GPU filters (ci_filters) need VLC.app's OpenGL
+                // output: the VideoToolbox frames go through I420 to the CPU filter.
+                if (windows) await WaitForLog("using video filter module \"d3d11_filters\"", "the adjust filter runs on the GPU (Direct3D 11), so frames stay there");
+                else await WaitForLog("using video filter module \"adjust\"", "the adjust filter runs (on the CPU)");
                 Console.WriteLine($"[engine-settings-smoke] brightness 1.5 {bright}");
                 Require(bright.Luma > neutral.Luma + 15, $"Brightness 1.5 brightens the picture ({neutral.Luma:0.0} -> {bright.Luma:0.0})");
                 Pass($"Brightness ({neutral.Luma:0.0} -> {bright.Luma:0.0}) with hardware decoding");
@@ -163,13 +177,16 @@ public partial class MainWindow
                 Sample software = await SampleVideo();
                 Sample softwareFine = await SampleVideo(320, 180);
                 await WaitForLog("allowing \\d+ thread\\(s\\) for decoding", "software decoding starts");
-                await WaitForLog("no hw decoder modules matched", "Off turns the hardware decoder away");
-                await RequireNoLog("using hw decoder module", "Off uses no hardware decoder");
+                if (windows) await WaitForLog("no hw decoder modules matched", "Off turns the hardware decoder away");
+                await RequireNoLog(windows ? "using hw decoder module" : "using video decoder module \"videotoolbox\"", "Off uses no hardware decoder");
                 Pass("Hardware decoding Off decodes in software");
-                await OpenPlaying("decoding-d3d11", s => s with { HardwareDecoding = "Direct3D11" }, still);
-                await Task.Delay(1500);
-                await WaitForLog(Regex.Escape(HardwareDecoder), "Direct3D 11 uses d3d11va");
-                Pass("Hardware decoding Direct3D 11 uses d3d11va");
+                if (windows)
+                {
+                    await OpenPlaying("decoding-d3d11", s => s with { HardwareDecoding = "Direct3D11" }, still);
+                    await Task.Delay(1500);
+                    await WaitForLog(Regex.Escape(HardwareDecoder), "Direct3D 11 uses d3d11va");
+                    Pass("Hardware decoding Direct3D 11 uses d3d11va");
+                }
 
                 // Gamma: the CPU adjust filter, so with software decoding.
                 await OpenPlaying("picture-gamma", s => s with { HardwareDecoding = "Off", Gamma = 2.5 }, still);
@@ -210,8 +227,8 @@ public partial class MainWindow
                 await OpenPlaying("deinterlace-on", s => s with { Deinterlace = "On", DeinterlaceMethod = "blend" }, still);
                 await Task.Delay(1500);
                 await WaitForLog("deinterlace 1, mode blend", "Deinterlacing On with Blend reaches the output");
-                await WaitForLog("Filter 'deinterlace' [(][0-9a-fA-F]+[)] appended to chain", "Deinterlacing On adds the deinterlace filter");
-                await WaitForLog("using video filter module \"d3d11_filters\"", "the deinterlacer runs on the GPU (Direct3D 11)");
+                await WaitForLog($"Filter 'deinterlace' {Pointer} appended to chain", "Deinterlacing On adds the deinterlace filter");
+                if (windows) await WaitForLog("using video filter module \"d3d11_filters\"", "the deinterlacer runs on the GPU (Direct3D 11)");
                 Pass("Deinterlacing On with a method");
                 await OpenPlaying("deinterlace-off", s => s with { Deinterlace = "Off" }, still);
                 await Task.Delay(1500);
@@ -237,17 +254,20 @@ public partial class MainWindow
                 Pass("Enable video off");
                 await OpenPlaying("fullscreen", s => s with { StartFullscreen = true }, still);
                 await WaitFor(() => WindowState == WindowState.FullScreen, "Start videos in fullscreen");
-                Require(DisplayRequest.DisplayRequiredForSmoke(), "the display stays on while video plays");
-                _settingsViewModel.StopScreensaver = false;
-                Require(!DisplayRequest.DisplayRequiredForSmoke(), "turning Stop the screensaver off releases the display at once");
-                _settingsViewModel.StopScreensaver = true;
-                Require(DisplayRequest.DisplayRequiredForSmoke(), "and turning it on holds it again");
-                _presentation.TogglePauseCommand.Execute(null);
-                await WaitFor(() => !_presentation.IsPlaying, "pause");
-                Require(!DisplayRequest.DisplayRequiredForSmoke(), "a paused video lets the screensaver run");
+                if (windows)
+                {
+                    Require(DisplayRequest.DisplayRequiredForSmoke(), "the display stays on while video plays");
+                    _settingsViewModel.StopScreensaver = false;
+                    Require(!DisplayRequest.DisplayRequiredForSmoke(), "turning Stop the screensaver off releases the display at once");
+                    _settingsViewModel.StopScreensaver = true;
+                    Require(DisplayRequest.DisplayRequiredForSmoke(), "and turning it on holds it again");
+                    _presentation.TogglePauseCommand.Execute(null);
+                    await WaitFor(() => !_presentation.IsPlaying, "pause");
+                    Require(!DisplayRequest.DisplayRequiredForSmoke(), "a paused video lets the screensaver run");
+                }
                 ToggleFullscreen();
                 await WaitFor(() => WindowState != WindowState.FullScreen, "leave fullscreen");
-                Pass("Start videos in fullscreen; Stop the screensaver (live, released on pause)");
+                Pass(windows ? "Start videos in fullscreen; Stop the screensaver (live, released on pause)" : "Start videos in fullscreen");
 
                 // ---- Playback › Startup ----
                 await Open("start-paused", s => s with { AutoPlay = false }, still);
@@ -385,6 +405,7 @@ public partial class MainWindow
                 }
 
                 // ---- Network › Proxy (the password through DPAPI) ----
+                if (windows)
                 using (ProxyRecorder proxy = new())
                 {
                     _settings.ResetAll();
@@ -400,34 +421,46 @@ public partial class MainWindow
                 }
 
                 // ---- Network › Security ----
-                await Open("tls-trust-on", s => s, "https://127.0.0.1:9/clip.mp4");
-                await Task.Delay(1500);
-                await WaitForLog("loaded \\d+ trusted CAs from system", "certificates are verified against the system store");
-                await Open("tls-trust-off", s => s with { VerifyCertificates = false }, "https://127.0.0.1:9/clip.mp4");
-                await Task.Delay(1500);
-                await WaitForLog("tls client", "a TLS client starts");
-                await RequireNoLog("trusted CAs from system", "the system store is not loaded when off");
-                Pass("Verify certificates against the system trust store");
-
-                // Cipher preference: the order of the cipher suites VLC offers in its TLS ClientHello.
-                async Task<ushort[]> OfferedCiphers(string name, string preference)
+                // GnuTLS options: VLC on macOS uses securetransport, and Settings hides them.
+                if (!windows)
                 {
-                    using ClientHelloRecorder hello = new();
-                    await Open(name, s => s with { CipherPreference = preference }, $"https://127.0.0.1:{hello.Port}/clip.mp4");
-                    await WaitFor(() => hello.Ciphers is not null, $"{name}: VLC sends a ClientHello", 15);
-                    return hello.Ciphers!;
+                    await Open("tls-macos", s => s, "https://127.0.0.1:9/clip.mp4");
+                    await Task.Delay(1500);
+                    await WaitForLog("using tls client module \"securetransport\"", "VLC uses Secure Transport on macOS");
+                    Require(!_settingsViewModel.ShowsSecurity, "Settings hides the GnuTLS security options");
+                    Pass("Security: Secure Transport, GnuTLS options hidden");
                 }
-                ushort[] performance = await OfferedCiphers("cipher-performance", "Performance");
-                ushort[] balanced = await OfferedCiphers("cipher-balanced", "Normal");
-                ushort[] secure128 = await OfferedCiphers("cipher-secure128", "Secure128");
-                ushort[] secure = await OfferedCiphers("cipher-secure256", "Secure256");
-                string Suites(ushort[] suites) => string.Join(" ", suites.Take(8).Select(c => c.ToString("X4")));
-                Console.WriteLine($"[engine-settings-smoke] ciphers offered: performance {Suites(performance)}; balanced {Suites(balanced)}; secure 128 {Suites(secure128)}; secure 256 {Suites(secure)}");
-                const ushort Aes128Gcm = 0x1301, Aes256Gcm = 0x1302; // TLS 1.3 suites
-                Require(performance[0] == Aes128Gcm && balanced[0] == Aes256Gcm, "Performance offers AES-128 first, Balanced AES-256");
-                Require(secure[0] == Aes256Gcm && !secure.Contains(Aes128Gcm), "Secure (256-bit) offers no 128-bit cipher");
-                Require(new[] { performance, balanced, secure128, secure }.Select(list => string.Join(",", list)).Distinct().Count() == 4, "each preference offers its own list");
-                Pass("Cipher preference (the TLS ClientHello's cipher order follows it)");
+                else
+                {
+                    await Open("tls-trust-on", s => s, "https://127.0.0.1:9/clip.mp4");
+                    await Task.Delay(1500);
+                    await WaitForLog("loaded \\d+ trusted CAs from system", "certificates are verified against the system store");
+                    await Open("tls-trust-off", s => s with { VerifyCertificates = false }, "https://127.0.0.1:9/clip.mp4");
+                    await Task.Delay(1500);
+                    await WaitForLog("tls client", "a TLS client starts");
+                    await RequireNoLog("trusted CAs from system", "the system store is not loaded when off");
+                    Pass("Verify certificates against the system trust store");
+
+                    // Cipher preference: the order of the cipher suites VLC offers in its TLS ClientHello.
+                    async Task<ushort[]> OfferedCiphers(string name, string preference)
+                    {
+                        using ClientHelloRecorder hello = new();
+                        await Open(name, s => s with { CipherPreference = preference }, $"https://127.0.0.1:{hello.Port}/clip.mp4");
+                        await WaitFor(() => hello.Ciphers is not null, $"{name}: VLC sends a ClientHello", 15);
+                        return hello.Ciphers!;
+                    }
+                    ushort[] performance = await OfferedCiphers("cipher-performance", "Performance");
+                    ushort[] balanced = await OfferedCiphers("cipher-balanced", "Normal");
+                    ushort[] secure128 = await OfferedCiphers("cipher-secure128", "Secure128");
+                    ushort[] secure = await OfferedCiphers("cipher-secure256", "Secure256");
+                    string Suites(ushort[] suites) => string.Join(" ", suites.Take(8).Select(c => c.ToString("X4")));
+                    Console.WriteLine($"[engine-settings-smoke] ciphers offered: performance {Suites(performance)}; balanced {Suites(balanced)}; secure 128 {Suites(secure128)}; secure 256 {Suites(secure)}");
+                    const ushort Aes128Gcm = 0x1301, Aes256Gcm = 0x1302; // TLS 1.3 suites
+                    Require(performance[0] == Aes128Gcm && balanced[0] == Aes256Gcm, "Performance offers AES-128 first, Balanced AES-256");
+                    Require(secure[0] == Aes256Gcm && !secure.Contains(Aes128Gcm), "Secure (256-bit) offers no 128-bit cipher");
+                    Require(new[] { performance, balanced, secure128, secure }.Select(list => string.Join(",", list)).Distinct().Count() == 4, "each preference offers its own list");
+                    Pass("Cipher preference (the TLS ClientHello's cipher order follows it)");
+                }
 
                 _presentation.StopCommand.Execute(null);
                 _settings.ResetAll();

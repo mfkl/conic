@@ -19,7 +19,7 @@ public sealed record SettingOption(string Value, string Label)
 public static class PlayerEngineOptions
 {
     // VLC 3's defaults (src/libvlc-module.c).
-    public const int DefaultFileCaching = 1000, DefaultDiscCaching = 300, DefaultNetworkCaching = 1000, DefaultLiveCaching = 300;
+    public const int DefaultFileCaching = 1000, DefaultNetworkCaching = 1000;
     public const int MaximumCaching = 60000;
     public const int MaximumDecodingThreads = 16;
 
@@ -32,9 +32,9 @@ public static class PlayerEngineOptions
         nameof(PlayerSettings.Contrast), nameof(PlayerSettings.Saturation), nameof(PlayerSettings.Gamma),
         nameof(PlayerSettings.Deinterlace), nameof(PlayerSettings.DeinterlaceMethod), nameof(PlayerSettings.DefaultAspectRatio),
         nameof(PlayerSettings.DefaultCrop), nameof(PlayerSettings.DefaultZoom), nameof(PlayerSettings.HardwareDecoding),
-        nameof(PlayerSettings.PostProcessing), nameof(PlayerSettings.SkipLoopFilter), nameof(PlayerSettings.DecodingThreads),
+        nameof(PlayerSettings.SkipLoopFilter), nameof(PlayerSettings.DecodingThreads),
         nameof(PlayerSettings.DropLateFrames), nameof(PlayerSettings.Buffering), nameof(PlayerSettings.FileCaching),
-        nameof(PlayerSettings.NetworkCaching), nameof(PlayerSettings.LiveCaching), nameof(PlayerSettings.HttpProxy),
+        nameof(PlayerSettings.NetworkCaching), nameof(PlayerSettings.HttpProxy),
         nameof(PlayerSettings.HttpProxyPasswordProtected), nameof(PlayerSettings.VerifyCertificates), nameof(PlayerSettings.CipherPreference),
     };
 
@@ -56,8 +56,6 @@ public static class PlayerEngineOptions
         [new("", "None"), new("16:10", "16:10"), new("16:9", "16:9"), new("4:3", "4:3"), new("185:100", "1.85:1"), new("221:100", "2.21:1"), new("235:100", "2.35:1"), new("239:100", "2.39:1"), new("5:3", "5:3"), new("5:4", "5:4"), new("1:1", "1:1")];
     public static IReadOnlyList<SettingOption> Zooms { get; } =
         [new("fit", "Fit to window"), new("0.25", "1:4 Quarter"), new("0.5", "1:2 Half"), new("1", "1:1 Original"), new("2", "2:1 Double")];
-    public static IReadOnlyList<SettingOption> PostProcessingLevels { get; } =
-        [new("0", "Off"), .. Enumerable.Range(1, 6).Select(level => new SettingOption(level.ToString(CultureInfo.InvariantCulture), level == 6 ? "Level 6 (strongest)" : $"Level {level}"))];
     public static IReadOnlyList<SettingOption> LoopFilterModes { get; } =
         [new("0", "Never"), new("1", "Non-reference frames"), new("2", "Bidirectional frames"), new("3", "Non-key frames"), new("4", "All frames")];
     // VLC's Qt preferences use these values for its caching policies.
@@ -74,15 +72,15 @@ public static class PlayerEngineOptions
         ? [new("Automatic", "Automatic"), new("Direct3D11", "Direct3D 11"), new("Off", "Off")]
         : [new("Automatic", "Automatic"), new("Off", "Off")];
 
-    /// <summary>The caching (file, network, live) a Buffering choice uses, in milliseconds.</summary>
-    public static (int File, int Network, int Live) Caching(PlayerSettings settings) => settings.Buffering switch
+    /// <summary>The caching (local files, network streams) a Buffering choice uses, in milliseconds.</summary>
+    public static (int File, int Network) Caching(PlayerSettings settings) => settings.Buffering switch
     {
-        "Lowest" => (100, 100, 100),
-        "Low" => (300, 300, 300),
-        "High" => (2000, 2000, 2000),
-        "Higher" => (5000, 5000, 5000),
-        "Custom" => (settings.FileCaching, settings.NetworkCaching, settings.LiveCaching),
-        _ => (DefaultFileCaching, DefaultNetworkCaching, DefaultLiveCaching),
+        "Lowest" => (100, 100),
+        "Low" => (300, 300),
+        "High" => (2000, 2000),
+        "Higher" => (5000, 5000),
+        "Custom" => (settings.FileCaching, settings.NetworkCaching),
+        _ => (DefaultFileCaching, DefaultNetworkCaching),
     };
 
     /// <summary>
@@ -119,14 +117,6 @@ public static class PlayerEngineOptions
             if (settings.Saturation != 1) filterOptions.Add($"--saturation={Format(settings.Saturation)}");
             if (settings.Gamma != 1) filterOptions.Add($"--gamma={Format(settings.Gamma)}");
         }
-        // Post-processing is a CPU filter; with hardware decoding it would
-        // copy every frame out of the GPU and back, so it only applies with
-        // hardware decoding off.
-        if (settings.PostProcessing > 0 && settings.HardwareDecoding == "Off")
-        {
-            filters.Add("postproc");
-            filterOptions.Add($"--postproc-q={settings.PostProcessing.ToString(CultureInfo.InvariantCulture)}");
-        }
         if (filters.Count > 0) arguments.Add($"--video-filter={string.Join(':', filters)}");
         arguments.AddRange(filterOptions);
         if (settings.Deinterlace == "On") arguments.Add("--deinterlace=1");
@@ -152,12 +142,16 @@ public static class PlayerEngineOptions
         // Network.
         if (settings.Buffering != "Normal")
         {
-            (int file, int network, int live) = Caching(settings);
+            (int file, int network) = Caching(settings);
             arguments.Add($"--file-caching={file.ToString(CultureInfo.InvariantCulture)}");
             arguments.Add($"--network-caching={network.ToString(CultureInfo.InvariantCulture)}");
-            arguments.Add($"--live-caching={live.ToString(CultureInfo.InvariantCulture)}");
-            // The presets set discs too, as VLC's own policies do; Custom leaves them at VLC's default.
-            if (settings.Buffering != "Custom") arguments.Add($"--disc-caching={file.ToString(CultureInfo.InvariantCulture)}");
+            // The presets set live capture and discs too, as VLC's own
+            // policies do; Custom leaves them at VLC's defaults.
+            if (settings.Buffering != "Custom")
+            {
+                arguments.Add($"--live-caching={file.ToString(CultureInfo.InvariantCulture)}");
+                arguments.Add($"--disc-caching={file.ToString(CultureInfo.InvariantCulture)}");
+            }
         }
         // VLC 3 reads the HTTP proxy options only on Windows.
         if (isWindows && ProxyUrl(settings.HttpProxy) is { } proxy)
@@ -210,13 +204,11 @@ public static class PlayerEngineOptions
         DefaultCrop = Choice(value.DefaultCrop, Crops, ""),
         DefaultZoom = Choice(value.DefaultZoom, Zooms, "fit"),
         HardwareDecoding = Choice(value.HardwareDecoding, HardwareDecodingModes(), "Automatic"),
-        PostProcessing = Math.Clamp(value.PostProcessing, 0, 6),
         SkipLoopFilter = Math.Clamp(value.SkipLoopFilter, 0, 4),
         DecodingThreads = Math.Clamp(value.DecodingThreads, 0, MaximumDecodingThreads),
         Buffering = Choice(value.Buffering, BufferingPresets, "Normal"),
         FileCaching = Math.Clamp(value.FileCaching, 0, MaximumCaching),
         NetworkCaching = Math.Clamp(value.NetworkCaching, 0, MaximumCaching),
-        LiveCaching = Math.Clamp(value.LiveCaching, 0, MaximumCaching),
         HttpProxy = (value.HttpProxy ?? string.Empty).Trim(),
         HttpProxyPasswordProtected = string.IsNullOrEmpty(value.HttpProxyPasswordProtected) ? null : value.HttpProxyPasswordProtected,
         CipherPreference = Choice(value.CipherPreference, CipherPreferences, "Normal"),

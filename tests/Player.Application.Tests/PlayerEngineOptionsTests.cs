@@ -74,11 +74,10 @@ public sealed class PlayerEngineOptionsTests
     }
 
     [Fact]
-    public void PostProcessingOnlyAppliesWithSoftwareDecoding()
+    public void PictureAndSoftwareDecodingCombine()
     {
-        Assert.Empty(Windows(PlayerSettings.Default with { PostProcessing = 4 }));
-        Assert.Equal(["--video-filter=adjust:postproc", "--contrast=1.5", "--postproc-q=4", "--avcodec-hw=none"],
-            Windows(PlayerSettings.Default with { PostProcessing = 4, HardwareDecoding = "Off", Contrast = 1.5 }));
+        Assert.Equal(["--video-filter=adjust", "--contrast=1.5", "--gamma=2", "--avcodec-hw=none"],
+            Windows(PlayerSettings.Default with { HardwareDecoding = "Off", Contrast = 1.5, Gamma = 2 }));
     }
 
     [Fact]
@@ -96,17 +95,18 @@ public sealed class PlayerEngineOptionsTests
     public void BufferingPresetsSetEverySource(string preset, int file, int network, int live)
     {
         Assert.Equal([$"--file-caching={file}", $"--network-caching={network}", $"--live-caching={live}", $"--disc-caching={file}"],
-            Windows(PlayerSettings.Default with { Buffering = preset, FileCaching = 1, NetworkCaching = 2, LiveCaching = 3 }));
+            Windows(PlayerSettings.Default with { Buffering = preset, FileCaching = 1, NetworkCaching = 2 }));
     }
 
     [Fact]
     public void CustomBufferingUsesTheFieldsAndNormalUsesVlcDefaults()
     {
-        PlayerSettings custom = PlayerSettings.Default with { Buffering = "Custom", FileCaching = 1500, NetworkCaching = 4000, LiveCaching = 250 };
+        PlayerSettings custom = PlayerSettings.Default with { Buffering = "Custom", FileCaching = 1500, NetworkCaching = 4000 };
 
-        Assert.Equal(["--file-caching=1500", "--network-caching=4000", "--live-caching=250"], Windows(custom));
+        // Custom sets the two sources the app opens; live capture and discs keep VLC's defaults.
+        Assert.Equal(["--file-caching=1500", "--network-caching=4000"], Windows(custom));
         Assert.Empty(Windows(custom with { Buffering = "Normal" }));
-        Assert.Equal((1000, 1000, 300), PlayerEngineOptions.Caching(PlayerSettings.Default));
+        Assert.Equal((1000, 1000), PlayerEngineOptions.Caching(PlayerSettings.Default));
     }
 
     [Fact]

@@ -233,7 +233,7 @@ public sealed class PlayerSettingsServiceTests
         {
             ResumeAutomatically = true, AutoPlay = false, AudioLanguage = " FR, en;xx1 ", QueueRepeat = "All", QueueShuffle = true,
             PlaybackFinished = "Quit", Hue = 400, Brightness = 1.234, Gamma = double.NaN, Deinterlace = "On", DeinterlaceMethod = "yadif",
-            DefaultCrop = "16:9", DefaultZoom = "3", PostProcessing = 9, DecodingThreads = -2, Buffering = "Custom", NetworkCaching = 999999,
+            DefaultCrop = "16:9", DefaultZoom = "3", SkipLoopFilter = 9, DecodingThreads = -2, Buffering = "Custom", NetworkCaching = 999999,
             HttpProxy = "  proxy:3128 ", CipherPreference = "Paranoid",
         });
         PlayerSettingsService reloaded = new(storage);
@@ -248,7 +248,7 @@ public sealed class PlayerSettingsServiceTests
         // "yadif" (single rate) is not a mode the Direct3D 11 deinterlacer has.
         Assert.Equal(("On", "Automatic"), (current.Deinterlace, current.DeinterlaceMethod));
         Assert.Equal(("16:9", "fit"), (current.DefaultCrop, current.DefaultZoom));
-        Assert.Equal((6, 0), (current.PostProcessing, current.DecodingThreads));
+        Assert.Equal((4, 0), (current.SkipLoopFilter, current.DecodingThreads));
         Assert.Equal(("Custom", PlayerEngineOptions.MaximumCaching), (current.Buffering, current.NetworkCaching));
         Assert.Equal(("proxy:3128", "Normal"), (current.HttpProxy, current.CipherPreference));
     }

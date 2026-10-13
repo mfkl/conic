@@ -807,11 +807,12 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
     /// <summary>
     /// Settings › Library › Add to the queue instead of replacing it: media
     /// opened from a file, a folder, a URL or a drop joins the queue that is
-    /// playing. Library, recent and playlist items still replace it.
+    /// playing. Library, recent and playlist items still replace it, and so
+    /// does anything opened after Stop, before the engine reports it stopped.
     /// </summary>
     private bool EnqueuesOnOpen(MediaSourceKind kind) =>
         (_settings?.Current.EnqueueOnOpen ?? false) && kind is MediaSourceKind.File or MediaSourceKind.Folder or MediaSourceKind.NetworkUrl or MediaSourceKind.DragDrop &&
-        _queue is not null && QueueItems.Count > 0 && PlaybackStatus is PlaybackStatus.Playing or PlaybackStatus.Paused;
+        _queue is not null && QueueItems.Count > 0 && !_stopRequested && PlaybackStatus is PlaybackStatus.Playing or PlaybackStatus.Paused;
 
     private void OpenSource(string? rawSource, MediaSourceKind kind, bool offerResume)
     {

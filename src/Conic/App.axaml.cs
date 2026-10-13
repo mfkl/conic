@@ -109,6 +109,8 @@ public partial class App : Application
             if (OperatingSystem.IsWindows() || OperatingSystem.IsMacOS()) window.EnableAudioSettingsSmoke(desktopArg());
             else throw new PlatformNotSupportedException("The settings smokes run on Windows and macOS.");
         }
+        else if (args.Contains("--interface-settings-smoke", StringComparer.OrdinalIgnoreCase))
+            window.EnableInterfaceSettingsSmoke(desktopArg());
         else if (args.Contains("--menu-smoke", StringComparer.OrdinalIgnoreCase))
             window.EnableMenuSmoke(desktopArg());
         else if (args.FirstOrDefault(arg => arg.StartsWith("--menu-review=", StringComparison.OrdinalIgnoreCase)) is { } review)

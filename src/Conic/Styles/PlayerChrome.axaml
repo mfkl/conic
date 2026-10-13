@@ -948,6 +948,17 @@
         <Setter Property="CornerRadius" Value="4" />
     </Style>
 
+    <!-- Reduce motion (MainWindow's reduced-motion class): no scaling and no
+         sliding bar. Theming/ReducedMotion turns off every transition; the
+         pressed scale is a theme setter, and the indeterminate bar a keyframe
+         animation, so they go here. The "Opening …" text stays. -->
+    <Style Selector=":is(Window).reduced-motion :is(Button):pressed">
+        <Setter Property="RenderTransform" Value="none" />
+    </Style>
+    <Style Selector=":is(Window).reduced-motion ProgressBar.openingIndicator">
+        <Setter Property="IsVisible" Value="False" />
+    </Style>
+
     <!-- Sliders ............................................................ -->
 
     <!-- Timeline per the design: a 28-tall BG/B2 track (radius 6), the played

@@ -338,9 +338,12 @@
                         HorizontalAlignment="Center"
                         VerticalAlignment="Center"
                         Spacing="12">
-                <ProgressBar Width="220"
+                <ProgressBar x:Name="OpeningIndicator"
+                             Classes="openingIndicator"
+                             Width="220"
                              Height="4"
-                             IsIndeterminate="True" />
+                             IsIndeterminate="True"
+                             x:FieldModifier="internal" />
                 <TextBlock Text="{Binding MediaTitle, StringFormat='Opening {0}…'}"
                            Foreground="{DynamicResource Vlc.Fg.2}" />
             </StackPanel>

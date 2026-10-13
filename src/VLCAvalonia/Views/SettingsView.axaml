@@ -275,10 +275,8 @@
         </Style>
 
         <!-- Startup volume (design 3176:16574): the segmented control stacked,
-             "Remember last volume" above "Always start at" and its value. -->
-        <Style Selector="Border.segmented.startupVolume">
-            <Setter Property="Height" Value="NaN" />
-        </Style>
+             "Remember last volume" above "Always start at" and its value
+             (its Border's height is freed after Border.segmented below). -->
         <Style Selector="controls|SettingRow NumericUpDown.startupVolume">
             <Setter Property="Height" Value="32" />
             <Setter Property="MinHeight" Value="32" />
@@ -382,6 +380,10 @@
             <Setter Property="Padding" Value="2" />
             <Setter Property="CornerRadius" Value="6" />
             <Setter Property="Background" Value="{DynamicResource Vlc.Bg.B2}" />
+        </Style>
+        <!-- After Border.segmented, which it overrides (a later style wins). -->
+        <Style Selector="Border.segmented.startupVolume">
+            <Setter Property="Height" Value="NaN" />
         </Style>
         <Style Selector="RadioButton.segment">
             <Setter Property="Margin" Value="1,0" />

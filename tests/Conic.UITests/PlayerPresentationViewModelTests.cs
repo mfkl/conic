@@ -1196,6 +1196,25 @@ public sealed class PlayerPresentationViewModelTests
     }
 
     [Fact]
+    public void AddToTheQueueDoesNotJoinAQueueThatIsStopping()
+    {
+        PlayerSettingsService settings = new(new SettingsStorage());
+        settings.Update(s => s with { EnqueueOnOpen = true });
+        QueueTransport transport = new();
+        PlayerPresentationViewModel vm = new(transport, new EmptyPicker(), () => { }, settings: settings, sourceValidator: new MediaSourceValidator(new ExistingFiles()));
+        vm.OpenSource("a.mp4", MediaSourceKind.File);
+        vm.ApplyEngineState(State(.5, PlaybackStatus.Playing, true) with { Source = "a.mp4" });
+        transport.Publish(new PlaybackQueueState(1, 1, QueueLoadState.Ready, [new QueueItem("1:1:a", "a", "a.mp4", 0, true)], 0, QueueRepeatMode.None, QueueOrder.Normal));
+
+        // Stop asked, the engine not stopped yet: the next file starts a new queue.
+        vm.StopCommand.Execute(null);
+        vm.OpenSource("b.mp4", MediaSourceKind.File);
+
+        Assert.Empty(transport.Enqueued);
+        Assert.Equal([["a.mp4"], ["b.mp4"]], transport.OpenedQueues);
+    }
+
+    [Fact]
     public async Task DroppedFoldersAreReadWithTheLibraryFolderSettings()
     {
         string root = Path.Combine(Path.GetTempPath(), "conic-drop-" + Guid.NewGuid().ToString("N"));

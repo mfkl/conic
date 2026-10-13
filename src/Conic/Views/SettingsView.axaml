@@ -339,7 +339,9 @@
                                 BorderThickness="1"
                                 BorderBrush="Transparent"
                                 Background="{TemplateBinding Background}" />
-                        <Track Name="PART_Track" Orientation="Vertical" IsDirectionReversed="True" Margin="0,2"
+                        <!-- A vertical Track already puts the minimum at the
+                             bottom, so the fill rises from it, as drawn. -->
+                        <Track Name="PART_Track" Orientation="Vertical" Margin="0,2"
                                Minimum="{TemplateBinding Minimum}" Maximum="{TemplateBinding Maximum}"
                                Value="{TemplateBinding Value}">
                             <Track.DecreaseButton>

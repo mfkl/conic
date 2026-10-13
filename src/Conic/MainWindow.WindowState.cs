@@ -34,9 +34,13 @@ public partial class MainWindow
         if (!_settings.Current.RememberWindowGeometry) return;
         WindowState state = WindowState == WindowState.FullScreen ? _preFullscreenState : WindowState;
         PixelPoint position = state == WindowState.Normal ? Position : default;
+        // Width and Height stay NaN until something sets them (a first run
+        // has no saved geometry), and JSON has no NaN: the laid-out size then.
+        Size size = double.IsFinite(Width) && double.IsFinite(Height) ? new Size(Width, Height) : ClientSize;
+        if (!double.IsFinite(size.Width) || !double.IsFinite(size.Height)) return;
         _windowGeometry.Save(new WindowGeometry(
-            Math.Max(Width, MinimumRestoredSize),
-            Math.Max(Height, MinimumRestoredSize),
+            Math.Max(size.Width, MinimumRestoredSize),
+            Math.Max(size.Height, MinimumRestoredSize),
             state == WindowState.Normal ? position.X : null,
             state == WindowState.Normal ? position.Y : null,
             state.ToString()));

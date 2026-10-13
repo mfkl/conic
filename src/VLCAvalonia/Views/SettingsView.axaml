@@ -1158,7 +1158,7 @@
                                             <TextBox Text="{Binding HttpProxyPassword, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" PasswordChar="•" AutomationProperties.Name="HTTP proxy password" AutomationProperties.HelpText="Used with the user name in the proxy address; stored encrypted for your Windows account" />
                                         </controls:SettingRow>
                                     </StackPanel>
-                                    <StackPanel Classes="settingsSection" IsVisible="{Binding IsNetwork}">
+                                    <StackPanel Classes="settingsSection" IsVisible="{Binding ShowsSecurityOnNetwork}">
                                         <TextBlock Classes="sectionTitle" Text="Security" />
                                         <controls:SettingRow Label="Verify certificates against the system trust store" Badge="Next open" Help="Trusts HTTPS servers whose certificates Windows trusts; when off, those servers are not trusted" ControlWidth="68">
                                             <CheckBox IsChecked="{Binding VerifyCertificates, Mode=TwoWay}" AutomationProperties.Name="Verify certificates against the system trust store" AutomationProperties.HelpText="Trusts HTTPS servers whose certificates Windows trusts; when off, those servers are not trusted" />

@@ -97,7 +97,7 @@ internal sealed partial class SettingsViewModel : INotifyPropertyChanged
             if (value is null || !Set(ref _selectedPage, value)) return;
             ConfirmReset = false;
             if (IsAudio) RefreshAudioDevices();
-            foreach (string property in new[] { nameof(IsGeneral), nameof(IsInterface), nameof(IsPrivacy), nameof(IsControls), nameof(IsPlayback), nameof(IsVideo), nameof(IsAudio), nameof(IsSubtitles), nameof(IsNetwork), nameof(ShowsProxyOnNetwork), nameof(IsPerformance), nameof(IsAdvanced), nameof(DialogTitle), nameof(CanResetPage) })
+            foreach (string property in new[] { nameof(IsGeneral), nameof(IsInterface), nameof(IsPrivacy), nameof(IsControls), nameof(IsPlayback), nameof(IsVideo), nameof(IsAudio), nameof(IsSubtitles), nameof(IsNetwork), nameof(ShowsProxyOnNetwork), nameof(ShowsSecurityOnNetwork), nameof(IsPerformance), nameof(IsAdvanced), nameof(DialogTitle), nameof(CanResetPage) })
                 Notify(property);
         }
     }

@@ -116,6 +116,10 @@ internal sealed partial class SettingsViewModel
     // where the password is kept with DPAPI (ProxyPasswordProtection).
     public bool ShowsProxy { get; } = OperatingSystem.IsWindows();
     public bool ShowsProxyOnNetwork => ShowsProxy && IsNetwork;
+    // Both security settings are GnuTLS options; VLC on macOS uses its
+    // securetransport TLS module (Apple's trust store and ciphers) instead.
+    public bool ShowsSecurity { get; } = !OperatingSystem.IsMacOS();
+    public bool ShowsSecurityOnNetwork => ShowsSecurity && IsNetwork;
     public string HttpProxy { get => Current.HttpProxy; set => Update(s => s with { HttpProxy = value ?? string.Empty }); }
     public string HttpProxyPassword
     {

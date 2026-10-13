@@ -52,7 +52,7 @@ public partial class MainWindow
                 _presentation.ApplyEngineState(playing with { PlaybackRate = 1.5 });
                 Require(SpeedSelector.SelectedItem is ComboBoxItem { Tag: "1.5" }, "speed follows native readback");
                 _presentation.ApplyEngineState(playing);
-                _chromeVisibility.SetPlaybackState(true, false);
+                _chromeVisibility.SetPlaybackState(true, autoHide: true);
                 _autoHideTimer.Interval = TimeSpan.FromMilliseconds(150);
                 await Task.Delay(50);
 

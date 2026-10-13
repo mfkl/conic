@@ -30,6 +30,26 @@ separate completed checks from release requirements.
 [Before/after captures](docs/contest/COMPARISON.md) show the current Windows
 result. Public downloads and final release qualification are still pending.
 
+## Install
+
+Preview builds are portable archives on the
+[Releases](https://github.com/mfkl/vlc-avalonia/releases) page. Each one
+bundles VLC 3.0.24, so no separate VLC install is needed. The builds are not
+signed, so each OS warns on the first launch.
+
+- **Windows x64:** unzip `VLC-Avalonia-<version>-win-x64.zip` anywhere and run
+  `VLCAvalonia.exe`. If SmartScreen stops it, choose **More info**, then
+  **Run anyway**.
+- **macOS:** unzip `VLC-Avalonia-<version>-osx-<arch>.zip` (`arm64` for Apple
+  silicon, `x64` for Intel) and move `VLC Avalonia.app` to Applications. On
+  the first launch macOS refuses to open it; open **System Settings > Privacy
+  & Security** and choose **Open Anyway**.
+- **Linux x64:** not available yet, because video output on Linux is still
+  being written.
+
+To remove the app, delete its folder (Windows) or the app (macOS). Settings
+and history stay in your user profile.
+
 ## Windows review package
 
 Build a local portable ZIP with PowerShell 7 and the pinned official VLC 3.0.24

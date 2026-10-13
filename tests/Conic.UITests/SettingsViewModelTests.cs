@@ -430,6 +430,89 @@ public sealed class SettingsViewModelTests
         finally { System.Globalization.CultureInfo.CurrentCulture = culture; }
     }
 
+    [Fact]
+    public void EqualizerPresetsFillTheBandsAndAChangedBandIsCustom()
+    {
+        SettingsViewModel viewModel = Create(out PlayerSettingsService service);
+        Assert.Equal("flat", viewModel.EqualizerPreset.Value);
+        Assert.Equal(10, viewModel.EqualizerBands.Count);
+        Assert.Equal(["60 Hz", "16 kHz"], new[] { viewModel.EqualizerBands[0].Frequency, viewModel.EqualizerBands[9].Frequency });
+
+        viewModel.EqualizerPreset = viewModel.EqualizerPresets.Single(preset => preset.Value == "rock");
+        Assert.Equal((5d, "8 4.8 -5.6 -8 -3.2 4 8.8 11.2 11.2 11.2"), (service.Current.EqualizerPreamp, service.Current.EqualizerBands));
+        Assert.Equal(8, viewModel.EqualizerBands[0].Gain);
+        Assert.Equal("8.0 dB", viewModel.EqualizerBands[0].GainText);
+
+        viewModel.EqualizerBands[0].Gain = 3.04;
+        Assert.Equal(("custom", "3 4.8 -5.6 -8 -3.2 4 8.8 11.2 11.2 11.2"), (service.Current.EqualizerPreset, service.Current.EqualizerBands));
+        Assert.Equal("Custom", viewModel.EqualizerPreset.Label);
+        // Choosing Custom keeps the bands; back to the preset's values, the preset is found again.
+        viewModel.EqualizerPreset = viewModel.EqualizerPresets.Single(preset => preset.Value == "custom");
+        Assert.Equal("3 4.8 -5.6 -8 -3.2 4 8.8 11.2 11.2 11.2", service.Current.EqualizerBands);
+        viewModel.EqualizerBands[0].Gain = 8;
+        Assert.Equal("rock", service.Current.EqualizerPreset);
+        viewModel.EqualizerPreamp = 7.26;
+        Assert.Equal((7.3, "custom", "7.3 dB"), (service.Current.EqualizerPreamp, service.Current.EqualizerPreset, viewModel.EqualizerPreampText));
+
+        Assert.False(viewModel.IsEqualizerOpen);
+        viewModel.ToggleEqualizerCommand.Execute(null);
+        Assert.Equal((true, "Close equalizer"), (viewModel.IsEqualizerOpen, viewModel.EqualizerToggleText));
+    }
+
+    [Fact]
+    public void AudioRowsWriteTheirSettings()
+    {
+        SettingsViewModel viewModel = Create(out PlayerSettingsService service);
+
+        // Startup volume: Remember last volume, or a fixed volume.
+        Assert.True(viewModel.RemembersVolume);
+        viewModel.StartsAtFixedVolume = true;
+        viewModel.StartupVolume = 40;
+        viewModel.RemembersVolume = false;
+        Assert.Equal((false, 40), (service.Current.RememberVolume, service.Current.StartupVolume));
+        viewModel.RemembersVolume = true;
+        Assert.True(service.Current.RememberVolume);
+        Assert.Equal("Restart", viewModel.LabelFor(nameof(PlayerSettings.StartupVolume)));
+
+        // The maximum snaps to the slider's 25 % steps.
+        viewModel.MaximumVolume = 262;
+        Assert.Equal(250, service.Current.MaximumVolume);
+        Assert.Equal("Live", viewModel.LabelFor(nameof(PlayerSettings.MaximumVolume)));
+
+        // Normalization is on while it has a level; the target needs it on.
+        Assert.False(viewModel.NormalizeLoudness);
+        viewModel.NormalizationTarget = 4;
+        Assert.Null(service.Current.NormalizationMaximumLevel);
+        viewModel.NormalizeLoudness = true;
+        Assert.Equal(2, service.Current.NormalizationMaximumLevel);
+        viewModel.NormalizationTarget = 4;
+        Assert.Equal(4, service.Current.NormalizationMaximumLevel);
+        viewModel.NormalizeLoudness = false;
+        Assert.Null(service.Current.NormalizationMaximumLevel);
+
+        viewModel.ReplayGain = viewModel.ReplayGainModes.Single(mode => mode.Value == "album");
+        Assert.True(viewModel.HasReplayGain);
+        viewModel.SpatialAudioMode = viewModel.SpatialAudioModes.Single(mode => mode.Value == "Room");
+        viewModel.DolbySurround = viewModel.DolbySurroundModes.Single(mode => mode.Value == "Off");
+        viewModel.ResamplerQuality = viewModel.ResamplerQualities.Single(mode => mode.Value == "Best");
+        viewModel.PitchShift = 2.5m;
+        viewModel.AudioDelay = -300;
+        viewModel.AudioPassthrough = true;
+        Assert.Equal(("album", "Room", "Off", "Best", 2.5, -300, (bool?)true),
+            (service.Current.ReplayGain, service.Current.SpatialAudioMode, service.Current.DolbySurround, service.Current.ResamplerQuality, service.Current.PitchShift, service.Current.AudioDelay, service.Current.AudioPassthrough));
+        Assert.Equal("Next open", viewModel.LabelFor(nameof(PlayerSettings.AudioOutputModule)));
+
+        // Preferred audio language is Playback's field, shown on both pages.
+        viewModel.AudioLanguage = "DE";
+        Assert.Equal("de", service.Current.AudioLanguage);
+
+        // The Audio page resets all of it, and nothing on other pages.
+        service.Update(s => s with { DefaultSpeed = 2, Equalizer = true, Karaoke = true, AudioOutputModule = "waveout", AudioDevice = "x" });
+        viewModel.SelectedPage = viewModel.Pages.Single(page => page.Name == "Audio");
+        viewModel.ResetPageCommand.Execute(null);
+        Assert.Equal(PlayerSettings.Default with { DefaultSpeed = 2, ShortcutOverrides = service.Current.ShortcutOverrides }, service.Current);
+    }
+
     private static SettingsViewModel Create(out PlayerSettingsService service)
     {
         service = new PlayerSettingsService(new MemoryStorage());

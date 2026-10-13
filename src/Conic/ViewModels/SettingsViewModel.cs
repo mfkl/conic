@@ -72,7 +72,7 @@ internal sealed partial class SettingsViewModel : INotifyPropertyChanged
         new("Controls", "App", "Hotkeys", "keyboard shortcuts hotkeys commands skip backward forward seconds"),
         new("Playback", "Media", "Playback", "continue resume left off position near end start playing autoplay paused speed default rate language audio subtitle repeat loop shuffle random order stop after each item finishes quit home seek precisely fast avi repair index"),
         new("Video", "Media", "Video", "enable video fullscreen screensaver sleep display picture hue brightness contrast saturation gamma color colour reset deinterlace deinterlacing method aspect ratio crop zoom framing adjustments"),
-        new("Audio", "Media", "Audio", "volume output module normalization passthrough spdif device tracks delay"),
+        new("Audio", "Media", "Audio", "enable volume maximum startup step output device module normalize normalization loudness target replay gain preamp equalizer eq preset bands bass treble spatial headphones room compressor pitch karaoke language tracks delay dolby surround resampler resampling quality passthrough spdif receiver"),
         new("Subtitles", "Media", "Subtitles", "render tracks delay synchronization"),
         new("Network", "System", "Link", "buffering caching cache latency local files network streams proxy http password certificates trust tls ssl cipher security"),
         new("Performance", "System", "Preferences", "hardware accelerated decoding gpu d3d11 direct3d dxva loop filter deblocking h.264 threads drop frames late smooth"),
@@ -96,6 +96,7 @@ internal sealed partial class SettingsViewModel : INotifyPropertyChanged
         {
             if (value is null || !Set(ref _selectedPage, value)) return;
             ConfirmReset = false;
+            if (IsAudio) RefreshAudioDevices();
             foreach (string property in new[] { nameof(IsGeneral), nameof(IsInterface), nameof(IsPrivacy), nameof(IsControls), nameof(IsPlayback), nameof(IsVideo), nameof(IsAudio), nameof(IsSubtitles), nameof(IsNetwork), nameof(ShowsProxyOnNetwork), nameof(IsPerformance), nameof(IsAdvanced), nameof(DialogTitle), nameof(CanResetPage) })
                 Notify(property);
         }
@@ -195,15 +196,16 @@ internal sealed partial class SettingsViewModel : INotifyPropertyChanged
     public decimal SkipForwardSeconds { get => _service.Current.SkipForwardSeconds; set => Update(s => s with { SkipForwardSeconds = (int)value }); }
     public IReadOnlyList<string> AudioOutputOptions { get; } = AudioOutputPolicy.Options();
     public string AudioOutputModule { get => AudioOutputPolicy.Effective(_service.Current.AudioOutputModule); set => Update(s => s with { AudioOutputModule = value }); }
-    public decimal? NormalizationMaximumLevel { get => (decimal?)_service.Current.NormalizationMaximumLevel; set => Update(s => s with { NormalizationMaximumLevel = value is null ? null : (double)value }); }
-    public bool? AudioPassthrough { get => _service.Current.AudioPassthrough; set => Update(s => s with { AudioPassthrough = value }); }
+    // Off is VLC's default; a document from before phase 9c may hold null.
+    public bool AudioPassthrough { get => _service.Current.AudioPassthrough == true; set => Update(s => s with { AudioPassthrough = value }); }
 
     public void Refresh()
     {
-        foreach (string name in new[] { nameof(ResumePlayback), nameof(RememberVolume), nameof(RememberRecentMedia), nameof(RememberResumeHistory), nameof(ResumeMinimumElapsedSeconds), nameof(ResumeMaximumRemainingSeconds), nameof(Theme), nameof(Accent), nameof(Density), nameof(IsCompactDensity), nameof(ControlTimeoutSeconds), nameof(ReduceMotion), nameof(DefaultSpeed), nameof(SkipBackwardSeconds), nameof(SkipForwardSeconds), nameof(AudioOutputModule), nameof(NormalizationMaximumLevel), nameof(AudioPassthrough) })
+        foreach (string name in new[] { nameof(ResumePlayback), nameof(RememberVolume), nameof(RememberRecentMedia), nameof(RememberResumeHistory), nameof(ResumeMinimumElapsedSeconds), nameof(ResumeMaximumRemainingSeconds), nameof(Theme), nameof(Accent), nameof(Density), nameof(IsCompactDensity), nameof(ControlTimeoutSeconds), nameof(ReduceMotion), nameof(DefaultSpeed), nameof(SkipBackwardSeconds), nameof(SkipForwardSeconds), nameof(AudioOutputModule), nameof(AudioPassthrough) })
             Notify(name);
         foreach (string name in EngineRowProperties)
             Notify(name);
+        RefreshAudioRows();
         RefreshChoices();
     }
 
@@ -241,7 +243,7 @@ internal sealed partial class SettingsViewModel : INotifyPropertyChanged
             IsPrivacy ? s with { RememberRecentMedia = defaults.RememberRecentMedia, RememberResumeHistory = defaults.RememberResumeHistory } :
             IsPlayback ? ResetPlaybackPage(s, defaults) :
             IsVideo ? ResetVideoPage(s, defaults) :
-            IsAudio ? s with { RememberVolume = defaults.RememberVolume, AudioOutputModule = defaults.AudioOutputModule, NormalizationMaximumLevel = null, AudioPassthrough = null } :
+            IsAudio ? ResetAudioPage(s, defaults) :
             IsNetwork ? ResetNetworkPage(s, defaults) :
             IsPerformance ? ResetPerformancePage(s, defaults) :
             s);

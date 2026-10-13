@@ -78,8 +78,14 @@ public partial class MainWindow
                     VideoSurface.ExtraOpenArgumentsForSmoke = ["--file-logging", $"--logfile={currentLog}", "--log-verbose=2", .. output, .. extra];
                     long previous = VideoSurface.Player?.State.Generation ?? 0;
                     _presentation.OpenSource(media, MediaSourceKind.File);
-                    // The new core plays (not the state the last one left).
-                    await WaitFor(() => VideoSurface.Player is { } player && player.State.Generation != previous && player.State.Status == PlaybackStatus.Playing && _presentation.IsPlaying, $"{name}: plays");
+                    // The new core plays (not the state the last one left). The
+                    // first core of a run can take longer than 15 s after a
+                    // fresh build (VLC loads its plugins without a cache, from
+                    // cold files).
+                    bool Plays() => VideoSurface.Player is { } player && player.State.Generation != previous && player.State.Status == PlaybackStatus.Playing && _presentation.IsPlaying;
+                    DateTime deadline = DateTime.UtcNow.AddSeconds(previous == 0 ? 60 : 15);
+                    while (!Plays() && DateTime.UtcNow < deadline) await Task.Delay(50);
+                    Require(Plays(), $"{name}: plays (engine {VideoSurface.Player?.State.Status}: {VideoSurface.Player?.State.Error})");
                 }
                 string Log()
                 {

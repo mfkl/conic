@@ -5,8 +5,32 @@ namespace Conic.Services;
 
 internal sealed class StorageMediaSourcePicker(IStorageProvider storageProvider) : IMediaSourcePicker, IPlaylistDocumentPicker, IExternalTrackPicker
 {
+#if SMOKE
+    /// <summary>
+    /// --interactions-smoke: while set, every picker answers with the next
+    /// of <see cref="PicksForSmoke"/> (null once they run out) instead of
+    /// opening a dialog, and <see cref="RequestsForSmoke"/> records which
+    /// picker was asked for.
+    /// </summary>
+    internal bool ScriptedForSmoke { get; set; }
+    internal Queue<string?> PicksForSmoke { get; } = new();
+    internal List<string> RequestsForSmoke { get; } = [];
+
+    private bool Scripted(string request, out string? path)
+    {
+        path = null;
+        if (!ScriptedForSmoke) return false;
+        RequestsForSmoke.Add(request);
+        PicksForSmoke.TryDequeue(out path);
+        return true;
+    }
+#endif
+
     public async Task<string?> PickMediaAsync(CancellationToken cancellationToken = default)
     {
+#if SMOKE
+        if (Scripted("media", out string? scripted)) return scripted;
+#endif
         FilePickerOpenOptions options = new()
         {
             Title = "Open Media File",
@@ -26,6 +50,9 @@ internal sealed class StorageMediaSourcePicker(IStorageProvider storageProvider)
 
     public async Task<string?> PickFolderAsync(CancellationToken cancellationToken = default)
     {
+#if SMOKE
+        if (Scripted("folder", out string? scripted)) return scripted;
+#endif
         IReadOnlyList<IStorageFolder> result = await storageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
         {
             Title = "Select media folder",
@@ -48,6 +75,9 @@ internal sealed class StorageMediaSourcePicker(IStorageProvider storageProvider)
 
     public async Task<string?> PickExternalTrackAsync(MediaTrackKind kind, CancellationToken cancellationToken = default)
     {
+#if SMOKE
+        if (Scripted(kind == MediaTrackKind.Subtitle ? "subtitle" : "audio", out string? scripted)) return scripted;
+#endif
         string[] patterns = kind == MediaTrackKind.Subtitle
             ? ["*.srt", "*.ass", "*.ssa", "*.vtt", "*.sub"]
             : ["*.mp3", "*.m4a", "*.aac", "*.flac", "*.wav", "*.ogg"];

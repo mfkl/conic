@@ -52,4 +52,14 @@ public sealed class AccentThemeTests
             Assert.True(family.Bright.ToHsl().L > family.Main.ToHsl().L && family.Main.ToHsl().L > family.Dim.ToHsl().L, $"{theme} {accent.Name} order");
         }
     }
+
+    [Theory]
+    [InlineData("Default", false, "#D37918")]
+    [InlineData("Light", true, "#C2711A")]
+    public void TheConeStaysOrangeInEveryAccent(string theme, bool light, string orange)
+    {
+        Assert.Equal(Color(Resources(theme), "Vlc.Accent.Logo"), Avalonia.Media.Color.Parse(orange).ToUInt32());
+        foreach (AccentColor accent in AccentPalette.Colors)
+            Assert.Equal(Avalonia.Media.Color.Parse(orange).ToUInt32(), AccentTheme.Derive(Avalonia.Media.Color.Parse(accent.Hex), light).Logo.ToUInt32());
+    }
 }

@@ -1376,6 +1376,51 @@ public sealed class PlayerPresentationViewModelTests
         finally { Directory.Delete(root, true); }
     }
 
+    [Fact]
+    public void DelayStepsResetsAndTitleAndChapterRowsReachTheEngine()
+    {
+        CapabilityTransport transport = new();
+        PlayerPresentationViewModel vm = new(transport, new EmptyPicker(), () => { });
+        Assert.False(vm.AdjustSubtitleDelayCommand.CanExecute("100"));
+        transport.Publish(new(1, 1, MediaCapabilityLoadState.Ready, [], [],
+            [new("0", "Title 1", true), new("1", "Title 2", false)], [new("0", "Chapter 1", true), new("1", "Chapter 2", false)], new(250, -300)));
+
+        // The drawer's −100 and +100 pass their step as text; each step starts from VLC's readback.
+        vm.AdjustSubtitleDelayCommand.Execute("100");
+        vm.AdjustSubtitleDelayCommand.Execute("-100");
+        vm.ResetSubtitleDelayCommand.Execute(null);
+        vm.ResetAudioDelayCommand.Execute(null);
+        Assert.False(vm.SelectTitleCommand.CanExecute("9"));
+        vm.SelectTitleCommand.Execute("9");
+        vm.SelectTitleCommand.Execute("1");
+        Assert.False(vm.SelectChapterCommand.CanExecute("9"));
+        vm.SelectChapterCommand.Execute("1");
+        Assert.Equal(["Subtitle delay -200", "Subtitle delay -400", "reset Subtitle", "reset Audio", "title 1", "chapter 1"], transport.Calls);
+
+        // Steps stop at the 10 s limit.
+        transport.Publish(new(1, 2, MediaCapabilityLoadState.Ready, [], [], [], [], new(0, 9_950)));
+        vm.AdjustSubtitleDelayCommand.Execute("100");
+        Assert.Equal("Subtitle delay 10000", transport.Calls[^1]);
+    }
+
+    [Fact]
+    public async Task AddAudioFileAttachesAnAudioFileForTheNextOpenOnly()
+    {
+        CapabilityTransport transport = new();
+        transport.Publish(new(1, 1, MediaCapabilityLoadState.Ready, [], [], [], [], new(0, 0)));
+        PlayerPresentationViewModel vm = new(transport, new ExternalPicker("notes.txt"), () => { });
+        vm.AttachExternalAudioCommand.Execute(null);
+        await Task.Yield();
+        Assert.Equal("Choose a supported audio file.", vm.MediaControlsNotice);
+        Assert.Empty(transport.Calls);
+
+        vm = new PlayerPresentationViewModel(transport, new ExternalPicker("music.wav"), () => { });
+        vm.AttachExternalAudioCommand.Execute(null);
+        await Task.Yield();
+        Assert.Equal(["attach Audio music.wav"], transport.Calls);
+        Assert.Equal("Added for the next media open. It is not a current live track.", vm.MediaControlsNotice);
+    }
+
     private static PlayerPresentationViewModel CreateViewModel(
         RecordingTransport transport) => new(transport, new EmptyPicker(), () => { });
 
@@ -1445,10 +1490,11 @@ public sealed class PlayerPresentationViewModelTests
         public (MediaTrackKind Kind, string Id)? LastTrack { get; private set; }
         public void Publish(MediaCapabilitiesState state) { MediaCapabilities = state; MediaCapabilitiesChanged?.Invoke(this, state); }
         public void SelectTrack(MediaTrackKind kind, string id) => LastTrack = (kind, id);
-        public void SelectTitle(string id) { } public void SelectChapter(string id) { }
-        public void SetDelayMilliseconds(MediaTrackKind kind, int milliseconds) { if (kind == MediaTrackKind.Audio) LastAudioDelay = milliseconds; }
-        public void ResetDelay(MediaTrackKind kind) { }
-        public ExternalTrackAttachmentState AttachExternalTrack(MediaTrackKind kind, string path) => new(true, true, false);
+        public List<string> Calls { get; } = [];
+        public void SelectTitle(string id) => Calls.Add($"title {id}"); public void SelectChapter(string id) => Calls.Add($"chapter {id}");
+        public void SetDelayMilliseconds(MediaTrackKind kind, int milliseconds) { if (kind == MediaTrackKind.Audio) LastAudioDelay = milliseconds; Calls.Add($"{kind} delay {milliseconds}"); }
+        public void ResetDelay(MediaTrackKind kind) => Calls.Add($"reset {kind}");
+        public ExternalTrackAttachmentState AttachExternalTrack(MediaTrackKind kind, string path) { Calls.Add($"attach {kind} {path}"); return new(true, true, false); }
         public void Open(string source) { } public void TogglePause() { } public void Stop() { } public void Seek(double normalizedPosition) { } public void SetVolume(double normalizedVolume) { } public void SetMuted(bool muted) { } public void Skip(TimeSpan offset) { } public void SetPlaybackRate(double playbackRate) { }
     }
 

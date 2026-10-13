@@ -88,6 +88,8 @@ public partial class App : Application
             window.EnableLayoutSmoke(desktopArg());
         else if (args.Contains("--playback-review", StringComparer.OrdinalIgnoreCase))
             window.EnablePlaybackReview();
+        else if (args.Contains("--settings-apply-smoke", StringComparer.OrdinalIgnoreCase))
+            window.EnableSettingsApplySmoke(desktopArg());
         else if (args.Contains("--menu-smoke", StringComparer.OrdinalIgnoreCase))
             window.EnableMenuSmoke(desktopArg());
         else if (args.FirstOrDefault(arg => arg.StartsWith("--menu-review=", StringComparison.OrdinalIgnoreCase)) is { } review)

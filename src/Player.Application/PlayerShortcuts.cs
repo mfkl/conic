@@ -38,10 +38,19 @@ public static class PlayerShortcutPolicy
 
     public static bool TryDispatch(IPlayerCommandRegistry registry, IReadOnlyDictionary<PlayerCommandId, string> active, string gesture)
     {
+        if (!TryFind(registry, active, gesture, out PlayerCommandId command)) return false;
+        registry.Execute(command);
+        return true;
+    }
+
+    /// <summary>The command <see cref="TryDispatch"/> would run for <paramref name="gesture"/>: assigned to it and able to run now.</summary>
+    public static bool TryFind(IPlayerCommandRegistry registry, IReadOnlyDictionary<PlayerCommandId, string> active, string gesture, out PlayerCommandId command)
+    {
         string normalized = Normalize(gesture);
         foreach (var pair in active)
             if (string.Equals(pair.Value, normalized, StringComparison.OrdinalIgnoreCase) && registry.CanExecute(pair.Key))
-            { registry.Execute(pair.Key); return true; }
+            { command = pair.Key; return true; }
+        command = default;
         return false;
     }
     public static string Normalize(string? gesture)

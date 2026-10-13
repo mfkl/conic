@@ -98,9 +98,63 @@ public sealed record PlayerSettings(
     // Advanced, and the audio delay new media starts with (milliseconds).
     string DolbySurround = "Automatic",
     string ResamplerQuality = "Balanced",
-    int AudioDelay = 0)
+    int AudioDelay = 0,
+    // Version 8 (phase 9d): Subtitles (SubtitleEngineOptions), Controls,
+    // Interface and Library (InterfaceOptions). Every field below has a
+    // default; Migrate turns AutoHideControls off for a version 7 or older
+    // document with Reduce motion on, which used to keep the controls up.
+    // Subtitles › Tracks and Loading; the preferred language is SubtitleLanguage.
+    bool SubtitlesEnabled = true,
+    string SubtitleEncoding = "",
+    bool SubtitleAutoload = true,
+    int SubtitleMatching = SubtitleEngineOptions.DefaultMatching,
+    // Subtitles › Appearance: VLC's text renderer (freetype) draws them.
+    // Colors are #RRGGBB, opacities and the text size percentages, the
+    // margin in video pixels from the bottom.
+    string SubtitleFont = "",
+    int SubtitleTextScale = 100,
+    bool SubtitleBold = false,
+    string SubtitleColor = "#FFFFFF",
+    int SubtitleOpacity = 100,
+    string SubtitleOutline = "Normal",
+    string SubtitleOutlineColor = "#000000",
+    bool SubtitleShadow = true,
+    string SubtitleShadowColor = "#000000",
+    string SubtitleShadowDistance = "Small",
+    bool SubtitleBackground = false,
+    string SubtitleBackgroundColor = "#000000",
+    int SubtitleBackgroundOpacity = 50,
+    int SubtitleMargin = 0,
+    // Subtitles › Timing (milliseconds, in VLC's 100 ms steps) and On-Screen Messages.
+    int SubtitleDelay = 0,
+    bool ShowFileNameOnStart = false,
+    int FileNameSeconds = 5,
+    bool ShortcutFeedback = true,
+    double ShortcutFeedbackSeconds = 1,
+    // Controls › Skip Amounts (the short skip is SkipBackwardSeconds and
+    // SkipForwardSeconds) and Mouse.
+    int VeryShortSkipSeconds = 3,
+    int MediumSkipSeconds = 60,
+    int LongSkipSeconds = 300,
+    string ClickAction = "None",
+    string DoubleClickAction = "Fullscreen",
+    string WheelAction = "Volume",
+    string HorizontalWheelAction = "Seek",
+    bool ReverseWheel = false,
+    // Interface › Window and Playback Controls.
+    bool RememberWindowGeometry = true,
+    bool KeepOnTop = false,
+    bool ShowFileNameInTitle = true,
+    bool ResizeToVideo = false,
+    bool PauseWhenMinimized = false,
+    bool ShowControlsInFullscreen = true,
+    bool AutoHideControls = true,
+    // Library › Opening Files.
+    bool EnqueueOnOpen = false,
+    string FolderOpening = "Subfolders",
+    bool ShowHiddenFiles = false)
 {
-    public const int CurrentVersion = 7;
+    public const int CurrentVersion = 8;
     public const double MinimumDefaultSpeed = .25, MaximumDefaultSpeed = 2;
     public static IReadOnlyList<string> Themes { get; } = Array.AsReadOnly(new[] { "Dark", "Light", "System" });
     // Dark is the default and the fallback for an unknown value; a stored
@@ -136,7 +190,7 @@ public sealed class PlayerSettingsService
             using JsonDocument json = JsonDocument.Parse(document);
             int version = TryGet(json.RootElement, "Version", out JsonElement versionValue) ? versionValue.GetInt32() : 1;
             bool migrated = version != PlayerSettings.CurrentVersion;
-            Current = Normalize(Migrate(json.RootElement, version));
+            Current = Normalize(Upgrade(Migrate(json.RootElement, version), version));
             if (migrated)
                 _storage.WriteAtomically(JsonSerializer.Serialize(Current, JsonOptions));
             LoadDiagnostic = null;
@@ -174,6 +228,10 @@ public sealed class PlayerSettingsService
             or nameof(PlayerSettings.StopScreensaver) or nameof(PlayerSettings.MaximumVolume) or nameof(PlayerSettings.VolumeStep) => SettingApplyMode.Live,
         // The audio effects, replay gain and the device also reach a playing core.
         _ when AudioEngineOptions.LiveKeys.Contains(key) => SettingApplyMode.Live,
+        // The subtitle text's size, color, outline and background reach a
+        // playing core; the controls, window and mouse settings are the app's own.
+        _ when SubtitleEngineOptions.LiveKeys.Contains(key) || InterfaceOptions.LiveKeys.Contains(key) => SettingApplyMode.Live,
+        _ when SubtitleEngineOptions.NextOpenKeys.Contains(key) || InterfaceOptions.NextOpenKeys.Contains(key) => SettingApplyMode.NextOpen,
         // RememberVolume and StartupVolume decide the volume the next start
         // begins at, so they are Restart.
         nameof(PlayerSettings.DefaultSpeed) or nameof(PlayerSettings.ResumePlayback) or nameof(PlayerSettings.ResumeAutomatically)
@@ -186,11 +244,12 @@ public sealed class PlayerSettingsService
 
     private static PlayerSettings Migrate(JsonElement root, int version) => version switch
     {
-        // Version 6 added Accent and version 7 the Playback, Video,
-        // Performance and Network fields. Every added field has a default,
-        // so a version 5 or 6 document reads as is: the values it holds stay
-        // and the missing ones take the record's defaults.
-        5 or 6 or PlayerSettings.CurrentVersion => JsonSerializer.Deserialize<PlayerSettings>(root, JsonOptions) ?? throw new JsonException("Settings document was empty."),
+        // Version 6 added Accent, version 7 the Playback, Video, Performance
+        // and Network fields, version 8 the Subtitles, Controls, Interface
+        // and Library ones. Every added field has a default, so a version 5,
+        // 6 or 7 document reads as is: the values it holds stay and the
+        // missing ones take the record's defaults (then Upgrade).
+        5 or 6 or 7 or PlayerSettings.CurrentVersion => JsonSerializer.Deserialize<PlayerSettings>(root, JsonOptions) ?? throw new JsonException("Settings document was empty."),
         0 or 1 or 2 or 3 or 4 => PlayerSettings.Default with
         {
             ResumePlayback = Read(root, nameof(PlayerSettings.ResumePlayback), PlayerSettings.Default.ResumePlayback),
@@ -213,6 +272,12 @@ public sealed class PlayerSettingsService
         _ => throw new JsonException("Unsupported settings version."),
     };
 
+    // Stored values whose meaning changed. Before version 8 Reduce motion
+    // also kept the playback controls from hiding; Auto-hide the controls
+    // now does that, so those users keep their controls up.
+    private static PlayerSettings Upgrade(PlayerSettings value, int version) =>
+        version < 8 ? value with { AutoHideControls = !value.ReduceMotion } : value;
+
     private static T Read<T>(JsonElement root, string name, T fallback) => TryGet(root, name, out JsonElement value)
         ? JsonSerializer.Deserialize<T>(value, JsonOptions) ?? fallback : fallback;
 
@@ -223,7 +288,7 @@ public sealed class PlayerSettingsService
         value = default; return false;
     }
 
-    private static PlayerSettings Normalize(PlayerSettings value) => AudioEngineOptions.Normalize(PlayerEngineOptions.Normalize(value)) with
+    private static PlayerSettings Normalize(PlayerSettings value) => InterfaceOptions.Normalize(SubtitleEngineOptions.Normalize(AudioEngineOptions.Normalize(PlayerEngineOptions.Normalize(value)))) with
     {
         Version = PlayerSettings.CurrentVersion,
         Theme = PlayerSettings.Themes.Contains(value.Theme) ? value.Theme : PlayerSettings.Default.Theme,

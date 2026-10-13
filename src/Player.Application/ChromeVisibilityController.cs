@@ -4,21 +4,22 @@ namespace Player.Application;
 /// Pure playback chrome visibility policy, driven by UI interaction state.
 /// In a normal window the title bar and control bar are docked around the
 /// video and never hide. They only overlay the video, and so auto-hide, in
-/// fullscreen and picture in picture.
+/// fullscreen and picture in picture, unless Settings › Interface › Auto-hide
+/// the controls is off.
 /// </summary>
 public sealed class ChromeVisibilityController
 {
     public bool IsFullscreen { get; private set; }
     public bool IsPictureInPicture { get; private set; }
     public bool IsPlaying { get; private set; }
-    public bool ReduceMotion { get; private set; }
+    public bool AutoHide { get; private set; } = true;
     public bool IsVisible { get; private set; } = true;
 
     /// <summary>The chrome is drawn over the video instead of beside it.</summary>
     public bool OverlaysVideo => IsFullscreen || IsPictureInPicture;
 
     /// <summary>The chrome hides after inactivity when nothing holds it.</summary>
-    public bool HidesAutomatically => OverlaysVideo && IsPlaying && !ReduceMotion;
+    public bool HidesAutomatically => OverlaysVideo && IsPlaying && AutoHide;
 
     public void SetFullscreen(bool fullscreen)
     {
@@ -34,10 +35,10 @@ public sealed class ChromeVisibilityController
 
     public void Wake() => IsVisible = true;
 
-    public void SetPlaybackState(bool isPlaying, bool reduceMotion)
+    public void SetPlaybackState(bool isPlaying, bool autoHide)
     {
         IsPlaying = isPlaying;
-        ReduceMotion = reduceMotion;
+        AutoHide = autoHide;
         if (!HidesAutomatically) IsVisible = true;
     }
 

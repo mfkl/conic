@@ -4,8 +4,8 @@ using Xunit;
 
 namespace Conic.UITests;
 
-/// <summary>Settings › Interface: what Density and Reduce motion change, and
-/// that their help text says so. Reduce motion's runtime switch
+/// <summary>Settings › Interface: what Density, Reduce motion and Auto-hide
+/// the controls change, and that their help text says so. Reduce motion's runtime switch
 /// (Theming/ReducedMotion) is checked by --settings-apply-smoke.</summary>
 public sealed class InterfaceSettingsTests
 {
@@ -39,14 +39,22 @@ public sealed class InterfaceSettingsTests
         Assert.Equal("False", Setter(Style(chrome, ":is(Window).reduced-motion ProgressBar.openingIndicator"), "IsVisible"));
         XElement opening = window.Descendants().Single(element => element.Name.LocalName == "ProgressBar" && (string?)element.Attribute("Classes") == "openingIndicator");
         Assert.Equal("True", (string?)opening.Attribute("IsIndeterminate"));
-        Assert.Equal("Turns off animation (fades, button press scaling, the sliding loading bar) and keeps the playback controls from hiding",
+        Assert.Equal("Turns off animation (fades, button press scaling, the sliding loading bar)",
             Row(Load("Views", "SettingsView.axaml"), "Reduce motion"));
-        // Reduce motion still keeps the controls up (PLAYBACK_SCREEN_SPEC §9)
-        // until Interface gets its own auto-hide row.
+    }
+
+    [Fact]
+    public void AutoHideTheControlsDecidesWhetherFullscreenControlsHide()
+    {
+        // Phase 9d split this from Reduce motion (the settings migration
+        // turns it off for users who had Reduce motion on).
+        Assert.StartsWith("Hides the bars over fullscreen video", Row(Load("Views", "SettingsView.axaml"), "Auto-hide the controls"));
         ChromeVisibilityController controller = new();
         controller.SetFullscreen(true);
-        controller.SetPlaybackState(isPlaying: true, reduceMotion: true);
+        controller.SetPlaybackState(isPlaying: true, autoHide: false);
         Assert.False(controller.HidesAutomatically);
+        controller.SetPlaybackState(isPlaying: true, autoHide: true);
+        Assert.True(controller.HidesAutomatically);
     }
 
     private static XDocument Load(params string[] path) =>

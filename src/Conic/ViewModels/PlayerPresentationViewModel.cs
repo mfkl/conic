@@ -4,6 +4,7 @@ using System.Windows.Input;
 using Player.Application;
 using Player.Contracts;
 using Conic.Commands;
+using Conic.Services;
 
 namespace Conic.ViewModels;
 
@@ -58,6 +59,13 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
     private string _mediaControlsNotice = string.Empty;
     private MediaInformationState _mediaInformation = MediaInformationState.Unavailable;
     private string _copyStatus = string.Empty;
+    private const int MaximumVolumeAttempts = 5;
+    private readonly IVolumeMemory? _volumeMemory;
+    private RememberedVolume _wantedVolume = RememberedVolume.Default;
+    private RememberedVolume? _savedVolume;
+    private long _volumeSyncedGeneration = -1;
+    private long _volumeAttemptGeneration = -1;
+    private int _volumeAttempts;
 
     public PlayerPresentationViewModel(
         IPlayerTransport transport,
@@ -70,7 +78,8 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
         MediaHistoryService? history = null,
         Func<DateTimeOffset>? clock = null,
         Action<string>? diagnostic = null,
-        Action? showUrlPanel = null, IClipboardService? clipboard = null)
+        Action? showUrlPanel = null, IClipboardService? clipboard = null,
+        IVolumeMemory? volumeMemory = null)
     {
         _transport = transport;
         _mediaSourcePicker = mediaSourcePicker;
@@ -81,6 +90,15 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
         _clock = clock ?? (() => DateTimeOffset.UtcNow);
         _diagnostic = diagnostic;
         _clipboard = clipboard;
+        _volumeMemory = volumeMemory;
+        if (volumeMemory is not null)
+        {
+            // Remember volume: the last session's volume and mute, else 100%, unmuted.
+            _savedVolume = (settings?.Current.RememberVolume ?? false) ? volumeMemory.Load() : null;
+            _wantedVolume = _savedVolume ?? RememberedVolume.Default;
+            _volume = _wantedVolume.Volume;
+            _isMuted = _wantedVolume.Muted;
+        }
         _queue = transport as IQueueTransport;
         _mediaControls = transport as IMediaCapabilitiesTransport;
         _mediaInformationTransport = transport as IMediaInformationTransport;
@@ -124,8 +142,17 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
             _transport.Stop();
         }, _ => CanStop);
         registry.Register(new(PlayerCommandId.Seek, "Seek", "Playback"), parameter => _transport.Seek(ToDouble(parameter)));
-        registry.Register(new(PlayerCommandId.SetVolume, "Set volume", "Audio"), parameter => _transport.SetVolume(Math.Clamp(ToDouble(parameter), 0, 200) / 100), _ => HasPlayableMedia);
-        registry.Register(new(PlayerCommandId.ToggleMute, "Mute", "Audio", "M"), _ => _transport.SetMuted(!IsMuted), _ => HasPlayableMedia);
+        registry.Register(new(PlayerCommandId.SetVolume, "Set volume", "Audio"), parameter =>
+        {
+            double volume = Math.Clamp(ToDouble(parameter), 0, 200);
+            _wantedVolume = _wantedVolume with { Volume = volume };
+            _transport.SetVolume(volume / 100);
+        }, _ => HasPlayableMedia);
+        registry.Register(new(PlayerCommandId.ToggleMute, "Mute", "Audio", "M"), _ =>
+        {
+            _wantedVolume = _wantedVolume with { Muted = !IsMuted };
+            _transport.SetMuted(!IsMuted);
+        }, _ => HasPlayableMedia);
         registry.Register(new(PlayerCommandId.SkipBackward, "Skip backward", "Playback", "Alt+Left"), _ => _transport.Skip(TimeSpan.FromSeconds(-(_settings?.Current.SkipBackwardSeconds ?? 10))), _ => CanSeek);
         registry.Register(new(PlayerCommandId.SkipForward, "Skip forward", "Playback", "Alt+Right"), _ => _transport.Skip(TimeSpan.FromSeconds(_settings?.Current.SkipForwardSeconds ?? 10)), _ => CanSeek);
         registry.Register(new(PlayerCommandId.SetPlaybackRate, "Playback speed", "Playback"), parameter => _transport.SetPlaybackRate(Math.Clamp(ToDouble(parameter), 1d / 32, 31.25)));
@@ -602,6 +629,7 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
             (SkipForwardCommand as RegistryCommand)?.RaiseCanExecuteChanged();
             Volume = state.Volume * 100;
             IsMuted = state.IsMuted;
+            SyncVolume(state);
             PlaybackRate = state.PlaybackRate;
             MediaTitle = string.IsNullOrWhiteSpace(state.Title) ? "Conic" : state.Title;
             if (!_isSeeking)
@@ -842,7 +870,42 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
         if (_activeGeneration < 0 || state.Generation != _activeGeneration || state.Status is not (PlaybackStatus.Playing or PlaybackStatus.Paused) || !state.CanSeek || state.Duration <= TimeSpan.Zero || !(_settings?.Current.RememberResumeHistory ?? true) || (!force && now - _lastCheckpointUtc < TimeSpan.FromSeconds(10))) return;
         if (TryHistory(() => _history?.Checkpoint(_currentSource, state.Elapsed, state.Duration, true, _settings?.Current.ResumeMinimumElapsedSeconds ?? 30, _settings?.Current.ResumeMaximumRemainingSeconds ?? 30, true))) { _lastCheckpointUtc = now; NotifyLibrary(); }
     }
-    public void OnClosing() => CheckpointCurrent(true);
+    public void OnClosing() { CheckpointCurrent(true); SaveVolume(); }
+
+    /// <summary>
+    /// Remember volume. VLC reports the volume of the system's audio session,
+    /// which Windows keeps from one run to the next, so playback can start
+    /// anywhere. Until a new engine generation reports the wanted volume and
+    /// mute (the remembered or default ones at start, later the ones last
+    /// set), they are sent again; after that, the engine's values are the
+    /// ones to remember. Opens within a session keep the volume either way.
+    /// </summary>
+    private void SyncVolume(MediaEngineState state)
+    {
+        if (_volumeMemory is null || state.Status is not (PlaybackStatus.Playing or PlaybackStatus.Paused)) return;
+        if (state.Generation != _volumeSyncedGeneration)
+        {
+            if (state.Generation != _volumeAttemptGeneration) { _volumeAttemptGeneration = state.Generation; _volumeAttempts = 0; }
+            bool reached = Math.Abs(state.Volume * 100 - _wantedVolume.Volume) < .5 && state.IsMuted == _wantedVolume.Muted;
+            if (!reached && _volumeAttempts < MaximumVolumeAttempts)
+            {
+                _volumeAttempts++;
+                _transport.SetVolume(_wantedVolume.Volume / 100);
+                _transport.SetMuted(_wantedVolume.Muted);
+                return;
+            }
+            _volumeSyncedGeneration = state.Generation;
+        }
+        _wantedVolume = new(Math.Round(state.Volume * 100, 1), state.IsMuted);
+    }
+
+    /// <summary>Writes the volume to remember, when Remember volume is on and it changed since the last write.</summary>
+    public void SaveVolume()
+    {
+        if (_volumeMemory is null || !(_settings?.Current.RememberVolume ?? false) || _wantedVolume == _savedVolume) return;
+        _volumeMemory.Save(_wantedVolume);
+        _savedVolume = _wantedVolume;
+    }
     private void DeclineResume()
     {
         bool ok = true; if (_pendingResume is { } resume) TryHistory(() => _history?.RemoveResume(resume.Source), () => ok = false); if (!ok) return;

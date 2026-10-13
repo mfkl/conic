@@ -129,7 +129,9 @@ public partial class MainWindow : Window
 
     private void ApplyLiveSettings(PlayerSettings settings)
     {
-        _chromeVisibility.SetPlaybackState(_presentation.IsPlaying, settings.ReduceMotion);
+        // Settings › Interface › Auto-hide the controls (Reduce motion kept
+        // them up before version 8; the settings migration carries that over).
+        _chromeVisibility.SetPlaybackState(_presentation.IsPlaying, settings.AutoHideControls);
         // Theme: Dark, Light or System (follows the OS); the accent family
         // follows the Accent color. The video and the controls drawn over it
         // stay dark (Styles/PlayerPalette.axaml).
@@ -143,7 +145,9 @@ public partial class MainWindow : Window
         ApplyEngineSettings(settings);
         Classes.Set("reduced-motion", settings.ReduceMotion);
         Theming.ReducedMotion.Apply(settings.ReduceMotion, this);
-        if (settings.ReduceMotion) SetChromeVisibility(true);
+        // Auto-hide turned off shows the controls at once; Show controls in
+        // fullscreen hides or shows them.
+        SetChromeVisibility(_chromeVisibility.IsVisible);
         Classes.Set("compact-density", settings.Density == "Compact");
         ApplyResponsiveChrome();
     }

@@ -16,7 +16,8 @@ namespace VLCAvalonia;
 // --settings-apply-smoke: the settings phase 9a wired up take effect in the
 // running app. Default speed on open and when the queue moves on, Remember
 // volume writes volume.json (and nothing when off), Reduce motion turns off
-// every transition and the pressed scale, Compact narrows the control bar,
+// every transition and the pressed scale (and no longer keeps the controls
+// up: Auto-hide the controls does), Compact narrows the control bar,
 // and the cone stays orange in another accent. Restoring the volume at the
 // next start needs a second run; the view model tests cover it.
 public partial class MainWindow
@@ -39,6 +40,7 @@ public partial class MainWindow
                 // Start from known values: other smokes share the profile.
                 _settingsViewModel.RememberVolume = true;
                 _settingsViewModel.ReduceMotion = false;
+                _settings.Update(s => s with { AutoHideControls = true });
                 _settingsViewModel.Density = "Comfortable";
 
                 // Default speed: each new item starts at it; the speed menu changes only the current one.
@@ -95,7 +97,8 @@ public partial class MainWindow
                 Require(press.RenderTransform is null || press.RenderTransform.Value == Matrix.Identity, "a pressed button does not scale with Reduce motion");
                 SetPressed(press, false);
                 Require(!OpeningIndicator.IsVisible, "the sliding Opening bar is hidden with Reduce motion");
-                Require(!_chromeVisibility.HidesAutomatically, "Reduce motion keeps the playback controls up");
+                // Since phase 9d, Auto-hide the controls decides that on its own.
+                Require(_chromeVisibility.AutoHide && _settings.Current.AutoHideControls, "Reduce motion leaves Auto-hide the controls on");
                 CaptureSettingsApply("reduce-motion-on");
                 _settingsViewModel.ReduceMotion = false;
                 await Task.Delay(200);

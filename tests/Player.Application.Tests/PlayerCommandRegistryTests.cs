@@ -51,7 +51,7 @@ public sealed class ChromeVisibilityControllerTests
     {
         ChromeVisibilityController controller = new();
         controller.SetFullscreen(true);
-        controller.SetPlaybackState(isPlaying: true, reduceMotion: false);
+        controller.SetPlaybackState(isPlaying: true, autoHide: true);
 
         Assert.False(controller.TryHide(seekDragging: true, menuOpen: false, chromePointerOver: false, chromeFocused: false));
         Assert.True(controller.IsVisible);
@@ -69,9 +69,9 @@ public sealed class ChromeVisibilityControllerTests
     public void WindowedDockedChromeNeverHides()
     {
         ChromeVisibilityController controller = new();
-        controller.SetPlaybackState(isPlaying: false, reduceMotion: false);
+        controller.SetPlaybackState(isPlaying: false, autoHide: true);
         Assert.False(controller.TryHide(false, false, false, false));
-        controller.SetPlaybackState(isPlaying: true, reduceMotion: false);
+        controller.SetPlaybackState(isPlaying: true, autoHide: true);
         Assert.False(controller.OverlaysVideo);
         Assert.False(controller.HidesAutomatically);
         Assert.False(controller.TryHide(false, false, false, false));
@@ -83,15 +83,15 @@ public sealed class ChromeVisibilityControllerTests
     {
         ChromeVisibilityController controller = new();
         controller.SetFullscreen(true);
-        controller.SetPlaybackState(isPlaying: false, reduceMotion: false);
+        controller.SetPlaybackState(isPlaying: false, autoHide: true);
         Assert.False(controller.TryHide(false, false, false, false));
-        controller.SetPlaybackState(isPlaying: true, reduceMotion: false);
+        controller.SetPlaybackState(isPlaying: true, autoHide: true);
         Assert.True(controller.HidesAutomatically);
         Assert.True(controller.TryHide(false, false, false, false));
         Assert.False(controller.IsVisible);
-        controller.SetPlaybackState(isPlaying: false, reduceMotion: false);
+        controller.SetPlaybackState(isPlaying: false, autoHide: true);
         Assert.True(controller.IsVisible);
-        controller.SetPlaybackState(isPlaying: true, reduceMotion: true);
+        controller.SetPlaybackState(isPlaying: true, autoHide: false);
         Assert.False(controller.TryHide(false, false, false, false));
     }
 
@@ -100,7 +100,7 @@ public sealed class ChromeVisibilityControllerTests
     {
         ChromeVisibilityController controller = new();
         controller.SetFullscreen(true);
-        controller.SetPlaybackState(isPlaying: true, reduceMotion: false);
+        controller.SetPlaybackState(isPlaying: true, autoHide: true);
         Assert.True(controller.TryHide(false, false, false, false));
 
         controller.SetFullscreen(false);
@@ -113,7 +113,7 @@ public sealed class ChromeVisibilityControllerTests
     public void PictureInPictureChromeOverlaysAndHidesLikeFullscreen()
     {
         ChromeVisibilityController controller = new();
-        controller.SetPlaybackState(isPlaying: true, reduceMotion: false);
+        controller.SetPlaybackState(isPlaying: true, autoHide: true);
         controller.SetPictureInPicture(true);
         Assert.True(controller.OverlaysVideo);
         Assert.True(controller.TryHide(false, false, false, false));

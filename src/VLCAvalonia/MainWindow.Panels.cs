@@ -385,10 +385,10 @@ public partial class MainWindow
             UpdatePlaybackRateSelection();
         if (e.PropertyName is nameof(PlayerPresentationViewModel.IsPlaying) or nameof(PlayerPresentationViewModel.PlaybackStatus))
         {
-            _chromeVisibility.SetPlaybackState(_presentation.IsPlaying, _settings.Current.ReduceMotion);
+            _chromeVisibility.SetPlaybackState(_presentation.IsPlaying, _settings.Current.AutoHideControls);
             SetChromeVisibility(true);
             _autoHideTimer.Stop();
-            if (_presentation.IsPlaying && !_settings.Current.ReduceMotion) _autoHideTimer.Start();
+            if (_chromeVisibility.HidesAutomatically) _autoHideTimer.Start();
         }
         if (e.PropertyName is nameof(PlayerPresentationViewModel.OpenError) or nameof(PlayerPresentationViewModel.HasOpenError))
             UpdateOpenErrorSurface();

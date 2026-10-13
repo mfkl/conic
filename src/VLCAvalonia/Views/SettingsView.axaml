@@ -529,10 +529,10 @@
                                                            Value="{Binding ControlTimeoutSeconds, Mode=TwoWay}"
                                                            AutomationProperties.Name="Controls hide after" />
                                         </controls:SettingRow>
-                                        <controls:SettingRow Label="Reduce motion" Help="Keeps playback controls visible and disables nonessential motion" ControlWidth="68">
+                                        <controls:SettingRow Label="Reduce motion" Help="Turns off animation (fades, button press scaling, the sliding loading bar) and keeps the playback controls from hiding" ControlWidth="68">
                                             <CheckBox IsChecked="{Binding ReduceMotion, Mode=TwoWay}"
                                                       AutomationProperties.Name="Reduce motion"
-                                                      AutomationProperties.HelpText="Keeps playback controls visible and disables nonessential motion" />
+                                                      AutomationProperties.HelpText="Turns off animation (fades, button press scaling, the sliding loading bar) and keeps the playback controls from hiding" />
                                         </controls:SettingRow>
                                     </StackPanel>
 

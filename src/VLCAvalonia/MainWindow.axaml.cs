@@ -150,6 +150,7 @@ public partial class MainWindow : Window
         _autoHideTimer.Interval = TimeSpan.FromSeconds(settings.ControlTimeoutSeconds);
         VideoSurface.OpenPlaybackRate = settings.DefaultSpeed;
         Classes.Set("reduced-motion", settings.ReduceMotion);
+        Theming.ReducedMotion.Apply(settings.ReduceMotion, this);
         if (settings.ReduceMotion) SetChromeVisibility(true);
         Classes.Set("compact-density", settings.Density == "Compact");
         ApplyResponsiveChrome();

@@ -1267,6 +1267,44 @@ public sealed class PlayerPresentationViewModelTests
         Assert.Equal(1, finished);
     }
 
+    [Fact]
+    public void QueueEditingReachesTheQueueWithTheRowsTokenWhenItCanRun()
+    {
+        QueueTransport transport = new();
+        PlayerPresentationViewModel vm = new(transport, new EmptyPicker(), () => { }, sourceValidator: new MediaSourceValidator(new ExistingFiles()));
+        int finished = 0;
+        vm.PlaybackFinished += (_, _) => finished++;
+        QueueItem[] items = [new("a", "A", "a.mp4", 0, true), new("b", "B", "b.mp4", 1, false), new("c", "C", "c.mp4", 2, false)];
+        vm.OpenSource("a.mp4", MediaSourceKind.File);
+        vm.ApplyEngineState(State(.5, PlaybackStatus.Playing, true) with { Source = "a.mp4" });
+        transport.Publish(new(1, 1, QueueLoadState.Ready, items, 0, QueueRepeatMode.None, QueueOrder.Normal));
+
+        // The first item has nothing before it; the second has.
+        Assert.False(vm.PreviousCommand.CanExecute(null));
+        vm.PreviousCommand.Execute(null);
+        transport.Publish(new(1, 2, QueueLoadState.Ready, [items[0] with { IsCurrent = false }, items[1] with { IsCurrent = true }, items[2]], 1, QueueRepeatMode.None, QueueOrder.Normal));
+        Assert.True(vm.PreviousCommand.CanExecute(null));
+        vm.PreviousCommand.Execute(null);
+
+        // Move and Remove act on a row of the current queue only.
+        Assert.False(vm.MoveQueueItemCommand.CanExecute(new QueueMove("gone", 0)));
+        vm.MoveQueueItemCommand.Execute(new QueueMove("gone", 0));
+        vm.MoveQueueItemCommand.Execute(new QueueMove("c", 0));
+        vm.MoveQueueItemCommand.Execute(new QueueMove("a", 1));
+        Assert.False(vm.RemoveQueueItemCommand.CanExecute("gone"));
+        vm.RemoveQueueItemCommand.Execute("gone");
+        vm.RemoveQueueItemCommand.Execute("b");
+        vm.ClearQueueCommand.Execute(null);
+        Assert.Equal(["previous", "move c 0", "move a 1", "remove b", "clear"], transport.Calls);
+
+        // Clearing stops playback by request: it is not the end of the queue.
+        vm.ApplyEngineState(State(.5, PlaybackStatus.Stopped, true) with { Source = "a.mp4" });
+        transport.Publish(new(1, 3, QueueLoadState.Empty, [], -1, QueueRepeatMode.None, QueueOrder.Normal));
+        Assert.Equal(0, finished);
+        Assert.False(vm.ClearQueueCommand.CanExecute(null));
+        Assert.False(vm.PreviousCommand.CanExecute(null));
+    }
+
     private static PlayerPresentationViewModel CreateViewModel(
         RecordingTransport transport) => new(transport, new EmptyPicker(), () => { });
 
@@ -1318,9 +1356,10 @@ public sealed class PlayerPresentationViewModelTests
         public QueueRepeatMode Repeat { get; private set; }
         public List<IReadOnlyList<string>> OpenedQueues { get; } = [];
         public List<IReadOnlyList<string>> Enqueued { get; } = [];
+        public List<string> Calls { get; } = [];
         public void Publish(PlaybackQueueState state) { QueueState = state; QueueStateChanged?.Invoke(this, state); }
         public void Open(string source) { } public void TogglePause() { } public void Stop() { } public void Seek(double normalizedPosition) { } public void SetVolume(double normalizedVolume) { } public void SetMuted(bool muted) { } public void Skip(TimeSpan offset) { } public void SetPlaybackRate(double playbackRate) { }
-        public void OpenQueue(IReadOnlyList<string> sources) => OpenedQueues.Add(sources.ToArray()); public void Enqueue(IEnumerable<string> sources) => Enqueued.Add(sources.ToArray()); public void SelectAndPlay(string token) => Selected = token; public void Move(string token, int destinationIndex) { } public void Remove(string token) { } public void ClearQueue() { } public void Previous() { } public void Next() { } public void SetRepeatMode(QueueRepeatMode mode) => Repeat = mode; public void SetOrder(QueueOrder order) { }
+        public void OpenQueue(IReadOnlyList<string> sources) => OpenedQueues.Add(sources.ToArray()); public void Enqueue(IEnumerable<string> sources) => Enqueued.Add(sources.ToArray()); public void SelectAndPlay(string token) => Selected = token; public void Move(string token, int destinationIndex) => Calls.Add($"move {token} {destinationIndex}"); public void Remove(string token) => Calls.Add($"remove {token}"); public void ClearQueue() => Calls.Add("clear"); public void Previous() => Calls.Add("previous"); public void Next() => Calls.Add("next"); public void SetRepeatMode(QueueRepeatMode mode) => Repeat = mode; public void SetOrder(QueueOrder order) { }
     }
 
     private sealed class CapabilityTransport : IPlayerTransport, IMediaCapabilitiesTransport, IMediaInformationTransport

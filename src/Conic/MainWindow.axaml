@@ -38,38 +38,155 @@
           input:DragDrop.DragOver="OnMediaDragOver"
           input:DragDrop.Drop="OnMediaDrop">
 
+        <!-- The right-click menu (design 6065:13616): transport first, then
+             the Playback, Video, Audio and Subtitle submenus, then More
+             Settings, Playlist and Open Media. Every command the menu had is
+             kept in the matching group; the design's Record, Hide UI and Quit
+             are left out (D2). Shortcut hints are filled in when it opens
+             (Controls/MenuShortcuts); the styles are in PlayerChrome.axaml
+             ("Menus"). -->
         <Grid.ContextMenu>
-            <ContextMenu>
+            <ContextMenu x:Name="VideoContextMenu" Opening="OnVideoContextMenuOpening">
                 <MenuItem Header="{Binding PlayPauseName}"
-                          Command="{Binding TogglePauseCommand}" />
-                <MenuItem Header="{Binding SkipBackwardLabel, StringFormat='Skip back {0} seconds'}"
-                          Command="{Binding SkipBackwardCommand}" />
-                <MenuItem Header="{Binding SkipForwardLabel, StringFormat='Skip forward {0} seconds'}"
-                          Command="{Binding SkipForwardCommand}" />
-                <Separator />
-                <MenuItem Header="Mute" Command="{Binding ToggleMuteCommand}" />
-                <MenuItem Header="Stop" Command="{Binding StopCommand}" />
-                <MenuItem Header="Playback speed">
-                    <MenuItem Header="0.5×" Command="{Binding SetPlaybackRateCommand}" CommandParameter="0.5" />
-                    <MenuItem Header="1×" Command="{Binding SetPlaybackRateCommand}" CommandParameter="1" />
-                    <MenuItem Header="1.5×" Command="{Binding SetPlaybackRateCommand}" CommandParameter="1.5" />
-                    <MenuItem Header="2×" Command="{Binding SetPlaybackRateCommand}" CommandParameter="2" />
+                          Command="{Binding TogglePauseCommand}"
+                          controls:MenuShortcuts.Command="TogglePause">
+                    <MenuItem.Icon>
+                        <Panel>
+                            <controls:VlcIcon Classes="menuIcon" IsVisible="{Binding !IsPlaying}" Icon="{StaticResource Icon.Play}" />
+                            <controls:VlcIcon Classes="menuIcon" IsVisible="{Binding IsPlaying}" Icon="{StaticResource Icon.Pause}" />
+                        </Panel>
+                    </MenuItem.Icon>
                 </MenuItem>
-                <MenuItem Header="Fullscreen" Command="{Binding ToggleFullscreenCommand}" />
-                <MenuItem Header="{Binding PictureInPictureLabel}"
-                          Command="{Binding TogglePictureInPictureCommand}" />
-                <MenuItem Header="Playback queue" Command="{Binding ToggleQueueCommand}" />
-                <MenuItem Header="{Binding RepeatLabel}" Command="{Binding CycleRepeatCommand}" />
-                <MenuItem Header="{Binding ShuffleLabel}" Command="{Binding ToggleShuffleCommand}" />
+                <MenuItem Header="Stop"
+                          Command="{Binding StopCommand}"
+                          controls:MenuShortcuts.Command="Stop">
+                    <MenuItem.Icon><controls:VlcIcon Classes="menuIcon" Icon="{StaticResource Icon.Stop}" /></MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="Previous Item"
+                          Command="{Binding PreviousCommand}"
+                          controls:MenuShortcuts.Command="QueuePrevious">
+                    <MenuItem.Icon><controls:VlcIcon Classes="menuIcon" Icon="{StaticResource Icon.Previous}" /></MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="Next Item"
+                          Command="{Binding NextCommand}"
+                          controls:MenuShortcuts.Command="QueueNext">
+                    <MenuItem.Icon><controls:VlcIcon Classes="menuIcon" Icon="{StaticResource Icon.Next}" /></MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="{Binding SkipBackwardMenuText}"
+                          Command="{Binding SkipBackwardCommand}"
+                          controls:MenuShortcuts.Command="SkipBackward">
+                    <MenuItem.Icon><controls:VlcIcon Classes="menuIcon" Icon="{StaticResource Icon.SkipBackwardArrow}" /></MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="{Binding SkipForwardMenuText}"
+                          Command="{Binding SkipForwardCommand}"
+                          controls:MenuShortcuts.Command="SkipForward">
+                    <MenuItem.Icon><controls:VlcIcon Classes="menuIcon" Icon="{StaticResource Icon.SkipForwardArrow}" /></MenuItem.Icon>
+                </MenuItem>
                 <Separator />
-                <MenuItem Header="Audio tracks"
-                          Command="{Binding ToggleMediaControlsCommand}" CommandParameter="Audio" />
-                <MenuItem Header="Subtitle tracks"
-                          Command="{Binding ToggleMediaControlsCommand}" CommandParameter="Subtitles" />
-                <MenuItem Header="Chapters"
-                          Command="{Binding ToggleMediaControlsCommand}" CommandParameter="Chapters" />
-                <MenuItem Header="Media information"
-                          Command="{Binding MediaInformationCommand}" />
+                <MenuItem Header="Playback">
+                    <MenuItem.Icon><controls:VlcIcon Classes="menuIcon" Icon="{StaticResource Icon.Playback}" /></MenuItem.Icon>
+                    <MenuItem Header="Speed 0.5×" ToggleType="Radio" GroupName="VideoMenuSpeed"
+                              IsChecked="{Binding PlaybackRate, Mode=OneWay, Converter={x:Static controls:RateEqualsConverter.Instance}, ConverterParameter=0.5}"
+                              Command="{Binding SetPlaybackRateCommand}" CommandParameter="0.5" />
+                    <MenuItem Header="Speed 1×" ToggleType="Radio" GroupName="VideoMenuSpeed"
+                              IsChecked="{Binding PlaybackRate, Mode=OneWay, Converter={x:Static controls:RateEqualsConverter.Instance}, ConverterParameter=1}"
+                              Command="{Binding SetPlaybackRateCommand}" CommandParameter="1" />
+                    <MenuItem Header="Speed 1.5×" ToggleType="Radio" GroupName="VideoMenuSpeed"
+                              IsChecked="{Binding PlaybackRate, Mode=OneWay, Converter={x:Static controls:RateEqualsConverter.Instance}, ConverterParameter=1.5}"
+                              Command="{Binding SetPlaybackRateCommand}" CommandParameter="1.5" />
+                    <MenuItem Header="Speed 2×" ToggleType="Radio" GroupName="VideoMenuSpeed"
+                              IsChecked="{Binding PlaybackRate, Mode=OneWay, Converter={x:Static controls:RateEqualsConverter.Instance}, ConverterParameter=2}"
+                              Command="{Binding SetPlaybackRateCommand}" CommandParameter="2" />
+                    <Separator />
+                    <MenuItem Header="Chapters"
+                              Command="{Binding ToggleMediaControlsCommand}" CommandParameter="Chapters" />
+                </MenuItem>
+                <MenuItem Header="Video">
+                    <MenuItem.Icon><controls:VlcIcon Classes="menuIcon" Icon="{StaticResource Icon.Video}" /></MenuItem.Icon>
+                    <MenuItem Header="Fullscreen"
+                              Command="{Binding ToggleFullscreenCommand}"
+                              controls:MenuShortcuts.Command="ToggleFullscreen">
+                        <MenuItem.Icon><controls:VlcIcon Classes="menuIcon" Icon="{StaticResource Icon.Fullscreen}" /></MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="{Binding PictureInPictureLabel}"
+                              Command="{Binding TogglePictureInPictureCommand}"
+                              controls:MenuShortcuts.Command="TogglePictureInPicture">
+                        <MenuItem.Icon><controls:VlcIcon Classes="menuIcon" Icon="{StaticResource Icon.Pip}" /></MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="Video Adjustments"
+                              Command="{Binding ToggleMediaControlsCommand}" CommandParameter="Video">
+                        <MenuItem.Icon><controls:VlcIcon Classes="menuIcon" Icon="{StaticResource Icon.Paint}" /></MenuItem.Icon>
+                    </MenuItem>
+                </MenuItem>
+                <MenuItem Header="Audio">
+                    <MenuItem.Icon><controls:VlcIcon Classes="menuIcon" Icon="{StaticResource Icon.Audio}" /></MenuItem.Icon>
+                    <MenuItem Header="Mute"
+                              Command="{Binding ToggleMuteCommand}"
+                              controls:MenuShortcuts.Command="ToggleMute">
+                        <MenuItem.Icon><controls:VlcIcon Classes="menuIcon" Icon="{StaticResource Icon.VolumeMute}" /></MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="Audio Tracks"
+                              Command="{Binding ToggleMediaControlsCommand}" CommandParameter="Audio" />
+                </MenuItem>
+                <MenuItem Header="Subtitle">
+                    <MenuItem.Icon><controls:VlcIcon Classes="menuIcon" Icon="{StaticResource Icon.Subtitles}" /></MenuItem.Icon>
+                    <MenuItem Header="Subtitle Tracks"
+                              Command="{Binding ToggleMediaControlsCommand}" CommandParameter="Subtitles" />
+                </MenuItem>
+                <Separator />
+                <MenuItem Header="More Settings">
+                    <MenuItem.Icon><controls:VlcIcon Classes="menuIcon" Icon="{StaticResource Icon.Settings}" /></MenuItem.Icon>
+                    <MenuItem Header="Media Information"
+                              Command="{Binding MediaInformationCommand}"
+                              controls:MenuShortcuts.Command="MediaInformation">
+                        <MenuItem.Icon><controls:VlcIcon Classes="menuIcon" Icon="{StaticResource Icon.Info}" /></MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="Keyboard Shortcuts" Click="OnShowKeyboardShortcuts">
+                        <MenuItem.Icon><controls:VlcIcon Classes="menuIcon" Icon="{StaticResource Icon.Hotkeys}" /></MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="Settings"
+                              Command="{Binding OpenSettingsCommand}"
+                              controls:MenuShortcuts.Command="OpenSettings">
+                        <MenuItem.Icon><controls:VlcIcon Classes="menuIcon" Icon="{StaticResource Icon.Preferences}" /></MenuItem.Icon>
+                    </MenuItem>
+                </MenuItem>
+                <MenuItem Header="Playlist">
+                    <MenuItem.Icon><controls:VlcIcon Classes="menuIcon" Icon="{StaticResource Icon.Playlist}" /></MenuItem.Icon>
+                    <MenuItem Header="Playback Queue"
+                              Command="{Binding ToggleQueueCommand}"
+                              controls:MenuShortcuts.Command="ToggleQueue">
+                        <MenuItem.Icon><controls:VlcIcon Classes="menuIcon" Icon="{StaticResource Icon.Lists}" /></MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="{Binding RepeatLabel}" Command="{Binding CycleRepeatCommand}">
+                        <MenuItem.Icon><controls:VlcIcon Classes="menuIcon" Icon="{StaticResource Icon.Repeat}" /></MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="{Binding ShuffleLabel}" Command="{Binding ToggleShuffleCommand}">
+                        <MenuItem.Icon><controls:VlcIcon Classes="menuIcon" Icon="{StaticResource Icon.Shuffle}" /></MenuItem.Icon>
+                    </MenuItem>
+                </MenuItem>
+                <MenuItem Header="Open Media">
+                    <MenuItem.Icon><controls:VlcIcon Classes="menuIcon" Icon="{StaticResource Icon.Open}" /></MenuItem.Icon>
+                    <MenuItem Header="Open File…"
+                              Command="{Binding OpenMediaCommand}"
+                              controls:MenuShortcuts.Command="OpenMedia">
+                        <MenuItem.Icon><controls:VlcIcon Classes="menuIcon" Icon="{StaticResource Icon.File}" /></MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="Open Folder…"
+                              Command="{Binding OpenFolderCommand}"
+                              controls:MenuShortcuts.Command="OpenFolder">
+                        <MenuItem.Icon><controls:VlcIcon Classes="menuIcon" Icon="{StaticResource Icon.Folder}" /></MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="Open Network Stream…"
+                              Command="{Binding OpenUrlCommand}"
+                              controls:MenuShortcuts.Command="OpenUrl">
+                        <MenuItem.Icon><controls:VlcIcon Classes="menuIcon" Icon="{StaticResource Icon.Link}" /></MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="Load Playlist…"
+                              Command="{Binding LoadPlaylistCommand}"
+                              controls:MenuShortcuts.Command="LoadPlaylist">
+                        <MenuItem.Icon><controls:VlcIcon Classes="menuIcon" Icon="{StaticResource Icon.Playlist}" /></MenuItem.Icon>
+                    </MenuItem>
+                </MenuItem>
             </ContextMenu>
         </Grid.ContextMenu>
 
@@ -329,161 +446,197 @@
             </controls:TitleBarPanel>
         </Border>
 
+        <!-- The More menu (design 6062:13354), shared by the player's and
+             Home's title bar "…" buttons. The design's groups: opening media
+             (with Open Recent), then the player's own commands (not in the
+             design's menu; kept), then Keyboard Shortcuts and Settings.
+             Options the app cannot do are left out (D2): Open Disc, Open
+             Capture Device, Convert, Profile, Customize Player, About.
+             Open Recent shows its page in place of the options (Right or
+             Enter; Left, Backspace, Escape or the back row return). Arrow
+             keys move between options (OnOpenMenuKeyDown); choosing one
+             closes the menu. Shortcut hints follow the user's shortcuts
+             (Controls/MenuShortcuts). -->
         <Border x:Name="OpenMenu"
                 Grid.RowSpan="3"
                 ZIndex="20"
                 IsVisible="False"
                 Focusable="True"
-                Width="360"
-                MaxWidth="420"
+                Classes="menuSurface"
+                Width="375"
                 MaxHeight="380"
                 HorizontalAlignment="Left"
                 VerticalAlignment="Top"
                 Margin="6,44,20,0"
-                Padding="8"
-                CornerRadius="6"
-                Background="{DynamicResource PlayerSurface}"
-                BorderBrush="{DynamicResource PlayerBorder}"
-                BorderThickness="1"
-                BoxShadow="0 8 24 0 #60000000">
-            <ScrollViewer VerticalScrollBarVisibility="Auto"
+                KeyDown="OnOpenMenuKeyDown"
+                AutomationProperties.Name="More options">
+            <ScrollViewer x:Name="OpenMenuScroll"
+                          VerticalScrollBarVisibility="Auto"
                           HorizontalScrollBarVisibility="Disabled">
-                <StackPanel Spacing="8">
-                    <TextBlock Text="More"
-                               FontWeight="SemiBold"
-                               FontSize="15" />
-                    <Button Classes="menuAction"
-                            Content="Open file"
-                            Click="OnOpenFile"
-                            ToolTip.Tip="Open a local media file (Ctrl+O)"
-                            AutomationProperties.Name="Open media file from menu" />
-                    <Button Classes="menuAction"
-                            Content="Open network URL"
-                            Command="{Binding OpenUrlCommand}"
-                            ToolTip.Tip="Open a network URL (Ctrl+L)" />
-                    <StackPanel Spacing="2">
-                        <Button x:Name="OpenFolderAction"
-                                Classes="menuAction"
-                                Content="Open folder"
-                                Command="{Binding OpenFolderCommand}"
-                                ToolTip.Tip="Open every supported file in a folder"
-                                AutomationProperties.Name="Open media folder" />
-                        <TextBlock Text="Files are added as a flat playback queue."
-                                   Classes="settingHint"
-                                   Margin="12,0" />
+                <Panel>
+                    <StackPanel x:Name="MoreMenuMain">
+                        <controls:MenuRow Content="Open File…"
+                                          Icon="{StaticResource Icon.File}"
+                                          controls:MenuShortcuts.Command="OpenMedia"
+                                          Click="OnOpenFile"
+                                          ToolTip.Tip="Open a local media file" />
+                        <controls:MenuRow x:Name="OpenFolderAction"
+                                          Content="Open Folder…"
+                                          Icon="{StaticResource Icon.Folder}"
+                                          controls:MenuShortcuts.Command="OpenFolder"
+                                          Command="{Binding OpenFolderCommand}"
+                                          ToolTip.Tip="Every supported file in the folder is added as a flat playback queue" />
+                        <controls:MenuRow Content="Open Network Stream…"
+                                          Icon="{StaticResource Icon.Link}"
+                                          controls:MenuShortcuts.Command="OpenUrl"
+                                          Command="{Binding OpenUrlCommand}"
+                                          ToolTip.Tip="Open an http or https media address" />
+                        <controls:MenuRow Content="Load Playlist…"
+                                          Icon="{StaticResource Icon.Playlist}"
+                                          controls:MenuShortcuts.Command="LoadPlaylist"
+                                          Command="{Binding LoadPlaylistCommand}"
+                                          ToolTip.Tip="Load a flat M3U or M3U8 playback queue" />
+                        <controls:MenuRow x:Name="OpenRecentRow"
+                                          Content="Open Recent"
+                                          Icon="{StaticResource Icon.Recent}"
+                                          HasSubmenu="True"
+                                          Click="OnShowRecentPage" />
+                        <Border Classes="menuSeparator" />
+                        <controls:MenuRow Content="Stop"
+                                          Icon="{StaticResource Icon.Stop}"
+                                          controls:MenuShortcuts.Command="Stop"
+                                          Command="{Binding StopCommand}"
+                                          IsVisible="{Binding CanStop}" />
+                        <controls:MenuRow Content="Tracks and Synchronization"
+                                          Icon="{StaticResource Icon.Audio}"
+                                          Command="{Binding ToggleMediaControlsCommand}"
+                                          CommandParameter="Audio" />
+                        <controls:MenuRow Content="Video Adjustments"
+                                          Icon="{StaticResource Icon.Video}"
+                                          Command="{Binding ToggleMediaControlsCommand}"
+                                          CommandParameter="Video" />
+                        <controls:MenuRow Content="Media Information"
+                                          Icon="{StaticResource Icon.Info}"
+                                          controls:MenuShortcuts.Command="MediaInformation"
+                                          Command="{Binding MediaInformationCommand}" />
+                        <controls:MenuRow Content="Picture in Picture"
+                                          Icon="{StaticResource Icon.Pip}"
+                                          controls:MenuShortcuts.Command="TogglePictureInPicture"
+                                          Command="{Binding TogglePictureInPictureCommand}"
+                                          ToolTip.Tip="Keep video above other windows" />
+                        <Grid Classes="menuControlRow" ColumnDefinitions="24,*,Auto">
+                            <controls:VlcIcon Icon="{StaticResource Icon.Speed}" />
+                            <TextBlock Grid.Column="1" Text="Playback Speed" />
+                            <ComboBox x:Name="SpeedSelector"
+                                      Grid.Column="2"
+                                      Width="88"
+                                      VerticalAlignment="Center"
+                                      PlaceholderText="{Binding PlaybackRate, StringFormat='{}{0:0.##}×'}"
+                                      SelectionChanged="OnSpeedChanged"
+                                      AutomationProperties.Name="Playback speed">
+                                <ComboBoxItem Content="0.5×" Tag="0.5" />
+                                <ComboBoxItem Content="1×" Tag="1" />
+                                <ComboBoxItem Content="1.5×" Tag="1.5" />
+                                <ComboBoxItem Content="2×" Tag="2" />
+                            </ComboBox>
+                        </Grid>
+                        <Grid x:Name="AlwaysOnTopChrome" Classes="menuControlRow" ColumnDefinitions="24,*">
+                            <controls:VlcIcon Icon="{StaticResource Icon.Window}" />
+                            <CheckBox Grid.Column="1"
+                                      Content="Always on Top"
+                                      IsChecked="{Binding IsAlwaysOnTop, Mode=TwoWay}"
+                                      Command="{Binding SetAlwaysOnTopCommand}"
+                                      CommandParameter="{Binding IsChecked, RelativeSource={RelativeSource Self}}" />
+                        </Grid>
+                        <Border Classes="menuSeparator" />
+                        <controls:MenuRow x:Name="KeyboardShortcutsRow"
+                                          Content="Keyboard Shortcuts"
+                                          Icon="{StaticResource Icon.Hotkeys}"
+                                          HasSubmenu="True"
+                                          Click="OnShowKeyboardShortcuts"
+                                          ToolTip.Tip="Change shortcuts in Settings, Controls" />
+                        <controls:MenuRow x:Name="OpenSettingsButton"
+                                          Content="Settings"
+                                          Icon="{StaticResource Icon.Settings}"
+                                          controls:MenuShortcuts.Command="OpenSettings"
+                                          Command="{Binding OpenSettingsCommand}" />
                     </StackPanel>
-                    <Button Classes="menuAction"
-                            Content="Load playlist…"
-                            Command="{Binding LoadPlaylistCommand}"
-                            ToolTip.Tip="Load a flat M3U or M3U8 playback queue" />
-                    <Button Classes="menuAction"
-                            Content="Stop"
-                            Command="{Binding StopCommand}"
-                            IsVisible="{Binding CanStop}" />
-                    <Button Classes="menuAction"
-                            Content="Tracks and synchronization"
-                            Command="{Binding ToggleMediaControlsCommand}"
-                            CommandParameter="Audio" />
-                    <Button Classes="menuAction"
-                            Content="Video adjustments"
-                            Command="{Binding ToggleMediaControlsCommand}"
-                            CommandParameter="Video" />
-                    <Button Classes="menuAction"
-                            Content="Media information"
-                            Command="{Binding MediaInformationCommand}" />
-                    <Button Classes="menuAction"
-                            Content="Picture in picture"
-                            Command="{Binding TogglePictureInPictureCommand}"
-                            ToolTip.Tip="Keep video above other windows (Ctrl+Shift+P)" />
-                    <StackPanel Orientation="Horizontal" Spacing="8" Margin="12,2">
-                        <TextBlock Text="Speed" VerticalAlignment="Center" />
-                        <ComboBox x:Name="SpeedSelector"
-                                  Width="88"
-                                  PlaceholderText="{Binding PlaybackRate, StringFormat='{}{0:0.##}×'}"
-                                  SelectionChanged="OnSpeedChanged"
-                                  AutomationProperties.Name="Playback speed">
-                            <ComboBoxItem Content="0.5×" Tag="0.5" />
-                            <ComboBoxItem Content="1×" Tag="1" />
-                            <ComboBoxItem Content="1.5×" Tag="1.5" />
-                            <ComboBoxItem Content="2×" Tag="2" />
-                        </ComboBox>
-                    </StackPanel>
-                    <Border x:Name="AlwaysOnTopChrome" Padding="12,4">
-                        <CheckBox Classes="monochrome"
-                                  Content="Always on top"
-                                  IsChecked="{Binding IsAlwaysOnTop, Mode=TwoWay}"
-                                  Command="{Binding SetAlwaysOnTopCommand}"
-                                  CommandParameter="{Binding IsChecked, RelativeSource={RelativeSource Self}}" />
-                    </Border>
-                    <Button x:Name="OpenSettingsButton"
-                            Classes="menuAction"
-                            Content="Settings"
-                            Command="{Binding OpenSettingsCommand}"
-                            ToolTip.Tip="Settings (Ctrl+,)"
-                            AutomationProperties.Name="Open settings" />
-                    <Border Height="1"
-                            Background="{DynamicResource PlayerBorder}"
-                            Margin="4,4" />
-                    <TextBlock Text="Recent" FontWeight="SemiBold" />
-                    <ScrollViewer x:Name="RecentScroll"
-                                  MaxHeight="260"
-                                  HorizontalScrollBarVisibility="Disabled"
-                                  VerticalScrollBarVisibility="Auto"
-                                  IsVisible="{Binding HasRecentItems}">
-                        <ItemsControl ItemsSource="{Binding RecentItems}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate x:DataType="application:RecentMediaEntry">
-                                    <Grid ColumnDefinitions="*,Auto" Margin="0,1">
-                                        <Button Classes="recentItem"
-                                                ToolTip.Tip="{Binding Source}"
-                                                Click="OnOpenRecent"
-                                                AutomationProperties.Name="Open recent media">
-                                            <TextBlock Text="{Binding DisplayName}"
-                                                       TextTrimming="CharacterEllipsis"
-                                                       TextWrapping="NoWrap" />
-                                        </Button>
-                                        <Button Grid.Column="1"
-                                                Classes="recentRemove"
-                                                ToolTip.Tip="Remove from recent media"
-                                                AutomationProperties.Name="Remove recent media"
-                                                Command="{Binding DataContext.RemoveRecentCommand, ElementName=VideoArea}"
-                                                CommandParameter="{Binding Source}">
-                                            <controls:VlcIcon Width="24" Height="24"
-                                                              Icon="{StaticResource Icon.Close}" />
-                                        </Button>
-                                    </Grid>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </ScrollViewer>
-                    <TextBlock x:Name="RecentEmptyState"
-                               IsVisible="{Binding HasNoRecentItems}"
-                               Text="No recent media yet."
-                               Classes="settingHint"
-                               Margin="12,2" />
-                    <TextBlock IsVisible="{Binding HasHistoryError}"
-                               Text="{Binding HistoryError}"
-                               Foreground="{DynamicResource PlayerErrorText}"
-                               TextWrapping="Wrap"
-                               AutomationProperties.Name="Recent history error" />
-                    <StackPanel x:Name="ClearRecentPrompt"
-                                Orientation="Horizontal"
+
+                    <!-- Open Recent: the recent media, each with a remove
+                         button, and Clear recent with a confirmation. -->
+                    <StackPanel x:Name="MoreMenuRecent" IsVisible="False">
+                        <controls:MenuRow x:Name="RecentBackRow"
+                                          Content="Open Recent"
+                                          Icon="{StaticResource Icon.ChevronLeft}"
+                                          Click="OnShowMainMenuPage"
+                                          AutomationProperties.Name="Open Recent, back to menu" />
+                        <Border Classes="menuSeparator" />
+                        <ScrollViewer x:Name="RecentScroll"
+                                      MaxHeight="300"
+                                      HorizontalScrollBarVisibility="Disabled"
+                                      VerticalScrollBarVisibility="Auto"
+                                      IsVisible="{Binding HasRecentItems}">
+                            <ItemsControl ItemsSource="{Binding RecentItems}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="application:RecentMediaEntry">
+                                        <Grid ColumnDefinitions="*,Auto" Margin="0,0,6,0">
+                                            <Button Classes="recentItem"
+                                                    ToolTip.Tip="{Binding Source}"
+                                                    Click="OnOpenRecent"
+                                                    AutomationProperties.Name="{Binding DisplayName, StringFormat='Open {0}'}">
+                                                <TextBlock Text="{Binding DisplayName}"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           TextWrapping="NoWrap" />
+                                            </Button>
+                                            <Button Grid.Column="1"
+                                                    Classes="recentRemove"
+                                                    ToolTip.Tip="Remove from recent media"
+                                                    AutomationProperties.Name="{Binding DisplayName, StringFormat='Remove {0} from recent media'}"
+                                                    Command="{Binding DataContext.RemoveRecentCommand, ElementName=VideoArea}"
+                                                    CommandParameter="{Binding Source}">
+                                                <controls:VlcIcon Width="24" Height="24"
+                                                                  Icon="{StaticResource Icon.Close}" />
+                                            </Button>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                        <TextBlock x:Name="RecentEmptyState"
+                                   IsVisible="{Binding HasNoRecentItems}"
+                                   Text="No recent media yet."
+                                   Classes="panelHint"
+                                   Foreground="{DynamicResource Vlc.Fg.A2}"
+                                   Margin="14,10" />
+                        <TextBlock IsVisible="{Binding HasHistoryError}"
+                                   Text="{Binding HistoryError}"
+                                   Foreground="{DynamicResource PlayerErrorText}"
+                                   TextWrapping="Wrap"
+                                   Margin="14,6"
+                                   AutomationProperties.Name="Recent history error" />
+                        <StackPanel x:Name="ClearRecentPrompt"
+                                    Orientation="Horizontal"
+                                    HorizontalAlignment="Right"
+                                    Margin="8"
+                                    Spacing="6"
+                                    IsVisible="False">
+                            <TextBlock Text="Clear recent media?"
+                                       VerticalAlignment="Center"
+                                       Classes="panelHint"
+                                       Foreground="{DynamicResource Vlc.Fg.A2}" />
+                            <Button Classes="secondary" Content="Cancel" Click="OnCancelClearRecent" />
+                            <Button Classes="secondary" Content="Clear" Command="{Binding ClearRecentCommand}" Click="OnConfirmClearRecent" />
+                        </StackPanel>
+                        <Button x:Name="ClearRecentButton"
+                                Classes="secondary"
                                 HorizontalAlignment="Right"
-                                Spacing="6"
-                                IsVisible="False">
-                        <TextBlock Text="Clear recent media?"
-                                   VerticalAlignment="Center"
-                                   Classes="settingHint" />
-                        <Button Content="Cancel" Click="OnCancelClearRecent" />
-                        <Button Content="Clear" Command="{Binding ClearRecentCommand}" Click="OnConfirmClearRecent" />
+                                Margin="8"
+                                Content="Clear recent"
+                                IsVisible="{Binding HasRecentItems}"
+                                Click="OnClearRecent"
+                                ToolTip.Tip="Clear recent media" />
                     </StackPanel>
-                    <Button x:Name="ClearRecentButton"
-                            HorizontalAlignment="Right"
-                            Content="Clear recent"
-                            IsVisible="{Binding HasRecentItems}"
-                            Click="OnClearRecent"
-                            ToolTip.Tip="Clear recent media" />
-                </StackPanel>
+                </Panel>
             </ScrollViewer>
         </Border>
 
@@ -699,51 +852,77 @@
             </Grid>
         </Border>
 
-        <Border x:Name="UrlPanel"
-                Grid.RowSpan="3"
-                ZIndex="30"
-                IsVisible="False"
-                MaxWidth="460"
-                HorizontalAlignment="Center"
-                VerticalAlignment="Top"
-                Margin="24,52,24,0"
-                Padding="16"
-                CornerRadius="16"
-                Background="{DynamicResource Vlc.Bg.B1Transparent}"
-                BorderBrush="{DynamicResource Vlc.Accent.Dim}"
-                BorderThickness="1"
-                BoxShadow="0 12 32 0 #80000000">
-            <StackPanel Spacing="10">
-                <TextBlock Text="Open network URL"
-                           FontWeight="SemiBold"
-                           FontSize="16" />
-                <TextBlock Text="Paste an http or https media address."
-                           Classes="settingHint"
-                           TextWrapping="Wrap" />
-                <TextBox x:Name="UrlTextBox"
-                         Text="{Binding UrlText, Mode=TwoWay}"
-                         KeyDown="OnUrlTextKeyDown"
-                         PlaceholderText="https://example.com/media.mp4"
-                         AutomationProperties.Name="Media URL"
-                         ToolTip.Tip="Only http and https URLs are supported" />
-                <TextBlock x:Name="UrlOpenError"
-                           IsVisible="{Binding HasOpenError}"
-                           Text="{Binding OpenError}"
-                           Foreground="{DynamicResource PlayerErrorText}"
-                           TextWrapping="Wrap"
-                           AutomationProperties.Name="URL open error" />
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+        <!-- Open Network Stream (design 6216:13614) in the modal shell Settings
+             uses (Controls/ModalDialog): a dimmed backdrop, the dialog (its
+             body BG/A3 as in the frame, which has the design's BG/A3
+             Transparent), the 50 px header with the title and close, the URL
+             field with the open error, and Cancel / Open in the footer.
+             Escape, Cancel, close and the backdrop dismiss it; focus returns
+             to the More button. The app opens one http or https address, so
+             the design's multi-link text area is a one-line field (Enter
+             opens), and the optional playlist name is left out (D2). -->
+        <controls:ModalDialog x:Name="UrlPanel"
+                              Grid.RowSpan="3"
+                              ZIndex="30"
+                              IsVisible="False"
+                              Classes="fit"
+                              Background="{DynamicResource Vlc.Bg.A3}"
+                              CloseRequested="OnUrlDialogCloseRequested"
+                              AutomationProperties.Name="Open Network Stream">
+            <controls:ModalDialog.Header>
+                <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Classes="dialogTitle"
+                               Margin="10,0,12,0"
+                               Text="Open Network Stream" />
+                    <Button x:Name="UrlCloseButton"
+                            Grid.Column="1"
+                            Classes="icon dialogClose"
+                            Click="OnUrlCancel"
+                            ToolTip.Tip="Close (Escape)"
+                            AutomationProperties.Name="Close Open Network Stream">
+                        <controls:VlcIcon Width="24" Height="24"
+                                          Icon="{StaticResource Icon.Close}" />
+                    </Button>
+                </Grid>
+            </controls:ModalDialog.Header>
+            <controls:ModalDialog.Footer>
+                <Grid ColumnDefinitions="Auto,*,Auto">
                     <Button x:Name="UrlCancelButton"
+                            Classes="secondary dialogAction"
                             Content="Cancel"
                             Click="OnUrlCancel"
                             AutomationProperties.Name="Cancel opening URL" />
                     <Button x:Name="UrlSubmitButton"
+                            Grid.Column="2"
+                            Classes="primary dialogAction"
                             Content="Open"
                             Click="OnUrlSubmit"
                             AutomationProperties.Name="Open network URL" />
+                </Grid>
+            </controls:ModalDialog.Footer>
+            <StackPanel Classes="dialogBody">
+                <StackPanel>
+                    <TextBlock Classes="dialogHeading" Text="Network URL" />
+                    <TextBlock Classes="dialogHint"
+                               Text="Paste an http or https media address, then press Open or Enter." />
+                </StackPanel>
+                <StackPanel Spacing="8">
+                    <TextBox x:Name="UrlTextBox"
+                             Classes="dialogField"
+                             Text="{Binding UrlText, Mode=TwoWay}"
+                             KeyDown="OnUrlTextKeyDown"
+                             PlaceholderText="e.g., https://www.example.com/stream.mp4"
+                             AutomationProperties.Name="Media URL"
+                             ToolTip.Tip="Only http and https URLs are supported" />
+                    <TextBlock x:Name="UrlOpenError"
+                               IsVisible="{Binding HasOpenError}"
+                               Text="{Binding OpenError}"
+                               Foreground="{DynamicResource PlayerErrorText}"
+                               TextWrapping="Wrap"
+                               AutomationProperties.Name="URL open error" />
                 </StackPanel>
             </StackPanel>
-        </Border>
+        </controls:ModalDialog>
 
         <Border x:Name="ResumePanel"
                 Grid.RowSpan="3"

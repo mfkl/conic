@@ -36,6 +36,11 @@ public partial class MainWindow
                 }
                 double EngineRate() => VideoSurface.Player!.State.PlaybackRate;
 
+                // Start from known values: other smokes share the profile.
+                _settingsViewModel.RememberVolume = true;
+                _settingsViewModel.ReduceMotion = false;
+                _settingsViewModel.Density = "Comfortable";
+
                 // Default speed: each new item starts at it; the speed menu changes only the current one.
                 _settingsViewModel.DefaultSpeed = "1.5";
                 Require(_settings.Current.DefaultSpeed == 1.5, "default speed saved");
@@ -48,12 +53,12 @@ public partial class MainWindow
                 await WaitFor(() => _presentation.QueueItems.Count == 2 && _presentation.IsPlaying && Math.Abs(EngineRate() - 1.5) < .01, "a new queue starts at the default speed");
                 _presentation.SetPlaybackRateCommand.Execute(.75);
                 await WaitFor(() => Math.Abs(EngineRate() - .75) < .01, "the speed menu changes the first queue item");
+                await WaitFor(() => _presentation.NextCommand.CanExecute(null), $"Next is available ({_presentation.QueueState.Status}, index {_presentation.QueueState.CurrentIndex}, repeat {_presentation.QueueState.Repeat}, order {_presentation.QueueState.Order})");
                 _presentation.NextCommand.Execute(null);
-                await WaitFor(() => _presentation.QueueState.CurrentIndex == 1 && Math.Abs(EngineRate() - 1.5) < .01, "the next queue item starts at the default speed");
+                await WaitFor(() => _presentation.QueueState.CurrentIndex == 1 && Math.Abs(EngineRate() - 1.5) < .01, $"the next queue item starts at the default speed (index {_presentation.QueueState.CurrentIndex}, rate {EngineRate():0.###})");
 
                 // Remember volume: written about 2 s after the volume settles, only while on.
                 string volumeFile = PlayerProfile.FilePath("volume.json");
-                Require(_settings.Current.RememberVolume, "Remember volume is on by default");
                 _presentation.Volume = 35;
                 if (!_presentation.IsMuted) _presentation.ToggleMuteCommand.Execute(null);
                 await WaitFor(() => Math.Abs(VideoSurface.Player!.State.Volume - .35) < .01 && VideoSurface.Player.State.IsMuted, "VLC takes the volume and mute");
@@ -112,6 +117,10 @@ public partial class MainWindow
                 Require(cone.Fill is ISolidColorBrush { Color: var logo } && logo == Color.Parse("#D37918"), $"the cone stays orange ({(cone.Fill as ISolidColorBrush)?.Color})");
                 CaptureSettingsApply("player-other-accent");
                 _settingsViewModel.Accent = AccentPalette.DefaultHex;
+                _settingsViewModel.DefaultSpeed = "1";
+                _settingsViewModel.RememberVolume = true;
+                _presentation.Volume = 100;
+                if (_presentation.IsMuted) _presentation.ToggleMuteCommand.Execute(null);
 
                 Console.WriteLine("[settings-apply-smoke] PASS default speed on open, new queue and next item; volume.json written only while Remember volume is on; no transitions or pressed scale with Reduce motion, restored when off; Compact control bar; orange cone in another accent");
                 desktop.Shutdown(0);

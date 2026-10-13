@@ -56,7 +56,8 @@ public partial class MainWindow
         }
     }
 
-    // Start videos in fullscreen: once per open, when its video output appears.
+    // Start videos in fullscreen and Resize the window to fit the video: once
+    // per open, when its video output appears.
     private void OnVideoOutputChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName != nameof(VideoAdjustmentsViewModel.Available)) return;
@@ -65,6 +66,7 @@ public partial class MainWindow
         long generation = player.State.Generation;
         if (generation == _fullscreenStartGeneration) return;
         _fullscreenStartGeneration = generation;
+        RequestResizeToVideo(generation);
         if (_settings.Current.StartFullscreen && WindowState != WindowState.FullScreen && !_presentation.IsPictureInPicture)
             ToggleFullscreen();
     }

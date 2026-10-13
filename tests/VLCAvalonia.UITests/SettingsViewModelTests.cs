@@ -111,6 +111,7 @@ public sealed class SettingsViewModelTests
     [InlineData("reduce motion", "Interface")]
     [InlineData("speed", "Playback")]
     [InlineData("diagnostics", "Advanced")]
+    [InlineData("shuffle", "Playback")]
     public void SearchSelectsTheMatchingPage(string query, string page)
     {
         SettingsViewModel viewModel = Create(out _);
@@ -230,6 +231,19 @@ public sealed class SettingsViewModelTests
             viewModel.SelectedPage = viewModel.Pages.Single(candidate => candidate.Name == page);
             Assert.False(viewModel.CanResetPage);
         }
+    }
+
+    [Fact]
+    public void ContinueWhereYouLeftOffMapsToTheResumeSettings()
+    {
+        SettingsViewModel viewModel = Create(out PlayerSettingsService service);
+
+        Assert.Equal("Ask", viewModel.ResumeMode.Value);
+        viewModel.ResumeMode = viewModel.ResumeModes.Single(option => option.Value == "Always");
+        Assert.Equal((true, true), (service.Current.ResumePlayback, service.Current.ResumeAutomatically));
+        viewModel.ResumeMode = viewModel.ResumeModes.Single(option => option.Value == "Never");
+        Assert.Equal((false, false), (service.Current.ResumePlayback, service.Current.ResumeAutomatically));
+        Assert.Equal("Never", viewModel.ResumeMode.Value);
     }
 
     [Fact]

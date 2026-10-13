@@ -182,10 +182,13 @@
             <Setter Property="Foreground" Value="{DynamicResource Vlc.Fg.A3}" />
         </Style>
         <!-- Controls in the 320 column: 36 tall, full width. -->
-        <Style Selector="controls|SettingRow ComboBox, controls|SettingRow NumericUpDown, controls|SettingRow Button.settingAction">
+        <Style Selector="controls|SettingRow ComboBox, controls|SettingRow NumericUpDown, controls|SettingRow Button.settingAction, controls|SettingRow TextBox">
             <Setter Property="Height" Value="36" />
             <Setter Property="MinHeight" Value="36" />
             <Setter Property="HorizontalAlignment" Value="Stretch" />
+        </Style>
+        <Style Selector="controls|SettingRow TextBox">
+            <Setter Property="VerticalContentAlignment" Value="Center" />
         </Style>
         <Style Selector="controls|SettingRow NumericUpDown">
             <Setter Property="VerticalContentAlignment" Value="Center" />
@@ -684,34 +687,62 @@
                                         <TextBlock Text="No shortcuts match your search." IsVisible="{Binding !HasShortcutResults}" Classes="settingNote" />
                                     </StackPanel>
 
-                                    <!-- Media › Playback -->
+                                    <!-- Media › Playback (design 3062:12552): Startup, Tracks, Order,
+                                         Seeking and Files. Not built: pause when another app uses audio,
+                                         video quality, menu language, optical drive, scrub thumbnails,
+                                         matching .mkv files (see the phase 9b log). -->
                                     <StackPanel Classes="settingsSection" IsVisible="{Binding IsPlayback}">
-                                        <TextBlock Classes="sectionTitle" Text="Resume" />
-                                        <controls:SettingRow Label="Resume playback" Badge="Next open" Help="Ask to resume eligible media the next time it opens" ControlWidth="68">
-                                            <CheckBox IsChecked="{Binding ResumePlayback, Mode=TwoWay}"
-                                                      AutomationProperties.Name="Resume playback"
-                                                      AutomationProperties.HelpText="Ask to resume eligible media next time it opens" />
+                                        <TextBlock Classes="sectionTitle" Text="Startup" />
+                                        <controls:SettingRow Label="Continue where you left off" Badge="Next open" Help="Ask shows a prompt to resume; Always resumes without asking; Never starts from the beginning">
+                                            <ComboBox ItemsSource="{Binding ResumeModes}" SelectedItem="{Binding ResumeMode, Mode=TwoWay}" AutomationProperties.Name="Continue where you left off" AutomationProperties.HelpText="Ask shows a prompt to resume; Always resumes without asking; Never starts from the beginning" />
                                         </controls:SettingRow>
                                         <controls:SettingRow Label="Resume after (seconds)" Badge="Next open" Help="Positions earlier than this are not saved">
-                                            <NumericUpDown Minimum="0"
-                                                           Maximum="3600"
-                                                           Value="{Binding ResumeMinimumElapsedSeconds, Mode=TwoWay}"
-                                                           AutomationProperties.Name="Resume after (seconds)" />
+                                            <NumericUpDown Minimum="0" Maximum="3600" Increment="1" FormatString="0" Value="{Binding ResumeMinimumElapsedSeconds, Mode=TwoWay}" AutomationProperties.Name="Resume after (seconds)" AutomationProperties.HelpText="Positions earlier than this are not saved" />
                                         </controls:SettingRow>
                                         <controls:SettingRow Label="Skip resume near end (seconds)" Badge="Next open" Help="Media this close to its end starts from the beginning">
-                                            <NumericUpDown Minimum="0"
-                                                           Maximum="3600"
-                                                           Value="{Binding ResumeMaximumRemainingSeconds, Mode=TwoWay}"
-                                                           AutomationProperties.Name="Do not resume within (seconds)" />
+                                            <NumericUpDown Minimum="0" Maximum="3600" Increment="1" FormatString="0" Value="{Binding ResumeMaximumRemainingSeconds, Mode=TwoWay}" AutomationProperties.Name="Do not resume within (seconds)" AutomationProperties.HelpText="Media this close to its end starts from the beginning" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Start playing as soon as a file opens" Badge="Next open" Help="When off, media opens paused" ControlWidth="68">
+                                            <CheckBox IsChecked="{Binding AutoPlay, Mode=TwoWay}" AutomationProperties.Name="Start playing as soon as a file opens" AutomationProperties.HelpText="When off, media opens paused" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Default playback speed" Badge="Next open" Help="Each media item starts at this speed; the speed menu changes only the item that is playing">
+                                            <ComboBox ItemsSource="{Binding SpeedOptions}" SelectedItem="{Binding DefaultSpeed, Mode=TwoWay}" AutomationProperties.Name="Default speed" AutomationProperties.HelpText="Each media item starts at this speed; the speed menu changes only the item that is playing" />
                                         </controls:SettingRow>
                                     </StackPanel>
                                     <StackPanel Classes="settingsSection" IsVisible="{Binding IsPlayback}">
-                                        <TextBlock Classes="sectionTitle" Text="Speed" />
-                                        <controls:SettingRow Label="Default speed" Badge="Next open" Help="Each media item starts at this speed; the speed menu changes only the item that is playing">
-                                            <ComboBox ItemsSource="{Binding SpeedOptions}"
-                                                      SelectedItem="{Binding DefaultSpeed, Mode=TwoWay}"
-                                                      AutomationProperties.Name="Default speed"
-                                                      AutomationProperties.HelpText="Each media item starts at this speed; the speed menu changes only the item that is playing" />
+                                        <TextBlock Classes="sectionTitle" Text="Tracks" />
+                                        <controls:SettingRow Label="Preferred audio language" Badge="Next open" Help="Language codes in order of preference, such as en, fr; empty plays the default track">
+                                            <TextBox Text="{Binding AudioLanguage, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" PlaceholderText="Media default (e.g. en, fr)" AutomationProperties.Name="Preferred audio language" AutomationProperties.HelpText="Language codes in order of preference, such as en, fr; empty plays the default track" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Preferred subtitle language" Badge="Next open" Help="Language codes in order of preference, such as en, fr; none turns subtitles off">
+                                            <TextBox Text="{Binding SubtitleLanguage, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" PlaceholderText="Media default (e.g. en, fr)" AutomationProperties.Name="Preferred subtitle language" AutomationProperties.HelpText="Language codes in order of preference, such as en, fr; none turns subtitles off" />
+                                        </controls:SettingRow>
+                                    </StackPanel>
+                                    <StackPanel Classes="settingsSection" IsVisible="{Binding IsPlayback}">
+                                        <TextBlock Classes="sectionTitle" Text="Order" />
+                                        <controls:SettingRow Label="Repeat" Help="The mode queues start in; changing it in the player is remembered">
+                                            <ComboBox ItemsSource="{Binding RepeatModes}" SelectedItem="{Binding QueueRepeat, Mode=TwoWay}" AutomationProperties.Name="Repeat" AutomationProperties.HelpText="The mode queues start in; changing it in the player is remembered" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Shuffle" Help="Plays queues in random order; changing it in the player is remembered" ControlWidth="68">
+                                            <CheckBox IsChecked="{Binding QueueShuffle, Mode=TwoWay}" AutomationProperties.Name="Shuffle" AutomationProperties.HelpText="Plays queues in random order; changing it in the player is remembered" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Stop after each item" Badge="Next open" Help="Stops when an item ends instead of playing the next one" ControlWidth="68">
+                                            <CheckBox IsChecked="{Binding StopAfterEachItem, Mode=TwoWay}" AutomationProperties.Name="Stop after each item" AutomationProperties.HelpText="Stops when an item ends instead of playing the next one" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="When playback finishes" Help="What happens when the queue ends (or each item, with Stop after each item)">
+                                            <ComboBox ItemsSource="{Binding PlaybackFinishedActions}" SelectedItem="{Binding PlaybackFinished, Mode=TwoWay}" AutomationProperties.Name="When playback finishes" AutomationProperties.HelpText="What happens when the queue ends (or each item, with Stop after each item)" />
+                                        </controls:SettingRow>
+                                    </StackPanel>
+                                    <StackPanel Classes="settingsSection" IsVisible="{Binding IsPlayback}">
+                                        <TextBlock Classes="sectionTitle" Text="Seeking" />
+                                        <controls:SettingRow Label="Seek precisely" Badge="Next open" Help="Seeks to the exact time; when off, seeking jumps to the nearest key frame, which is faster" ControlWidth="68">
+                                            <CheckBox IsChecked="{Binding SeekPrecisely, Mode=TwoWay}" AutomationProperties.Name="Seek precisely" AutomationProperties.HelpText="Seeks to the exact time; when off, seeking jumps to the nearest key frame, which is faster" />
+                                        </controls:SettingRow>
+                                    </StackPanel>
+                                    <StackPanel Classes="settingsSection" IsVisible="{Binding IsPlayback}">
+                                        <TextBlock Classes="sectionTitle" Text="Files" />
+                                        <controls:SettingRow Label="Repair damaged AVI files" Badge="Next open" Help="Builds an index in memory for AVI files with a missing or broken index, so seeking works">
+                                            <ComboBox ItemsSource="{Binding AviRepairModes}" SelectedItem="{Binding AviRepair, Mode=TwoWay}" AutomationProperties.Name="Repair damaged AVI files" AutomationProperties.HelpText="Builds an index in memory for AVI files with a missing or broken index, so seeking works" />
                                         </controls:SettingRow>
                                     </StackPanel>
 

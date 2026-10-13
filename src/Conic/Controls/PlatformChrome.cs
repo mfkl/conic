@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using System.Runtime.Versioning;
 using Avalonia.Platform;
 using Conic.Interop.MacOS;
+using Conic.Interop.Windows;
 
 namespace Conic.Controls;
 
@@ -29,9 +30,13 @@ internal static class PlatformChrome
     /// </summary>
     public const double SystemCaptionButtonsWidth = 92;
 
-    /// <summary>Keeps the system caption buttons and uses the macOS app icon on macOS.</summary>
+    /// <summary>
+    /// Keeps the system caption buttons and uses the macOS app icon on macOS;
+    /// keeps the frame in the app's theme on Windows 10.
+    /// </summary>
     public static void Apply(Window window)
     {
+        if (OperatingSystem.IsWindows()) WindowsFrameTheme.Apply(window);
         if (!UsesSystemCaptionButtons) return;
         window.WindowDecorations = WindowDecorations.Full;
         // The bundle's Dock icon comes from AppIcon.icns; run from source,

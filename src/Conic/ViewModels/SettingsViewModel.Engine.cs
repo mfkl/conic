@@ -4,7 +4,7 @@ using Conic.Commands;
 
 namespace Conic.ViewModels;
 
-// Playback and Video rows (phase 9b). Most of them are
+// Playback, Video and Performance rows (phase 9b). Most of them are
 // libVLC options the next open's core starts with (PlayerEngineOptions); the
 // choices offered are the ones PlayerEngineOptions knows how to map.
 internal sealed partial class SettingsViewModel
@@ -16,6 +16,7 @@ internal sealed partial class SettingsViewModel
         nameof(VideoEnabled), nameof(StartFullscreen), nameof(StopScreensaver), nameof(Hue), nameof(Brightness), nameof(Contrast),
         nameof(Saturation), nameof(Gamma), nameof(CanAdjustGamma), nameof(Deinterlace), nameof(DeinterlaceMethod), nameof(DefaultAspectRatio),
         nameof(DefaultCrop), nameof(DefaultZoom),
+        nameof(HardwareDecoding), nameof(SkipLoopFilter), nameof(DecodingThreads), nameof(DropLateFrames),
     ];
 
     private PlayerSettings Current => _service.Current;
@@ -87,6 +88,18 @@ internal sealed partial class SettingsViewModel
     public IReadOnlyList<SettingOption> Zooms => PlayerEngineOptions.Zooms;
     public SettingOption DefaultZoom { get => Find(Zooms, Current.DefaultZoom); set { if (value is not null) Update(s => s with { DefaultZoom = value.Value }); } }
 
+    // Performance.
+    public IReadOnlyList<SettingOption> HardwareDecodingModes { get; } = PlayerEngineOptions.HardwareDecodingModes();
+    public SettingOption HardwareDecoding { get => Find(HardwareDecodingModes, Current.HardwareDecoding); set { if (value is not null) Update(s => s with { HardwareDecoding = value.Value }); } }
+    public IReadOnlyList<SettingOption> LoopFilterModes => PlayerEngineOptions.LoopFilterModes;
+    public SettingOption SkipLoopFilter
+    {
+        get => Find(LoopFilterModes, Current.SkipLoopFilter.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        set { if (value is not null) Update(s => s with { SkipLoopFilter = int.Parse(value.Value, System.Globalization.CultureInfo.InvariantCulture) }); }
+    }
+    public decimal DecodingThreads { get => Current.DecodingThreads; set => Update(s => s with { DecodingThreads = (int)value }); }
+    public bool DropLateFrames { get => Current.DropLateFrames; set => Update(s => s with { DropLateFrames = value }); }
+
     private static PlayerSettings ResetPlaybackPage(PlayerSettings s, PlayerSettings d) => s with
     {
         ResumePlayback = d.ResumePlayback, ResumeAutomatically = d.ResumeAutomatically, ResumeMinimumElapsedSeconds = d.ResumeMinimumElapsedSeconds,
@@ -100,5 +113,11 @@ internal sealed partial class SettingsViewModel
         VideoEnabled = d.VideoEnabled, StartFullscreen = d.StartFullscreen, StopScreensaver = d.StopScreensaver, Hue = d.Hue, Brightness = d.Brightness,
         Contrast = d.Contrast, Saturation = d.Saturation, Gamma = d.Gamma, Deinterlace = d.Deinterlace, DeinterlaceMethod = d.DeinterlaceMethod,
         DefaultAspectRatio = d.DefaultAspectRatio, DefaultCrop = d.DefaultCrop, DefaultZoom = d.DefaultZoom,
+    };
+
+    private static PlayerSettings ResetPerformancePage(PlayerSettings s, PlayerSettings d) => s with
+    {
+        HardwareDecoding = d.HardwareDecoding, SkipLoopFilter = d.SkipLoopFilter,
+        DecodingThreads = d.DecodingThreads, DropLateFrames = d.DropLateFrames,
     };
 }

@@ -731,7 +731,7 @@
                                                       AutomationProperties.Name="Auto-hide the controls"
                                                       AutomationProperties.HelpText="Hides the bars over fullscreen video and picture in picture while playing; in a window they stay beside the video" />
                                         </controls:SettingRow>
-                                        <controls:SettingRow Label="Controls hide after (seconds)" Help="How long the bars stay up over fullscreen video without input">
+                                        <controls:SettingRow Label="Controls hide after (seconds)" Badge="Live" Help="How long the bars stay up over fullscreen video without input">
                                             <NumericUpDown Minimum="1"
                                                            Maximum="15"
                                                            Value="{Binding ControlTimeoutSeconds, Mode=TwoWay}"

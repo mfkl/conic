@@ -52,12 +52,9 @@ public partial class SettingsView : UserControl
     // The backdrop (ModalDialog) closes Settings.
     private void OnShellCloseRequested(object? sender, EventArgs e) => CloseRequested?.Invoke(this, EventArgs.Empty);
 
-    /// <summary>Keyboard Shortcuts (More menu, right-click menu): the Controls page's shortcut search, scrolled into view.</summary>
-    internal void FocusShortcuts() => Dispatcher.UIThread.Post(() =>
-    {
-        ShortcutsSection.BringIntoView();
-        ShortcutSearchBox.Focus(NavigationMethod.Directional);
-    }, DispatcherPriority.Loaded);
+    /// <summary>Keyboard Shortcuts (More menu, right-click menu): scrolls the Controls page's shortcut editor into view once it is laid out.</summary>
+    internal void BringShortcutsIntoView() =>
+        Dispatcher.UIThread.Post(() => ShortcutsSection.BringIntoView(), DispatcherPriority.Loaded);
 
     // Enter in a hotkey field saves that shortcut, like its Save button.
     private void OnShortcutFieldKeyDown(object? sender, KeyEventArgs e)

@@ -256,6 +256,7 @@ public partial class MainWindow
 
     private void ShowOpenMenuForSmoke()
     {
+        PrepareOpenMenu();
         OpenMenu.IsVisible = true;
         UrlPanel.IsVisible = false;
         ClearRecentPrompt.IsVisible = false;

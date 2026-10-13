@@ -175,21 +175,160 @@
         <Setter Property="Padding" Value="10,8" />
         <Setter Property="Foreground" Value="{DynamicResource PlayerSecondaryText}" />
     </Style>
-    <!-- Menu rows (More menu, track lists, media cards). -->
-    <Style Selector="Button.menuAction">
+    <!-- Menus ............................................................ -->
+
+    <!-- The design's menus (More 6062:13354, right-click 6065:13616): an
+         opaque BG/A3 surface (the design's BG/A3 Transparent without its
+         blur), padding 4, 48-tall options with a 24 accent icon, the label in
+         14 FG/2, a right-aligned shortcut hint in FG/A2 (FG/A3 is below 4.5:1
+         on the surface) or a chevron for a submenu, and full-width
+         separators. The More menu is a Border of MenuRow buttons (it hosts the
+         speed selector and the always-on-top toggle); context menus and menu
+         flyouts are Fluent's MenuItem, recolored through the MenuFlyout*
+         resources in Styles/PlayerPalette.axaml and sized here. -->
+    <Style Selector="Border.menuSurface">
+        <Setter Property="Background" Value="{DynamicResource Vlc.Bg.A3}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Vlc.Divider.Bright}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="6" />
+        <Setter Property="Padding" Value="4" />
+    </Style>
+    <Style Selector="ContextMenu, MenuFlyoutPresenter">
+        <Setter Property="Background" Value="{DynamicResource Vlc.Bg.A3}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Vlc.Divider.Bright}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="6" />
+        <Setter Property="Padding" Value="4" />
+    </Style>
+    <Style Selector="Border.menuSurface">
+        <Setter Property="BoxShadow" Value="0 8 15 0 #75000000" />
+    </Style>
+    <Style Selector="controls|MenuRow">
+        <Setter Property="MinHeight" Value="48" />
+        <Setter Property="Padding" Value="14,0" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
         <Setter Property="HorizontalContentAlignment" Value="Left" />
-        <Setter Property="Padding" Value="12,8" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
         <Setter Property="Background" Value="Transparent" />
-        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="2" />
         <Setter Property="CornerRadius" Value="4" />
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="Foreground" Value="{DynamicResource Vlc.Fg.2}" />
+        <Setter Property="Template">
+            <ControlTemplate TargetType="controls:MenuRow">
+                <Border Name="PART_Row"
+                        Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        CornerRadius="{TemplateBinding CornerRadius}"
+                        Padding="{TemplateBinding Padding}">
+                    <Grid ColumnDefinitions="24,*,Auto" ColumnSpacing="10">
+                        <controls:VlcIcon Name="PART_Icon"
+                                          Width="24" Height="24"
+                                          VerticalAlignment="Center"
+                                          Icon="{TemplateBinding Icon}" />
+                        <ContentPresenter Name="PART_ContentPresenter"
+                                          Grid.Column="1"
+                                          Content="{TemplateBinding Content}"
+                                          ContentTemplate="{TemplateBinding ContentTemplate}"
+                                          HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                          TextTrimming="CharacterEllipsis" />
+                        <TextBlock Name="PART_Shortcut"
+                                   Grid.Column="2"
+                                   Margin="12,0,0,0"
+                                   VerticalAlignment="Center"
+                                   Text="{TemplateBinding Shortcut}"
+                                   IsVisible="{TemplateBinding Shortcut, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                        <controls:VlcIcon Name="PART_Chevron"
+                                          Grid.Column="2"
+                                          Width="24" Height="24"
+                                          VerticalAlignment="Center"
+                                          IsVisible="{TemplateBinding HasSubmenu}"
+                                          Icon="{StaticResource Icon.ChevronRight}" />
+                    </Grid>
+                </Border>
+            </ControlTemplate>
+        </Setter>
+    </Style>
+    <Style Selector="controls|MenuRow /template/ controls|VlcIcon#PART_Icon">
+        <Setter Property="Foreground" Value="{DynamicResource PlayerAccentIcon}" />
+    </Style>
+    <Style Selector="controls|MenuRow /template/ TextBlock#PART_Shortcut">
+        <Setter Property="Foreground" Value="{DynamicResource Vlc.Fg.A2}" />
+    </Style>
+    <Style Selector="controls|MenuRow /template/ controls|VlcIcon#PART_Chevron">
+        <Setter Property="Foreground" Value="{DynamicResource Vlc.Fg.A2}" />
+    </Style>
+    <Style Selector="controls|MenuRow:pointerover, controls|MenuRow:focus-visible">
+        <Setter Property="Background" Value="{DynamicResource Vlc.Overlay.Hover}" />
+        <Setter Property="Foreground" Value="{DynamicResource Vlc.Fg.1}" />
+    </Style>
+    <Style Selector="controls|MenuRow:pointerover /template/ TextBlock#PART_Shortcut, controls|MenuRow:focus-visible /template/ TextBlock#PART_Shortcut">
         <Setter Property="Foreground" Value="{DynamicResource Vlc.Fg.2}" />
     </Style>
+    <Style Selector="controls|MenuRow:pointerover /template/ controls|VlcIcon#PART_Chevron, controls|MenuRow:focus-visible /template/ controls|VlcIcon#PART_Chevron">
+        <Setter Property="Foreground" Value="{DynamicResource Vlc.Fg.2}" />
+    </Style>
+    <Style Selector="controls|MenuRow:pressed">
+        <Setter Property="Background" Value="{DynamicResource Vlc.Overlay.Pressed}" />
+    </Style>
+    <Style Selector="controls|MenuRow:focus-visible">
+        <Setter Property="BorderBrush" Value="{DynamicResource PlayerAccent}" />
+    </Style>
+    <Style Selector="controls|MenuRow:disabled">
+        <Setter Property="Foreground" Value="{DynamicResource Vlc.Fg.A3}" />
+    </Style>
+    <Style Selector="controls|MenuRow:disabled /template/ controls|VlcIcon#PART_Icon">
+        <Setter Property="Foreground" Value="{DynamicResource Vlc.Fg.A4}" />
+    </Style>
+    <!-- A More menu row that holds a control (speed, always on top): the
+         same 24 icon column and 14 label. -->
+    <Style Selector="Grid.menuControlRow">
+        <Setter Property="MinHeight" Value="48" />
+        <Setter Property="Margin" Value="16,0,14,0" />
+        <Setter Property="ColumnSpacing" Value="10" />
+    </Style>
+    <Style Selector="Grid.menuControlRow > controls|VlcIcon">
+        <Setter Property="Width" Value="24" />
+        <Setter Property="Height" Value="24" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="Foreground" Value="{DynamicResource PlayerAccentIcon}" />
+    </Style>
+    <Style Selector="Grid.menuControlRow > TextBlock">
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="Foreground" Value="{DynamicResource Vlc.Fg.2}" />
+    </Style>
+    <Style Selector="Grid.menuControlRow > CheckBox">
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="Foreground" Value="{DynamicResource Vlc.Fg.2}" />
+    </Style>
+    <Style Selector="Border.menuSeparator">
+        <Setter Property="Height" Value="1" />
+        <Setter Property="MinHeight" Value="1" />
+        <Setter Property="Margin" Value="0,2" />
+        <Setter Property="Background" Value="{DynamicResource Vlc.Divider.Bright}" />
+    </Style>
+    <Style Selector="ContextMenu Separator, MenuFlyoutPresenter Separator, MenuItem Separator">
+        <Setter Property="Height" Value="1" />
+        <Setter Property="MinHeight" Value="1" />
+        <Setter Property="Margin" Value="0,2" />
+        <Setter Property="Background" Value="{DynamicResource Vlc.Divider.Bright}" />
+    </Style>
+    <!-- Recent entries in the More menu's Open Recent page. -->
     <Style Selector="Button.recentItem">
+        <Setter Property="MinHeight" Value="40" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
         <Setter Property="HorizontalContentAlignment" Value="Left" />
-        <Setter Property="Padding" Value="12,7" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Padding" Value="14,0" />
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="BorderThickness" Value="0" />
         <Setter Property="CornerRadius" Value="4" />
+        <Setter Property="FontSize" Value="14" />
         <Setter Property="Foreground" Value="{DynamicResource Vlc.Fg.2}" />
     </Style>
     <Style Selector="Button.recentRemove">
@@ -201,15 +340,31 @@
         <Setter Property="BorderThickness" Value="0" />
         <Setter Property="Foreground" Value="{DynamicResource PlayerSecondaryText}" />
     </Style>
-    <!-- Current menu row: accent label on BG/Accent Bright, kept under the
-         pointer. -->
-    <Style Selector="Button.menuAction.selected, Button.recentItem.selected">
-        <Setter Property="Background" Value="{DynamicResource PlayerSelection}" />
-        <Setter Property="Foreground" Value="{DynamicResource PlayerAccentText}" />
+    <!-- Context menus and flyouts: Fluent's MenuItem at the design's size. -->
+    <Style Selector="MenuItem">
+        <Setter Property="Padding" Value="14,12" />
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="CornerRadius" Value="4" />
     </Style>
-    <Style Selector="Button.menuAction.selected:pointerover /template/ ContentPresenter#PART_ContentPresenter, Button.recentItem.selected:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-        <Setter Property="Background" Value="{DynamicResource PlayerSelection}" />
-        <Setter Property="Foreground" Value="{DynamicResource PlayerAccentTextHover}" />
+    <Style Selector="MenuItem /template/ ContentControl#PART_IconPresenter">
+        <Setter Property="Width" Value="24" />
+        <Setter Property="Height" Value="24" />
+        <Setter Property="Margin" Value="0,0,10,0" />
+    </Style>
+    <Style Selector="MenuItem:disabled /template/ ContentControl#PART_IconPresenter">
+        <Setter Property="Opacity" Value="0.4" />
+    </Style>
+    <Style Selector="MenuItem /template/ TextBlock#PART_InputGestureText">
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="Margin" Value="24,0,0,0" />
+    </Style>
+    <Style Selector="MenuItem /template/ Path#PART_ChevronPath">
+        <Setter Property="Margin" Value="24,0,4,0" />
+    </Style>
+    <Style Selector="controls|VlcIcon.menuIcon">
+        <Setter Property="Width" Value="24" />
+        <Setter Property="Height" Value="24" />
+        <Setter Property="Foreground" Value="{DynamicResource PlayerAccentIcon}" />
     </Style>
 
     <!-- Dialogs .......................................................... -->
@@ -789,12 +944,6 @@
         <Setter Property="CornerRadius" Value="2" />
     </Style>
 
-    <Style Selector="ContextMenu, MenuFlyoutPresenter">
-        <Setter Property="CornerRadius" Value="6" />
-    </Style>
-    <Style Selector="ContextMenu Separator, MenuFlyoutPresenter Separator">
-        <Setter Property="Background" Value="{DynamicResource Vlc.Divider.Bright}" />
-    </Style>
     <Style Selector="ToolTip">
         <Setter Property="CornerRadius" Value="4" />
     </Style>

@@ -62,6 +62,7 @@ public partial class MainWindow : Window
         SettingsPanel.CloseRequested += (_, _) => CloseSettings();
         DataContext = _presentation;
         HomeScreen.MoreRequested += (_, _) => OnOpenOptions(null, new RoutedEventArgs());
+        OpenMenu.AddHandler(Button.ClickEvent, OnOpenMenuClick);
         _presentation.PropertyChanged += OnPresentationPropertyChanged;
         InitializePictureInPicture();
         InitializeMacMenu();

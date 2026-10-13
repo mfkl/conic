@@ -7,13 +7,15 @@ using Conic.Services;
 namespace Conic;
 
 // Restores the window at the size, position and state of the previous
-// session instead of always opening maximized.
+// session instead of always opening maximized, while Settings › Interface ›
+// Remember window size and position is on (it applies at the next start).
 public partial class MainWindow
 {
     private const double MinimumRestoredSize = 320;
 
     private void RestoreWindowGeometry()
     {
+        if (!_settings.Current.RememberWindowGeometry) return;
         WindowGeometry? geometry = _windowGeometry.Load();
         if (geometry is null || !IsValidSize(geometry.Width, geometry.Height)) return;
         Width = geometry.Width;
@@ -29,6 +31,7 @@ public partial class MainWindow
 
     private void SaveWindowGeometry()
     {
+        if (!_settings.Current.RememberWindowGeometry) return;
         WindowState state = WindowState == WindowState.FullScreen ? _preFullscreenState : WindowState;
         PixelPoint position = state == WindowState.Normal ? Position : default;
         _windowGeometry.Save(new WindowGeometry(

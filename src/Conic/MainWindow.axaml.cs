@@ -37,6 +37,9 @@ public partial class MainWindow : Window
         PlatformChrome.Apply(this);
         TopChrome.Padding = PlatformChrome.ClearOfCaptionButtons(TopChrome.Padding);
         OpenMenu.Margin = PlatformChrome.ClearOfCaptionButtons(OpenMenu.Margin);
+        // Settings first: Remember window size and position decides whether the window opens where it was.
+        _settings = new PlayerSettingsService(new FilePlayerSettingsStorage());
+        _settings.Load();
         _windowGeometry = new WindowGeometryStore(PlayerProfile.FilePath("window.json"));
         RestoreWindowGeometry();
         AddHandler(PointerPressedEvent, OnPlayerPointerPressed, RoutingStrategies.Tunnel, true);
@@ -46,8 +49,6 @@ public partial class MainWindow : Window
                 _keyboardNavigation = true;
             WakeChrome();
         }, RoutingStrategies.Tunnel, true);
-        _settings = new PlayerSettingsService(new FilePlayerSettingsStorage());
-        _settings.Load();
         _presentation = new PlayerPresentationViewModel(
             new CompositionVideoTransport(VideoSurface),
             new StorageMediaSourcePicker(StorageProvider),
@@ -75,6 +76,7 @@ public partial class MainWindow : Window
         _volumeSaveTimer.Tick += (_, _) => { _volumeSaveTimer.Stop(); _presentation.SaveVolume(); };
         InitializePictureInPicture();
         InitializePlaybackSettings();
+        InitializeInterfaceSettings();
         InitializeMacMenu();
         UpdatePlaybackRateSelection();
         UpdateHistorySettingsControls();
@@ -160,7 +162,10 @@ public partial class MainWindow : Window
     /// </summary>
     private void SetChromeVisibility(bool visible)
     {
-        bool bars = !_presentation.IsHomeOpen && !_presentation.IsPictureInPicture &&
+        // Settings › Interface › Show controls in fullscreen: off keeps the
+        // bars away over fullscreen video (keyboard, mouse and menus still work).
+        bool hiddenInFullscreen = _chromeVisibility.IsFullscreen && !_settings.Current.ShowControlsInFullscreen;
+        bool bars = !_presentation.IsHomeOpen && !_presentation.IsPictureInPicture && !hiddenInFullscreen &&
             (visible || !_chromeVisibility.OverlaysVideo);
         PlayerDock.IsVisible = bars;
         TopChrome.IsVisible = bars;

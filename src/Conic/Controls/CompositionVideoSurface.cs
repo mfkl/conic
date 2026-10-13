@@ -31,6 +31,21 @@ public sealed class CompositionVideoSurface : Control, IDisposable
     internal VideoSurfaceLayout CurrentVideoLayout => VideoSurfaceLayout.Calculate(
         Bounds.Size, Backend?.VideoSize ?? default, GeometryForSmoke,
         TopLevel.GetTopLevel(this)?.RenderScaling ?? 1);
+    /// <summary>The video's own size in pixels, its sample aspect and crop
+    /// applied; empty until the first frame.</summary>
+    internal Size NaturalVideoSize
+    {
+        get
+        {
+            Size pixels = Backend?.VideoSize ?? default;
+            if (pixels.Width <= 0 || pixels.Height <= 0) return default;
+            VideoGeometry geometry = GeometryForSmoke;
+            if (geometry.Active == 0) return pixels;
+            double sar = geometry.SampleAspect > 0 && double.IsFinite(geometry.SampleAspect) ? geometry.SampleAspect : 1;
+            double width = geometry.Width > 0 && geometry.Width <= 1 ? geometry.Width : 1, height = geometry.Height > 0 && geometry.Height <= 1 ? geometry.Height : 1;
+            return new(pixels.Width * width * sar, pixels.Height * height);
+        }
+    }
     private bool _attached;
     private IReadOnlyList<string>? _pendingQueueSources;
     private double _openPlaybackRate = 1;

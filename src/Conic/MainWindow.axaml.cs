@@ -26,6 +26,7 @@ public partial class MainWindow : Window
     private readonly DispatcherTimer _volumeSaveTimer = new() { Interval = TimeSpan.FromSeconds(2) };
     private readonly ChromeVisibilityController _chromeVisibility = new();
     private readonly WindowGeometryStore _windowGeometry;
+    private readonly StorageMediaSourcePicker _mediaPicker;
     private WindowState _preFullscreenState = WindowState.Normal;
     private bool _isSeeking;
     private bool _isVolumeDragging;
@@ -49,9 +50,10 @@ public partial class MainWindow : Window
                 _keyboardNavigation = true;
             WakeChrome();
         }, RoutingStrategies.Tunnel, true);
+        _mediaPicker = new StorageMediaSourcePicker(StorageProvider);
         _presentation = new PlayerPresentationViewModel(
             new CompositionVideoTransport(VideoSurface),
-            new StorageMediaSourcePicker(StorageProvider),
+            _mediaPicker,
             OpenTestMedia,
             ToggleFullscreen,
             OpenSettings,

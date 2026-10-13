@@ -254,6 +254,16 @@ the video, so they also show with hardware decoding. Text subtitles were
 checked by hand on Windows; styled ASS and image subtitles are not yet
 qualified.
 
+## Design credit
+
+The interface, its icons and its Settings pages follow the
+[VLC Redesign](https://www.figma.com/community/file/1691465999134370980/vlc-redesign)
+Figma Community file by [Juxtopposed](https://www.youtube.com/@juxtopposed),
+presented in the video
+[I Redesigned VLC After 25 Years](https://www.youtube.com/watch?v=ERFeOgqk324).
+It is used under the file's Figma Community license. Where the app differs
+from the design, the difference is ours.
+
 ## License
 
 VLC Avalonia is free software: you can redistribute it and/or modify

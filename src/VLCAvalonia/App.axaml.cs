@@ -101,6 +101,8 @@ public partial class App : Application
             window.EnableSettingsApplySmoke(desktopArg());
         else if (args.Contains("--engine-settings-smoke", StringComparer.OrdinalIgnoreCase))
             window.EnableEngineSettingsSmoke(desktopArg());
+        else if (args.Contains("--audio-settings-smoke", StringComparer.OrdinalIgnoreCase))
+            window.EnableAudioSettingsSmoke(desktopArg());
         else if (args.Contains("--menu-smoke", StringComparer.OrdinalIgnoreCase))
             window.EnableMenuSmoke(desktopArg());
         else if (args.FirstOrDefault(arg => arg.StartsWith("--menu-review=", StringComparison.OrdinalIgnoreCase)) is { } review)

@@ -1018,6 +1018,57 @@ public sealed class PlayerPresentationViewModelTests
     }
 
 
+    [Fact]
+    public void ContinueAlwaysResumesWithoutAsking()
+    {
+        MediaHistoryService history = new(new HistoryStorage()); MediaSource source = new("a.mp4", MediaSourceKind.File, "a");
+        history.Checkpoint(source, TimeSpan.FromSeconds(40), TimeSpan.FromSeconds(100), true, 0, 0);
+        PlayerSettingsService settings = new(new SettingsStorage()); settings.Update(s => s with { ResumePlayback = true, ResumeAutomatically = true, ResumeMinimumElapsedSeconds = 30, ResumeMaximumRemainingSeconds = 20 });
+        RecordingTransport transport = new();
+        PlayerPresentationViewModel vm = new(transport, new EmptyPicker(), () => { }, settings: settings, sourceValidator: new MediaSourceValidator(new ExistingFiles()), history: history);
+
+        vm.OpenSource("a.mp4", MediaSourceKind.File);
+        vm.ApplyEngineState(State(.1, PlaybackStatus.Playing, true) with { Generation = 1, Source = "a.mp4" });
+
+        Assert.False(vm.HasPendingResume);
+        Assert.Equal([.4], transport.Seeks);
+    }
+
+    [Fact]
+    public void RepeatAndShuffleChosenInThePlayerAreRemembered()
+    {
+        PlayerSettingsService settings = new(new SettingsStorage());
+        QueueTransport transport = new();
+        PlayerPresentationViewModel vm = new(transport, new EmptyPicker(), () => { }, settings: settings);
+
+        vm.Registry.Execute(PlayerCommandId.QueueRepeat);
+        vm.Registry.Execute(PlayerCommandId.QueueShuffle);
+
+        Assert.Equal(QueueRepeatMode.CurrentItem, transport.Repeat);
+        Assert.Equal(("One", true), (settings.Current.QueueRepeat, settings.Current.QueueShuffle));
+    }
+
+    [Fact]
+    public void PlaybackFinishedIsRaisedWhenPlaybackEndsByItselfOnly()
+    {
+        RecordingTransport transport = new();
+        PlayerPresentationViewModel vm = new(transport, new EmptyPicker(), () => { }, sourceValidator: new MediaSourceValidator(new ExistingFiles()));
+        int finished = 0;
+        vm.PlaybackFinished += (_, _) => finished++;
+
+        vm.OpenSource("a.mp4", MediaSourceKind.File);
+        vm.ApplyEngineState(State(.5, PlaybackStatus.Playing, true) with { Generation = 1, Source = "a.mp4" });
+        vm.ApplyEngineState(State(1, PlaybackStatus.Stopped, true) with { Generation = 1, Source = "a.mp4" });
+        vm.ApplyEngineState(State(1, PlaybackStatus.Stopped, true) with { Generation = 1, Source = "a.mp4" });
+        Assert.Equal(1, finished);
+
+        vm.OpenSource("a.mp4", MediaSourceKind.File);
+        vm.ApplyEngineState(State(.5, PlaybackStatus.Playing, true) with { Generation = 2, Source = "a.mp4" });
+        vm.Registry.Execute(PlayerCommandId.Stop);
+        vm.ApplyEngineState(State(.5, PlaybackStatus.Stopped, true) with { Generation = 2, Source = "a.mp4" });
+        Assert.Equal(1, finished);
+    }
+
     private static PlayerPresentationViewModel CreateViewModel(
         RecordingTransport transport) => new(transport, new EmptyPicker(), () => { });
 

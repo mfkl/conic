@@ -95,6 +95,39 @@ internal sealed unsafe partial class VlcCorePlayer : IMediaEngine, IQueueTranspo
             ? [$"--rate={rate.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture)}"]
             : [];
 
+    /// <summary>
+    /// The settings' libVLC options for the next core (<see cref="PlayerEngineOptions"/>).
+    /// They follow the built-in options, so one of them (such as
+    /// <c>--avcodec-hw</c>) replaces the default the constructor chose.
+    /// </summary>
+    public IReadOnlyList<string> OpenArguments
+    {
+        get { lock (_gate) return _openArguments; }
+        set { string[] copy = (value ?? []).ToArray(); lock (_gate) _openArguments = copy; }
+    }
+    private IReadOnlyList<string> _openArguments = [];
+
+    /// <summary>
+    /// The repeat and shuffle modes new queues start with (Settings ›
+    /// Playback › Order). Each core takes them when it starts; a queue that
+    /// is playing takes them at once.
+    /// </summary>
+    internal void RequestQueueModes(QueueRepeatMode repeat, QueueOrder order)
+    {
+        if (repeat == QueueRepeatMode.Inconsistent) return;
+        long generation;
+        bool live;
+        lock (_gate)
+        {
+            if (_requestedRepeat == repeat && _requestedOrder == order) return;
+            _requestedRepeat = repeat;
+            _requestedOrder = order;
+            generation = _generation;
+            live = _queue is not null && !_tearingDown;
+        }
+        if (live) ApplyRequestedModes(generation);
+    }
+
     public event EventHandler<MediaEngineState>? StateChanged
     {
         add => _states.Changed += value;
@@ -159,11 +192,11 @@ internal sealed unsafe partial class VlcCorePlayer : IMediaEngine, IQueueTranspo
         }
 
         long generation = _states.BeginOpen(stateSource);
-        string[] rateArguments = RateArguments(OpenPlaybackRate);
+        string[] openArguments = [.. RateArguments(OpenPlaybackRate), .. OpenArguments];
         PublishQueue(new PlaybackQueueState(generation, 0, QueueLoadState.Loading, [], -1, _requestedRepeat, _requestedOrder));
         PublishMediaCapabilities(new MediaCapabilitiesState(generation, 0, MediaCapabilityLoadState.Loading, [], [], [], [], new(0, 0)));
         ManualResetEventSlim stop = new(false);
-        Thread thread = new(() => Run(launchSources, initialEnqueueSources, rateArguments, generation, stop))
+        Thread thread = new(() => Run(launchSources, initialEnqueueSources, openArguments, generation, stop))
         {
             IsBackground = true,
             Name = "VLCLR composition playback",
@@ -631,7 +664,7 @@ internal sealed unsafe partial class VlcCorePlayer : IMediaEngine, IQueueTranspo
     private void Run(
         IReadOnlyList<string> sources,
         IReadOnlyList<string> initialEnqueueSources,
-        IReadOnlyList<string> rateArguments,
+        IReadOnlyList<string> openArguments,
         long generation,
         ManualResetEventSlim stop)
     {
@@ -646,7 +679,7 @@ internal sealed unsafe partial class VlcCorePlayer : IMediaEngine, IQueueTranspo
             // VideoToolbox is a separate decoder module on macOS, ahead of avcodec.
             .. (!_hardwareDecoding && OperatingSystem.IsMacOS() ? new[] { "--no-videotoolbox" } : []),
             .. _audioStartupArguments,
-            .. rateArguments,
+            .. openArguments,
             .. sources,
         ];
 

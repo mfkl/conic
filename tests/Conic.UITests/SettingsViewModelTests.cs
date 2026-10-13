@@ -112,6 +112,7 @@ public sealed class SettingsViewModelTests
     [InlineData("speed", "Playback")]
     [InlineData("diagnostics", "Advanced")]
     [InlineData("shuffle", "Playback")]
+    [InlineData("deinterlace", "Video")]
     public void SearchSelectsTheMatchingPage(string query, string page)
     {
         SettingsViewModel viewModel = Create(out _);
@@ -226,7 +227,7 @@ public sealed class SettingsViewModelTests
         Assert.Equal((true, 1d, false), (service.Current.ResumePlayback, service.Current.DefaultSpeed, service.Current.RememberVolume));
         Reset("Audio");
         Assert.Equal((true, "Default", 2d), (service.Current.RememberVolume, service.Current.AudioOutputModule, service.Current.DefaultSpeed));
-        foreach (string page in new[] { "Video", "Subtitles", "Advanced" })
+        foreach (string page in new[] { "Subtitles", "Advanced" })
         {
             viewModel.SelectedPage = viewModel.Pages.Single(candidate => candidate.Name == page);
             Assert.False(viewModel.CanResetPage);
@@ -244,6 +245,26 @@ public sealed class SettingsViewModelTests
         viewModel.ResumeMode = viewModel.ResumeModes.Single(option => option.Value == "Never");
         Assert.Equal((false, false), (service.Current.ResumePlayback, service.Current.ResumeAutomatically));
         Assert.Equal("Never", viewModel.ResumeMode.Value);
+    }
+
+    [Fact]
+    public void PictureSlidersRoundAndResetTogether()
+    {
+        SettingsViewModel viewModel = Create(out PlayerSettingsService service);
+
+        viewModel.Hue = 33.333;
+        viewModel.Brightness = 1.5;
+        viewModel.Gamma = 2;
+        Assert.Equal((33.33, 1.5, 2d), (service.Current.Hue, service.Current.Brightness, service.Current.Gamma));
+        Assert.False(viewModel.CanAdjustGamma);
+        service.Update(s => s with { HardwareDecoding = "Off" });
+        viewModel.Refresh();
+        Assert.True(viewModel.CanAdjustGamma);
+
+        viewModel.ResetPictureCommand.Execute(null);
+
+        Assert.True(PlayerEngineOptions.IsNeutralPicture(service.Current));
+        Assert.Equal("Off", service.Current.HardwareDecoding);
     }
 
     [Fact]

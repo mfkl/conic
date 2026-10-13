@@ -23,6 +23,8 @@ public partial class MainWindow
             {
                 Directory.CreateDirectory(folder);
                 OpenSettings();
+                // The Audio page shows its equalizer open, to review the bands.
+                _settingsViewModel.IsEqualizerOpen = true;
                 foreach (string theme in new[] { "Dark", "Light" })
                 {
                     _settingsViewModel.Theme = theme;

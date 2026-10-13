@@ -296,6 +296,12 @@ public sealed class SettingsViewModelTests
 
         viewModel.HttpProxyPassword = "pa55 word";
 
+        // The password is kept with DPAPI; elsewhere the setting is hidden and stores nothing.
+        if (!OperatingSystem.IsWindows())
+        {
+            Assert.Equal(("", null), (viewModel.HttpProxyPassword, service.Current.HttpProxyPasswordProtected));
+            return;
+        }
         Assert.Equal("pa55 word", viewModel.HttpProxyPassword);
         Assert.NotNull(service.Current.HttpProxyPasswordProtected);
         Assert.DoesNotContain("pa55", service.Current.HttpProxyPasswordProtected, StringComparison.Ordinal);

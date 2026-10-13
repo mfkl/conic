@@ -10,7 +10,9 @@ namespace Conic;
 // Playback › When playback finishes, Video › Start videos in fullscreen and
 // Stop the screensaver during playback. The rest go to each new core
 // (EngineArguments, PlayerEngineOptions); the audio effects, replay gain and
-// the device also go to the playing one (LiveAudio, AudioEngineOptions).
+// the device also go to the playing one (LiveAudio, AudioEngineOptions), as
+// do the subtitle text's size, color, outline and background (LiveSubtitles,
+// SubtitleEngineOptions).
 public partial class MainWindow
 {
     private long _fullscreenStartGeneration = -1;
@@ -34,6 +36,7 @@ public partial class MainWindow
     {
         VideoSurface.OpenArguments = EngineArguments(settings);
         VideoSurface.LiveAudio = AudioEngineOptions.Live(settings);
+        VideoSurface.LiveSubtitles = SubtitleEngineOptions.Live(settings);
         VideoSurface.QueueModes = (QueueModeSettings.Repeat(settings.QueueRepeat), QueueModeSettings.Order(settings.QueueShuffle));
         UpdateDisplayRequest();
     }

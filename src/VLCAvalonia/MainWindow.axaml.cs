@@ -79,7 +79,6 @@ public partial class MainWindow : Window
         UpdatePlaybackRateSelection();
         UpdateHistorySettingsControls();
         _settings.Changed += (_, settings) => ApplyLiveSettings(settings);
-        VideoSurface.AudioStartupArguments = ToAudioArguments(_settings.Current);
         ApplyLiveSettings(_settings.Current);
         SetChromeVisibility(false);
         _autoHideTimer.Tick += (_, _) =>
@@ -119,15 +118,6 @@ public partial class MainWindow : Window
         Dispatcher.UIThread.Post(() =>
             PlatformChrome.PlaceCaptionButtons(this, PlatformChrome.TitleBarHeight / 2),
             DispatcherPriority.Background);
-    }
-
-    internal static IReadOnlyList<string> ToAudioArguments(PlayerSettings settings, bool? windows = null)
-    {
-        string output = AudioOutputPolicy.Effective(settings.AudioOutputModule, windows);
-        return new VLCAudioStartupOptions(
-            output == "Default" ? null : output,
-            settings.NormalizationMaximumLevel is double level ? (float)level : null,
-            settings.AudioPassthrough).ToArguments();
     }
 
     private static MediaHistoryService CreateHistory()

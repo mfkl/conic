@@ -24,20 +24,17 @@ public sealed class VideoBackendSessionTests
     }
 
     [Fact]
-    public async Task DeviceSelectionCompletesBeforePlayerCreationAndArgumentsAreCaptured()
+    public async Task DeviceSelectionCompletesBeforePlayerCreation()
     {
         Backend backend = new();
         using VideoBackendSession session = new(backend);
-        string[] audio = ["--aout=mmdevice"];
-        Task<IMediaEngine?> initialization = session.InitializeAsync(audio);
-        audio[0] = "changed";
+        Task<IMediaEngine?> initialization = session.InitializeAsync();
         Assert.Equal(0, backend.PlayersCreated);
-        Assert.Same(initialization, session.InitializeAsync([]));
+        Assert.Same(initialization, session.InitializeAsync());
 
         backend.Ready.SetResult();
         Assert.Same(backend.Player, await initialization);
         Assert.Equal(1, backend.PlayersCreated);
-        Assert.Equal(["--aout=mmdevice"], backend.AudioArguments);
     }
 
     [Fact]
@@ -45,7 +42,7 @@ public sealed class VideoBackendSessionTests
     {
         Backend backend = new();
         VideoBackendSession session = new(backend);
-        Task<IMediaEngine?> initialization = session.InitializeAsync([]);
+        Task<IMediaEngine?> initialization = session.InitializeAsync();
         session.Dispose();
         backend.Ready.SetResult();
 
@@ -61,11 +58,11 @@ public sealed class VideoBackendSessionTests
     {
         Backend oldBackend = new();
         using VideoBackendSession oldSession = new(oldBackend);
-        Task<IMediaEngine?> oldInitialization = oldSession.InitializeAsync([]);
+        Task<IMediaEngine?> oldInitialization = oldSession.InitializeAsync();
         oldSession.Dispose();
         Backend currentBackend = new();
         using VideoBackendSession currentSession = new(currentBackend);
-        Task<IMediaEngine?> currentInitialization = currentSession.InitializeAsync([]);
+        Task<IMediaEngine?> currentInitialization = currentSession.InitializeAsync();
         currentBackend.Ready.SetResult();
         Assert.Same(currentBackend.Player, await currentInitialization);
 
@@ -84,13 +81,13 @@ public sealed class VideoBackendSessionTests
         VideoBackendSession session = new(backend);
         backend.Player.ThrowOnDispose = throws;
         backend.Ready.SetResult();
-        await session.InitializeAsync([]);
+        await session.InitializeAsync();
 
         if (throws) Assert.Throws<InvalidOperationException>(session.Dispose);
         else session.Dispose();
         session.Dispose();
         Assert.Equal(["player", "backend"], backend.DisposalOrder);
-        await Assert.ThrowsAsync<ObjectDisposedException>(() => session.InitializeAsync([]));
+        await Assert.ThrowsAsync<ObjectDisposedException>(() => session.InitializeAsync());
     }
 
     [Theory]
@@ -100,7 +97,7 @@ public sealed class VideoBackendSessionTests
     {
         Backend backend = new() { FailPlayerCreation = failPlayerCreation };
         using VideoBackendSession session = new(backend);
-        Task<IMediaEngine?> initialization = session.InitializeAsync([]);
+        Task<IMediaEngine?> initialization = session.InitializeAsync();
         if (failPlayerCreation) backend.Ready.SetResult();
         else backend.Ready.SetException(new InvalidOperationException("device selection failed"));
 
@@ -116,7 +113,6 @@ public sealed class VideoBackendSessionTests
         public Backend() => Player = new(DisposalOrder);
         public bool FailPlayerCreation { get; init; }
         public int PlayersCreated { get; private set; }
-        public IReadOnlyList<string> AudioArguments { get; private set; } = [];
         public event Action<string>? StatusChanged { add { } remove { } }
         public event Action<ulong, ulong, string>? GpuFramePresented { add { } remove { } }
         public event Action? PresentationChanged { add { } remove { } }
@@ -126,11 +122,10 @@ public sealed class VideoBackendSessionTests
         public bool HasCpuFrame => false;
         public bool HasGpuFrame => false;
         public Task InitializeAsync() => Ready.Task;
-        public IMediaEngine CreatePlayer(IReadOnlyList<string> audioStartupArguments)
+        public IMediaEngine CreatePlayer()
         {
             if (FailPlayerCreation) throw new InvalidOperationException("native startup failed");
             PlayersCreated++;
-            AudioArguments = audioStartupArguments;
             return Player;
         }
         public Task PresentLatestFrameAsync() => Task.CompletedTask;

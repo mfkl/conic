@@ -60,12 +60,12 @@ internal sealed class D3D11VideoBackend : IVideoBackend
     public bool HasCpuFrame => _reportedFirstCPUFrame;
     public bool HasGpuFrame => _reportedFirstGPUFrame;
 
-    public IMediaEngine CreatePlayer(IReadOnlyList<string> audioStartupArguments)
+    public IMediaEngine CreatePlayer()
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         if (!NativePlaybackSupport.IsAvailable)
             throw new PlatformNotSupportedException(NativePlaybackSupport.CurrentUnavailableReason);
-        return new VlcCorePlayer(audioStartupArguments: audioStartupArguments);
+        return new VlcCorePlayer();
     }
 
     public async Task InitializeAsync()

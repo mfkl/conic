@@ -80,11 +80,11 @@ internal sealed class IOSurfaceVideoBackend : IVideoBackend
     internal long GpuFramesPresentedCount => _gpuFramesPresented;
     internal IOSurfacePluginBridge.PoolTelemetry? ReadPoolTelemetry() => _bridge?.ReadPoolTelemetry();
 
-    public IMediaEngine CreatePlayer(IReadOnlyList<string> audioStartupArguments)
+    public IMediaEngine CreatePlayer()
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         NativePlaybackSupport.RequireAvailable();
-        return new VlcCorePlayer(audioStartupArguments: audioStartupArguments);
+        return new VlcCorePlayer();
     }
 
     public async Task InitializeAsync()

@@ -305,9 +305,13 @@
             <Setter Property="MinWidth" Value="28" />
             <Setter Property="HorizontalAlignment" Value="Center" />
         </Style>
+        <!-- In a narrow dialog the frequency and the gain wrap under their
+             number instead of running into the next band. -->
         <Style Selector="TextBlock.bandFrequency">
             <Setter Property="FontSize" Value="12" />
             <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="TextAlignment" Value="Center" />
+            <Setter Property="TextWrapping" Value="Wrap" />
             <Setter Property="Foreground" Value="{DynamicResource Vlc.Fg.A2}" />
         </Style>
         <Style Selector="Border.bandGain">
@@ -318,6 +322,8 @@
         </Style>
         <Style Selector="Border.bandGain > TextBlock">
             <Setter Property="FontSize" Value="11" />
+            <Setter Property="TextAlignment" Value="Center" />
+            <Setter Property="TextWrapping" Value="Wrap" />
             <Setter Property="Foreground" Value="{DynamicResource Vlc.Fg.A2}" />
         </Style>
         <Style Selector="Slider.band">

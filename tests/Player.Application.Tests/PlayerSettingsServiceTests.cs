@@ -61,21 +61,23 @@ public sealed class PlayerSettingsServiceTests
         service.ResetAll(); Assert.Equal(PlayerSettings.Default, service.Current);
     }
     [Fact]
-    public void Version5DocumentMigratesToVersion6WithTheDefaultAccent()
+    public void Version5DocumentMigratesToVersion7WithTheDefaultAccent()
     {
         MemoryStorage storage = new() { Content = "{\"Version\":5,\"Theme\":\"Dark\",\"Density\":\"Compact\",\"SkipForwardSeconds\":25,\"ReduceMotion\":true}" };
         PlayerSettingsService service = new(storage);
 
         service.Load();
 
-        Assert.Equal(6, PlayerSettings.CurrentVersion);
+        Assert.Equal(7, PlayerSettings.CurrentVersion);
         Assert.Equal(PlayerSettings.CurrentVersion, service.Current.Version);
         Assert.Equal("Dark", service.Current.Theme);
         Assert.Equal("Compact", service.Current.Density);
         Assert.Equal(25, service.Current.SkipForwardSeconds);
         Assert.True(service.Current.ReduceMotion);
         Assert.Equal(AccentPalette.DefaultHex, service.Current.Accent);
-        Assert.Contains("\"Version\": 6", storage.Content);
+        Assert.Equal(PlayerSettings.Default.HardwareDecoding, service.Current.HardwareDecoding);
+        Assert.Equal(PlayerSettings.Default.Buffering, service.Current.Buffering);
+        Assert.Contains("\"Version\": 7", storage.Content);
         Assert.Contains($"\"Accent\": \"{AccentPalette.DefaultHex}\"", storage.Content);
         Assert.Null(service.LoadDiagnostic);
     }
@@ -186,6 +188,82 @@ public sealed class PlayerSettingsServiceTests
         Assert.Equal(expected, service.Current.DefaultSpeed);
         Assert.Null(service.LoadDiagnostic);
         Assert.Equal(SettingApplyMode.NextOpen, PlayerSettingsService.ApplyMode(nameof(PlayerSettings.DefaultSpeed)));
+    }
+
+    [Fact]
+    public void Version6DocumentKeepsEveryValueAndGetsTheVersion7Defaults()
+    {
+        // A complete phase 9a (version 6) document.
+        const string document = """
+            {"Version":6,"ResumePlayback":false,"RememberVolume":false,"Theme":"Light","Density":"Compact","ControlTimeoutSeconds":7,
+             "DefaultSpeed":1.5,"SkipBackwardSeconds":5,"SkipForwardSeconds":30,"RememberRecentMedia":false,"RememberResumeHistory":false,
+             "ResumeMinimumElapsedSeconds":60,"ResumeMaximumRemainingSeconds":90,"AudioOutputModule":"directsound","NormalizationMaximumLevel":2.5,
+             "AudioPassthrough":true,"ShortcutOverrides":{"TogglePause":"K"},"ReduceMotion":true,"Accent":"#1B5DD3"}
+            """;
+        MemoryStorage storage = new() { Content = document };
+        PlayerSettingsService service = new(storage);
+
+        service.Load();
+
+        PlayerSettings current = service.Current;
+        Assert.Null(service.LoadDiagnostic);
+        Assert.Equal(7, current.Version);
+        Assert.Equal((false, false, "Light", "Compact", 7, 1.5, 5, 30), (current.ResumePlayback, current.RememberVolume, current.Theme, current.Density, current.ControlTimeoutSeconds, current.DefaultSpeed, current.SkipBackwardSeconds, current.SkipForwardSeconds));
+        Assert.Equal((false, false, 60, 90, "directsound", (double?)2.5, (bool?)true, true, "#1B5DD3"), (current.RememberRecentMedia, current.RememberResumeHistory, current.ResumeMinimumElapsedSeconds, current.ResumeMaximumRemainingSeconds, current.AudioOutputModule, current.NormalizationMaximumLevel, current.AudioPassthrough, current.ReduceMotion, current.Accent));
+        Assert.Equal("K", current.ShortcutOverrides!["TogglePause"]);
+        // Every version 7 field takes its default.
+        PlayerSettings defaults = PlayerSettings.Default;
+        Assert.Equal(defaults with
+        {
+            ResumePlayback = false, RememberVolume = false, Theme = "Light", Density = "Compact", ControlTimeoutSeconds = 7, DefaultSpeed = 1.5,
+            SkipBackwardSeconds = 5, SkipForwardSeconds = 30, RememberRecentMedia = false, RememberResumeHistory = false,
+            ResumeMinimumElapsedSeconds = 60, ResumeMaximumRemainingSeconds = 90, AudioOutputModule = "directsound", NormalizationMaximumLevel = 2.5,
+            AudioPassthrough = true, ShortcutOverrides = current.ShortcutOverrides, ReduceMotion = true, Accent = "#1B5DD3",
+        }, current);
+        Assert.Empty(PlayerEngineOptions.Arguments(current, windows: true, macOS: false));
+        Assert.Contains("\"Version\": 7", storage.Content);
+        Assert.Contains("\"HardwareDecoding\": \"Automatic\"", storage.Content);
+    }
+
+    [Fact]
+    public void Version7ValuesRoundTripAndInvalidOnesFallBack()
+    {
+        MemoryStorage storage = new();
+        new PlayerSettingsService(storage).Update(s => s with
+        {
+            ResumeAutomatically = true, AutoPlay = false, AudioLanguage = " FR, en;xx1 ", QueueRepeat = "All", QueueShuffle = true,
+            PlaybackFinished = "Quit", Hue = 400, Brightness = 1.234, Gamma = double.NaN, Deinterlace = "On", DeinterlaceMethod = "yadif",
+            DefaultCrop = "16:9", DefaultZoom = "3", PostProcessing = 9, DecodingThreads = -2, Buffering = "Custom", NetworkCaching = 999999,
+            HttpProxy = "  proxy:3128 ", CipherPreference = "Paranoid",
+        });
+        PlayerSettingsService reloaded = new(storage);
+
+        reloaded.Load();
+
+        PlayerSettings current = reloaded.Current;
+        Assert.True(current.ResumeAutomatically); Assert.False(current.AutoPlay);
+        Assert.Equal("fr,en", current.AudioLanguage);
+        Assert.Equal(("All", true, "Quit"), (current.QueueRepeat, current.QueueShuffle, current.PlaybackFinished));
+        Assert.Equal((180d, 1.23, 1d), (current.Hue, current.Brightness, current.Gamma));
+        // "yadif" (single rate) is not a mode the Direct3D 11 deinterlacer has.
+        Assert.Equal(("On", "Automatic"), (current.Deinterlace, current.DeinterlaceMethod));
+        Assert.Equal(("16:9", "fit"), (current.DefaultCrop, current.DefaultZoom));
+        Assert.Equal((6, 0), (current.PostProcessing, current.DecodingThreads));
+        Assert.Equal(("Custom", PlayerEngineOptions.MaximumCaching), (current.Buffering, current.NetworkCaching));
+        Assert.Equal(("proxy:3128", "Normal"), (current.HttpProxy, current.CipherPreference));
+    }
+
+    [Fact]
+    public void EngineSettingsApplyAtTheNextOpenAndAppSettingsLive()
+    {
+        foreach (string key in PlayerEngineOptions.Keys)
+            Assert.Equal(SettingApplyMode.NextOpen, PlayerSettingsService.ApplyMode(key));
+        foreach (string key in new[] { nameof(PlayerSettings.ResumeAutomatically), nameof(PlayerSettings.StartFullscreen) })
+            Assert.Equal(SettingApplyMode.NextOpen, PlayerSettingsService.ApplyMode(key));
+        foreach (string key in new[] { nameof(PlayerSettings.QueueRepeat), nameof(PlayerSettings.QueueShuffle), nameof(PlayerSettings.PlaybackFinished), nameof(PlayerSettings.StopScreensaver) })
+            Assert.Equal(SettingApplyMode.Live, PlayerSettingsService.ApplyMode(key));
+        // Every Keys entry names a settings field.
+        Assert.All(PlayerEngineOptions.Keys, key => Assert.NotNull(typeof(PlayerSettings).GetProperty(key)));
     }
 
     private sealed class MemoryStorage : IPlayerSettingsStorage

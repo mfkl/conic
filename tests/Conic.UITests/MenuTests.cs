@@ -47,6 +47,8 @@ public sealed class MenuTests
     [InlineData("Ctrl+,", Key.OemComma, KeyModifiers.Control)]
     [InlineData("Space", Key.Space, KeyModifiers.None)]
     [InlineData("F11", Key.F11, KeyModifiers.None)]
+    [InlineData("Ctrl+1", Key.D1, KeyModifiers.Control)]
+    [InlineData("Alt+0", Key.D0, KeyModifiers.Alt)]
     public void ShortcutsBecomeMenuGestures(string gesture, Key key, KeyModifiers modifiers) =>
         Assert.Equal(new KeyGesture(key, modifiers), MenuShortcuts.ToKeyGesture(gesture));
 

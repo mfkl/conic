@@ -203,11 +203,15 @@ public partial class MainWindow
                 string cyrillic = Fixture("cyrillic.mp4");
                 await Open("encoding-automatic", s => s, cyrillic);
                 await Task.Delay(1500);
+                await RequireLog("trying default character encoding", "Automatic falls back on the system's default encoding");
                 await RequireLog("invalid UTF-8 sequence", "Automatic tries UTF-8 on the Windows-1251 file first");
                 await Open("encoding-1251", s => s with { SubtitleEncoding = "Windows-1251" }, cyrillic);
                 await Task.Delay(1500);
                 await RequireLog("trying configured character encoding: Windows-1251", "Text encoding Windows-1251 reaches the subtitle decoder");
-                await RequireNoLog("failed to convert subtitle encoding|invalid UTF-8 sequence", "Windows-1251 reads the file without errors");
+                // subsdec still tries UTF-8 first with a configured encoding and
+                // logs "invalid UTF-8 sequence" when it gives up on it; only a
+                // failed conversion from Windows-1251 is an error.
+                await RequireNoLog("failed to convert subtitle encoding|cannot convert from", "Windows-1251 reads the file without errors");
                 Pass("Text encoding");
 
                 // ---- Subtitles › Timing and On-Screen Messages ----
@@ -241,6 +245,8 @@ public partial class MainWindow
                 await Key(Avalonia.Input.Key.Left, KeyModifiers.Shift, -3, "Very short skip (Shift+Left)");
                 await Key(Avalonia.Input.Key.Right, KeyModifiers.Control | KeyModifiers.Alt, 12, "Long skip (Ctrl+Alt+Right)");
                 Pass("Very short, medium and long skips, with their feedback");
+                // The long skip's feedback stays up for its second first.
+                await WaitFor(() => !ShortcutFeedback.IsVisible, "the long skip's feedback goes after its time", 3);
                 Settings(s => s with { ShortcutFeedback = false });
                 await Key(Avalonia.Input.Key.Left, KeyModifiers.Control, -7, "Medium skip back");
                 Require(!ShortcutFeedback.IsVisible, "Show feedback for shortcuts off shows nothing");
@@ -332,7 +338,11 @@ public partial class MainWindow
                 Require(PlayerDock.IsVisible, "Auto-hide the controls off keeps the bars up in fullscreen");
                 Settings(s => s with { AutoHideControls = true });
                 WakeChrome();
-                await WaitFor(() => !PlayerDock.IsVisible, "Auto-hide on hides them after the timeout", 4);
+                DateTime hideDeadline = DateTime.UtcNow.AddSeconds(4);
+                while (PlayerDock.IsVisible && DateTime.UtcNow < hideDeadline) await Task.Delay(50);
+                // A real pointer moving over the video wakes the bars too: say what held them.
+                Require(!PlayerDock.IsVisible, $"Auto-hide on hides them after the timeout (hides automatically {_chromeVisibility.HidesAutomatically}, timer {_autoHideTimer.IsEnabled}, " +
+                    $"pointer over the bars {TopChrome.IsPointerOver || PlayerDock.IsPointerOver}, keyboard focus {_keyboardNavigation && (TopChrome.IsKeyboardFocusWithin || PlayerDock.IsKeyboardFocusWithin)}, seeking {_isSeeking || _isVolumeDragging})");
                 Settings(s => s with { ShowControlsInFullscreen = false });
                 WakeChrome();
                 await Task.Delay(200);

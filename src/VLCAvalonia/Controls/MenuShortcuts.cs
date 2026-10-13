@@ -60,7 +60,8 @@ public static class MenuShortcuts
         if (string.IsNullOrWhiteSpace(gesture)) return null;
         string[] parts = gesture.Split('+');
         if (parts[^1] == string.Empty && parts.Length > 1) return null;
-        parts[^1] = parts[^1] switch { "," => "OemComma", "[" => "OemOpenBrackets", "]" => "OemCloseBrackets", "=" => "OemPlus", string key => key };
+        // A digit names its top-row key: KeyGesture.Parse would read "1" as the key numbered 1 (Cancel).
+        parts[^1] = parts[^1] switch { "," => "OemComma", "[" => "OemOpenBrackets", "]" => "OemCloseBrackets", "=" => "OemPlus", [char digit] when char.IsAsciiDigit(digit) => "D" + digit, string key => key };
         try { return KeyGesture.Parse(string.Join('+', parts)); }
         catch (ArgumentException) { return null; }
         catch (FormatException) { return null; }

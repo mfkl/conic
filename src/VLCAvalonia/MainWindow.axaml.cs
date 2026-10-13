@@ -139,6 +139,7 @@ public partial class MainWindow : Window
             Theming.AccentTheme.Apply(application, settings.Accent);
         }
         _autoHideTimer.Interval = TimeSpan.FromSeconds(settings.ControlTimeoutSeconds);
+        VideoSurface.OpenPlaybackRate = settings.DefaultSpeed;
         Classes.Set("reduced-motion", settings.ReduceMotion);
         if (settings.ReduceMotion) SetChromeVisibility(true);
         Classes.Set("compact-density", settings.Density == "Compact");

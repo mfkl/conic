@@ -79,6 +79,22 @@ internal sealed unsafe partial class VlcCorePlayer : IMediaEngine, IQueueTranspo
 
     public MediaEngineState State => _states.State;
 
+    /// <summary>
+    /// The speed each media item starts at from the next open on (Settings ›
+    /// Playback › Default speed). Every open starts a new core, and VLC's
+    /// playlist gives the rate to each input it creates, so the queue moving
+    /// on, an item starting over and Play after the end start at it too. The
+    /// speed menu changes only the input that is playing.
+    /// </summary>
+    public double OpenPlaybackRate { get; set; } = 1;
+
+    /// <summary>The core option for <see cref="OpenPlaybackRate"/>; none at 1× or out of VLC's range.</summary>
+    internal static string[] RateArguments(double rate) =>
+        double.IsFinite(rate) && Math.Abs(rate - 1) > .001 &&
+        rate >= VLCTransportControl.MinimumPlaybackRate && rate <= VLCTransportControl.MaximumPlaybackRate
+            ? [$"--rate={rate.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture)}"]
+            : [];
+
     public event EventHandler<MediaEngineState>? StateChanged
     {
         add => _states.Changed += value;
@@ -143,10 +159,11 @@ internal sealed unsafe partial class VlcCorePlayer : IMediaEngine, IQueueTranspo
         }
 
         long generation = _states.BeginOpen(stateSource);
+        string[] rateArguments = RateArguments(OpenPlaybackRate);
         PublishQueue(new PlaybackQueueState(generation, 0, QueueLoadState.Loading, [], -1, _requestedRepeat, _requestedOrder));
         PublishMediaCapabilities(new MediaCapabilitiesState(generation, 0, MediaCapabilityLoadState.Loading, [], [], [], [], new(0, 0)));
         ManualResetEventSlim stop = new(false);
-        Thread thread = new(() => Run(launchSources, initialEnqueueSources, generation, stop))
+        Thread thread = new(() => Run(launchSources, initialEnqueueSources, rateArguments, generation, stop))
         {
             IsBackground = true,
             Name = "VLCLR composition playback",
@@ -614,6 +631,7 @@ internal sealed unsafe partial class VlcCorePlayer : IMediaEngine, IQueueTranspo
     private void Run(
         IReadOnlyList<string> sources,
         IReadOnlyList<string> initialEnqueueSources,
+        IReadOnlyList<string> rateArguments,
         long generation,
         ManualResetEventSlim stop)
     {
@@ -628,6 +646,7 @@ internal sealed unsafe partial class VlcCorePlayer : IMediaEngine, IQueueTranspo
             // VideoToolbox is a separate decoder module on macOS, ahead of avcodec.
             .. (!_hardwareDecoding && OperatingSystem.IsMacOS() ? new[] { "--no-videotoolbox" } : []),
             .. _audioStartupArguments,
+            .. rateArguments,
             .. sources,
         ];
 

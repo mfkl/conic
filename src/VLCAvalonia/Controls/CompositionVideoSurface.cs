@@ -34,6 +34,18 @@ public sealed class CompositionVideoSurface : Control, IDisposable
     private bool _attached;
     private IReadOnlyList<string>? _pendingQueueSources;
     private IReadOnlyList<string> _audioStartupArguments = [];
+    private double _openPlaybackRate = 1;
+
+    /// <summary>Default speed for the next open (<see cref="VlcCorePlayer.OpenPlaybackRate"/>).</summary>
+    internal double OpenPlaybackRate
+    {
+        get => _openPlaybackRate;
+        set
+        {
+            _openPlaybackRate = value;
+            if (_player is VlcCorePlayer core) core.OpenPlaybackRate = value;
+        }
+    }
     internal IReadOnlyList<string> AudioStartupArguments
     {
         get => _audioStartupArguments;
@@ -244,6 +256,7 @@ public sealed class CompositionVideoSurface : Control, IDisposable
         try
         {
             _player = player;
+            if (player is VlcCorePlayer core) core.OpenPlaybackRate = _openPlaybackRate;
             _player.StateChanged += StateChanged;
             if (_player is IQueueTransport queue)
                 queue.QueueStateChanged += QueueChanged;

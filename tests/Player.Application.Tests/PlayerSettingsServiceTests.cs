@@ -149,6 +149,27 @@ public sealed class PlayerSettingsServiceTests
         Assert.Equal(42, service.Current.SkipForwardSeconds);
     }
 
+    [Theory]
+    [InlineData("0.5", .5)]
+    [InlineData("1.75", 1.75)]
+    [InlineData("4", 2)]
+    [InlineData("3", 2)]
+    [InlineData("0.1", .25)]
+    [InlineData("1.1", 1)]
+    [InlineData("1.13", 1.25)]
+    public void DefaultSpeedSnapsToTheDesignStepsAndKeepsOldValuesInRange(string stored, double expected)
+    {
+        // Before phase 9a the setting offered 0.5 to 2 and accepted up to 4.
+        MemoryStorage storage = new() { Content = $"{{\"Version\":6,\"DefaultSpeed\":{stored}}}" };
+        PlayerSettingsService service = new(storage);
+
+        service.Load();
+
+        Assert.Equal(expected, service.Current.DefaultSpeed);
+        Assert.Null(service.LoadDiagnostic);
+        Assert.Equal(SettingApplyMode.NextOpen, PlayerSettingsService.ApplyMode(nameof(PlayerSettings.DefaultSpeed)));
+    }
+
     private sealed class MemoryStorage : IPlayerSettingsStorage
     { public string? Content; public string? Preserved; public bool ThrowOnWrite; public string? Read() => Content; public void WriteAtomically(string content) { if (ThrowOnWrite) throw new IOException(); Content = content; } public void PreserveInvalid(string content) => Preserved = content; }
 }

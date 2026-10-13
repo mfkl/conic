@@ -706,10 +706,11 @@
                                     </StackPanel>
                                     <StackPanel Classes="settingsSection" IsVisible="{Binding IsPlayback}">
                                         <TextBlock Classes="sectionTitle" Text="Speed" />
-                                        <controls:SettingRow Label="Default speed" Badge="Next open">
+                                        <controls:SettingRow Label="Default speed" Badge="Next open" Help="Each media item starts at this speed; the speed menu changes only the item that is playing">
                                             <ComboBox ItemsSource="{Binding SpeedOptions}"
                                                       SelectedItem="{Binding DefaultSpeed, Mode=TwoWay}"
-                                                      AutomationProperties.Name="Default speed" />
+                                                      AutomationProperties.Name="Default speed"
+                                                      AutomationProperties.HelpText="Each media item starts at this speed; the speed menu changes only the item that is playing" />
                                         </controls:SettingRow>
                                     </StackPanel>
 

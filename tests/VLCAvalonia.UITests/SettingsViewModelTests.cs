@@ -301,6 +301,37 @@ public sealed class SettingsViewModelTests
     }
 
     [Fact]
+    public void DefaultSpeedOffersTheDesignRangeAndEachOptionRoundTrips()
+    {
+        SettingsViewModel viewModel = Create(out PlayerSettingsService service);
+
+        Assert.Equal(["0.25", "0.5", "0.75", "1", "1.25", "1.5", "1.75", "2"], viewModel.SpeedOptions);
+        foreach (string option in viewModel.SpeedOptions)
+        {
+            viewModel.DefaultSpeed = option;
+            Assert.Equal(option, viewModel.DefaultSpeed);
+            Assert.Equal(double.Parse(option, System.Globalization.CultureInfo.InvariantCulture), service.Current.DefaultSpeed);
+        }
+    }
+
+    [Fact]
+    public void DefaultSpeedReachesVlcAsTheRateOfTheNextOpen()
+    {
+        System.Globalization.CultureInfo culture = System.Globalization.CultureInfo.CurrentCulture;
+        try
+        {
+            // A decimal comma must not reach VLC's command line.
+            System.Globalization.CultureInfo.CurrentCulture = new("de-DE");
+            Assert.Empty(VLCAvalonia.Interop.VlcCorePlayer.RateArguments(1));
+            Assert.Equal(["--rate=1.75"], VLCAvalonia.Interop.VlcCorePlayer.RateArguments(1.75));
+            Assert.Equal(["--rate=0.25"], VLCAvalonia.Interop.VlcCorePlayer.RateArguments(.25));
+            Assert.Empty(VLCAvalonia.Interop.VlcCorePlayer.RateArguments(double.NaN));
+            Assert.Empty(VLCAvalonia.Interop.VlcCorePlayer.RateArguments(64));
+        }
+        finally { System.Globalization.CultureInfo.CurrentCulture = culture; }
+    }
+
+    [Fact]
     public void AudioStartupArgumentsAreAllowlistedExactAndEmptyByDefault()
     {
         Assert.Empty(MainWindow.ToAudioArguments(PlayerSettings.Default));

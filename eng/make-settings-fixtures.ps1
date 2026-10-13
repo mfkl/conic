@@ -1,8 +1,8 @@
 # Writes the media --engine-settings-smoke (phase 9b),
-# --audio-settings-smoke (phase 9c) and --interface-settings-smoke (phase
-# 9d) play to artifacts/settings-fixtures, with ffmpeg from PATH. Every
-# file is synthetic: testsrc and black video, sine audio, small subtitle
-# files.
+# --audio-settings-smoke (phase 9c), --interface-settings-smoke (phase 9d)
+# and --interactions-smoke play to artifacts/settings-fixtures, with ffmpeg
+# from PATH. Every file is synthetic: testsrc and black video, sine audio,
+# small subtitle files.
 [CmdletBinding()]
 param([string] $Output = (Join-Path (Split-Path $PSScriptRoot -Parent) 'artifacts/settings-fixtures'))
 
@@ -72,6 +72,10 @@ try {
     New-Item -ItemType Directory -Force -Path matching | Out-Null
     Copy-Item dark.mp4 matching/film.mp4
     Set-Content -NoNewline -Path matching/unrelated.srt -Value "1`n00:00:00,000 --> 00:00:20,000`nUnrelated`n"
+    # Chapters (--interactions-smoke): 30 s with three 10 s chapters and a key frame every second.
+    Set-Content -NoNewline -Path chapters.txt -Value (";FFMETADATA1`n" + ((0..2 | ForEach-Object { "[CHAPTER]`nTIMEBASE=1/1000`nSTART={0}`nEND={1}`ntitle=Part {2}`n" -f ($_ * 10000), (($_ + 1) * 10000), ($_ + 1) }) -join ''))
+    Invoke-Ffmpeg -f lavfi -i testsrc=size=640x360:rate=25 -f lavfi -i sine=frequency=440:duration=30 -i chapters.txt -map 0:v -map 1:a -map_chapters 2 -t 30 `
+        '-c:v' libx264 -preset veryfast -g 25 -pix_fmt yuv420p '-c:a' aac chapters.mkv
     Write-Output "Fixtures written to $Output"
 }
 finally { Pop-Location }

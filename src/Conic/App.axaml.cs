@@ -46,8 +46,8 @@ public partial class App : Application
         if (args is null) return;
         // Smoke and capture windows open without taking focus, so test runs
         // do not pull the user out of other apps. The screen checks keep
-        // their windows Topmost instead; only --menu-smoke activates its
-        // window, because its focus checks need an active one.
+        // their windows Topmost instead; only --menu-smoke and --interactions-smoke
+        // activate their window, because their focus checks need an active one.
         if (args.Any(arg => arg.StartsWith("--", StringComparison.Ordinal) &&
             (arg.Contains("smoke", StringComparison.OrdinalIgnoreCase) || arg.Contains("capture", StringComparison.OrdinalIgnoreCase) || arg.Contains("review", StringComparison.OrdinalIgnoreCase))))
             window.ShowActivated = false;
@@ -111,6 +111,8 @@ public partial class App : Application
         }
         else if (args.Contains("--interface-settings-smoke", StringComparer.OrdinalIgnoreCase))
             window.EnableInterfaceSettingsSmoke(desktopArg());
+        else if (args.Contains("--interactions-smoke", StringComparer.OrdinalIgnoreCase))
+            window.EnableInteractionsSmoke(desktopArg());
         else if (args.Contains("--menu-smoke", StringComparer.OrdinalIgnoreCase))
             window.EnableMenuSmoke(desktopArg());
         else if (args.FirstOrDefault(arg => arg.StartsWith("--menu-review=", StringComparison.OrdinalIgnoreCase)) is { } review)

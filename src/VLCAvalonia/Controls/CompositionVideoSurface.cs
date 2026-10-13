@@ -38,6 +38,7 @@ public sealed class CompositionVideoSurface : Control, IDisposable
     private IReadOnlyList<string> _extraOpenArguments = [];
     private (QueueRepeatMode Repeat, QueueOrder Order) _queueModes = (QueueRepeatMode.None, QueueOrder.Normal);
     private LiveAudioSettings? _liveAudio;
+    private LiveSubtitleSettings? _liveSubtitles;
 
     /// <summary>Default speed for the next open (<see cref="VlcCorePlayer.OpenPlaybackRate"/>).</summary>
     internal double OpenPlaybackRate
@@ -68,6 +69,13 @@ public sealed class CompositionVideoSurface : Control, IDisposable
     {
         get => _liveAudio;
         set { _liveAudio = value; if (_player is VlcCorePlayer core) core.LiveAudio = value; }
+    }
+
+    /// <summary>The subtitle style for the playing core (<see cref="VlcCorePlayer.LiveSubtitles"/>).</summary>
+    internal LiveSubtitleSettings? LiveSubtitles
+    {
+        get => _liveSubtitles;
+        set { _liveSubtitles = value; if (_player is VlcCorePlayer core) core.LiveSubtitles = value; }
     }
 
     /// <summary>The repeat and shuffle modes new queues start with (<see cref="VlcCorePlayer.RequestQueueModes"/>).</summary>
@@ -292,6 +300,7 @@ public sealed class CompositionVideoSurface : Control, IDisposable
                 core.OpenArguments = [.. _openArguments, .. _extraOpenArguments];
                 core.RequestQueueModes(_queueModes.Repeat, _queueModes.Order);
                 core.LiveAudio = _liveAudio;
+                core.LiveSubtitles = _liveSubtitles;
             }
             _player.StateChanged += StateChanged;
             if (_player is IQueueTransport queue)

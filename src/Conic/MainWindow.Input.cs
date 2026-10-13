@@ -4,6 +4,7 @@ using Avalonia.Input;
 using Avalonia.Platform.Storage;
 using Avalonia.Controls;
 using Player.Application;
+using Conic.Controls;
 using Conic.ViewModels;
 
 namespace Conic;
@@ -59,12 +60,7 @@ public partial class MainWindow
             return;
         }
         if (SettingsPanel.IsVisible || ShortcutFocusPolicy.Suppresses(e.Source)) return;
-        string key = e.Key == Key.OemComma ? "," : e.Key.ToString();
-        string modifiers = (e.KeyModifiers.HasFlag(KeyModifiers.Control) ? "Ctrl+" : "") +
-            (e.KeyModifiers.HasFlag(KeyModifiers.Alt) ? "Alt+" : "") +
-            (e.KeyModifiers.HasFlag(KeyModifiers.Shift) ? "Shift+" : "") +
-            (e.KeyModifiers.HasFlag(KeyModifiers.Meta) ? "Meta+" : "");
-        string gesture = PlayerShortcutPolicy.Normalize(modifiers + key);
+        string gesture = MenuShortcuts.FromKey(e.Key, e.KeyModifiers);
         IReadOnlyDictionary<PlayerCommandId, string> active =
             PlayerShortcutPolicy.Effective(_presentation.Registry, _settings.Current.ShortcutOverrides);
         if (!PlayerShortcutPolicy.TryFind(_presentation.Registry, active, gesture, out PlayerCommandId command)) return;

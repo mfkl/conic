@@ -71,7 +71,35 @@ public sealed record PlayerSettings(
     // The proxy password, protected for the current Windows user (DPAPI), base64.
     string? HttpProxyPasswordProtected = null,
     bool VerifyCertificates = true,
-    string CipherPreference = "Normal")
+    string CipherPreference = "Normal",
+    // Phase 9c: Audio (AudioEngineOptions). Every field below has a default,
+    // so a version 7 document reads as is.
+    bool AudioEnabled = true,
+    // The MMDevice endpoint ID; empty is the system default.
+    string AudioDevice = "",
+    // Percent: the volume slider's maximum, the volume each start begins at
+    // when Remember volume is off, and the arrow keys' step on the slider.
+    int MaximumVolume = 200,
+    int StartupVolume = 100,
+    int VolumeStep = 2,
+    // Loudness; normalization is NormalizationMaximumLevel (null when off).
+    string ReplayGain = "none",
+    double ReplayGainPreamp = 0,
+    // Effects. The equalizer's gains are in dB: its preamp is neutral at 12.
+    bool Equalizer = false,
+    string EqualizerPreset = "flat",
+    double EqualizerPreamp = AudioEngineOptions.NeutralEqualizerPreamp,
+    string EqualizerBands = "0 0 0 0 0 0 0 0 0 0",
+    bool StereoWidening = false,
+    bool SpatialAudio = false,
+    string SpatialAudioMode = "Headphones",
+    bool Compressor = false,
+    double PitchShift = 0,
+    bool Karaoke = false,
+    // Advanced, and the audio delay new media starts with (milliseconds).
+    string DolbySurround = "Automatic",
+    string ResamplerQuality = "Balanced",
+    int AudioDelay = 0)
 {
     public const int CurrentVersion = 7;
     public const double MinimumDefaultSpeed = .25, MaximumDefaultSpeed = 2;
@@ -144,13 +172,16 @@ public sealed class PlayerSettingsService
         // The app applies these itself, at once: the queue modes go to the
         // playing queue, the end action and the screensaver follow playback.
         nameof(PlayerSettings.QueueRepeat) or nameof(PlayerSettings.QueueShuffle) or nameof(PlayerSettings.PlaybackFinished)
-            or nameof(PlayerSettings.StopScreensaver) => SettingApplyMode.Live,
-        // RememberVolume decides the volume the next start begins at, so it is Restart.
+            or nameof(PlayerSettings.StopScreensaver) or nameof(PlayerSettings.MaximumVolume) or nameof(PlayerSettings.VolumeStep) => SettingApplyMode.Live,
+        // The audio effects, replay gain and the device also reach a playing core.
+        _ when AudioEngineOptions.LiveKeys.Contains(key) => SettingApplyMode.Live,
+        // RememberVolume and StartupVolume decide the volume the next start
+        // begins at, so they are Restart.
         nameof(PlayerSettings.DefaultSpeed) or nameof(PlayerSettings.ResumePlayback) or nameof(PlayerSettings.ResumeAutomatically)
             or nameof(PlayerSettings.ResumeMinimumElapsedSeconds) or nameof(PlayerSettings.ResumeMaximumRemainingSeconds)
             or nameof(PlayerSettings.StartFullscreen) => SettingApplyMode.NextOpen,
         // Every open starts a new VLC core; these are its options (PlayerEngineOptions).
-        _ when PlayerEngineOptions.Keys.Contains(key) => SettingApplyMode.NextOpen,
+        _ when PlayerEngineOptions.Keys.Contains(key) || AudioEngineOptions.NextOpenKeys.Contains(key) => SettingApplyMode.NextOpen,
         _ => SettingApplyMode.Restart,
     };
 
@@ -193,7 +224,7 @@ public sealed class PlayerSettingsService
         value = default; return false;
     }
 
-    private static PlayerSettings Normalize(PlayerSettings value) => PlayerEngineOptions.Normalize(value) with
+    private static PlayerSettings Normalize(PlayerSettings value) => AudioEngineOptions.Normalize(PlayerEngineOptions.Normalize(value)) with
     {
         Version = PlayerSettings.CurrentVersion,
         Theme = PlayerSettings.Themes.Contains(value.Theme) ? value.Theme : PlayerSettings.Default.Theme,
@@ -206,7 +237,6 @@ public sealed class PlayerSettingsService
         ResumeMinimumElapsedSeconds = Math.Clamp(value.ResumeMinimumElapsedSeconds, 0, 3600),
         ResumeMaximumRemainingSeconds = Math.Clamp(value.ResumeMaximumRemainingSeconds, 0, 3600),
         AudioOutputModule = value.AudioOutputModule is "Default" or "mmdevice" or "directsound" or "waveout" ? value.AudioOutputModule : "Default",
-        NormalizationMaximumLevel = value.NormalizationMaximumLevel is double level && double.IsFinite(level) ? Math.Clamp(level, .5, 10) : null,
         ShortcutOverrides = NormalizeShortcuts(value.ShortcutOverrides),
     };
 

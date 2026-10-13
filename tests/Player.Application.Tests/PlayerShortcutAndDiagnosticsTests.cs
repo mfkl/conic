@@ -58,13 +58,15 @@ public sealed class PlayerShortcutAndDiagnosticsTests
     }
 
     [Fact]
-    public void AudioSettingsMigrateNormalizeAndAreRestartOnly()
+    public void AudioSettingsMigrateNormalizeAndApplyWithoutARestart()
     {
         MemoryStorage storage = new() { Content = "{\"Version\":3,\"AudioOutputModule\":\"not-allowed\",\"NormalizationMaximumLevel\":50}" };
         PlayerSettingsService service = new(storage); service.Load();
         Assert.Equal("Default", service.Current.AudioOutputModule);
         Assert.Equal(10, service.Current.NormalizationMaximumLevel);
-        Assert.Equal(SettingApplyMode.Restart, PlayerSettingsService.ApplyMode(nameof(PlayerSettings.AudioOutputModule)));
+        // Every open starts a new core with the audio options (phase 9c); normalization also reaches a playing one.
+        Assert.Equal(SettingApplyMode.NextOpen, PlayerSettingsService.ApplyMode(nameof(PlayerSettings.AudioOutputModule)));
+        Assert.Equal(SettingApplyMode.Live, PlayerSettingsService.ApplyMode(nameof(PlayerSettings.NormalizationMaximumLevel)));
     }
 
     [Fact]

@@ -51,7 +51,7 @@ public partial class MainWindow
             _presentation.IsPictureInPicture = true;
             _presentation.IsFullscreen = false;
             _chromeVisibility.SetFullscreen(false);
-            WindowState = WindowState.Normal;
+            RequestWindowState(WindowState.Normal);
             WindowDecorations = WindowDecorations.BorderOnly;
             MinWidth = 320;
             MinHeight = 180;
@@ -96,7 +96,7 @@ public partial class MainWindow
         _changingWindowMode = true;
         try
         {
-            WindowState = WindowState.Normal;
+            RequestWindowState(WindowState.Normal);
             WindowDecorations = saved.Decorations;
             MinWidth = saved.MinWidth;
             MinHeight = saved.MinHeight;
@@ -108,7 +108,7 @@ public partial class MainWindow
             SetCurrentValue(TopmostProperty, saved.Topmost);
             _presentation.IsPictureInPicture = false;
             if (restoreRoute) _presentation.IsHomeOpen = saved.Home;
-            WindowState = saved.State;
+            RequestWindowState(saved.State);
             _presentation.IsFullscreen = WindowState == WindowState.FullScreen;
             _chromeVisibility.SetFullscreen(_presentation.IsFullscreen);
             _normalPlacement = saved.Placement;

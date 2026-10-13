@@ -25,6 +25,7 @@ public partial class MainWindow
     {
         _keyboardNavigation = false;
         WakeChrome();
+        _pressClosedOverlay = HasOverlayOpen;
         Point point = e.GetPosition(this);
         if (OpenMenu.IsVisible && !GetClientRect(OpenMenu).Contains(point) && !GetClientRect(OpenOptionsButton).Contains(point))
             CloseOpenMenu(restoreFocus: false);
@@ -33,11 +34,8 @@ public partial class MainWindow
     private void OnVideoPointerPressed(object? sender, PointerPressedEventArgs e)
     {
         WakeChrome();
-        if (e.ClickCount == 2 && (ReferenceEquals(e.Source, VideoSurface) || ReferenceEquals(e.Source, VideoArea)))
-        {
-            if (_presentation.IsPictureInPicture) ExitPictureInPicture(); else ToggleFullscreen();
-            e.Handled = true;
-        }
+        // Clicks on the video itself (Settings › Controls › Mouse).
+        if (IsVideoSource(e.Source)) OnVideoClick(e);
     }
 
     private void WakeChrome()

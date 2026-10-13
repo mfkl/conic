@@ -166,7 +166,7 @@ public sealed class SettingsViewModelTests
 
         Assert.Equal(["Theme Dark", "Theme Light", "Theme System"], viewModel.ThemeChoices.Select(choice => choice.AutomationName));
         Assert.Equal(AccentPalette.Colors.Select(color => $"Accent color {color.Name}"), viewModel.AccentChoices.Select(choice => choice.AutomationName));
-        Assert.Equal("System", Assert.Single(viewModel.ThemeChoices, choice => choice.IsSelected).Value);
+        Assert.Equal("Dark", Assert.Single(viewModel.ThemeChoices, choice => choice.IsSelected).Value);
         Assert.Equal(AccentPalette.DefaultHex, Assert.Single(viewModel.AccentChoices, choice => choice.IsSelected).Value);
 
         viewModel.ThemeChoices[1].IsSelected = true;
@@ -179,9 +179,9 @@ public sealed class SettingsViewModelTests
         Assert.Equal("Light", Assert.Single(viewModel.ThemeChoices, choice => choice.IsSelected).Value);
         Assert.Equal(AccentPalette.Colors[5].Hex, Assert.Single(viewModel.AccentChoices, choice => choice.IsSelected).Value);
 
-        service.Update(s => s with { Theme = "Dark", Accent = AccentPalette.Colors[2].Hex });
+        service.Update(s => s with { Theme = "System", Accent = AccentPalette.Colors[2].Hex });
         viewModel.Refresh();
-        Assert.Equal("Dark", Assert.Single(viewModel.ThemeChoices, choice => choice.IsSelected).Value);
+        Assert.Equal("System", Assert.Single(viewModel.ThemeChoices, choice => choice.IsSelected).Value);
         Assert.Equal(AccentPalette.Colors[2].Hex, Assert.Single(viewModel.AccentChoices, choice => choice.IsSelected).Value);
     }
 
@@ -214,7 +214,7 @@ public sealed class SettingsViewModelTests
         }
 
         Reset("General");
-        Assert.Equal(("System", AccentPalette.DefaultHex, "Compact"), (service.Current.Theme, service.Current.Accent, service.Current.Density));
+        Assert.Equal(("Dark", AccentPalette.DefaultHex, "Compact"), (service.Current.Theme, service.Current.Accent, service.Current.Density));
         Reset("Interface");
         Assert.Equal(("Comfortable", false, "Light"), (service.Current.Density, service.Current.ReduceMotion, service.Current.Theme));
         Reset("Privacy");

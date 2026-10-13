@@ -28,7 +28,9 @@ public sealed record PlayerSettings(
     public const int CurrentVersion = 6;
     public const double MinimumDefaultSpeed = .25, MaximumDefaultSpeed = 2;
     public static IReadOnlyList<string> Themes { get; } = Array.AsReadOnly(new[] { "Dark", "Light", "System" });
-    public static PlayerSettings Default { get; } = new(CurrentVersion, true, true, "System", "Comfortable", 3, 1, 10, 10, true, true, 30, 30, "Default");
+    // Dark is the default and the fallback for an unknown value; a stored
+    // "System" stays as it is.
+    public static PlayerSettings Default { get; } = new(CurrentVersion, true, true, "Dark", "Comfortable", 3, 1, 10, 10, true, true, 30, 30, "Default");
 }
 
 public interface IPlayerSettingsStorage

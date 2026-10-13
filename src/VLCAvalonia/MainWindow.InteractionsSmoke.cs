@@ -40,6 +40,8 @@ public partial class MainWindow
             List<string> passed = [];
             // Shortcut checks go on after a miss, so one run reports every key that fails.
             List<string> keyFailures = [];
+            // Shortcuts dropped because a button had the focus (ShortcutFocusPolicy).
+            List<string> buttonFindings = [];
             try
             {
                 string fixtures = Path.Combine(RepositoryPaths.ArtifactsDirectory, "settings-fixtures");
@@ -76,7 +78,9 @@ public partial class MainWindow
                 MediaEngineState Engine() => VideoSurface.Player!.State;
                 double Elapsed() => VideoSurface.Player?.State.Elapsed.TotalSeconds ?? 0;
                 bool Plays(string path) => _presentation.IsPlaying && string.Equals(CurrentSource(), path, StringComparison.OrdinalIgnoreCase);
-                string? CurrentSource() => _presentation.QueueItems.FirstOrDefault(item => item.IsCurrent)?.Source is { } source && Uri.TryCreate(source, UriKind.Absolute, out Uri? uri) && uri.IsFile ? uri.LocalPath : _presentation.QueueItems.FirstOrDefault(item => item.IsCurrent)?.Source;
+                // The queue holds file URIs; the checks compare paths.
+                static string Local(string source) => Uri.TryCreate(source, UriKind.Absolute, out Uri? uri) && uri.IsFile ? uri.LocalPath : source;
+                string? CurrentSource() => _presentation.QueueItems.FirstOrDefault(item => item.IsCurrent)?.Source is { } source ? Local(source) : null;
                 string Queue() => string.Join(", ", _presentation.QueueItems.Select(item => Path.GetFileName(item.Source) + (item.IsCurrent ? "*" : "")));
                 Control? Focused() => FocusManager?.GetFocusedElement() as Control;
                 // A press needs a control the user can see and use.
@@ -100,13 +104,24 @@ public partial class MainWindow
                     up.RaiseEvent(new KeyEventArgs { RoutedEvent = KeyUpEvent, Key = key, KeyModifiers = modifiers, Source = up });
                     await Settle();
                 }
-                async Task<string> Shortcut(PlayerCommandId command)
+                // A shortcut pressed where the focus is. ShortcutFocusPolicy keeps
+                // shortcuts away from a focused button: such a miss is a finding,
+                // and the key is pressed again on the video area to check its effect.
+                async Task Shortcut(PlayerCommandId command, Func<Task<bool>> effect, string what)
                 {
                     string gesture = EffectiveShortcuts()[command];
                     KeyGesture key = MenuShortcuts.ToKeyGesture(gesture) ?? throw new InvalidOperationException($"{gesture} has no key");
-                    string focus = Describe(Focused());
+                    await Settle();
+                    Control focus = Focused() ?? VideoArea;
                     await Key(key.Key, key.KeyModifiers);
-                    return $"{gesture} (focus {focus})";
+                    if (await effect()) return;
+                    if (!ShortcutFocusPolicy.Suppresses(focus)) { KeyCheck(false, $"{gesture} {what} (focus {Describe(focus)})"); return; }
+                    buttonFindings.Add($"{gesture} ({what}) on {focus.GetType().Name}#{focus.Name}{(OpenMenu.IsVisible ? ", which opened the More menu" : "")}");
+                    Console.WriteLine($"[interactions-smoke] finding: {gesture} does nothing with the focus on {Describe(focus)}");
+                    if (OpenMenu.IsVisible) CloseOpenMenu(restoreFocus: false);
+                    await Settle();
+                    VideoArea.RaiseEvent(new KeyEventArgs { RoutedEvent = KeyDownEvent, Key = key.Key, KeyModifiers = key.KeyModifiers, Source = VideoArea });
+                    KeyCheck(await effect(), $"{gesture} {what}, pressed on the video area");
                 }
                 void KeyCheck(bool condition, string message)
                 {
@@ -246,9 +261,8 @@ public partial class MainWindow
                 _presentation.IsQueueOpen = true;
                 await Settle();
                 Button RowAction(string source, string tip) => QueueDrawer.GetVisualDescendants().OfType<Button>()
-                    .First(button => button.IsEffectivelyVisible && button.DataContext is QueueItem item && string.Equals(item.Source, source, StringComparison.OrdinalIgnoreCase) && ToolTip.GetTip(button) as string == tip);
-                string[] Order() => _presentation.QueueItems.Select(item => item.Source).ToArray();
-                bool InOrder(params string[] paths) => Order().Select(source => Uri.TryCreate(source, UriKind.Absolute, out Uri? uri) && uri.IsFile ? uri.LocalPath : source).SequenceEqual(paths, StringComparer.OrdinalIgnoreCase);
+                    .First(button => button.IsEffectivelyVisible && button.DataContext is QueueItem item && string.Equals(Local(item.Source), source, StringComparison.OrdinalIgnoreCase) && ToolTip.GetTip(button) as string == tip);
+                bool InOrder(params string[] paths) => _presentation.QueueItems.Select(item => Local(item.Source)).SequenceEqual(paths, StringComparer.OrdinalIgnoreCase);
                 await Press(RowAction(gop, "Move earlier"), "Move earlier on the first row");
                 await Task.Delay(500);
                 Require(InOrder(gop, dark, chapters), $"the first row cannot move earlier ({Queue()})");
@@ -276,10 +290,8 @@ public partial class MainWindow
                 await WaitFor(() => Math.Abs(Elapsed() - 15) < 1.5, "seeked to the middle");
                 _presentation.TogglePauseCommand.Execute(null);
                 await WaitFor(() => _presentation.PlaybackStatus == PlaybackStatus.Paused, "paused");
-                string pressed = await Shortcut(PlayerCommandId.TogglePause);
-                KeyCheck(await Within(() => _presentation.IsPlaying, 3), $"{pressed} plays");
-                pressed = await Shortcut(PlayerCommandId.TogglePause);
-                KeyCheck(await Within(() => _presentation.PlaybackStatus == PlaybackStatus.Paused, 3), $"{pressed} pauses");
+                await Shortcut(PlayerCommandId.TogglePause, () => Within(() => _presentation.IsPlaying, 3), "plays");
+                await Shortcut(PlayerCommandId.TogglePause, () => Within(() => _presentation.PlaybackStatus == PlaybackStatus.Paused, 3), "pauses");
                 foreach ((PlayerCommandId command, int seconds) in new[]
                 {
                     (PlayerCommandId.SkipForward, 5), (PlayerCommandId.SkipBackward, -4), (PlayerCommandId.SkipForwardVeryShort, 2), (PlayerCommandId.SkipBackwardVeryShort, -2),
@@ -287,61 +299,46 @@ public partial class MainWindow
                 })
                 {
                     double before = Elapsed();
-                    pressed = await Shortcut(command);
-                    KeyCheck(await Within(() => Math.Abs(Elapsed() - before - seconds) < 1.2, 5), $"{pressed} moves {seconds} s ({before:0.0} -> {Elapsed():0.0})");
+                    await Shortcut(command, () => Within(() => Math.Abs(Elapsed() - before - seconds) < 1.2, 5), $"moves {seconds} s from {before:0.0} s");
                 }
                 bool muted = _presentation.IsMuted;
-                pressed = await Shortcut(PlayerCommandId.ToggleMute);
-                KeyCheck(await Within(() => _presentation.IsMuted != muted, 3), $"{pressed} mutes");
-                pressed = await Shortcut(PlayerCommandId.ToggleMute);
-                KeyCheck(await Within(() => _presentation.IsMuted == muted, 3), $"{pressed} unmutes");
-                pressed = await Shortcut(PlayerCommandId.ToggleFullscreen);
-                KeyCheck(await Within(() => WindowState == WindowState.FullScreen, 3), $"{pressed} goes fullscreen");
-                pressed = await Shortcut(PlayerCommandId.ToggleFullscreen);
-                KeyCheck(await Within(() => WindowState != WindowState.FullScreen, 3), $"{pressed} leaves fullscreen");
+                await Shortcut(PlayerCommandId.ToggleMute, () => Within(() => _presentation.IsMuted != muted, 3), "mutes");
+                await Shortcut(PlayerCommandId.ToggleMute, () => Within(() => _presentation.IsMuted == muted, 3), "unmutes");
+                await Shortcut(PlayerCommandId.ToggleFullscreen, () => Within(() => WindowState == WindowState.FullScreen, 3), "goes fullscreen");
+                await Shortcut(PlayerCommandId.ToggleFullscreen, () => Within(() => WindowState != WindowState.FullScreen, 3), "leaves fullscreen");
                 if (WindowState == WindowState.FullScreen) ToggleFullscreen();
                 int requests = _mediaPicker.RequestsForSmoke.Count;
-                pressed = await Shortcut(PlayerCommandId.OpenMedia);
-                KeyCheck(await Within(() => _mediaPicker.RequestsForSmoke.Count > requests && _mediaPicker.RequestsForSmoke[^1] == "media", 3), $"{pressed} asks for a file");
+                await Shortcut(PlayerCommandId.OpenMedia, () => Within(() => _mediaPicker.RequestsForSmoke.Count > requests && _mediaPicker.RequestsForSmoke[^1] == "media", 3), "asks for a file");
                 requests = _mediaPicker.RequestsForSmoke.Count;
-                pressed = await Shortcut(PlayerCommandId.OpenFolder);
-                KeyCheck(await Within(() => _mediaPicker.RequestsForSmoke.Count > requests && _mediaPicker.RequestsForSmoke[^1] == "folder", 3), $"{pressed} asks for a folder");
+                await Shortcut(PlayerCommandId.OpenFolder, () => Within(() => _mediaPicker.RequestsForSmoke.Count > requests && _mediaPicker.RequestsForSmoke[^1] == "folder", 3), "asks for a folder");
                 Require(Plays(gop) || _presentation.PlaybackStatus == PlaybackStatus.Paused, "cancelled pickers leave gop.mp4 open");
-                pressed = await Shortcut(PlayerCommandId.OpenSettings);
-                KeyCheck(SettingsPanel.IsVisible, $"{pressed} opens Settings");
+                await Shortcut(PlayerCommandId.OpenSettings, () => Task.FromResult(SettingsPanel.IsVisible), "opens Settings");
                 await Key(Avalonia.Input.Key.Escape);
                 KeyCheck(!SettingsPanel.IsVisible, $"Escape closes Settings (focus {Describe(Focused())})");
                 if (SettingsPanel.IsVisible) CloseSettings();
-                pressed = await Shortcut(PlayerCommandId.OpenLibrary);
-                KeyCheck(_presentation.IsLibraryOpen, $"{pressed} opens the library drawer");
+                await Shortcut(PlayerCommandId.OpenLibrary, () => Task.FromResult(_presentation.IsLibraryOpen), "opens the library drawer");
                 await Key(Avalonia.Input.Key.Escape);
                 KeyCheck(!_presentation.IsLibraryOpen, $"Escape closes the library drawer (focus {Describe(Focused())})");
                 if (_presentation.IsLibraryOpen) CloseLibrary();
-                pressed = await Shortcut(PlayerCommandId.ToggleQueue);
-                KeyCheck(_presentation.IsQueueOpen && _presentation.DrawerTab == "Queue", $"{pressed} opens the queue");
+                await Shortcut(PlayerCommandId.ToggleQueue, () => Task.FromResult(_presentation.IsQueueOpen && _presentation.DrawerTab == "Queue"), "opens the queue");
                 await Key(Avalonia.Input.Key.Escape);
                 KeyCheck(!_presentation.IsQueueOpen, $"Escape closes the queue (focus {Describe(Focused())})");
-                pressed = await Shortcut(PlayerCommandId.MediaInformation);
-                KeyCheck(_presentation.IsQueueOpen && _presentation.DrawerTab == "Information", $"{pressed} opens Media Information");
+                if (_presentation.IsQueueOpen) CloseDrawer();
+                await Shortcut(PlayerCommandId.MediaInformation, () => Task.FromResult(_presentation.IsQueueOpen && _presentation.DrawerTab == "Information"), "opens Media Information");
                 await Key(Avalonia.Input.Key.Escape);
                 if (_presentation.IsQueueOpen) CloseDrawer();
-                pressed = await Shortcut(PlayerCommandId.Snapshot);
-                KeyCheck(_presentation.MediaControlsNotice.Contains("Snapshot", StringComparison.Ordinal), $"{pressed} answers with the snapshot notice");
-                pressed = await Shortcut(PlayerCommandId.TogglePictureInPicture);
-                KeyCheck(await Within(() => _presentation.IsPictureInPicture, 3), $"{pressed} enters picture in picture");
-                pressed = await Shortcut(PlayerCommandId.TogglePictureInPicture);
-                KeyCheck(await Within(() => !_presentation.IsPictureInPicture, 3), $"{pressed} leaves picture in picture");
+                await Shortcut(PlayerCommandId.Snapshot, () => Task.FromResult(_presentation.MediaControlsNotice.Contains("Snapshot", StringComparison.Ordinal)), "answers with the snapshot notice");
+                await Shortcut(PlayerCommandId.TogglePictureInPicture, () => Within(() => _presentation.IsPictureInPicture, 3), "enters picture in picture");
+                await Shortcut(PlayerCommandId.TogglePictureInPicture, () => Within(() => !_presentation.IsPictureInPicture, 3), "leaves picture in picture");
                 if (_presentation.IsPictureInPicture) ExitPictureInPicture();
-                pressed = await Shortcut(PlayerCommandId.ShowHome);
-                KeyCheck(_presentation.IsHomeOpen, $"{pressed} shows Home");
+                await Shortcut(PlayerCommandId.ShowHome, () => Task.FromResult(_presentation.IsHomeOpen), "shows Home");
                 _presentation.ShowPlayerCommand.Execute(null);
                 await Settle();
 
                 // Open Network Stream: Enter in the URL field opens it, or keeps the field with the error.
                 using (MediaServer server = new(gop))
                 {
-                    pressed = await Shortcut(PlayerCommandId.OpenUrl);
-                    KeyCheck(UrlPanel.IsVisible && UrlTextBox.IsFocused, $"{pressed} opens Open Network Stream with the focus in the address");
+                    await Shortcut(PlayerCommandId.OpenUrl, async () => { await Settle(); return UrlPanel.IsVisible && UrlTextBox.IsFocused; }, "opens Open Network Stream with the focus in the address");
                     if (!UrlPanel.IsVisible) ShowUrlPanel();
                     await Settle();
                     UrlTextBox.Focus();
@@ -364,7 +361,8 @@ public partial class MainWindow
                     // gop.mp4 has a saved position from earlier cases: that prompt is not the one checked.
                     if (_presentation.HasPendingResume) _presentation.Registry.Execute(PlayerCommandId.DismissResume);
                     _presentation.Registry.Execute(PlayerCommandId.Seek, .5);
-                    await WaitFor(() => Math.Abs(Elapsed() - 15) < 1.5, "seeked to 15 s");
+                    // Stop once the player shows the new position, as a user would.
+                    await WaitFor(() => Math.Abs(Elapsed() - 15) < 1.5 && Math.Abs(_presentation.Position - .5) < .05, $"the player shows 15 s ({_presentation.ElapsedText})");
                     _presentation.StopCommand.Execute(null);
                     await WaitFor(() => !_presentation.IsPlaying, "stopped, the position saved");
                     _presentation.OpenSource(gop, MediaSourceKind.File);
@@ -383,7 +381,7 @@ public partial class MainWindow
                     $"Escape closes the resume prompt, plays from the start and keeps the position (focus {focus}, at {Elapsed():0.0} s)");
                 if (_presentation.HasPendingResume) _presentation.Registry.Execute(PlayerCommandId.DismissResume);
                 Require(keyFailures.Count == 0, $"{keyFailures.Count} shortcut checks failed: {string.Join("; ", keyFailures)}");
-                Pass("every default shortcut, Escape on Settings, the library and the drawer, Enter and Escape on the resume prompt");
+                Pass($"every default shortcut, Escape on Settings, the library and the drawer, Enter and Escape on the resume prompt ({buttonFindings.Count} presses dropped on a focused button, then run from the video area)");
 
                 // ---- The mouse on the video (gap 4), default settings ----
                 _settings.ResetAll();
@@ -454,13 +452,22 @@ public partial class MainWindow
                 _mediaPicker.PicksForSmoke.Enqueue(audio);
                 await Press(Named(QueueDrawer, "Add audio file"), "Add audio file");
                 await WaitFor(() => _mediaPicker.RequestsForSmoke[^1] == "audio" && _presentation.MediaControlsNotice.StartsWith("Added for the next media open", StringComparison.Ordinal), $"Add audio file takes the picked file for the next open ({_presentation.MediaControlsNotice})", 5);
-                // The next open of this item (Stop, then Play restarts it) has the file as a track.
+                // The file is added to the queue item: playing the item again from its
+                // queue row opens it with one more audio track.
+                int Tracks() => _presentation.AudioTracks.Count(track => !track.IsDisabled);
+                string TrackList() => string.Join(", ", _presentation.AudioTracks.Select(track => track.Label));
+                _presentation.DrawerTab = "Queue";
+                await Settle();
+                await Press(QueueDrawer.GetVisualDescendants().OfType<Button>().First(button => button.IsEffectivelyVisible && button.Classes.Contains("panelRow") && button.DataContext is QueueItem { IsCurrent: true }), "the queue row of languages.mkv");
+                await WaitFor(() => _presentation.IsPlaying && Tracks() == audioTracks + 1, $"the item played again has one more audio track ({audioTracks} -> {Tracks()}: {TrackList()})");
+                Pass("Add audio file, as a track when the item plays again");
+                // Stop starts a new VLC core on Play, without the item's added track: say what it does.
                 _presentation.StopCommand.Execute(null);
                 await WaitFor(() => _presentation.PlaybackStatus == PlaybackStatus.Stopped, "stopped");
                 _presentation.TogglePauseCommand.Execute(null);
-                await WaitFor(() => _presentation.IsPlaying && _presentation.AudioTracks.Count(track => !track.IsDisabled) == audioTracks + 1,
-                    $"the next open has one more audio track ({audioTracks} -> {_presentation.AudioTracks.Count(track => !track.IsDisabled)}: {string.Join(", ", _presentation.AudioTracks.Select(track => track.Label))})");
-                Pass("Add audio file, as a track of the next open");
+                await WaitFor(() => _presentation.IsPlaying && _presentation.CanAdjustDelays && _presentation.AudioTracks.Count > 0, "playing again after Stop");
+                await Task.Delay(1000);
+                Console.WriteLine($"[interactions-smoke] finding: after Stop and Play, languages.mkv has {Tracks()} audio tracks ({TrackList()}); the added file is {(Tracks() == audioTracks + 1 ? "kept" : "gone")}");
                 _presentation.IsQueueOpen = false;
 
                 await Open(chapters);
@@ -489,6 +496,7 @@ public partial class MainWindow
                 _presentation.StopCommand.Execute(null);
                 _settings.ResetAll();
                 Console.WriteLine($"[interactions-smoke] PASS {passed.Count} checks: {string.Join("; ", passed)}");
+                Console.WriteLine($"[interactions-smoke] button focus finding: {buttonFindings.Count} shortcut presses did nothing with the focus on a button: {string.Join("; ", buttonFindings)}");
                 desktop.Shutdown(0);
             }
             catch (Exception error)

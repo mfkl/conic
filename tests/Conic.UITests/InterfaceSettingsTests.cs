@@ -4,11 +4,31 @@ using Xunit;
 
 namespace Conic.UITests;
 
-/// <summary>Settings › Interface: what Reduce motion changes, and that its
-/// help text says so. Reduce motion's runtime switch
+/// <summary>Settings › Interface: what Density and Reduce motion change, and
+/// that their help text says so. Reduce motion's runtime switch
 /// (Theming/ReducedMotion) is checked by --settings-apply-smoke.</summary>
 public sealed class InterfaceSettingsTests
 {
+    [Theory]
+    [InlineData(1280, false, 20, 20)]
+    [InlineData(1280, true, 12, 12)]
+    [InlineData(800, true, 12, 12)]
+    [InlineData(480, false, 12, 12)]
+    [InlineData(480, true, 12, 12)]
+    public void CompactNarrowsTheControlBar(double width, bool compact, double spacing, double padding) =>
+        Assert.Equal((spacing, padding), MainWindow.BarSpacing(PlayerLayoutPolicy.ForWidth(width), compact));
+
+    [Fact]
+    public void DensityHelpNamesWhatCompactChanges()
+    {
+        XDocument view = Load("Views", "SettingsView.axaml");
+
+        Assert.Equal("Compact narrows the gaps in the control bar and tightens the rows in Settings", Row(view, "Density"));
+        XElement dense = Style(view, ":is(UserControl).dense controls|SettingRow");
+        Assert.Equal("40", Setter(dense, "MinHeight"));
+        Assert.Equal("12", Setter(Style(view, ":is(UserControl).dense StackPanel#SettingsPageContent"), "Spacing"));
+    }
+
     [Fact]
     public void ReduceMotionIsStyledAndItsHelpSaysWhatItDoes()
     {

@@ -162,8 +162,16 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
             _wantedVolume = _wantedVolume with { Muted = !IsMuted };
             _transport.SetMuted(!IsMuted);
         }, _ => HasPlayableMedia);
-        registry.Register(new(PlayerCommandId.SkipBackward, "Skip backward", "Playback", "Alt+Left"), _ => _transport.Skip(TimeSpan.FromSeconds(-(_settings?.Current.SkipBackwardSeconds ?? 10))), _ => CanSeek);
-        registry.Register(new(PlayerCommandId.SkipForward, "Skip forward", "Playback", "Alt+Right"), _ => _transport.Skip(TimeSpan.FromSeconds(_settings?.Current.SkipForwardSeconds ?? 10)), _ => CanSeek);
+        // Settings › Controls › Skip Amounts, with VLC's keys: Shift for the
+        // very short skip, Alt for the short one, Ctrl for medium, Ctrl+Alt for long.
+        foreach ((PlayerCommandId id, string name, string gesture) in new[]
+        {
+            (PlayerCommandId.SkipBackward, "Skip backward", "Alt+Left"), (PlayerCommandId.SkipForward, "Skip forward", "Alt+Right"),
+            (PlayerCommandId.SkipBackwardVeryShort, "Very short skip backward", "Shift+Left"), (PlayerCommandId.SkipForwardVeryShort, "Very short skip forward", "Shift+Right"),
+            (PlayerCommandId.SkipBackwardMedium, "Medium skip backward", "Ctrl+Left"), (PlayerCommandId.SkipForwardMedium, "Medium skip forward", "Ctrl+Right"),
+            (PlayerCommandId.SkipBackwardLong, "Long skip backward", "Ctrl+Alt+Left"), (PlayerCommandId.SkipForwardLong, "Long skip forward", "Ctrl+Alt+Right"),
+        })
+            registry.Register(new(id, name, "Playback", gesture), _ => _transport.Skip(TimeSpan.FromSeconds(SkipSeconds(id))), _ => CanSeek);
         registry.Register(new(PlayerCommandId.SetPlaybackRate, "Playback speed", "Playback"), parameter => _transport.SetPlaybackRate(Math.Clamp(ToDouble(parameter), 1d / 32, 31.25)));
         registry.Register(new(PlayerCommandId.ToggleFullscreen, "Fullscreen", "Window", "F11"), _ => toggleFullscreen?.Invoke(), _ => toggleFullscreen is not null);
         registry.Register(new(PlayerCommandId.SetAlwaysOnTop, "Always on top", "Window"), parameter => IsAlwaysOnTop = parameter is true);
@@ -271,6 +279,62 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
         try { _settings?.Update(update); }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException) { _diagnostic?.Invoke(exception.ToString()); }
     }
+
+    /// <summary>How far a skip command moves, in seconds: negative is backward.</summary>
+    internal int SkipSeconds(PlayerCommandId command)
+    {
+        PlayerSettings settings = _settings?.Current ?? PlayerSettings.Default;
+        return command switch
+        {
+            PlayerCommandId.SkipBackward => -settings.SkipBackwardSeconds,
+            PlayerCommandId.SkipForward => settings.SkipForwardSeconds,
+            PlayerCommandId.SkipBackwardVeryShort => -settings.VeryShortSkipSeconds,
+            PlayerCommandId.SkipForwardVeryShort => settings.VeryShortSkipSeconds,
+            PlayerCommandId.SkipBackwardMedium => -settings.MediumSkipSeconds,
+            PlayerCommandId.SkipForwardMedium => settings.MediumSkipSeconds,
+            PlayerCommandId.SkipBackwardLong => -settings.LongSkipSeconds,
+            PlayerCommandId.SkipForwardLong => settings.LongSkipSeconds,
+            _ => 0,
+        };
+    }
+
+    /// <summary>
+    /// Settings › Subtitles › Show feedback for shortcuts: what a shortcut
+    /// is about to do, said before it runs (its result reaches the view
+    /// model later, from the engine). Null for commands that show their own
+    /// result, such as a panel or fullscreen.
+    /// </summary>
+    internal string? ShortcutFeedbackText(PlayerCommandId command) => command switch
+    {
+        PlayerCommandId.TogglePause => IsPlaying ? "Pause" : "Play",
+        PlayerCommandId.Stop => "Stop",
+        PlayerCommandId.ToggleMute => IsMuted ? $"Volume {Volume:0}%" : "Muted",
+        PlayerCommandId.QueuePrevious => "Previous",
+        PlayerCommandId.QueueNext => "Next",
+        PlayerCommandId.QueueRepeat => QueueState.Repeat switch { QueueRepeatMode.None => "Repeat item", QueueRepeatMode.CurrentItem => "Repeat all", _ => "Repeat off" },
+        PlayerCommandId.QueueShuffle => QueueState.Order == QueueOrder.Random ? "Shuffle off" : "Shuffle on",
+        _ when SkipSeconds(command) is int seconds and not 0 => SkipText(seconds),
+        _ => null,
+    };
+
+    /// <summary>Settings › Controls › Mouse: a wheel move over the video. Returns what it did, for the feedback.</summary>
+    internal string? ApplyWheel(WheelStep step)
+    {
+        switch (step.Target)
+        {
+            case WheelTarget.Volume when HasPlayableMedia:
+                double volume = Math.Clamp(Math.Round(Volume + step.Amount), 0, MaximumVolume);
+                Registry.Execute(PlayerCommandId.SetVolume, volume);
+                return $"Volume {volume:0}%";
+            case WheelTarget.Seek when CanSeek:
+                _transport.Skip(TimeSpan.FromSeconds(step.Amount));
+                return SkipText(step.Amount);
+            default:
+                return null;
+        }
+    }
+
+    private static string SkipText(double seconds) => (seconds < 0 ? "−" : "+") + Math.Abs(seconds).ToString("0.#", System.Globalization.CultureInfo.CurrentCulture) + " s";
 
     private async Task CopyDiagnosticsAsync()
     {

@@ -33,6 +33,7 @@
           Background="{DynamicResource PlayerCanvas}"
           PointerMoved="OnPlayerInteraction"
           PointerPressed="OnVideoPointerPressed"
+          PointerWheelChanged="OnVideoPointerWheelChanged"
           KeyDown="OnPlayerKeyDown"
           input:DragDrop.AllowDrop="True"
           input:DragDrop.DragOver="OnMediaDragOver"
@@ -194,6 +195,29 @@
              only its row changes. Subtitles always share its cell. -->
         <controls:CompositionVideoSurface x:Name="VideoSurface" Grid.Row="1" />
         <controls:SubtitleOverlay x:Name="SubtitleLayer" Grid.Row="1" />
+
+        <!-- Settings › Subtitles › Show feedback for shortcuts: what a
+             shortcut or the wheel did, over the video's top left corner for
+             a moment (MainWindow.ControlSettings.cs). Over the video, so dark
+             in both themes. -->
+        <ThemeVariantScope Grid.Row="1"
+                           RequestedThemeVariant="Dark"
+                           IsHitTestVisible="False"
+                           HorizontalAlignment="Left"
+                           VerticalAlignment="Top"
+                           Margin="20,16">
+            <Border x:Name="ShortcutFeedback"
+                    IsVisible="False"
+                    Padding="12,6"
+                    CornerRadius="6"
+                    Background="{DynamicResource Vlc.OnMedia.Scrim}"
+                    x:FieldModifier="internal">
+                <TextBlock x:Name="ShortcutFeedbackText"
+                           FontSize="16"
+                           Foreground="{DynamicResource Vlc.Fg.1}"
+                           x:FieldModifier="internal" />
+            </Border>
+        </ThemeVariantScope>
 
         <views:HomeView x:Name="HomeScreen"
                         Grid.RowSpan="3"

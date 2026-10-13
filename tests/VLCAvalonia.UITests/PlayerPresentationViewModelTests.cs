@@ -506,6 +506,83 @@ public sealed class PlayerPresentationViewModelTests
     }
 
     [Fact]
+    public void SkipSizesHaveVlcsKeysAndFollowTheSettings()
+    {
+        RecordingTransport transport = new();
+        PlayerSettingsService settings = new(new SettingsStorage());
+        PlayerPresentationViewModel viewModel = new(transport, new EmptyPicker(), () => { }, settings: settings);
+        viewModel.ApplyEngineState(State(.5, PlaybackStatus.Playing, true));
+        settings.Update(s => s with { VeryShortSkipSeconds = 2, MediumSkipSeconds = 45, LongSkipSeconds = 600 });
+
+        foreach (PlayerCommandId command in new[] { PlayerCommandId.SkipBackwardVeryShort, PlayerCommandId.SkipForwardVeryShort, PlayerCommandId.SkipBackwardMedium, PlayerCommandId.SkipForwardMedium, PlayerCommandId.SkipBackwardLong, PlayerCommandId.SkipForwardLong })
+            viewModel.Registry.Execute(command);
+
+        Assert.Equal([-2, 2, -45, 45, -600, 600], transport.Skips.Select(skip => skip.TotalSeconds));
+        IReadOnlyDictionary<PlayerCommandId, string> defaults = PlayerShortcutPolicy.Effective(viewModel.Registry, null);
+        Assert.Equal(PlayerShortcutPolicy.PlatformDefault("Shift+Left", PlayerShortcutPolicy.UsesCommandKey), defaults[PlayerCommandId.SkipBackwardVeryShort]);
+        Assert.Equal(PlayerShortcutPolicy.PlatformDefault("Ctrl+Right", PlayerShortcutPolicy.UsesCommandKey), defaults[PlayerCommandId.SkipForwardMedium]);
+        Assert.Equal(PlayerShortcutPolicy.PlatformDefault("Ctrl+Alt+Left", PlayerShortcutPolicy.UsesCommandKey), defaults[PlayerCommandId.SkipBackwardLong]);
+        // Every default is unique.
+        Assert.True(PlayerShortcutPolicy.TryValidate(defaults.Select(pair => new PlayerShortcut(pair.Key, pair.Value)), out string? error), error);
+    }
+
+    [Fact]
+    public void ShortcutFeedbackSaysWhatTheShortcutDoes()
+    {
+        RecordingTransport transport = new();
+        PlayerSettingsService settings = new(new SettingsStorage());
+        PlayerPresentationViewModel viewModel = new(transport, new EmptyPicker(), () => { }, settings: settings);
+        viewModel.ApplyEngineState(State(.5, PlaybackStatus.Playing, true) with { IsMuted = false });
+
+        Assert.Equal("Pause", viewModel.ShortcutFeedbackText(PlayerCommandId.TogglePause));
+        Assert.Equal("Muted", viewModel.ShortcutFeedbackText(PlayerCommandId.ToggleMute));
+        Assert.Equal("−10 s", viewModel.ShortcutFeedbackText(PlayerCommandId.SkipBackward));
+        Assert.Equal("+300 s", viewModel.ShortcutFeedbackText(PlayerCommandId.SkipForwardLong));
+        Assert.Null(viewModel.ShortcutFeedbackText(PlayerCommandId.ToggleFullscreen));
+        viewModel.ApplyEngineState(State(.5, PlaybackStatus.Paused, true));
+        Assert.Equal("Play", viewModel.ShortcutFeedbackText(PlayerCommandId.TogglePause));
+    }
+
+    [Fact]
+    public void TheWheelMovesTheVolumeOrThePosition()
+    {
+        RecordingTransport transport = new();
+        PlayerSettingsService settings = new(new SettingsStorage());
+        PlayerPresentationViewModel viewModel = new(transport, new EmptyPicker(), () => { }, settings: settings);
+        viewModel.ApplyEngineState(State(.5, PlaybackStatus.Playing, true) with { Volume = .5 });
+
+        Assert.Equal("Volume 54%", viewModel.ApplyWheel(new WheelStep(WheelTarget.Volume, 4)));
+        Assert.Equal(.54, transport.Volumes[^1], 3);
+        Assert.Equal("−3 s", viewModel.ApplyWheel(new WheelStep(WheelTarget.Seek, -3)));
+        Assert.Equal(TimeSpan.FromSeconds(-3), transport.Skips[^1]);
+        // Not above the maximum volume.
+        viewModel.ApplyWheel(new WheelStep(WheelTarget.Volume, 500));
+        Assert.Equal(PlayerSettings.Default.MaximumVolume / 100d, transport.Volumes[^1], 3);
+        Assert.Null(viewModel.ApplyWheel(default));
+    }
+
+    [Fact]
+    public void KeepOnTopIsTheRememberedAlwaysOnTopAndTheTitleCanHideTheFileName()
+    {
+        PlayerSettingsService settings = new(new SettingsStorage());
+        settings.Update(s => s with { KeepOnTop = true });
+        PlayerPresentationViewModel viewModel = new(new RecordingTransport(), new EmptyPicker(), () => { }, settings: settings);
+        Assert.True(viewModel.IsAlwaysOnTop);
+
+        viewModel.SetAlwaysOnTopCommand.Execute(false);
+        Assert.False(settings.Current.KeepOnTop);
+        settings.Update(s => s with { KeepOnTop = true });
+        Assert.True(viewModel.IsAlwaysOnTop);
+
+        viewModel.ApplyEngineState(State(.5, PlaybackStatus.Playing, true) with { Title = "movie.mkv" });
+        Assert.Equal("movie.mkv", viewModel.TitleBarText);
+        List<string?> changed = []; viewModel.PropertyChanged += (_, args) => changed.Add(args.PropertyName);
+        settings.Update(s => s with { ShowFileNameInTitle = false });
+        Assert.Equal("VLC Avalonia", viewModel.TitleBarText);
+        Assert.Contains(nameof(PlayerPresentationViewModel.TitleBarText), changed);
+    }
+
+    [Fact]
     public void DirectPlayingEstablishesGenerationAndIgnoresOlderSameSource()
     {
         RecordingTransport transport = new(); PlayerPresentationViewModel vm = CreateOpeningViewModel(transport);

@@ -67,7 +67,12 @@ public partial class MainWindow
         string gesture = PlayerShortcutPolicy.Normalize(modifiers + key);
         IReadOnlyDictionary<PlayerCommandId, string> active =
             PlayerShortcutPolicy.Effective(_presentation.Registry, _settings.Current.ShortcutOverrides);
-        e.Handled = PlayerShortcutPolicy.TryDispatch(_presentation.Registry, active, gesture);
+        if (!PlayerShortcutPolicy.TryFind(_presentation.Registry, active, gesture, out PlayerCommandId command)) return;
+        // The feedback says what the shortcut does, before its result arrives from the engine.
+        string? feedback = _presentation.ShortcutFeedbackText(command);
+        _presentation.Registry.Execute(command);
+        e.Handled = true;
+        ShowShortcutFeedback(feedback);
     }
 
     private void OnMediaDragOver(object? sender, DragEventArgs e)

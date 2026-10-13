@@ -77,6 +77,7 @@ public partial class MainWindow : Window
         InitializePictureInPicture();
         InitializePlaybackSettings();
         InitializeInterfaceSettings();
+        InitializeControlSettings();
         InitializeMacMenu();
         UpdatePlaybackRateSelection();
         UpdateHistorySettingsControls();

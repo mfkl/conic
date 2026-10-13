@@ -37,7 +37,17 @@ GPU video path. CI runs it on GitHub's `macos-15` (arm64) and
   exports now live in `VoutHost`, shared with the D3D11 output.
 - **App.** Home thumbnails come from Quick Look (`qlmanage`). The window uses
   the macOS traffic lights instead of the in-app caption buttons, and default
-  shortcuts use Cmd instead of Ctrl.
+  shortcuts use Cmd instead of Ctrl. The menu bar is built once and its key
+  equivalents updated in place: Avalonia's exporter throws when a window is
+  given a second `NativeMenu`.
+- **Settings.** VLC on macOS uses its `securetransport` TLS module, so the
+  GnuTLS options (Verify certificates, Cipher preference) are hidden there,
+  like the Windows-only proxy, screensaver and audio device rows. VLC's GPU
+  picture filters (`ci_filters`) need VLC.app's OpenGL output, so the picture
+  adjustments and the deinterlacer convert VideoToolbox frames to I420 and run
+  on the CPU. The engine and audio settings smokes run on macOS: the screen is
+  sampled with `screencapture`; DirectSound, MMDevice, Direct3D 11, the
+  display request and the DPAPI proxy password stay Windows cases.
 
 The software-decoding pass uploads frames into pixel buffers on the CPU; it
 checks the transport, not the hardware requirement above, which needs

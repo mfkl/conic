@@ -25,6 +25,8 @@ internal sealed class ShortcutRow : INotifyPropertyChanged
     public event PropertyChangedEventHandler? PropertyChanged;
     private void Notify(string name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 }
+/// <summary>A heading and its shortcuts in the shortcut editor; every group but the first has a divider above it.</summary>
+internal sealed record ShortcutGroup(string Category, IReadOnlyList<ShortcutRow> Rows, bool HasDivider);
 internal sealed partial class SettingsViewModel : INotifyPropertyChanged
 {
     private readonly PlayerSettingsService _service;
@@ -125,8 +127,25 @@ internal sealed partial class SettingsViewModel : INotifyPropertyChanged
     public ICommand CancelResetCommand { get; }
     public ICommand ResetAllShortcutsCommand { get; }
 
-    public string ShortcutSearch { get => _shortcutSearch; set { if (Set(ref _shortcutSearch, value ?? string.Empty)) { Notify(nameof(EditableShortcutRows)); Notify(nameof(HasShortcutResults)); } } }
+    public string ShortcutSearch { get => _shortcutSearch; set { if (Set(ref _shortcutSearch, value ?? string.Empty)) NotifyShortcutRows(); } }
     public IReadOnlyList<ShortcutRow> EditableShortcutRows => _shortcutRows.Values.Where(row => string.IsNullOrWhiteSpace(ShortcutSearch) || (row.Name + " " + row.Category).Contains(ShortcutSearch, StringComparison.OrdinalIgnoreCase)).OrderBy(row => row.Category).ThenBy(row => row.Name).ToArray();
+
+    // The design's shortcut editor (2437:14832) lists the shortcuts under a
+    // heading per group; Playback first, as its "Basic" group leads there.
+    private static readonly string[] ShortcutCategoryOrder = ["Playback", "Media", "Audio", "Subtitles", "Video", "Window", "Library"];
+    public IReadOnlyList<ShortcutGroup> EditableShortcutGroups => EditableShortcutRows
+        .GroupBy(row => row.Category)
+        .OrderBy(group => Array.IndexOf(ShortcutCategoryOrder, group.Key) is int index and >= 0 ? index : ShortcutCategoryOrder.Length)
+        .ThenBy(group => group.Key, StringComparer.Ordinal)
+        .Select((group, index) => new ShortcutGroup(group.Key, group.ToArray(), index > 0))
+        .ToArray();
+
+    private void NotifyShortcutRows()
+    {
+        Notify(nameof(EditableShortcutRows));
+        Notify(nameof(EditableShortcutGroups));
+        Notify(nameof(HasShortcutResults));
+    }
     public bool SaveShortcut(ShortcutRow row) => TrySaveShortcuts([new PlayerShortcut(row.Command, row.PendingGesture)]);
     public bool TrySaveShortcuts(IEnumerable<PlayerShortcut> changes)
     {
@@ -231,7 +250,7 @@ internal sealed partial class SettingsViewModel : INotifyPropertyChanged
             if (_shortcutRows.TryGetValue(value.Command, out ShortcutRow? row)) row.Refresh(value);
             else _shortcutRows.Add(value.Command, new ShortcutRow(value, shortcut => SaveShortcut(shortcut), shortcut => ResetShortcut(shortcut.Command)));
         }
-        Notify(nameof(EditableShortcutRows));
+        NotifyShortcutRows();
     }
 
     // The category list shows a group header above the first visible page

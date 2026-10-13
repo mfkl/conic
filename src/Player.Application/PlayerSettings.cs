@@ -26,6 +26,7 @@ public sealed record PlayerSettings(
     string Accent = AccentPalette.DefaultHex)
 {
     public const int CurrentVersion = 6;
+    public const double MinimumDefaultSpeed = .25, MaximumDefaultSpeed = 2;
     public static IReadOnlyList<string> Themes { get; } = Array.AsReadOnly(new[] { "Dark", "Light", "System" });
     public static PlayerSettings Default { get; } = new(CurrentVersion, true, true, "System", "Comfortable", 3, 1, 10, 10, true, true, 30, 30, "Default");
 }
@@ -139,7 +140,7 @@ public sealed class PlayerSettingsService
         Accent = AccentPalette.Find(value.Accent) ?? PlayerSettings.Default.Accent,
         Density = value.Density is "Compact" or "Comfortable" ? value.Density : PlayerSettings.Default.Density,
         ControlTimeoutSeconds = Math.Clamp(value.ControlTimeoutSeconds, 1, 15),
-        DefaultSpeed = Math.Clamp(value.DefaultSpeed, .25, 4),
+        DefaultSpeed = NormalizeSpeed(value.DefaultSpeed),
         SkipBackwardSeconds = Math.Clamp(value.SkipBackwardSeconds, 1, 120),
         SkipForwardSeconds = Math.Clamp(value.SkipForwardSeconds, 1, 120),
         ResumeMinimumElapsedSeconds = Math.Clamp(value.ResumeMinimumElapsedSeconds, 0, 3600),
@@ -148,6 +149,13 @@ public sealed class PlayerSettingsService
         NormalizationMaximumLevel = value.NormalizationMaximumLevel is double level && double.IsFinite(level) ? Math.Clamp(level, .5, 10) : null,
         ShortcutOverrides = NormalizeShortcuts(value.ShortcutOverrides),
     };
+
+    // The design's speeds run from 0.25 to 2 in 0.25 steps. Older documents
+    // could hold up to 4 or a value off the steps; they snap to the nearest
+    // step in range instead of falling back to 1.
+    private static double NormalizeSpeed(double speed) => double.IsFinite(speed)
+        ? Math.Clamp(Math.Round(speed * 4, MidpointRounding.AwayFromZero) / 4, PlayerSettings.MinimumDefaultSpeed, PlayerSettings.MaximumDefaultSpeed)
+        : PlayerSettings.Default.DefaultSpeed;
 
     private static IReadOnlyDictionary<string, string>? NormalizeShortcuts(IReadOnlyDictionary<string, string>? shortcuts)
     {

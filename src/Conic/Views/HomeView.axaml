@@ -474,26 +474,38 @@
              so switching layouts keeps each card and its loaded thumbnail. -->
         <DataTemplate x:Key="MediaCardTemplate" x:DataType="vm:HomeMediaItem">
             <Panel Classes="mediaCard">
+                <!-- The design's right-click menu styles (6065:13616) for a
+                     library item: Play, Add to queue, favorites, remove. -->
                 <Panel.ContextMenu>
                     <ContextMenu>
                         <MenuItem Header="Play"
                                   Command="{Binding DataContext.OpenRecentCommand, ElementName=HomeRoot}"
-                                  CommandParameter="{Binding Source}" />
-                        <MenuItem Header="Add to queue"
+                                  CommandParameter="{Binding Source}">
+                            <MenuItem.Icon><controls:VlcIcon Classes="menuIcon" Icon="{StaticResource Icon.Play}" /></MenuItem.Icon>
+                        </MenuItem>
+                        <MenuItem Header="Add to Queue"
                                   Command="{Binding DataContext.EnqueueHomeItemCommand, ElementName=HomeRoot}"
-                                  CommandParameter="{Binding Source}" />
-                        <MenuItem Header="Add to favorites"
+                                  CommandParameter="{Binding Source}">
+                            <MenuItem.Icon><controls:VlcIcon Classes="menuIcon" Icon="{StaticResource Icon.Add}" /></MenuItem.Icon>
+                        </MenuItem>
+                        <MenuItem Header="Add to Favorites"
                                   IsVisible="{Binding !IsFavorite}"
                                   Command="{Binding DataContext.AddFavoriteCommand, ElementName=HomeRoot}"
-                                  CommandParameter="{Binding Source}" />
-                        <MenuItem Header="Remove from favorites"
+                                  CommandParameter="{Binding Source}">
+                            <MenuItem.Icon><controls:VlcIcon Classes="menuIcon" Icon="{StaticResource Icon.Favorite}" /></MenuItem.Icon>
+                        </MenuItem>
+                        <MenuItem Header="Remove from Favorites"
                                   IsVisible="{Binding IsFavorite}"
                                   Command="{Binding DataContext.RemoveFavoriteCommand, ElementName=HomeRoot}"
-                                  CommandParameter="{Binding Source}" />
+                                  CommandParameter="{Binding Source}">
+                            <MenuItem.Icon><controls:VlcIcon Classes="menuIcon" Icon="{StaticResource Icon.FavoriteActive}" /></MenuItem.Icon>
+                        </MenuItem>
                         <Separator />
-                        <MenuItem Header="Remove from this section"
+                        <MenuItem Header="Remove from This Section"
                                   Command="{Binding DataContext.RemoveHomeItemCommand, ElementName=HomeRoot}"
-                                  CommandParameter="{Binding}" />
+                                  CommandParameter="{Binding}">
+                            <MenuItem.Icon><controls:VlcIcon Classes="menuIcon" Icon="{StaticResource Icon.Close}" /></MenuItem.Icon>
+                        </MenuItem>
                     </ContextMenu>
                 </Panel.ContextMenu>
                 <Button Classes="mediaTile"
@@ -565,7 +577,8 @@
                                       Height="24"
                                       Margin="7,2"
                                       VerticalAlignment="Center" />
-                    <Button Classes="titleBar"
+                    <Button x:Name="HomeMoreButton"
+                            Classes="titleBar"
                             Click="OnMore"
                             ToolTip.Tip="Open options"
                             AutomationProperties.Name="Open options">
@@ -758,10 +771,16 @@
                                                   Icon="{StaticResource Icon.More}" />
                                 <Button.Flyout>
                                     <MenuFlyout Placement="BottomEdgeAlignedRight">
-                                        <MenuItem Header="Open file…" Command="{Binding OpenMediaCommand}" />
-                                        <MenuItem Header="Open folder…" Command="{Binding OpenFolderCommand}" />
+                                        <MenuItem Header="Open File…" Command="{Binding OpenMediaCommand}">
+                                            <MenuItem.Icon><controls:VlcIcon Classes="menuIcon" Icon="{StaticResource Icon.File}" /></MenuItem.Icon>
+                                        </MenuItem>
+                                        <MenuItem Header="Open Folder…" Command="{Binding OpenFolderCommand}">
+                                            <MenuItem.Icon><controls:VlcIcon Classes="menuIcon" Icon="{StaticResource Icon.Folder}" /></MenuItem.Icon>
+                                        </MenuItem>
                                         <Separator />
-                                        <MenuItem Header="Manage library…" Command="{Binding OpenLibraryCommand}" />
+                                        <MenuItem Header="Manage Library…" Command="{Binding OpenLibraryCommand}">
+                                            <MenuItem.Icon><controls:VlcIcon Classes="menuIcon" Icon="{StaticResource Icon.Lists}" /></MenuItem.Icon>
+                                        </MenuItem>
                                     </MenuFlyout>
                                 </Button.Flyout>
                             </Button>

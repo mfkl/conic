@@ -88,6 +88,16 @@ public partial class App : Application
             window.EnableLayoutSmoke(desktopArg());
         else if (args.Contains("--playback-review", StringComparer.OrdinalIgnoreCase))
             window.EnablePlaybackReview();
+        else if (args.Contains("--menu-smoke", StringComparer.OrdinalIgnoreCase))
+            window.EnableMenuSmoke(desktopArg());
+        else if (args.FirstOrDefault(arg => arg.StartsWith("--menu-review=", StringComparison.OrdinalIgnoreCase)) is { } review)
+        {
+            // --menu-review=<step>[,WIDTHxHEIGHT]: the size is in DIPs.
+            string[] parts = review["--menu-review=".Length..].Split(',');
+            string[] size = parts.Length > 1 ? parts[1].Split('x') : [];
+            window.EnableMenuReview(parts[0], size.Length == 2 && double.TryParse(size[0], System.Globalization.CultureInfo.InvariantCulture, out double width) &&
+                double.TryParse(size[1], System.Globalization.CultureInfo.InvariantCulture, out double height) ? new Avalonia.Size(width, height) : null);
+        }
 
         IClassicDesktopStyleApplicationLifetime desktopArg() =>
             (IClassicDesktopStyleApplicationLifetime)Application.Current!.ApplicationLifetime!;

@@ -220,9 +220,10 @@
             <StaticResource x:Key="MenuFlyoutItemForegroundPointerOver" ResourceKey="Vlc.Fg.1" />
             <StaticResource x:Key="MenuFlyoutItemForegroundPressed" ResourceKey="Vlc.Fg.1" />
             <StaticResource x:Key="MenuFlyoutItemForegroundDisabled" ResourceKey="Vlc.Fg.A3" />
-            <StaticResource x:Key="MenuFlyoutItemKeyboardAcceleratorTextForeground" ResourceKey="Vlc.Fg.A3" />
-            <StaticResource x:Key="MenuFlyoutItemKeyboardAcceleratorTextForegroundPointerOver" ResourceKey="Vlc.Fg.A2" />
-            <StaticResource x:Key="MenuFlyoutItemKeyboardAcceleratorTextForegroundPressed" ResourceKey="Vlc.Fg.A2" />
+            <!-- Shortcut hints: FG/A2 (the design's FG/A3 is below 4.5:1 on the menu). -->
+            <StaticResource x:Key="MenuFlyoutItemKeyboardAcceleratorTextForeground" ResourceKey="Vlc.Fg.A2" />
+            <StaticResource x:Key="MenuFlyoutItemKeyboardAcceleratorTextForegroundPointerOver" ResourceKey="Vlc.Fg.2" />
+            <StaticResource x:Key="MenuFlyoutItemKeyboardAcceleratorTextForegroundPressed" ResourceKey="Vlc.Fg.2" />
             <StaticResource x:Key="MenuFlyoutItemKeyboardAcceleratorTextForegroundDisabled" ResourceKey="Vlc.Fg.A4" />
             <StaticResource x:Key="MenuFlyoutSubItemChevron" ResourceKey="Vlc.Fg.A2" />
             <StaticResource x:Key="MenuFlyoutSubItemChevronPointerOver" ResourceKey="Vlc.Fg.1" />
@@ -480,9 +481,10 @@
             <StaticResource x:Key="MenuFlyoutItemForegroundPointerOver" ResourceKey="Vlc.Fg.1" />
             <StaticResource x:Key="MenuFlyoutItemForegroundPressed" ResourceKey="Vlc.Fg.1" />
             <StaticResource x:Key="MenuFlyoutItemForegroundDisabled" ResourceKey="Vlc.Fg.A3" />
-            <StaticResource x:Key="MenuFlyoutItemKeyboardAcceleratorTextForeground" ResourceKey="Vlc.Fg.A3" />
-            <StaticResource x:Key="MenuFlyoutItemKeyboardAcceleratorTextForegroundPointerOver" ResourceKey="Vlc.Fg.A2" />
-            <StaticResource x:Key="MenuFlyoutItemKeyboardAcceleratorTextForegroundPressed" ResourceKey="Vlc.Fg.A2" />
+            <!-- Shortcut hints: FG/A2 (the design's FG/A3 is below 4.5:1 on the menu). -->
+            <StaticResource x:Key="MenuFlyoutItemKeyboardAcceleratorTextForeground" ResourceKey="Vlc.Fg.A2" />
+            <StaticResource x:Key="MenuFlyoutItemKeyboardAcceleratorTextForegroundPointerOver" ResourceKey="Vlc.Fg.2" />
+            <StaticResource x:Key="MenuFlyoutItemKeyboardAcceleratorTextForegroundPressed" ResourceKey="Vlc.Fg.2" />
             <StaticResource x:Key="MenuFlyoutItemKeyboardAcceleratorTextForegroundDisabled" ResourceKey="Vlc.Fg.A4" />
             <StaticResource x:Key="MenuFlyoutSubItemChevron" ResourceKey="Vlc.Fg.A2" />
             <StaticResource x:Key="MenuFlyoutSubItemChevronPointerOver" ResourceKey="Vlc.Fg.1" />

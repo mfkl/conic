@@ -2,9 +2,12 @@ using System;
 using System.ComponentModel;
 using System.Linq;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using Player.Application;
 using Player.Contracts;
+using Conic.Controls;
 using Conic.ViewModels;
 
 namespace Conic;
@@ -13,7 +16,10 @@ namespace Conic;
 // settings, and the presentation state that opens and closes them.
 public partial class MainWindow
 {
-    private void OpenSettings()
+    private void OpenSettings() => OpenSettings(null);
+
+    /// <summary>Opens Settings with the focus on <paramref name="focus"/> (the search by default).</summary>
+    private void OpenSettings(Control? focus)
     {
         ExitPictureInPicture();
         CloseRightDrawers();
@@ -25,7 +31,7 @@ public partial class MainWindow
         UpdateOpenErrorSurface();
         _chromeVisibility.Wake();
         SetChromeVisibility(true);
-        Dispatcher.UIThread.Post(() => SettingsPanel.SettingsSearch.Focus());
+        Dispatcher.UIThread.Post(() => (focus ?? SettingsPanel.SettingsSearch).Focus());
     }
 
     private void OnOpenOptions(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
@@ -34,10 +40,113 @@ public partial class MainWindow
         if (open) CloseRightDrawers();
         UrlPanel.IsVisible = false;
         ClearRecentPrompt.IsVisible = false;
+        if (open) PrepareOpenMenu();
         OpenMenu.IsVisible = open;
         UpdateOpenErrorSurface();
         SetChromeVisibility(true);
         if (open) Dispatcher.UIThread.Post(() => OpenMenu.Focus());
+    }
+
+    // Every opening starts on the options page, with the current shortcuts.
+    private void PrepareOpenMenu()
+    {
+        ShowOpenMenuPage(recent: false, focus: false);
+        MenuShortcuts.Apply(OpenMenu, EffectiveShortcuts());
+    }
+
+    private IReadOnlyDictionary<PlayerCommandId, string> EffectiveShortcuts() =>
+        PlayerShortcutPolicy.Effective(_presentation.Registry, _settings.Current.ShortcutOverrides);
+
+    private void OnVideoContextMenuOpening(object? sender, System.ComponentModel.CancelEventArgs e) =>
+        MenuShortcuts.Apply(VideoContextMenu, EffectiveShortcuts());
+
+    private void OnShowRecentPage(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ShowOpenMenuPage(recent: true, focus: true);
+
+    private void OnShowMainMenuPage(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ShowOpenMenuPage(recent: false, focus: true);
+
+    // Open Recent replaces the options with its page; going back focuses the
+    // Open Recent option again.
+    private void ShowOpenMenuPage(bool recent, bool focus)
+    {
+        // Show the new page and move the focus before hiding the old one, so
+        // the focus never sits on a hidden option.
+        (recent ? MoreMenuRecent : MoreMenuMain).IsVisible = true;
+        if (focus) (recent ? RecentBackRow : OpenRecentRow).Focus(NavigationMethod.Directional);
+        (recent ? MoreMenuMain : MoreMenuRecent).IsVisible = false;
+        ClearRecentPrompt.IsVisible = false;
+        ClearRecentButton.IsVisible = _presentation.HasRecentItems;
+        OpenMenuScroll.Offset = default;
+    }
+
+    // Choosing an option closes the menu (before its command runs, so a
+    // dialog or panel it opens keeps the focus). Open Recent and its back
+    // row only change the page; the recent list's remove and clear buttons
+    // keep it open.
+    private void OnOpenMenuClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (e.Source is MenuRow row && !ReferenceEquals(row, OpenRecentRow) && !ReferenceEquals(row, RecentBackRow))
+            CloseOpenMenu();
+    }
+
+    // Menu keys: Up/Down (Home/End) move between the options of the page
+    // that shows, Right or Enter opens Open Recent, and Left, Backspace or
+    // Escape leave it. Escape on the options page closes the menu
+    // (OnPlayerKeyDown). A focused speed selector keeps its arrows.
+    private void OnOpenMenuKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.KeyModifiers != KeyModifiers.None) return;
+        bool recent = MoreMenuRecent.IsVisible;
+        if (recent && e.Key is Key.Left or Key.Back or Key.Escape)
+        {
+            ShowOpenMenuPage(recent: false, focus: true);
+            e.Handled = true;
+            return;
+        }
+        if (!recent && e.Key == Key.Right && e.Source is MenuRow { HasSubmenu: true } submenu)
+        {
+            submenu.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+            e.Handled = true;
+            return;
+        }
+        if (e.Key is not (Key.Up or Key.Down or Key.Home or Key.End)) return;
+        Control page = recent ? MoreMenuRecent : MoreMenuMain;
+        Control[] options = page.GetVisualDescendants().OfType<Control>()
+            .Where(control => control is Button or ComboBox && control.TemplatedParent is null && control.Focusable && control.IsEffectivelyVisible && control.IsEffectivelyEnabled)
+            .ToArray();
+        if (options.Length == 0) return;
+        int current = Array.FindIndex(options, option => option.IsFocused || option.IsKeyboardFocusWithin);
+        int next = e.Key switch
+        {
+            Key.Home => 0,
+            Key.End => options.Length - 1,
+            Key.Up => current < 0 ? options.Length - 1 : (current + options.Length - 1) % options.Length,
+            _ => current < 0 ? 0 : (current + 1) % options.Length,
+        };
+        options[next].Focus(NavigationMethod.Directional);
+        options[next].BringIntoView();
+        e.Handled = true;
+    }
+
+    // From the More menu, the right-click menu or Settings' search: the
+    // shortcut editor is the Controls page of Settings (design 2437:14832).
+    private void OnShowKeyboardShortcuts(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ShowKeyboardShortcuts();
+
+    private void ShowKeyboardShortcuts()
+    {
+        _settingsViewModel.Search = string.Empty;
+        _settingsViewModel.SelectedPage = _settingsViewModel.Pages.First(page => page.Name == "Controls");
+        OpenSettings(SettingsPanel.ShortcutSearchBox);
+        SettingsPanel.BringShortcutsIntoView();
+    }
+
+    private void OnUrlDialogCloseRequested(object? sender, EventArgs e) => CloseUrlPanel();
+
+    // The More menu and the dialogs it opens give focus back to the "…"
+    // button they came from: Home's or the player's.
+    private void RestoreMenuFocus()
+    {
+        if (_presentation.IsHomeOpen) HomeScreen.FocusMore();
+        else RestoreRouteFocus(OpenOptionsButton);
     }
 
     private void ShowUrlPanel()
@@ -58,7 +167,7 @@ public partial class MainWindow
     {
         UrlPanel.IsVisible = false;
         UpdateOpenErrorSurface();
-        RestoreRouteFocus(OpenOptionsButton);
+        RestoreMenuFocus();
     }
 
     private void CloseOpenMenu(bool restoreFocus = true)
@@ -66,7 +175,7 @@ public partial class MainWindow
         OpenMenu.IsVisible = false;
         ClearRecentPrompt.IsVisible = false;
         UpdateOpenErrorSurface();
-        if (restoreFocus) RestoreRouteFocus(OpenOptionsButton);
+        if (restoreFocus) RestoreMenuFocus();
         WakeChrome();
     }
 
@@ -235,7 +344,7 @@ public partial class MainWindow
         SettingsPanel.ResetTransientState();
         UpdateOpenErrorSurface();
         WakeChrome();
-        RestoreRouteFocus(OpenSettingsButton);
+        RestoreRouteFocus(OpenOptionsButton);
         if (_presentation.IsPlaying) { _autoHideTimer.Stop(); _autoHideTimer.Start(); }
     }
 

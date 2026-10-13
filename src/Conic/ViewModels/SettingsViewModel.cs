@@ -78,7 +78,10 @@ internal sealed partial class SettingsViewModel : INotifyPropertyChanged
     ];
 
     public IReadOnlyList<string> DensityOptions { get; } = ["Comfortable", "Compact"];
-    public IReadOnlyList<string> SpeedOptions { get; } = ["0.5", "1", "1.5", "2"];
+    // The design's range: 0.25 to 2 in 0.25 steps, as the playback panel's slider.
+    public IReadOnlyList<string> SpeedOptions { get; } = Enumerable.Range(1, (int)(PlayerSettings.MaximumDefaultSpeed * 4))
+        .Select(step => (step / 4d).ToString(System.Globalization.CultureInfo.InvariantCulture))
+        .ToArray();
     public IReadOnlyList<SettingChoice> ThemeChoices { get; }
     public IReadOnlyList<SettingChoice> AccentChoices { get; }
 

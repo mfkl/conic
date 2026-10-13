@@ -62,4 +62,11 @@ public enum PlayerCommandId
     ToggleHomeLayout,
     TogglePictureInPicture,
     DismissResume,
+    // Settings › Controls › Skip Amounts: the short skip is SkipBackward and SkipForward.
+    SkipBackwardVeryShort,
+    SkipForwardVeryShort,
+    SkipBackwardMedium,
+    SkipForwardMedium,
+    SkipBackwardLong,
+    SkipForwardLong,
 }

@@ -29,6 +29,24 @@ public sealed class PlayerShortcutAndDiagnosticsTests
         Assert.Contains("already assigned", error);
     }
 
+    [Fact]
+    public void TryFindNamesTheCommandADispatchWouldRun()
+    {
+        PlayerCommandRegistry registry = new();
+        int skips = 0;
+        registry.Register(new(PlayerCommandId.SkipForwardVeryShort, "Very short skip forward", "Playback", "Shift+Right"), _ => skips++, _ => true);
+        registry.Register(new(PlayerCommandId.SkipForwardLong, "Long skip forward", "Playback", "Ctrl+Alt+Right"), _ => skips++, _ => false);
+        IReadOnlyDictionary<PlayerCommandId, string> active = PlayerShortcutPolicy.Effective(registry, null);
+
+        Assert.True(PlayerShortcutPolicy.TryFind(registry, active, "shift+right", out PlayerCommandId command));
+        Assert.Equal(PlayerCommandId.SkipForwardVeryShort, command);
+        Assert.Equal(0, skips);
+        // A command that cannot run now is not found, as a dispatch skips it.
+        Assert.False(PlayerShortcutPolicy.TryFind(registry, active, "Ctrl+Alt+Right", out _));
+        Assert.True(PlayerShortcutPolicy.TryDispatch(registry, active, "Shift+Right"));
+        Assert.Equal(1, skips);
+    }
+
     [Theory]
     [InlineData("Ctrl+O", false, "Ctrl+O")]
     [InlineData("Ctrl+O", true, "Meta+O")]

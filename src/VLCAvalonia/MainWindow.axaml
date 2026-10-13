@@ -419,8 +419,8 @@
                 </StackPanel>
                 <TextBlock x:Name="TopChromeTitle"
                            Classes="windowTitle"
-                           Text="{Binding MediaTitle}"
-                           ToolTip.Tip="{Binding MediaTitle}" />
+                           Text="{Binding TitleBarText}"
+                           ToolTip.Tip="{Binding TitleBarText}" />
                 <StackPanel Orientation="Horizontal" Spacing="10">
                     <controls:WindowCaptionButtons>
                         <!-- Design: minimize, maximize, fullscreen, close. It

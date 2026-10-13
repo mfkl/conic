@@ -101,6 +101,9 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
             _volume = _wantedVolume.Volume;
             _isMuted = _wantedVolume.Muted;
         }
+        // Settings › Interface › Keep window above other windows: the More
+        // menu's Always on Top, remembered across runs.
+        _isAlwaysOnTop = settings?.Current.KeepOnTop ?? false;
         _queue = transport as IQueueTransport;
         _mediaControls = transport as IMediaCapabilitiesTransport;
         _mediaInformationTransport = transport as IMediaInformationTransport;
@@ -116,6 +119,8 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
             if (!updated.RememberResumeHistory) { _pendingResume = null; _resumeReady = false; NotifyPendingResume(); }
             OnPropertyChanged(nameof(SkipBackwardLabel)); OnPropertyChanged(nameof(SkipForwardLabel)); OnPropertyChanged(nameof(SkipBackwardMenuText)); OnPropertyChanged(nameof(SkipForwardMenuText)); OnPropertyChanged(nameof(RecentItems));
             ApplyVolumeSettings();
+            Set(ref _isAlwaysOnTop, updated.KeepOnTop, nameof(IsAlwaysOnTop));
+            OnPropertyChanged(nameof(TitleBarText));
         };
         PlayerCommandRegistry registry = new();
         Registry = registry;
@@ -176,13 +181,13 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
         {
             QueueRepeatMode next = QueueState.Repeat switch { QueueRepeatMode.None => QueueRepeatMode.CurrentItem, QueueRepeatMode.CurrentItem => QueueRepeatMode.All, _ => QueueRepeatMode.None };
             _queue?.SetRepeatMode(next);
-            RememberQueueModes(s => s with { QueueRepeat = QueueModeSettings.Setting(next) });
+            RememberSetting(s => s with { QueueRepeat = QueueModeSettings.Setting(next) });
         }, _ => _queue is not null);
         registry.Register(new(PlayerCommandId.QueueShuffle, "Shuffle queue", "Playback"), _ =>
         {
             bool shuffle = QueueState.Order != QueueOrder.Random;
             _queue?.SetOrder(QueueModeSettings.Order(shuffle));
-            RememberQueueModes(s => s with { QueueShuffle = shuffle });
+            RememberSetting(s => s with { QueueShuffle = shuffle });
         }, _ => _queue is not null);
         registry.Register(new(PlayerCommandId.LoadPlaylist, "Load playlist", "Media"), _ => _ = LoadPlaylistAsync(), _ => _mediaSourcePicker is IPlaylistDocumentPicker && _queue is not null);
         registry.Register(new(PlayerCommandId.SavePlaylist, "Save playlist", "Media"), _ => _ = SavePlaylistAsync(), _ => _mediaSourcePicker is IPlaylistDocumentPicker && QueueItems.Count > 0);
@@ -261,7 +266,7 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
     public event EventHandler? PlaybackFinished;
     private bool _stopRequested;
 
-    private void RememberQueueModes(Func<PlayerSettings, PlayerSettings> update)
+    private void RememberSetting(Func<PlayerSettings, PlayerSettings> update)
     {
         try { _settings?.Update(update); }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException) { _diagnostic?.Invoke(exception.ToString()); }
@@ -414,7 +419,11 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
     public string VolumeHelpText => $"0 to {MaximumVolume:0} percent. Values above 100 percent are amplified.";
     public string VolumeText => IsVolumeAmplified ? $"Volume {Volume:0}% · Amplified" : $"Volume {Volume:0}%";
     public VolumeLevel VolumeLevel => VolumeLevels.For(IsMuted, Volume);
-    public bool IsAlwaysOnTop { get => _isAlwaysOnTop; set => Set(ref _isAlwaysOnTop, value); }
+    public bool IsAlwaysOnTop
+    {
+        get => _isAlwaysOnTop;
+        set { if (Set(ref _isAlwaysOnTop, value) && _settings is not null && _settings.Current.KeepOnTop != value) RememberSetting(s => s with { KeepOnTop = value }); }
+    }
     public bool IsMuted
     {
         get => _isMuted;
@@ -435,7 +444,11 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
             OnPropertyChanged(nameof(PlaybackRateText));
         }
     }
-    public string MediaTitle { get => _mediaTitle; private set => Set(ref _mediaTitle, value); }
+    public string MediaTitle { get => _mediaTitle; private set { if (Set(ref _mediaTitle, value)) OnPropertyChanged(nameof(TitleBarText)); } }
+    /// <summary>The title bar's text: the media's name, or the app's with
+    /// Settings › Interface › Show the file name in the title bar off.</summary>
+    public string TitleBarText => _settings?.Current.ShowFileNameInTitle == false ? AppName : MediaTitle;
+    private const string AppName = "VLC Avalonia";
     public bool IsFullscreen { get => _isFullscreen; set { if (Set(ref _isFullscreen, value)) OnPropertyChanged(nameof(FullscreenName)); } }
     public string OpenError
     {

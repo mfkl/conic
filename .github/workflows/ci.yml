@@ -330,8 +330,8 @@ jobs:
 
   package_macos:
     name: Package / macOS ${{ matrix.architecture }}
-    # Not attached to releases until the bundle is qualified on a real Mac,
-    # so it only needs the managed app tests.
+    # Attached to releases. Signed ad hoc and not notarized; the README tells
+    # users how to open it.
     if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
     needs: desktop
     runs-on: ${{ matrix.os }}
@@ -375,7 +375,7 @@ jobs:
           REF_NAME: ${{ github.ref_name }}
           RUN_NUMBER: ${{ github.run_number }}
         run: |
-          $version = if ($env:REF_TYPE -eq 'tag') { $env:REF_NAME.TrimStart('v') } else { "0.1.0-ci.$env:RUN_NUMBER" }
+          $version = if ($env:REF_TYPE -eq 'tag') { $env:REF_NAME.TrimStart('v') } else { "0.2.0-ci.$env:RUN_NUMBER" }
           ./eng/package-macos.ps1 -VlcDirectory '${{ steps.vlc.outputs.directory }}' -Version $version -OutputDirectory artifacts/packages
       - name: Upload package
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -421,7 +421,7 @@ jobs:
           REF_NAME: ${{ github.ref_name }}
           RUN_NUMBER: ${{ github.run_number }}
         run: |
-          $version = if ($env:REF_TYPE -eq 'tag') { $env:REF_NAME.TrimStart('v') } else { "0.1.0-ci.$env:RUN_NUMBER" }
+          $version = if ($env:REF_TYPE -eq 'tag') { $env:REF_NAME.TrimStart('v') } else { "0.2.0-ci.$env:RUN_NUMBER" }
           ./eng/package-linux.ps1 -Version $version -OutputDirectory artifacts/packages
       - name: Upload package
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -471,7 +471,7 @@ jobs:
           REF_NAME: ${{ github.ref_name }}
           RUN_NUMBER: ${{ github.run_number }}
         run: |
-          $version = if ($env:REF_TYPE -eq 'tag') { $env:REF_NAME.TrimStart('v') } else { "0.1.0-ci.$env:RUN_NUMBER" }
+          $version = if ($env:REF_TYPE -eq 'tag') { $env:REF_NAME.TrimStart('v') } else { "0.2.0-ci.$env:RUN_NUMBER" }
           ./eng/package.ps1 -VlcDirectory '${{ steps.vlc.outputs.directory }}' -Version $version -OutputDirectory artifacts/packages
       - name: Upload package
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -484,24 +484,67 @@ jobs:
           retention-days: 14
 
   release:
-    name: Draft release
-    if: startsWith(github.ref, 'refs/tags/v')
-    needs: package
+    name: Release
+    # A v* tag publishes that release; a push to main replaces the rolling
+    # "continuous" pre-release. Linux joins once it has a GPU video output.
+    if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main'
+    needs: [package, package_macos]
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 15
     permissions:
       contents: write
+    concurrency:
+      group: release-${{ github.ref }}
+      cancel-in-progress: false
     steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          sparse-checkout: docs/releases
+          persist-credentials: false
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: package-win-x64
+          path: dist/win-x64
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: package-macos-*
           path: dist
-      - name: Create draft GitHub release
+      - name: Collect release files
+        run: |
+          mkdir release
+          find dist -name '*.zip' -exec cp {} release/ \;
+          find dist -name SHA256SUMS.txt -exec cat {} + | tr -d '\r' > release/SHA256SUMS.txt
+          (cd release && sha256sum --check SHA256SUMS.txt)
+          test "$(find release -name '*.zip' | wc -l)" -eq 3
+      - name: Publish tagged release
+        if: github.ref_type == 'tag'
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           TAG: ${{ github.ref_name }}
         run: |
-          gh release create "$TAG" --draft --verify-tag --title "VLC Avalonia $TAG" \
-            --notes "Portable Windows x64 build with the official VLC 3.0.24 runtime. Extract the ZIP and run VLCAvalonia.exe. Verify the download with SHA256SUMS.txt." \
-            $(find dist -type f)
+          notes="docs/releases/$TAG.md"
+          if [ ! -f "$notes" ]; then
+            notes=$(mktemp)
+            echo "Portable builds with the official VLC 3.0.24 runtime for Windows x64 and macOS (Apple silicon and Intel). They are not signed; see the README for how to open them. Verify the downloads with SHA256SUMS.txt." > "$notes"
+          fi
+          # A tag with a suffix, such as v0.2.0-preview.1, is a pre-release.
+          prerelease=$([[ "$TAG" == *-* ]] && echo --prerelease || true)
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            gh release upload "$TAG" release/* --clobber
+          else
+            gh release create "$TAG" --verify-tag $prerelease --title "VLC Avalonia ${TAG#v}" --notes-file "$notes" release/*
+          fi
+      - name: Replace the continuous pre-release
+        if: github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          # Events made with GITHUB_TOKEN start no workflow, so recreating the
+          # tag does not run CI again.
+          gh release delete continuous --cleanup-tag --yes || true
+          gh release create continuous --prerelease --latest=false --target "$GITHUB_SHA" \
+            --title "Continuous build" \
+            --notes "Latest build of main ($GITHUB_SHA), replaced on every push. Portable builds for Windows x64 and macOS (Apple silicon and Intel), not signed; see the README for how to open them. Verify the downloads with SHA256SUMS.txt." \
+            release/*

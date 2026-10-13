@@ -91,8 +91,21 @@ even on failure.
 `Package / macOS arm64` and `Package / macOS x64` run on `main`, tags and
 manual runs: `eng/package-macos.ps1` builds an ad hoc signed
 `VLC Avalonia.app` with VLC bundled in `Contents/Frameworks/vlc` and uploads
-the ZIP. They are not attached to releases until the bundle is qualified on a
-real Mac.
+the ZIP.
+
+## Releases
+
+The `Release` job runs after the Windows and both macOS package jobs:
+
+- A `v*` tag publishes that release with the three ZIPs and one combined
+  `SHA256SUMS.txt`. A tag with a suffix, such as `v0.2.0-preview.1`, is a
+  pre-release. The notes come from `docs/releases/<tag>.md` when that file
+  exists. Re-running the job on an existing release replaces its files.
+- A push to `main` replaces the `continuous` pre-release with the latest
+  builds of `main`.
+
+Linux joins the releases once it has a GPU video output. The builds are not
+signed.
 
 ## Full Windows coverage
 

@@ -64,8 +64,8 @@ the SHA-256 in `eng/versions.json`:
 Each build creates a new folder under `artifacts/packages` with the ZIP,
 checksums, manifest and logs. Package tests extract outside the repository and
 run the included executable with isolated profiles and no development runtime
-override. CI builds the same ZIP on pushes to `main` and attaches it to a draft
-GitHub release for `v*` tags. [Quick start](docs/WINDOWS_QUICK_START.md) ·
+override. CI builds the same ZIP, plus the macOS ZIPs, on pushes to `main` and
+on `v*` tags, and publishes them as a GitHub release (see the [CI guide](docs/CI.md#releases)). [Quick start](docs/WINDOWS_QUICK_START.md) ·
 [Dependency/distribution status](docs/contest/DEPENDENCIES.md)
 
 An early modern Avalonia desktop UI for VLC 3. The Windows video path uses a

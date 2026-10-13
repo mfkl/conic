@@ -59,15 +59,14 @@ public sealed record PlayerSettings(
     string DefaultZoom = "fit",
     // Performance.
     string HardwareDecoding = "Automatic",
-    int PostProcessing = 0,
     int SkipLoopFilter = 0,
     int DecodingThreads = 0,
     bool DropLateFrames = true,
-    // Network: caching in milliseconds, used as is only with Buffering Custom.
+    // Network: caching in milliseconds, used as is only with Buffering Custom
+    // (live capture and discs keep VLC's defaults: the app opens neither).
     string Buffering = "Normal",
     int FileCaching = PlayerEngineOptions.DefaultFileCaching,
     int NetworkCaching = PlayerEngineOptions.DefaultNetworkCaching,
-    int LiveCaching = PlayerEngineOptions.DefaultLiveCaching,
     string HttpProxy = "",
     // The proxy password, protected for the current Windows user (DPAPI), base64.
     string? HttpProxyPasswordProtected = null,

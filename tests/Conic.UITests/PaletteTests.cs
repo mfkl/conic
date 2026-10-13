@@ -92,7 +92,7 @@ public sealed class PaletteTests
             .ToDictionary(element => (string)element.Attribute(Xaml + "Key")!);
     }
 
-    private static string RepositoryRoot()
+    internal static string RepositoryRoot()
     {
         for (DirectoryInfo? directory = new(AppContext.BaseDirectory); directory is not null; directory = directory.Parent)
             if (File.Exists(Path.Combine(directory.FullName, "conic.slnx"))) return directory.FullName;

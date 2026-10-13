@@ -77,7 +77,11 @@ Homebrew and run `eng/test-macos.ps1` twice:
   lent pixel buffer returned, no CPU copies) and a 10-cycle engine smoke with
   the IOSurface video output;
 - `-Window`, in the runner's desktop session: GPU and CPU-fallback video
-  smokes with screen captures, compositor reattachment and PiP.
+  smokes with screen captures, compositor reattachment and PiP, then the UI
+  smokes (Home, drawer, menus, playback controls, Stop, media information,
+  thumbnails, accessibility and scale, Settings) and the engine and audio
+  settings smokes against `eng/make-settings-fixtures.ps1`'s fixtures. Each
+  case starts from its own profile.
 
 The runners are virtual machines with a paravirtualized GPU; on arm64 VLC
 selects VideoToolbox there. This qualifies the transport and lifecycle, not

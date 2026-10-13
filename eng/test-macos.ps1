@@ -4,8 +4,11 @@
 #  - IOSurface video output: BGRA pixel buffers lent and returned, with
 #    hardware (VideoToolbox) and software decoding;
 #  - with -Window, the styled window: GPU and CPU-fallback video, video
-#    adjustments, PiP, compositor reattachment, and AppKit clicks and menu
-#    shortcuts on the caption row.
+#    adjustments, PiP, compositor reattachment, AppKit clicks and menu
+#    shortcuts on the caption row, and the UI smokes (Home, drawer, menus,
+#    playback controls, Settings, accessibility), including the engine and
+#    audio settings against fixtures from eng/make-settings-fixtures.ps1
+#    (needs ffmpeg; the screen samples need the Screen Recording permission).
 # Window cases need a logged-in GUI session.
 [CmdletBinding()]
 param(
@@ -40,12 +43,13 @@ if ($LASTEXITCODE -ne 0) { throw "App build failed; see $output/app-build.log" }
 $app = Join-Path $productRoot 'src/VLCAvalonia/bin/Debug/net10.0/VLCAvalonia.dll'
 $environment = @{
     VLC_AVALONIA_TEST_MEDIA = $mediaPath
-    VLC_AVALONIA_PROFILE = Join-Path $output 'profile'
     VLC_AVALONIA_ARTIFACTS = $output
+    VLCLR_ROOT = Join-Path $productRoot 'external/vlclr'
 }
 if ($VlcDirectory) { $environment.VLC_DIRECTORY = (Resolve-Path -LiteralPath $VlcDirectory).Path }
 
-function Invoke-Case([string] $Name, [string[]] $Arguments) {
+# Each case starts from its own profile; $Overrides replaces environment entries.
+function Invoke-Case([string] $Name, [string[]] $Arguments, [hashtable] $Overrides = @{}) {
     $log = Join-Path $output "$Name.log"
     $start = [Diagnostics.ProcessStartInfo]::new((Get-Command dotnet).Source)
     $start.UseShellExecute = $false
@@ -53,7 +57,11 @@ function Invoke-Case([string] $Name, [string[]] $Arguments) {
     $start.RedirectStandardError = $true
     $start.ArgumentList.Add($app)
     foreach ($argument in $Arguments) { $start.ArgumentList.Add($argument) }
+    $caseProfile = Join-Path $output "profile-$Name"
+    if (Test-Path -LiteralPath $caseProfile) { Remove-Item -LiteralPath $caseProfile -Recurse -Force }
+    $start.Environment['VLC_AVALONIA_PROFILE'] = $caseProfile
     foreach ($entry in $environment.GetEnumerator()) { $start.Environment[$entry.Key] = $entry.Value }
+    foreach ($entry in $Overrides.GetEnumerator()) { $start.Environment[$entry.Key] = $entry.Value }
     $watch = [Diagnostics.Stopwatch]::StartNew()
     $process = [Diagnostics.Process]::Start($start)
     $stderr = $process.StandardError.ReadToEndAsync()
@@ -101,10 +109,24 @@ if ($Window) {
     $cases['compositor'] = @('--ui-smoke')
     $cases['pip'] = @('--pip-smoke')
     $cases['caption-click'] = @('--caption-click-smoke')
+    foreach ($smoke in 'home', 'home-session', 'layout', 'drawer', 'menu', 'playback-controls', 'stop', 'media-information',
+        'thumbnail', 'accessibility', 'scale', 'settings', 'settings-apply', 'audio-settings', 'engine-settings') {
+        $cases[$smoke] = @("--$smoke-smoke")
+    }
+    # The drawer's native tracks and the settings smokes play the fixtures;
+    # Quick Look makes no thumbnail for Matroska, so Home's gets an MP4.
+    $fixtures = Join-Path $output 'settings-fixtures'
+    & (Join-Path $PSScriptRoot 'make-settings-fixtures.ps1') -Output $fixtures | Out-Null
+    $cases['drawer-native'] = @('--drawer-native-smoke')
+    $overrides = @{
+        'drawer-native' = @{ VLC_AVALONIA_TEST_MEDIA = Join-Path $fixtures 'languages.mkv' }
+        'thumbnail' = @{ VLC_AVALONIA_TEST_MEDIA = Join-Path $fixtures 'gop.mp4' }
+    }
 }
 $failed = [Collections.Generic.List[string]]::new()
 foreach ($case in $cases.GetEnumerator()) {
-    if (-not (Invoke-Case $case.Key $case.Value)) { $failed.Add($case.Key) }
+    $caseOverrides = if ($overrides -and $overrides.Contains($case.Key)) { $overrides[$case.Key] } else { @{} }
+    if (-not (Invoke-Case $case.Key $case.Value $caseOverrides)) { $failed.Add($case.Key) }
 }
 # The hardware pass logs VLC's module selection. Without a VideoToolbox
 # hardware decoder for the clip, VLC falls back to avcodec.

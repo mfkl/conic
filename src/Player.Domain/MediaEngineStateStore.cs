@@ -90,7 +90,8 @@ public sealed class MediaEngineStateStore
                 Position = Math.Clamp(position, 0, 1),
                 Elapsed = elapsed < TimeSpan.Zero ? TimeSpan.Zero : elapsed,
                 Duration = duration < TimeSpan.Zero ? TimeSpan.Zero : duration,
-                Volume = Math.Clamp(volume, 0, 2),
+                // VLC 3 amplifies up to 300 % (Settings › Audio › Maximum volume).
+                Volume = Math.Clamp(volume, 0, 3),
                 CanSeek = canSeek,
                 Error = error,
                 IsMuted = isMuted,

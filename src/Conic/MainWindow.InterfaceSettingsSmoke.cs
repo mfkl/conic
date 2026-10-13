@@ -8,7 +8,7 @@ using Player.Application;
 using Player.Contracts;
 using Conic.Interop;
 using Conic.Interop.Windows;
-using Sample = Conic.Interop.Windows.ScreenSampler.Sample;
+using Sample = Conic.Interop.ScreenSample;
 
 namespace Conic;
 

@@ -86,7 +86,7 @@ public partial class MainWindow
                 KeyEventArgs escape = new() { Key = Key.Escape };
                 OnPlayerKeyDown(this, escape);
                 Require(escape.Handled && !SettingsPanel.IsVisible, "Escape closes Settings");
-                Console.WriteLine("[settings-smoke] PASS all nine categories, dialog bounds, theme and accent radio groups applied live, 1280x720 and 480x360, editors, search/no results, reset confirmation, Home focus, Media information and Escape");
+                Console.WriteLine("[settings-smoke] PASS all eleven categories, dialog bounds, theme and accent radio groups applied live, 1280x720 and 480x360, editors, search/no results, reset confirmation, Home focus, Media information and Escape");
                 desktop.Shutdown(0);
             }
             catch (Exception error) { Console.Error.WriteLine($"[settings-smoke] FAIL {error}"); desktop.Shutdown(1); }

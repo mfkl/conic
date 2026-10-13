@@ -264,6 +264,104 @@
             <Setter Property="VerticalContentAlignment" Value="Center" />
         </Style>
 
+        <!-- Startup volume (design 3176:16574): the segmented control stacked,
+             "Remember last volume" above "Always start at" and its value. -->
+        <Style Selector="Border.segmented.startupVolume">
+            <Setter Property="Height" Value="NaN" />
+        </Style>
+        <Style Selector="controls|SettingRow NumericUpDown.startupVolume">
+            <Setter Property="Height" Value="32" />
+            <Setter Property="MinHeight" Value="32" />
+        </Style>
+        <!-- Equalizer (design 3178:16769): a BG/A1 panel, radius 6; the bar
+             opens it; the preamp and ten bands are 8-wide vertical sliders
+             (the setting sliders turned upright), the frequency in 12 FG/A2
+             and the gain in a BG/B2 box. -->
+        <Style Selector="Border.equalizer">
+            <Setter Property="Margin" Value="0,5" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Background" Value="{DynamicResource Vlc.Bg.A1}" />
+        </Style>
+        <Style Selector="Button.equalizerToggle">
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="Height" Value="36" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="Foreground" Value="{DynamicResource Vlc.Fg.A2}" />
+        </Style>
+        <Style Selector="StackPanel.equalizerBand">
+            <Setter Property="Spacing" Value="6" />
+            <Setter Property="MinWidth" Value="28" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="TextBlock.bandFrequency">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="Foreground" Value="{DynamicResource Vlc.Fg.A2}" />
+        </Style>
+        <Style Selector="Border.bandGain">
+            <Setter Property="Padding" Value="4,3" />
+            <Setter Property="CornerRadius" Value="4" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="Background" Value="{DynamicResource Vlc.Bg.B2}" />
+        </Style>
+        <Style Selector="Border.bandGain > TextBlock">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Foreground" Value="{DynamicResource Vlc.Fg.A2}" />
+        </Style>
+        <Style Selector="Slider.band">
+            <Setter Property="Orientation" Value="Vertical" />
+            <Setter Property="Width" Value="24" />
+            <Setter Property="Height" Value="150" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="Background" Value="{DynamicResource Vlc.Bg.B2}" />
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Grid Margin="{TemplateBinding Padding}">
+                        <Border x:Name="TrackBackground"
+                                Width="8"
+                                HorizontalAlignment="Center"
+                                CornerRadius="4"
+                                BorderThickness="1"
+                                BorderBrush="Transparent"
+                                Background="{TemplateBinding Background}" />
+                        <Track Name="PART_Track" Orientation="Vertical" IsDirectionReversed="True" Margin="0,2"
+                               Minimum="{TemplateBinding Minimum}" Maximum="{TemplateBinding Maximum}"
+                               Value="{TemplateBinding Value}">
+                            <Track.DecreaseButton>
+                                <RepeatButton Name="PART_DecreaseButton" Theme="{StaticResource PlayerSliderFill}" Padding="8,0" CornerRadius="4" />
+                            </Track.DecreaseButton>
+                            <Track.Thumb>
+                                <Thumb Theme="{StaticResource PlayerSliderThumb}" Width="20" Height="8" CornerRadius="3" />
+                            </Track.Thumb>
+                            <Track.IncreaseButton>
+                                <RepeatButton Name="PART_IncreaseButton" Theme="{StaticResource PlayerSliderFill}" />
+                            </Track.IncreaseButton>
+                        </Track>
+                    </Grid>
+                </ControlTemplate>
+            </Setter>
+        </Style>
+        <Style Selector="Slider.band /template/ RepeatButton#PART_DecreaseButton, Slider.band:pointerover /template/ RepeatButton#PART_DecreaseButton, Slider.band:pressed /template/ RepeatButton#PART_DecreaseButton">
+            <Setter Property="Background" Value="{DynamicResource Vlc.Bg.AccentBright}" />
+        </Style>
+        <Style Selector="Slider.band /template/ RepeatButton#PART_IncreaseButton, Slider.band:pointerover /template/ RepeatButton#PART_IncreaseButton, Slider.band:pressed /template/ RepeatButton#PART_IncreaseButton">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+        <Style Selector="Slider.band /template/ Thumb">
+            <Setter Property="Background" Value="{DynamicResource PlayerAccent}" />
+        </Style>
+        <Style Selector="Slider.band:pointerover /template/ Thumb, Slider.band:pressed /template/ Thumb">
+            <Setter Property="Background" Value="{DynamicResource PlayerAccentHover}" />
+        </Style>
+        <Style Selector="Slider.band:focus-visible /template/ Border#TrackBackground">
+            <Setter Property="BorderBrush" Value="{DynamicResource PlayerAccent}" />
+        </Style>
+
         <!-- Segmented control (Theme): 320x36 BG/B2 container (radius 6,
              padding 2, gap 2), segments radius 4 in BG/A4, the selected one
              in BG/Accent Bright with an accent label. -->
@@ -881,40 +979,143 @@
                                         </controls:SettingRow>
                                     </StackPanel>
 
-                                    <!-- Media › Audio -->
+                                    <!-- Media › Audio (design 3073:15879, 3180:17398): Output, Volume,
+                                         Loudness, Effects, Tracks and Advanced. The effects, replay
+                                         gain and the device reach a playing core (Live). Not built:
+                                         speaker setup, night mode, two-pass equalizer, chorus/flanger,
+                                         visualizer, media role, stereo widening (see the phase 9c log). -->
                                     <StackPanel Classes="settingsSection" IsVisible="{Binding IsAudio}">
-                                        <TextBlock Classes="sectionTitle" Text="Volume" />
-                                        <controls:SettingRow Label="Remember volume" Badge="Restart" Help="Starts with the volume and mute of your last session; when off, VLC starts at 100%" ControlWidth="68">
-                                            <CheckBox IsChecked="{Binding RememberVolume, Mode=TwoWay}"
-                                                      AutomationProperties.Name="Remember volume"
-                                                      AutomationProperties.HelpText="Starts with the volume and mute of your last session; when off, VLC starts at 100%" />
+                                        <TextBlock Classes="sectionTitle" Text="Output" />
+                                        <controls:SettingRow Label="Enable audio" Badge="Next open" Help="When off, media plays without sound" ControlWidth="68">
+                                            <CheckBox IsChecked="{Binding AudioEnabled, Mode=TwoWay}" AutomationProperties.Name="Enable audio" AutomationProperties.HelpText="When off, media plays without sound" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Output device" Badge="Live" Help="Where the sound plays, with the Default output module; a device that is not connected plays on the system default" IsVisible="{Binding ShowsAudioDevice}">
+                                            <ComboBox ItemsSource="{Binding AudioDevices}" SelectedItem="{Binding AudioDevice, Mode=TwoWay}" IsEnabled="{Binding CanChooseAudioDevice}" AutomationProperties.Name="Output device" AutomationProperties.HelpText="Where the sound plays, with the Default output module; a device that is not connected plays on the system default" />
                                         </controls:SettingRow>
                                     </StackPanel>
                                     <StackPanel Classes="settingsSection" IsVisible="{Binding IsAudio}">
-                                        <TextBlock Classes="sectionTitle" Text="Output" />
-                                        <controls:SettingRow Label="Output module" Badge="Restart" Help="VLC uses this audio output; choosing a device is not available yet">
-                                            <ComboBox ItemsSource="{Binding AudioOutputOptions}"
-                                                      SelectedItem="{Binding AudioOutputModule, Mode=TwoWay}"
-                                                      AutomationProperties.Name="Output module" />
+                                        <TextBlock Classes="sectionTitle" Text="Volume" />
+                                        <controls:SettingRow Label="Maximum volume" Badge="Live" Help="The volume slider goes up to this; above 100% the sound is amplified">
+                                            <Grid ColumnDefinitions="*,52" ColumnSpacing="8">
+                                                <Slider Classes="setting" Minimum="100" Maximum="300" TickFrequency="25" IsSnapToTickEnabled="True" SmallChange="25" LargeChange="50" Value="{Binding MaximumVolume, Mode=TwoWay}" AutomationProperties.Name="Maximum volume" AutomationProperties.HelpText="The volume slider goes up to this; above 100% the sound is amplified" />
+                                                <TextBlock Grid.Column="1" Classes="settingValue" Text="{Binding MaximumVolume, StringFormat='{}{0:0}%'}" />
+                                            </Grid>
                                         </controls:SettingRow>
-                                        <controls:SettingRow Label="Normalization level" Badge="Restart" Help="Maximum volume normalization level; empty turns normalization off">
-                                            <NumericUpDown Minimum="0.5"
-                                                           Maximum="10"
-                                                           Increment="0.5"
-                                                           Value="{Binding NormalizationMaximumLevel, Mode=TwoWay}"
-                                                           AutomationProperties.Name="Normvol max level" />
+                                        <controls:SettingRow Label="Startup volume" Badge="Restart" Help="Remember last volume starts with the volume and mute of your last session; otherwise VLC starts at the volume set here">
+                                            <Border Classes="segmented startupVolume">
+                                                <StackPanel Spacing="2">
+                                                    <RadioButton Classes="segment" Height="32" GroupName="StartupVolume" Content="Remember last volume" IsChecked="{Binding RemembersVolume, Mode=TwoWay}" AutomationProperties.Name="Remember last volume" AutomationProperties.HelpText="Starts with the volume and mute of your last session" />
+                                                    <Grid ColumnDefinitions="*,*" ColumnSpacing="2" Height="32">
+                                                        <RadioButton Classes="segment" GroupName="StartupVolume" Content="Always start at (%)" IsChecked="{Binding StartsAtFixedVolume, Mode=TwoWay}" AutomationProperties.Name="Always start at a fixed volume" />
+                                                        <NumericUpDown Grid.Column="1" Classes="startupVolume" Minimum="0" Maximum="{Binding MaximumVolume}" Increment="5" FormatString="0" Value="{Binding StartupVolume, Mode=TwoWay}" IsEnabled="{Binding StartsAtFixedVolume}" AutomationProperties.Name="Startup volume (percent)" />
+                                                    </Grid>
+                                                </StackPanel>
+                                            </Border>
                                         </controls:SettingRow>
-                                        <controls:SettingRow Label="S/PDIF passthrough" Badge="Restart" ControlWidth="68">
-                                            <CheckBox IsChecked="{Binding AudioPassthrough, Mode=TwoWay}"
-                                                      AutomationProperties.Name="S/PDIF passthrough" />
+                                        <controls:SettingRow Label="Volume step (%)" Badge="Live" Help="How much the arrow keys move the volume slider">
+                                            <NumericUpDown Minimum="1" Maximum="25" Increment="1" FormatString="0" Value="{Binding VolumeStep, Mode=TwoWay}" AutomationProperties.Name="Volume step (percent)" AutomationProperties.HelpText="How much the arrow keys move the volume slider" />
+                                        </controls:SettingRow>
+                                    </StackPanel>
+                                    <StackPanel Classes="settingsSection" IsVisible="{Binding IsAudio}">
+                                        <TextBlock Classes="sectionTitle" Text="Loudness" />
+                                        <controls:SettingRow Label="Normalize loudness" Badge="Live" Help="Keeps loud passages down to the target level" ControlWidth="68">
+                                            <CheckBox IsChecked="{Binding NormalizeLoudness, Mode=TwoWay}" AutomationProperties.Name="Normalize loudness" AutomationProperties.HelpText="Keeps loud passages down to the target level" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Target level" Badge="Live" Help="The loudest level normalization allows; lower is quieter (VLC's default is 2)">
+                                            <NumericUpDown Minimum="0.5" Maximum="10" Increment="0.5" FormatString="0.0" Value="{Binding NormalizationTarget, Mode=TwoWay}" IsEnabled="{Binding NormalizeLoudness}" AutomationProperties.Name="Normalization target level" AutomationProperties.HelpText="The loudest level normalization allows; lower is quieter (VLC's default is 2)" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Replay gain" Badge="Live" Help="Plays files at the loudness their replay gain tags give, per track or per album">
+                                            <ComboBox ItemsSource="{Binding ReplayGainModes}" SelectedItem="{Binding ReplayGain, Mode=TwoWay}" AutomationProperties.Name="Replay gain" AutomationProperties.HelpText="Plays files at the loudness their replay gain tags give, per track or per album" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Replay gain preamp (dB)" Badge="Live" Help="Added to the gain of files with replay gain tags">
+                                            <NumericUpDown Minimum="-20" Maximum="20" Increment="0.5" FormatString="0.0" Value="{Binding ReplayGainPreamp, Mode=TwoWay}" IsEnabled="{Binding HasReplayGain}" AutomationProperties.Name="Replay gain preamp (dB)" AutomationProperties.HelpText="Added to the gain of files with replay gain tags" />
+                                        </controls:SettingRow>
+                                    </StackPanel>
+                                    <StackPanel Classes="settingsSection" IsVisible="{Binding IsAudio}">
+                                        <TextBlock Classes="sectionTitle" Text="Effects" />
+                                        <controls:SettingRow Label="Equalizer" Badge="Live" Help="Shapes the sound with ten bands, from bass to treble" ControlWidth="68">
+                                            <CheckBox IsChecked="{Binding Equalizer, Mode=TwoWay}" AutomationProperties.Name="Equalizer" AutomationProperties.HelpText="Shapes the sound with ten bands, from bass to treble" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Equalizer preset" Badge="Live" Help="Fills the bands; changing a band makes it Custom">
+                                            <ComboBox ItemsSource="{Binding EqualizerPresets}" SelectedItem="{Binding EqualizerPreset, Mode=TwoWay}" AutomationProperties.Name="Equalizer preset" AutomationProperties.HelpText="Fills the bands; changing a band makes it Custom" />
+                                        </controls:SettingRow>
+                                        <!-- The design's EQ panel (3178:16769): an Open/Close bar, then the
+                                             preamp and ten bands as vertical sliders with their gains. -->
+                                        <Border Classes="equalizer">
+                                            <StackPanel>
+                                                <Button Classes="equalizerToggle" Command="{Binding ToggleEqualizerCommand}" AutomationProperties.Name="{Binding EqualizerToggleText}">
+                                                    <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                                                        <TextBlock Text="{Binding EqualizerToggleText}" VerticalAlignment="Center" />
+                                                        <controls:VlcIcon Width="16" Height="16" Icon="{StaticResource Icon.ChevronDown}" IsVisible="{Binding !IsEqualizerOpen}" />
+                                                        <controls:VlcIcon Width="16" Height="16" Icon="{StaticResource Icon.ChevronUp}" IsVisible="{Binding IsEqualizerOpen}" />
+                                                    </StackPanel>
+                                                </Button>
+                                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="4" Margin="12,4,12,14" IsVisible="{Binding IsEqualizerOpen}">
+                                                    <StackPanel Classes="equalizerBand">
+                                                        <Slider Classes="band" Minimum="-20" Maximum="20" SmallChange="0.5" LargeChange="2" Value="{Binding EqualizerPreamp, Mode=TwoWay}" AutomationProperties.Name="Equalizer preamp" />
+                                                        <TextBlock Classes="bandFrequency" Text="Preamp" />
+                                                        <Border Classes="bandGain"><TextBlock Text="{Binding EqualizerPreampText}" /></Border>
+                                                    </StackPanel>
+                                                    <ItemsControl Grid.Column="1" ItemsSource="{Binding EqualizerBands}">
+                                                        <ItemsControl.ItemsPanel>
+                                                            <ItemsPanelTemplate><UniformGrid Rows="1" /></ItemsPanelTemplate>
+                                                        </ItemsControl.ItemsPanel>
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate x:DataType="viewModels:EqualizerBand">
+                                                                <StackPanel Classes="equalizerBand">
+                                                                    <Slider Classes="band" Minimum="-20" Maximum="20" SmallChange="0.5" LargeChange="2" Value="{Binding Gain, Mode=TwoWay}" AutomationProperties.Name="{Binding Name}" />
+                                                                    <TextBlock Classes="bandFrequency" Text="{Binding Frequency}" />
+                                                                    <Border Classes="bandGain"><TextBlock Text="{Binding GainText}" /></Border>
+                                                                </StackPanel>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+                                                </Grid>
+                                            </StackPanel>
+                                        </Border>
+                                        <controls:SettingRow Label="Spatial audio" Badge="Live" Help="Renders the sound in space, in the mode below" ControlWidth="68">
+                                            <CheckBox IsChecked="{Binding SpatialAudio, Mode=TwoWay}" AutomationProperties.Name="Spatial audio" AutomationProperties.HelpText="Renders the sound in space, in the mode below" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Spatial audio mode" Badge="Live" Help="Headphone virtualization places the sound around you on headphones; Room adds the reverberation of a room">
+                                            <ComboBox ItemsSource="{Binding SpatialAudioModes}" SelectedItem="{Binding SpatialAudioMode, Mode=TwoWay}" IsEnabled="{Binding SpatialAudio}" AutomationProperties.Name="Spatial audio mode" AutomationProperties.HelpText="Headphone virtualization places the sound around you on headphones; Room adds the reverberation of a room" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Compressor" Badge="Live" Help="Narrows the gap between loud and quiet passages" ControlWidth="68">
+                                            <CheckBox IsChecked="{Binding Compressor, Mode=TwoWay}" AutomationProperties.Name="Compressor" AutomationProperties.HelpText="Narrows the gap between loud and quiet passages" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Pitch shift (semitones)" Badge="Live" Help="Raises or lowers the pitch without changing the speed">
+                                            <NumericUpDown Minimum="-12" Maximum="12" Increment="0.5" FormatString="0.0" Value="{Binding PitchShift, Mode=TwoWay}" AutomationProperties.Name="Pitch shift (semitones)" AutomationProperties.HelpText="Raises or lowers the pitch without changing the speed" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Karaoke" Badge="Live" Help="Removes the voice mixed in the center of stereo music" ControlWidth="68">
+                                            <CheckBox IsChecked="{Binding Karaoke, Mode=TwoWay}" AutomationProperties.Name="Karaoke" AutomationProperties.HelpText="Removes the voice mixed in the center of stereo music" />
                                         </controls:SettingRow>
                                     </StackPanel>
                                     <StackPanel Classes="settingsSection" IsVisible="{Binding IsAudio}">
                                         <TextBlock Classes="sectionTitle" Text="Tracks" />
-                                        <controls:SettingRow Label="Audio tracks and timing">
+                                        <controls:SettingRow Label="Preferred audio language" Badge="Next open" Help="Language codes in order of preference, such as en, fr; empty plays the default track. The same setting as in Playback">
+                                            <TextBox Text="{Binding AudioLanguage, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" PlaceholderText="Media default (e.g. en, fr)" AutomationProperties.Name="Preferred audio language" AutomationProperties.HelpText="Language codes in order of preference, such as en, fr; empty plays the default track. The same setting as in Playback" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Audio delay (ms)" Badge="Next open" Help="The delay new media starts with; positive plays the sound later. The Audio panel changes the media that is playing">
+                                            <NumericUpDown Minimum="-10000" Maximum="10000" Increment="50" FormatString="0" Value="{Binding AudioDelay, Mode=TwoWay}" AutomationProperties.Name="Default audio delay (milliseconds)" AutomationProperties.HelpText="The delay new media starts with; positive plays the sound later. The Audio panel changes the media that is playing" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Audio tracks and timing" Help="Choose tracks and adjust timing during playback">
                                             <Button Classes="secondary settingAction"
                                                     Content="Audio tracks and timing"
                                                     Command="{Binding OpenAudioControlsCommand}" />
+                                        </controls:SettingRow>
+                                    </StackPanel>
+                                    <StackPanel Classes="settingsSection" IsVisible="{Binding IsAudio}">
+                                        <TextBlock Classes="sectionTitle" Text="Advanced" />
+                                        <controls:SettingRow Label="Output module" Badge="Next open" Help="VLC's audio output; Default is MMDevice, the one the device list is for">
+                                            <ComboBox ItemsSource="{Binding AudioOutputOptions}" SelectedItem="{Binding AudioOutputModule, Mode=TwoWay}" AutomationProperties.Name="Output module" AutomationProperties.HelpText="VLC's audio output; Default is MMDevice, the one the device list is for" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Pass compressed audio to the receiver" Badge="Next open" Help="Sends Dolby Digital and DTS undecoded to an S/PDIF or HDMI receiver that accepts them" ControlWidth="68">
+                                            <CheckBox IsChecked="{Binding AudioPassthrough, Mode=TwoWay}" AutomationProperties.Name="Pass compressed audio to the receiver" AutomationProperties.HelpText="Sends Dolby Digital and DTS undecoded to an S/PDIF or HDMI receiver that accepts them" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Detect Dolby Surround" Badge="Next open" Help="Automatic follows the media's Dolby Surround flag; On treats every stereo track as Dolby Surround; Off never does">
+                                            <ComboBox ItemsSource="{Binding DolbySurroundModes}" SelectedItem="{Binding DolbySurround, Mode=TwoWay}" AutomationProperties.Name="Detect Dolby Surround" AutomationProperties.HelpText="Automatic follows the media's Dolby Surround flag; On treats every stereo track as Dolby Surround; Off never does" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Resampling quality" Badge="Next open" Help="When the sample rate changes: Best keeps the highest frequencies, Fast takes the least processor time">
+                                            <ComboBox ItemsSource="{Binding ResamplerQualities}" SelectedItem="{Binding ResamplerQuality, Mode=TwoWay}" AutomationProperties.Name="Resampling quality" AutomationProperties.HelpText="When the sample rate changes: Best keeps the highest frequencies, Fast takes the least processor time" />
                                         </controls:SettingRow>
                                     </StackPanel>
 

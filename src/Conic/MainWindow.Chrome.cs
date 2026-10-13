@@ -55,6 +55,7 @@ public partial class MainWindow
         if (_chromeVisibility.IsFullscreen != fullscreen) _chromeVisibility.SetFullscreen(fullscreen);
         _presentation.IsFullscreen = fullscreen;
         ApplyVideoLayout();
+        ApplyMinimizedPause();
     }
 
     /// <summary>

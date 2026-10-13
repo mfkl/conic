@@ -337,7 +337,8 @@ public sealed class PlayerSettingsServiceTests
         // it used to keep the playback controls from hiding.
         MemoryStorage storage = new() { Content = """
             {"Version":7,"ResumePlayback":true,"RememberVolume":true,"Theme":"Dark","Density":"Comfortable","ControlTimeoutSeconds":4,"DefaultSpeed":1,
-             "SkipBackwardSeconds":10,"SkipForwardSeconds":10,"ReduceMotion":true,"SubtitleLanguage":"none","Equalizer":true,"EqualizerPreset":"rock"}
+             "SkipBackwardSeconds":10,"SkipForwardSeconds":10,"ReduceMotion":true,"SubtitleLanguage":"none","Equalizer":true,"EqualizerPreset":"rock",
+             "EqualizerPreamp":5,"EqualizerBands":"8 4.8 -5.6 -8 -3.2 4 8.8 11.2 11.2 11.2"}
             """ };
         PlayerSettingsService service = new(storage);
 

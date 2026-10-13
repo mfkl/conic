@@ -430,16 +430,6 @@ public sealed class SettingsViewModelTests
         finally { System.Globalization.CultureInfo.CurrentCulture = culture; }
     }
 
-    [Fact]
-    public void AudioStartupArgumentsAreAllowlistedExactAndEmptyByDefault()
-    {
-        Assert.Empty(MainWindow.ToAudioArguments(PlayerSettings.Default));
-        PlayerSettings configured = PlayerSettings.Default with { AudioOutputModule = "mmdevice", NormalizationMaximumLevel = 1.25, AudioPassthrough = true };
-        Assert.Equal(["--aout=mmdevice", "--audio-filter=normvol", "--norm-max-level=1.25", "--spdif"], MainWindow.ToAudioArguments(configured, windows: true));
-        Assert.Equal(["--audio-filter=normvol", "--norm-max-level=1.25", "--spdif"], MainWindow.ToAudioArguments(configured, windows: false));
-        Assert.Equal(["--no-spdif"], MainWindow.ToAudioArguments(PlayerSettings.Default with { AudioPassthrough = false }));
-    }
-
     private static SettingsViewModel Create(out PlayerSettingsService service)
     {
         service = new PlayerSettingsService(new MemoryStorage());

@@ -10,7 +10,7 @@ internal sealed partial class SettingsViewModel
     public bool HasShortcutResults => EditableShortcutRows.Count != 0;
     public bool HasError => !string.IsNullOrWhiteSpace(ErrorMessage);
     public bool IsCompactDensity => Density == "Compact";
-    public bool CanResetPage => IsGeneral || IsInterface || IsPrivacy || IsControls || IsPlayback || IsVideo || IsAudio || IsNetwork || IsPerformance;
+    public bool CanResetPage => IsGeneral || IsInterface || IsPrivacy || IsControls || IsPlayback || IsVideo || IsAudio || IsSubtitles || IsLibrary || IsNetwork || IsPerformance;
 
     public ICommand OpenAudioControlsCommand { get; private set; } = null!;
     public ICommand OpenSubtitleControlsCommand { get; private set; } = null!;

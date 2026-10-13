@@ -67,13 +67,14 @@ internal sealed partial class SettingsViewModel : INotifyPropertyChanged
     public IReadOnlyList<SettingsPage> Pages { get; } =
     [
         new("General", "App", "Preferences", "appearance theme dark light system accent color colour"),
-        new("Interface", "App", "Interface", "density compact comfortable controls hide auto-hide timeout reduce motion accessibility animation"),
+        new("Interface", "App", "Interface", "density compact comfortable controls hide auto-hide timeout reduce motion accessibility animation window size position remember keep on top above always title bar file name fullscreen minimized pause resize fit video"),
         new("Privacy", "App", "Privacy", "history recent media resume positions clear remember forget"),
-        new("Controls", "App", "Hotkeys", "keyboard shortcuts hotkeys commands skip backward forward seconds"),
+        new("Controls", "App", "Hotkeys", "keyboard shortcuts hotkeys commands skip backward forward seconds very short medium long mouse click double click scroll wheel horizontal reverse direction"),
         new("Playback", "Media", "Playback", "continue resume left off position near end start playing autoplay paused speed default rate language audio subtitle repeat loop shuffle random order stop after each item finishes quit home seek precisely fast avi repair index"),
         new("Video", "Media", "Video", "enable video fullscreen screensaver sleep display picture hue brightness contrast saturation gamma color colour reset deinterlace deinterlacing method aspect ratio crop zoom framing adjustments"),
         new("Audio", "Media", "Audio", "enable volume maximum startup step output device module normalize normalization loudness target replay gain preamp equalizer eq preset bands bass treble spatial headphones room compressor pitch karaoke language tracks delay dolby surround resampler resampling quality passthrough spdif receiver"),
-        new("Subtitles", "Media", "Subtitles", "render tracks delay synchronization"),
+        new("Subtitles", "Media", "Subtitles", "render tracks delay synchronization enable language encoding character set autoload load automatically matching file name appearance font size bold color colour opacity outline shadow background position margin on-screen messages feedback shortcuts filename osd"),
+        new("Library", "Media", "Folder", "opening files add queue enqueue replace folder subfolders hidden files"),
         new("Network", "System", "Link", "buffering caching cache latency local files network streams proxy http password certificates trust tls ssl cipher security"),
         new("Performance", "System", "Preferences", "hardware accelerated decoding gpu d3d11 direct3d dxva loop filter deblocking h.264 threads drop frames late smooth"),
         new("Advanced", "System", "Info", "engine diagnostics media information codec streams"),
@@ -97,7 +98,7 @@ internal sealed partial class SettingsViewModel : INotifyPropertyChanged
             if (value is null || !Set(ref _selectedPage, value)) return;
             ConfirmReset = false;
             if (IsAudio) RefreshAudioDevices();
-            foreach (string property in new[] { nameof(IsGeneral), nameof(IsInterface), nameof(IsPrivacy), nameof(IsControls), nameof(IsPlayback), nameof(IsVideo), nameof(IsAudio), nameof(IsSubtitles), nameof(IsNetwork), nameof(ShowsProxyOnNetwork), nameof(ShowsSecurityOnNetwork), nameof(IsPerformance), nameof(IsAdvanced), nameof(DialogTitle), nameof(CanResetPage) })
+            foreach (string property in new[] { nameof(IsGeneral), nameof(IsInterface), nameof(IsPrivacy), nameof(IsControls), nameof(IsPlayback), nameof(IsVideo), nameof(IsAudio), nameof(IsSubtitles), nameof(IsLibrary), nameof(IsNetwork), nameof(ShowsProxyOnNetwork), nameof(ShowsSecurityOnNetwork), nameof(IsPerformance), nameof(IsAdvanced), nameof(DialogTitle), nameof(CanResetPage) })
                 Notify(property);
         }
     }
@@ -110,6 +111,7 @@ internal sealed partial class SettingsViewModel : INotifyPropertyChanged
     public bool IsVideo => SelectedPage.Name == "Video";
     public bool IsAudio => SelectedPage.Name == "Audio";
     public bool IsSubtitles => SelectedPage.Name == "Subtitles";
+    public bool IsLibrary => SelectedPage.Name == "Library";
     public bool IsNetwork => SelectedPage.Name == "Network";
     public bool IsPerformance => SelectedPage.Name == "Performance";
     public bool IsAdvanced => SelectedPage.Name == "Advanced";
@@ -204,7 +206,7 @@ internal sealed partial class SettingsViewModel : INotifyPropertyChanged
     {
         foreach (string name in new[] { nameof(ResumePlayback), nameof(RememberVolume), nameof(RememberRecentMedia), nameof(RememberResumeHistory), nameof(ResumeMinimumElapsedSeconds), nameof(ResumeMaximumRemainingSeconds), nameof(Theme), nameof(Accent), nameof(Density), nameof(IsCompactDensity), nameof(ControlTimeoutSeconds), nameof(ReduceMotion), nameof(AutoHideControls), nameof(DefaultSpeed), nameof(SkipBackwardSeconds), nameof(SkipForwardSeconds), nameof(AudioOutputModule), nameof(AudioPassthrough) })
             Notify(name);
-        foreach (string name in EngineRowProperties)
+        foreach (string name in EngineRowProperties.Concat(SubtitleRowProperties).Concat(InterfaceRowProperties))
             Notify(name);
         RefreshAudioRows();
         RefreshChoices();
@@ -228,23 +230,25 @@ internal sealed partial class SettingsViewModel : INotifyPropertyChanged
     }
 
     // Each page resets what it shows; Controls also restores the default
-    // shortcuts. Subtitles and Advanced have no settings of their own.
+    // shortcuts. Advanced has no settings of its own.
     private void ResetPage()
     {
         PlayerSettings defaults = PlayerSettings.Default;
         if (IsControls)
         {
-            Update(s => s with { SkipBackwardSeconds = defaults.SkipBackwardSeconds, SkipForwardSeconds = defaults.SkipForwardSeconds });
+            Update(s => ResetControlsPage(s, defaults));
             ResetAllShortcuts();
             return;
         }
         Update(s =>
             IsGeneral ? s with { Theme = defaults.Theme, Accent = defaults.Accent } :
-            IsInterface ? s with { Density = defaults.Density, ControlTimeoutSeconds = defaults.ControlTimeoutSeconds, ReduceMotion = defaults.ReduceMotion, AutoHideControls = defaults.AutoHideControls } :
+            IsInterface ? ResetInterfacePage(s, defaults) :
             IsPrivacy ? s with { RememberRecentMedia = defaults.RememberRecentMedia, RememberResumeHistory = defaults.RememberResumeHistory } :
             IsPlayback ? ResetPlaybackPage(s, defaults) :
             IsVideo ? ResetVideoPage(s, defaults) :
             IsAudio ? ResetAudioPage(s, defaults) :
+            IsSubtitles ? ResetSubtitlesPage(s, defaults) :
+            IsLibrary ? ResetLibraryPage(s, defaults) :
             IsNetwork ? ResetNetworkPage(s, defaults) :
             IsPerformance ? ResetPerformancePage(s, defaults) :
             s);

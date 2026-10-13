@@ -116,6 +116,10 @@ public sealed class SettingsViewModelTests
     [InlineData("hardware", "Performance")]
     [InlineData("proxy", "Network")]
     [InlineData("caching", "Network")]
+    [InlineData("mouse", "Controls")]
+    [InlineData("title bar", "Interface")]
+    [InlineData("encoding", "Subtitles")]
+    [InlineData("hidden", "Library")]
     public void SearchSelectsTheMatchingPage(string query, string page)
     {
         SettingsViewModel viewModel = Create(out _);
@@ -142,8 +146,8 @@ public sealed class SettingsViewModelTests
     {
         SettingsViewModel viewModel = Create(out _);
 
-        Assert.Equal(["General", "Interface", "Privacy", "Controls", "Playback", "Video", "Audio", "Subtitles", "Network", "Performance", "Advanced"], viewModel.Pages.Select(page => page.Name));
-        Assert.Equal(["App", "App", "App", "App", "Media", "Media", "Media", "Media", "System", "System", "System"], viewModel.Pages.Select(page => page.Group));
+        Assert.Equal(["General", "Interface", "Privacy", "Controls", "Playback", "Video", "Audio", "Subtitles", "Library", "Network", "Performance", "Advanced"], viewModel.Pages.Select(page => page.Name));
+        Assert.Equal(["App", "App", "App", "App", "Media", "Media", "Media", "Media", "Media", "System", "System", "System"], viewModel.Pages.Select(page => page.Group));
         Assert.Equal(["General", "Playback", "Network"], viewModel.Pages.Where(page => page.ShowsGroupHeader).Select(page => page.Name));
         Assert.Equal("General Settings", viewModel.DialogTitle);
         viewModel.SelectedPage = viewModel.Pages[6];
@@ -230,11 +234,89 @@ public sealed class SettingsViewModelTests
         Assert.Equal((true, 1d, false), (service.Current.ResumePlayback, service.Current.DefaultSpeed, service.Current.RememberVolume));
         Reset("Audio");
         Assert.Equal((true, "Default", 2d), (service.Current.RememberVolume, service.Current.AudioOutputModule, service.Current.DefaultSpeed));
-        foreach (string page in new[] { "Subtitles", "Advanced" })
+        viewModel.SelectedPage = viewModel.Pages.Single(candidate => candidate.Name == "Advanced");
+        Assert.False(viewModel.CanResetPage);
+    }
+
+    [Fact]
+    public void SubtitlesControlsInterfaceAndLibraryResetOnlyTheirOwnRows()
+    {
+        SettingsViewModel viewModel = Create(out PlayerSettingsService service);
+        PlayerSettings changed = PlayerSettings.Default with
         {
+            SubtitlesEnabled = false, SubtitleLanguage = "fr", SubtitleColor = "#FFFF00", SubtitleDelay = 500, ShortcutFeedback = false,
+            MediumSkipSeconds = 30, ClickAction = "PlayPause", ReverseWheel = true,
+            KeepOnTop = true, ShowFileNameInTitle = false, ShowControlsInFullscreen = false,
+            EnqueueOnOpen = true, FolderOpening = "FolderOnly", ShowHiddenFiles = true,
+        };
+        PlayerSettings Reset(string page)
+        {
+            service.Update(_ => changed);
             viewModel.SelectedPage = viewModel.Pages.Single(candidate => candidate.Name == page);
-            Assert.False(viewModel.CanResetPage);
+            Assert.True(viewModel.CanResetPage);
+            viewModel.ResetPageCommand.Execute(null);
+            return service.Current with { ShortcutOverrides = null };
         }
+
+        Assert.Equal(changed with
+        {
+            SubtitlesEnabled = true, SubtitleLanguage = "", SubtitleColor = "#FFFFFF", SubtitleDelay = 0, ShortcutFeedback = true,
+        }, Reset("Subtitles"));
+        Assert.Equal(changed with { MediumSkipSeconds = 60, ClickAction = "None", ReverseWheel = false }, Reset("Controls"));
+        Assert.Equal(changed with { KeepOnTop = false, ShowFileNameInTitle = true, ShowControlsInFullscreen = true }, Reset("Interface"));
+        Assert.Equal(changed with { EnqueueOnOpen = false, FolderOpening = "Subfolders", ShowHiddenFiles = false }, Reset("Library"));
+    }
+
+    [Fact]
+    public void SubtitleColorsSlidersAndChoicesMapToTheSettings()
+    {
+        SettingsViewModel viewModel = Create(out PlayerSettingsService service);
+
+        // Colors: any case, with or without #; anything else keeps the value in effect.
+        viewModel.SubtitleColor = "ff8800";
+        Assert.Equal("#FF8800", service.Current.SubtitleColor);
+        viewModel.SubtitleColor = "orange";
+        Assert.Equal("#FF8800", service.Current.SubtitleColor);
+        Assert.Equal("#FF8800", viewModel.SubtitleColor);
+        Assert.Equal(Avalonia.Media.Color.Parse("#FF8800"), Assert.IsAssignableFrom<Avalonia.Media.ISolidColorBrush>(viewModel.SubtitleColorSwatch).Color);
+
+        // Sliders: whole percents, half seconds, whole seconds.
+        viewModel.SubtitleOpacity = 42.4;
+        viewModel.SubtitleBackgroundOpacity = 80.6;
+        viewModel.ShortcutFeedbackSeconds = 1.3;
+        viewModel.FileNameSeconds = 6.7;
+        Assert.Equal((42, 81, 1.5, 7), (service.Current.SubtitleOpacity, service.Current.SubtitleBackgroundOpacity, service.Current.ShortcutFeedbackSeconds, service.Current.FileNameSeconds));
+
+        // Choices hold the values the options map.
+        viewModel.SubtitleMatching = viewModel.SubtitleMatchings.Single(option => option.Value == "4");
+        viewModel.SubtitleEncoding = viewModel.SubtitleEncodings.Single(option => option.Value == "Windows-1251");
+        viewModel.HorizontalWheelAction = viewModel.WheelActions.Single(option => option.Value == "Volume");
+        viewModel.FolderOpening = viewModel.FolderOpenings.Single(option => option.Value == "FolderOnly");
+        Assert.Equal((4, "Windows-1251", "Volume", "FolderOnly"), (service.Current.SubtitleMatching, service.Current.SubtitleEncoding, service.Current.HorizontalWheelAction, service.Current.FolderOpening));
+        Assert.Contains("--sub-autodetect-fuzzy=4", PlayerEngineOptions.Arguments(service.Current, windows: true));
+
+        // The preferred language is Playback's field.
+        viewModel.SubtitleLanguage = "fr";
+        Assert.Equal("fr", service.Current.SubtitleLanguage);
+    }
+
+    [Theory]
+    [InlineData(nameof(PlayerSettings.SubtitleTextScale), "Live")]
+    [InlineData(nameof(PlayerSettings.SubtitleColor), "Live")]
+    [InlineData(nameof(PlayerSettings.SubtitleOpacity), "Next open")]
+    [InlineData(nameof(PlayerSettings.SubtitleFont), "Next open")]
+    [InlineData(nameof(PlayerSettings.ShowFileNameOnStart), "Next open")]
+    [InlineData(nameof(PlayerSettings.ShortcutFeedback), "Live")]
+    [InlineData(nameof(PlayerSettings.MediumSkipSeconds), "Live")]
+    [InlineData(nameof(PlayerSettings.WheelAction), "Live")]
+    [InlineData(nameof(PlayerSettings.KeepOnTop), "Live")]
+    [InlineData(nameof(PlayerSettings.ResizeToVideo), "Next open")]
+    [InlineData(nameof(PlayerSettings.RememberWindowGeometry), "Restart")]
+    [InlineData(nameof(PlayerSettings.EnqueueOnOpen), "Next open")]
+    [InlineData(nameof(PlayerSettings.ShowHiddenFiles), "Next open")]
+    public void PhaseNineDRowsAreTaggedWithTheirApplyMode(string key, string tag)
+    {
+        Assert.Equal(tag, Create(out _).LabelFor(key));
     }
 
     [Fact]

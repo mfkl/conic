@@ -1,8 +1,10 @@
+using System.Windows.Input;
 using Player.Application;
+using VLCAvalonia.Commands;
 
 namespace VLCAvalonia.ViewModels;
 
-// Playback rows (phase 9b). Most of them are
+// Playback and Video rows (phase 9b). Most of them are
 // libVLC options the next open's core starts with (PlayerEngineOptions); the
 // choices offered are the ones PlayerEngineOptions knows how to map.
 internal sealed partial class SettingsViewModel
@@ -11,6 +13,9 @@ internal sealed partial class SettingsViewModel
     [
         nameof(ResumeMode), nameof(AutoPlay), nameof(AudioLanguage), nameof(SubtitleLanguage), nameof(QueueRepeat), nameof(QueueShuffle),
         nameof(StopAfterEachItem), nameof(PlaybackFinished), nameof(SeekPrecisely), nameof(AviRepair),
+        nameof(VideoEnabled), nameof(StartFullscreen), nameof(StopScreensaver), nameof(Hue), nameof(Brightness), nameof(Contrast),
+        nameof(Saturation), nameof(Gamma), nameof(CanAdjustGamma), nameof(Deinterlace), nameof(DeinterlaceMethod), nameof(DefaultAspectRatio),
+        nameof(DefaultCrop), nameof(DefaultZoom),
     ];
 
     private PlayerSettings Current => _service.Current;
@@ -43,11 +48,57 @@ internal sealed partial class SettingsViewModel
     public IReadOnlyList<SettingOption> AviRepairModes => PlayerEngineOptions.AviRepairModes;
     public SettingOption AviRepair { get => Find(AviRepairModes, Current.AviRepair); set { if (value is not null) Update(s => s with { AviRepair = value.Value }); } }
 
+    // Video › Output. The screensaver row is Windows only (DisplayRequest).
+    public bool VideoEnabled { get => Current.VideoEnabled; set => Update(s => s with { VideoEnabled = value }); }
+    public bool StartFullscreen { get => Current.StartFullscreen; set => Update(s => s with { StartFullscreen = value }); }
+    public bool StopScreensaver { get => Current.StopScreensaver; set => Update(s => s with { StopScreensaver = value }); }
+    public bool ShowsScreensaver { get; } = OperatingSystem.IsWindows();
+
+    // Video › Picture. Sliders write on every step; equal values are skipped.
+    public double Hue { get => Current.Hue; set => UpdatePicture(Current.Hue, value, (s, v) => s with { Hue = v }); }
+    public double Brightness { get => Current.Brightness; set => UpdatePicture(Current.Brightness, value, (s, v) => s with { Brightness = v }); }
+    public double Contrast { get => Current.Contrast; set => UpdatePicture(Current.Contrast, value, (s, v) => s with { Contrast = v }); }
+    public double Saturation { get => Current.Saturation; set => UpdatePicture(Current.Saturation, value, (s, v) => s with { Saturation = v }); }
+    public double Gamma { get => Current.Gamma; set => UpdatePicture(Current.Gamma, value, (s, v) => s with { Gamma = v }); }
+    // VLC's Direct3D 11 adjust filter (hardware decoding) has no gamma.
+    public bool CanAdjustGamma => Current.HardwareDecoding == "Off";
+    public ICommand ResetPictureCommand => _resetPictureCommand ??= new RelayCommand(_ => Update(s => s with
+    {
+        Hue = PlayerSettings.Default.Hue, Brightness = PlayerSettings.Default.Brightness, Contrast = PlayerSettings.Default.Contrast,
+        Saturation = PlayerSettings.Default.Saturation, Gamma = PlayerSettings.Default.Gamma,
+    }));
+    private ICommand? _resetPictureCommand;
+
+    private void UpdatePicture(double current, double value, Func<PlayerSettings, double, PlayerSettings> update)
+    {
+        double rounded = Math.Round(value, 2);
+        if (double.IsFinite(rounded) && rounded != current) Update(s => update(s, rounded));
+    }
+
+    // Video › Deinterlacing and Framing.
+    public IReadOnlyList<SettingOption> DeinterlaceModes => PlayerEngineOptions.DeinterlaceModes;
+    public SettingOption Deinterlace { get => Find(DeinterlaceModes, Current.Deinterlace); set { if (value is not null) Update(s => s with { Deinterlace = value.Value }); } }
+    public IReadOnlyList<SettingOption> DeinterlaceMethods => PlayerEngineOptions.DeinterlaceMethods;
+    public SettingOption DeinterlaceMethod { get => Find(DeinterlaceMethods, Current.DeinterlaceMethod); set { if (value is not null) Update(s => s with { DeinterlaceMethod = value.Value }); } }
+    public IReadOnlyList<SettingOption> AspectRatios => PlayerEngineOptions.AspectRatios;
+    public SettingOption DefaultAspectRatio { get => Find(AspectRatios, Current.DefaultAspectRatio); set { if (value is not null) Update(s => s with { DefaultAspectRatio = value.Value }); } }
+    public IReadOnlyList<SettingOption> Crops => PlayerEngineOptions.Crops;
+    public SettingOption DefaultCrop { get => Find(Crops, Current.DefaultCrop); set { if (value is not null) Update(s => s with { DefaultCrop = value.Value }); } }
+    public IReadOnlyList<SettingOption> Zooms => PlayerEngineOptions.Zooms;
+    public SettingOption DefaultZoom { get => Find(Zooms, Current.DefaultZoom); set { if (value is not null) Update(s => s with { DefaultZoom = value.Value }); } }
+
     private static PlayerSettings ResetPlaybackPage(PlayerSettings s, PlayerSettings d) => s with
     {
         ResumePlayback = d.ResumePlayback, ResumeAutomatically = d.ResumeAutomatically, ResumeMinimumElapsedSeconds = d.ResumeMinimumElapsedSeconds,
         ResumeMaximumRemainingSeconds = d.ResumeMaximumRemainingSeconds, DefaultSpeed = d.DefaultSpeed, AutoPlay = d.AutoPlay,
         AudioLanguage = d.AudioLanguage, SubtitleLanguage = d.SubtitleLanguage, QueueRepeat = d.QueueRepeat, QueueShuffle = d.QueueShuffle,
         StopAfterEachItem = d.StopAfterEachItem, PlaybackFinished = d.PlaybackFinished, SeekPrecisely = d.SeekPrecisely, AviRepair = d.AviRepair,
+    };
+
+    private static PlayerSettings ResetVideoPage(PlayerSettings s, PlayerSettings d) => s with
+    {
+        VideoEnabled = d.VideoEnabled, StartFullscreen = d.StartFullscreen, StopScreensaver = d.StopScreensaver, Hue = d.Hue, Brightness = d.Brightness,
+        Contrast = d.Contrast, Saturation = d.Saturation, Gamma = d.Gamma, Deinterlace = d.Deinterlace, DeinterlaceMethod = d.DeinterlaceMethod,
+        DefaultAspectRatio = d.DefaultAspectRatio, DefaultCrop = d.DefaultCrop, DefaultZoom = d.DefaultZoom,
     };
 }

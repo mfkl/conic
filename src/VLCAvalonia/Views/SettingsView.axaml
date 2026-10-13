@@ -193,6 +193,65 @@
         <Style Selector="controls|SettingRow NumericUpDown">
             <Setter Property="VerticalContentAlignment" Value="Center" />
         </Style>
+        <!-- Picture sliders (design: Video › Picture): the speed slider's
+             8-tall BG/B2 track, BG/Accent Bright fill and 8x20 accent handle,
+             without ticks; the value is shown at the right. -->
+        <Style Selector="Slider.setting">
+            <Setter Property="Height" Value="24" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Background" Value="{DynamicResource Vlc.Bg.B2}" />
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Grid Margin="{TemplateBinding Padding}">
+                        <Border x:Name="TrackBackground"
+                                Height="8"
+                                VerticalAlignment="Center"
+                                CornerRadius="4"
+                                BorderThickness="1"
+                                BorderBrush="Transparent"
+                                Background="{TemplateBinding Background}" />
+                        <Track Name="PART_Track" Orientation="Horizontal" Margin="2,0"
+                               Minimum="{TemplateBinding Minimum}" Maximum="{TemplateBinding Maximum}"
+                               Value="{TemplateBinding Value}">
+                            <Track.DecreaseButton>
+                                <RepeatButton Name="PART_DecreaseButton" Theme="{StaticResource PlayerSliderFill}" Padding="0,8" CornerRadius="4" />
+                            </Track.DecreaseButton>
+                            <Track.Thumb>
+                                <Thumb Theme="{StaticResource PlayerSliderThumb}" Width="8" Height="20" CornerRadius="3" />
+                            </Track.Thumb>
+                            <Track.IncreaseButton>
+                                <RepeatButton Name="PART_IncreaseButton" Theme="{StaticResource PlayerSliderFill}" />
+                            </Track.IncreaseButton>
+                        </Track>
+                    </Grid>
+                </ControlTemplate>
+            </Setter>
+        </Style>
+        <Style Selector="Slider.setting /template/ RepeatButton#PART_DecreaseButton, Slider.setting:pointerover /template/ RepeatButton#PART_DecreaseButton, Slider.setting:pressed /template/ RepeatButton#PART_DecreaseButton">
+            <Setter Property="Background" Value="{DynamicResource Vlc.Bg.AccentBright}" />
+        </Style>
+        <Style Selector="Slider.setting /template/ RepeatButton#PART_IncreaseButton, Slider.setting:pointerover /template/ RepeatButton#PART_IncreaseButton, Slider.setting:pressed /template/ RepeatButton#PART_IncreaseButton">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+        <Style Selector="Slider.setting /template/ Thumb">
+            <Setter Property="Background" Value="{DynamicResource PlayerAccent}" />
+        </Style>
+        <Style Selector="Slider.setting:pointerover /template/ Thumb, Slider.setting:pressed /template/ Thumb">
+            <Setter Property="Background" Value="{DynamicResource PlayerAccentHover}" />
+        </Style>
+        <Style Selector="Slider.setting:focus-visible /template/ Border#TrackBackground">
+            <Setter Property="BorderBrush" Value="{DynamicResource PlayerAccent}" />
+        </Style>
+        <Style Selector="Slider.setting:disabled">
+            <Setter Property="Opacity" Value="0.4" />
+        </Style>
+        <Style Selector="TextBlock.settingValue">
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="TextAlignment" Value="Right" />
+            <Setter Property="Foreground" Value="{DynamicResource Vlc.Fg.A2}" />
+        </Style>
         <Style Selector="Button.settingAction">
             <Setter Property="HorizontalContentAlignment" Value="Center" />
             <Setter Property="VerticalContentAlignment" Value="Center" />
@@ -746,13 +805,79 @@
                                         </controls:SettingRow>
                                     </StackPanel>
 
-                                    <!-- Media › Video -->
+                                    <!-- Media › Video (design 3073:14187): Output, Picture, Deinterlacing
+                                         and Framing; defaults for new media. Not built: wallpaper mode,
+                                         position in the window, snapshots, custom ratios. -->
                                     <StackPanel Classes="settingsSection" IsVisible="{Binding IsVideo}">
-                                        <TextBlock Classes="sectionTitle" Text="Video" />
+                                        <TextBlock Classes="sectionTitle" Text="Output" />
+                                        <controls:SettingRow Label="Enable video" Badge="Next open" Help="When off, media plays its audio only" ControlWidth="68">
+                                            <CheckBox IsChecked="{Binding VideoEnabled, Mode=TwoWay}" AutomationProperties.Name="Enable video" AutomationProperties.HelpText="When off, media plays its audio only" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Start videos in fullscreen" Badge="Next open" Help="Switches to fullscreen when a video starts" ControlWidth="68">
+                                            <CheckBox IsChecked="{Binding StartFullscreen, Mode=TwoWay}" AutomationProperties.Name="Start videos in fullscreen" AutomationProperties.HelpText="Switches to fullscreen when a video starts" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Stop the screensaver during playback" Help="Keeps the display on while video plays" ControlWidth="68" IsVisible="{Binding ShowsScreensaver}">
+                                            <CheckBox IsChecked="{Binding StopScreensaver, Mode=TwoWay}" AutomationProperties.Name="Stop the screensaver during playback" AutomationProperties.HelpText="Keeps the display on while video plays" />
+                                        </controls:SettingRow>
+                                    </StackPanel>
+                                    <StackPanel Classes="settingsSection" IsVisible="{Binding IsVideo}">
+                                        <TextBlock Classes="sectionTitle" Text="Picture" />
+                                        <controls:SettingRow Label="Hue" Badge="Next open" Help="Turns the colors around the color wheel, in degrees; 0 leaves them unchanged">
+                                            <Grid ColumnDefinitions="*,52" ColumnSpacing="8">
+                                                <Slider Classes="setting" Minimum="-180" Maximum="180" SmallChange="1" LargeChange="10" Value="{Binding Hue, Mode=TwoWay}" AutomationProperties.Name="Hue" AutomationProperties.HelpText="Turns the colors around the color wheel, in degrees; 0 leaves them unchanged" />
+                                                <TextBlock Grid.Column="1" Classes="settingValue" Text="{Binding Hue, StringFormat='{}{0:0}°'}" />
+                                            </Grid>
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Brightness" Badge="Next open" Help="1 leaves the picture unchanged">
+                                            <Grid ColumnDefinitions="*,52" ColumnSpacing="8">
+                                                <Slider Classes="setting" Minimum="0" Maximum="2" SmallChange="0.01" LargeChange="0.1" Value="{Binding Brightness, Mode=TwoWay}" AutomationProperties.Name="Brightness" AutomationProperties.HelpText="1 leaves the picture unchanged" />
+                                                <TextBlock Grid.Column="1" Classes="settingValue" Text="{Binding Brightness, StringFormat='{}{0:0.00}'}" />
+                                            </Grid>
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Contrast" Badge="Next open" Help="1 leaves the picture unchanged">
+                                            <Grid ColumnDefinitions="*,52" ColumnSpacing="8">
+                                                <Slider Classes="setting" Minimum="0" Maximum="2" SmallChange="0.01" LargeChange="0.1" Value="{Binding Contrast, Mode=TwoWay}" AutomationProperties.Name="Contrast" AutomationProperties.HelpText="1 leaves the picture unchanged" />
+                                                <TextBlock Grid.Column="1" Classes="settingValue" Text="{Binding Contrast, StringFormat='{}{0:0.00}'}" />
+                                            </Grid>
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Saturation" Badge="Next open" Help="1 leaves the colors unchanged; 0 is black and white">
+                                            <Grid ColumnDefinitions="*,52" ColumnSpacing="8">
+                                                <Slider Classes="setting" Minimum="0" Maximum="3" SmallChange="0.01" LargeChange="0.1" Value="{Binding Saturation, Mode=TwoWay}" AutomationProperties.Name="Saturation" AutomationProperties.HelpText="1 leaves the colors unchanged; 0 is black and white" />
+                                                <TextBlock Grid.Column="1" Classes="settingValue" Text="{Binding Saturation, StringFormat='{}{0:0.00}'}" />
+                                            </Grid>
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Gamma" Badge="Next open" Help="Needs hardware decoding off (Performance); 1 leaves the picture unchanged">
+                                            <Grid ColumnDefinitions="*,52" ColumnSpacing="8">
+                                                <Slider Classes="setting" Minimum="0.01" Maximum="10" SmallChange="0.01" LargeChange="0.1" Value="{Binding Gamma, Mode=TwoWay}" AutomationProperties.Name="Gamma" AutomationProperties.HelpText="Needs hardware decoding off (Performance); 1 leaves the picture unchanged" IsEnabled="{Binding CanAdjustGamma}" />
+                                                <TextBlock Grid.Column="1" Classes="settingValue" Text="{Binding Gamma, StringFormat='{}{0:0.00}'}" />
+                                            </Grid>
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Reset picture">
+                                            <Button Classes="secondary settingAction" Content="Reset" HorizontalAlignment="Right" MinWidth="100" Command="{Binding ResetPictureCommand}" AutomationProperties.Name="Reset picture" />
+                                        </controls:SettingRow>
+                                    </StackPanel>
+                                    <StackPanel Classes="settingsSection" IsVisible="{Binding IsVideo}">
+                                        <TextBlock Classes="sectionTitle" Text="Deinterlacing" />
+                                        <controls:SettingRow Label="Deinterlacing" Badge="Next open" Help="Automatic deinterlaces media marked as interlaced; On always does">
+                                            <ComboBox ItemsSource="{Binding DeinterlaceModes}" SelectedItem="{Binding Deinterlace, Mode=TwoWay}" AutomationProperties.Name="Deinterlacing" AutomationProperties.HelpText="Automatic deinterlaces media marked as interlaced; On always does" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Method" Badge="Next open" Help="How the two fields of an interlaced frame are combined">
+                                            <ComboBox ItemsSource="{Binding DeinterlaceMethods}" SelectedItem="{Binding DeinterlaceMethod, Mode=TwoWay}" AutomationProperties.Name="Deinterlacing method" AutomationProperties.HelpText="How the two fields of an interlaced frame are combined" />
+                                        </controls:SettingRow>
+                                    </StackPanel>
+                                    <StackPanel Classes="settingsSection" IsVisible="{Binding IsVideo}">
+                                        <TextBlock Classes="sectionTitle" Text="Framing" />
+                                        <controls:SettingRow Label="Aspect ratio" Badge="Next open" Help="The aspect ratio new media starts with; the Video panel changes the media that is playing">
+                                            <ComboBox ItemsSource="{Binding AspectRatios}" SelectedItem="{Binding DefaultAspectRatio, Mode=TwoWay}" AutomationProperties.Name="Default aspect ratio" AutomationProperties.HelpText="The aspect ratio new media starts with; the Video panel changes the media that is playing" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Crop" Badge="Next open" Help="The crop new media starts with; the Video panel changes the media that is playing">
+                                            <ComboBox ItemsSource="{Binding Crops}" SelectedItem="{Binding DefaultCrop, Mode=TwoWay}" AutomationProperties.Name="Default crop" AutomationProperties.HelpText="The crop new media starts with; the Video panel changes the media that is playing" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Zoom" Badge="Next open" Help="Fit scales the video to the window; a fixed size keeps it at that scale">
+                                            <ComboBox ItemsSource="{Binding Zooms}" SelectedItem="{Binding DefaultZoom, Mode=TwoWay}" AutomationProperties.Name="Default zoom" AutomationProperties.HelpText="Fit scales the video to the window; a fixed size keeps it at that scale" />
+                                        </controls:SettingRow>
                                         <controls:SettingRow Label="Video adjustments" Help="Aspect ratio, crop and zoom for the media that is playing">
-                                            <Button Classes="secondary settingAction"
-                                                    Content="Open video adjustments"
-                                                    Command="{Binding OpenVideoControlsCommand}" />
+                                            <Button Classes="secondary settingAction" Content="Open video adjustments" Command="{Binding OpenVideoControlsCommand}" />
                                         </controls:SettingRow>
                                     </StackPanel>
 

@@ -71,7 +71,7 @@ internal sealed partial class SettingsViewModel : INotifyPropertyChanged
         new("Privacy", "App", "Privacy", "history recent media resume positions clear remember forget"),
         new("Controls", "App", "Hotkeys", "keyboard shortcuts hotkeys commands skip backward forward seconds"),
         new("Playback", "Media", "Playback", "continue resume left off position near end start playing autoplay paused speed default rate language audio subtitle repeat loop shuffle random order stop after each item finishes quit home seek precisely fast avi repair index"),
-        new("Video", "Media", "Video", "aspect crop zoom adjustments deinterlace snapshot"),
+        new("Video", "Media", "Video", "enable video fullscreen screensaver sleep display picture hue brightness contrast saturation gamma color colour reset deinterlace deinterlacing method aspect ratio crop zoom framing adjustments"),
         new("Audio", "Media", "Audio", "volume output module normalization passthrough spdif device tracks delay"),
         new("Subtitles", "Media", "Subtitles", "render tracks delay synchronization"),
         new("Advanced", "System", "Info", "engine diagnostics media information codec streams"),
@@ -221,7 +221,7 @@ internal sealed partial class SettingsViewModel : INotifyPropertyChanged
     }
 
     // Each page resets what it shows; Controls also restores the default
-    // shortcuts. Video, Subtitles and Advanced have no settings of their own.
+    // shortcuts. Subtitles and Advanced have no settings of their own.
     private void ResetPage()
     {
         PlayerSettings defaults = PlayerSettings.Default;
@@ -236,6 +236,7 @@ internal sealed partial class SettingsViewModel : INotifyPropertyChanged
             IsInterface ? s with { Density = defaults.Density, ControlTimeoutSeconds = defaults.ControlTimeoutSeconds, ReduceMotion = defaults.ReduceMotion } :
             IsPrivacy ? s with { RememberRecentMedia = defaults.RememberRecentMedia, RememberResumeHistory = defaults.RememberResumeHistory } :
             IsPlayback ? ResetPlaybackPage(s, defaults) :
+            IsVideo ? ResetVideoPage(s, defaults) :
             IsAudio ? s with { RememberVolume = defaults.RememberVolume, AudioOutputModule = defaults.AudioOutputModule, NormalizationMaximumLevel = null, AudioPassthrough = null } :
             s);
     }

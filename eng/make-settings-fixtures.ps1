@@ -1,4 +1,5 @@
-# Writes the media --engine-settings-smoke plays (phase 9b) to
+# Writes the media --engine-settings-smoke (phase 9b) and
+# --audio-settings-smoke (phase 9c) play to
 # artifacts/settings-fixtures, with ffmpeg from PATH. Every file is
 # synthetic: testsrc video, sine audio, two tiny subtitle files.
 [CmdletBinding()]
@@ -39,6 +40,21 @@ try {
     [byte[]] $broken = $bytes[0..($index - 1)]
     [BitConverter]::GetBytes([int]($broken.Length - 8)).CopyTo($broken, 4)
     [IO.File]::WriteAllBytes((Join-Path $Output 'broken.avi'), $broken)
+    # Audio (--audio-settings-smoke, phase 9c), 20 s at 48 kHz unless said.
+    # Three tones (80 Hz, 1 kHz, 10 kHz) in the center: equalizer, karaoke, spatial audio.
+    Invoke-Ffmpeg -f lavfi -i 'aevalsrc=0.2*sin(2*PI*80*t)+0.2*sin(2*PI*1000*t)+0.2*sin(2*PI*10000*t)|0.2*sin(2*PI*80*t)+0.2*sin(2*PI*1000*t)+0.2*sin(2*PI*10000*t):s=48000:d=20' '-c:a' pcm_s16le audio-mix.wav
+    # 440 Hz on the left, 660 Hz on the right: stereo widening, pitch.
+    Invoke-Ffmpeg -f lavfi -i 'aevalsrc=0.3*sin(2*PI*440*t)|0.3*sin(2*PI*660*t):s=48000:d=20' '-c:a' pcm_s16le audio-lr.wav
+    # A loud second, then a quiet one: compressor, normalization.
+    Invoke-Ffmpeg -f lavfi -i 'aevalsrc=if(lt(mod(t\,2)\,1)\,0.8\,0.02)*sin(2*PI*440*t)|if(lt(mod(t\,2)\,1)\,0.8\,0.02)*sin(2*PI*440*t):s=48000:d=20' '-c:a' pcm_s16le audio-dynamics.wav
+    # Replay gain tags: track -10 dB, album -4 dB.
+    Invoke-Ffmpeg -f lavfi -i 'aevalsrc=0.3*sin(2*PI*440*t)|0.3*sin(2*PI*440*t):s=48000:d=20' '-c:a' libvorbis '-q:a' 4 `
+        -metadata 'REPLAYGAIN_TRACK_GAIN=-10.00 dB' -metadata 'REPLAYGAIN_TRACK_PEAK=0.3' -metadata 'REPLAYGAIN_ALBUM_GAIN=-4.00 dB' -metadata 'REPLAYGAIN_ALBUM_PEAK=0.3' audio-replaygain.ogg
+    # AC-3 with the Dolby Surround flag set.
+    Invoke-Ffmpeg -f lavfi -i 'aevalsrc=0.3*sin(2*PI*440*t)|0.3*sin(2*PI*660*t):s=48000:d=20' '-c:a' ac3 -dsur_mode on audio-dolby.ac3
+    # Tones for the resampler: 6 kHz (images) and 20 kHz (the top of the band).
+    Invoke-Ffmpeg -f lavfi -i 'aevalsrc=0.4*sin(2*PI*6000*t)|0.4*sin(2*PI*6000*t):s=48000:d=20' '-c:a' pcm_s16le audio-6k.wav
+    Invoke-Ffmpeg -f lavfi -i 'aevalsrc=0.4*sin(2*PI*20000*t)|0.4*sin(2*PI*20000*t):s=48000:d=20' '-c:a' pcm_s16le audio-20k.wav
     Write-Output "Fixtures written to $Output"
 }
 finally { Pop-Location }

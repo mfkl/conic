@@ -67,7 +67,7 @@ internal sealed partial class SettingsViewModel : INotifyPropertyChanged
     public IReadOnlyList<SettingsPage> Pages { get; } =
     [
         new("General", "App", "Preferences", "appearance theme dark light system accent color colour"),
-        new("Interface", "App", "Interface", "density compact comfortable controls hide timeout reduce motion accessibility animation"),
+        new("Interface", "App", "Interface", "density compact comfortable controls hide auto-hide timeout reduce motion accessibility animation"),
         new("Privacy", "App", "Privacy", "history recent media resume positions clear remember forget"),
         new("Controls", "App", "Hotkeys", "keyboard shortcuts hotkeys commands skip backward forward seconds"),
         new("Playback", "Media", "Playback", "continue resume left off position near end start playing autoplay paused speed default rate language audio subtitle repeat loop shuffle random order stop after each item finishes quit home seek precisely fast avi repair index"),
@@ -191,6 +191,7 @@ internal sealed partial class SettingsViewModel : INotifyPropertyChanged
     public string Density { get => _service.Current.Density; set => Update(s => s with { Density = value }); }
     public decimal ControlTimeoutSeconds { get => _service.Current.ControlTimeoutSeconds; set => Update(s => s with { ControlTimeoutSeconds = (int)value }); }
     public bool ReduceMotion { get => _service.Current.ReduceMotion; set => Update(s => s with { ReduceMotion = value }); }
+    public bool AutoHideControls { get => _service.Current.AutoHideControls; set => Update(s => s with { AutoHideControls = value }); }
     public string DefaultSpeed { get => _service.Current.DefaultSpeed.ToString(System.Globalization.CultureInfo.InvariantCulture); set => Update(s => s with { DefaultSpeed = double.TryParse(value, System.Globalization.CultureInfo.InvariantCulture, out double v) ? v : s.DefaultSpeed }); }
     public decimal SkipBackwardSeconds { get => _service.Current.SkipBackwardSeconds; set => Update(s => s with { SkipBackwardSeconds = (int)value }); }
     public decimal SkipForwardSeconds { get => _service.Current.SkipForwardSeconds; set => Update(s => s with { SkipForwardSeconds = (int)value }); }
@@ -201,7 +202,7 @@ internal sealed partial class SettingsViewModel : INotifyPropertyChanged
 
     public void Refresh()
     {
-        foreach (string name in new[] { nameof(ResumePlayback), nameof(RememberVolume), nameof(RememberRecentMedia), nameof(RememberResumeHistory), nameof(ResumeMinimumElapsedSeconds), nameof(ResumeMaximumRemainingSeconds), nameof(Theme), nameof(Accent), nameof(Density), nameof(IsCompactDensity), nameof(ControlTimeoutSeconds), nameof(ReduceMotion), nameof(DefaultSpeed), nameof(SkipBackwardSeconds), nameof(SkipForwardSeconds), nameof(AudioOutputModule), nameof(AudioPassthrough) })
+        foreach (string name in new[] { nameof(ResumePlayback), nameof(RememberVolume), nameof(RememberRecentMedia), nameof(RememberResumeHistory), nameof(ResumeMinimumElapsedSeconds), nameof(ResumeMaximumRemainingSeconds), nameof(Theme), nameof(Accent), nameof(Density), nameof(IsCompactDensity), nameof(ControlTimeoutSeconds), nameof(ReduceMotion), nameof(AutoHideControls), nameof(DefaultSpeed), nameof(SkipBackwardSeconds), nameof(SkipForwardSeconds), nameof(AudioOutputModule), nameof(AudioPassthrough) })
             Notify(name);
         foreach (string name in EngineRowProperties)
             Notify(name);
@@ -239,7 +240,7 @@ internal sealed partial class SettingsViewModel : INotifyPropertyChanged
         }
         Update(s =>
             IsGeneral ? s with { Theme = defaults.Theme, Accent = defaults.Accent } :
-            IsInterface ? s with { Density = defaults.Density, ControlTimeoutSeconds = defaults.ControlTimeoutSeconds, ReduceMotion = defaults.ReduceMotion } :
+            IsInterface ? s with { Density = defaults.Density, ControlTimeoutSeconds = defaults.ControlTimeoutSeconds, ReduceMotion = defaults.ReduceMotion, AutoHideControls = defaults.AutoHideControls } :
             IsPrivacy ? s with { RememberRecentMedia = defaults.RememberRecentMedia, RememberResumeHistory = defaults.RememberResumeHistory } :
             IsPlayback ? ResetPlaybackPage(s, defaults) :
             IsVideo ? ResetVideoPage(s, defaults) :

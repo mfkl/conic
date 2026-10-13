@@ -104,8 +104,9 @@ public static class PlayerEngineOptions
         if (settings.AviRepair == "WhenNeeded") arguments.Add("--avi-index=3");
         else if (settings.AviRepair == "Always") arguments.Add("--avi-index=1");
 
-        // Audio.
+        // Audio and subtitles.
         arguments.AddRange(AudioEngineOptions.Arguments(settings, isWindows));
+        arguments.AddRange(SubtitleEngineOptions.Arguments(settings));
 
         // Video.
         if (!settings.VideoEnabled) arguments.Add("--no-video");

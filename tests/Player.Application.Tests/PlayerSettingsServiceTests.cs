@@ -61,23 +61,25 @@ public sealed class PlayerSettingsServiceTests
         service.ResetAll(); Assert.Equal(PlayerSettings.Default, service.Current);
     }
     [Fact]
-    public void Version5DocumentMigratesToVersion7WithTheDefaultAccent()
+    public void Version5DocumentMigratesToVersion8WithTheDefaultAccent()
     {
         MemoryStorage storage = new() { Content = "{\"Version\":5,\"Theme\":\"Dark\",\"Density\":\"Compact\",\"SkipForwardSeconds\":25,\"ReduceMotion\":true}" };
         PlayerSettingsService service = new(storage);
 
         service.Load();
 
-        Assert.Equal(7, PlayerSettings.CurrentVersion);
+        Assert.Equal(8, PlayerSettings.CurrentVersion);
         Assert.Equal(PlayerSettings.CurrentVersion, service.Current.Version);
         Assert.Equal("Dark", service.Current.Theme);
         Assert.Equal("Compact", service.Current.Density);
         Assert.Equal(25, service.Current.SkipForwardSeconds);
         Assert.True(service.Current.ReduceMotion);
+        // Reduce motion kept the controls up before version 8.
+        Assert.False(service.Current.AutoHideControls);
         Assert.Equal(AccentPalette.DefaultHex, service.Current.Accent);
         Assert.Equal(PlayerSettings.Default.HardwareDecoding, service.Current.HardwareDecoding);
         Assert.Equal(PlayerSettings.Default.Buffering, service.Current.Buffering);
-        Assert.Contains("\"Version\": 7", storage.Content);
+        Assert.Contains("\"Version\": 8", storage.Content);
         Assert.Contains($"\"Accent\": \"{AccentPalette.DefaultHex}\"", storage.Content);
         Assert.Null(service.LoadDiagnostic);
     }
@@ -191,7 +193,7 @@ public sealed class PlayerSettingsServiceTests
     }
 
     [Fact]
-    public void Version6DocumentKeepsEveryValueAndGetsTheVersion7Defaults()
+    public void Version6DocumentKeepsEveryValueAndGetsTheVersion8Defaults()
     {
         // A complete phase 9a (version 6) document.
         const string document = """
@@ -207,22 +209,23 @@ public sealed class PlayerSettingsServiceTests
 
         PlayerSettings current = service.Current;
         Assert.Null(service.LoadDiagnostic);
-        Assert.Equal(7, current.Version);
+        Assert.Equal(8, current.Version);
         Assert.Equal((false, false, "Light", "Compact", 7, 1.5, 5, 30), (current.ResumePlayback, current.RememberVolume, current.Theme, current.Density, current.ControlTimeoutSeconds, current.DefaultSpeed, current.SkipBackwardSeconds, current.SkipForwardSeconds));
         Assert.Equal((false, false, 60, 90, "directsound", (double?)2.5, (bool?)true, true, "#1B5DD3"), (current.RememberRecentMedia, current.RememberResumeHistory, current.ResumeMinimumElapsedSeconds, current.ResumeMaximumRemainingSeconds, current.AudioOutputModule, current.NormalizationMaximumLevel, current.AudioPassthrough, current.ReduceMotion, current.Accent));
         Assert.Equal("K", current.ShortcutOverrides!["TogglePause"]);
-        // Every version 7 field takes its default.
+        // Every version 7 and 8 field takes its default, but Reduce motion
+        // (on here) turns Auto-hide the controls off.
         PlayerSettings defaults = PlayerSettings.Default;
         Assert.Equal(defaults with
         {
             ResumePlayback = false, RememberVolume = false, Theme = "Light", Density = "Compact", ControlTimeoutSeconds = 7, DefaultSpeed = 1.5,
             SkipBackwardSeconds = 5, SkipForwardSeconds = 30, RememberRecentMedia = false, RememberResumeHistory = false,
             ResumeMinimumElapsedSeconds = 60, ResumeMaximumRemainingSeconds = 90, AudioOutputModule = "directsound", NormalizationMaximumLevel = 2.5,
-            AudioPassthrough = true, ShortcutOverrides = current.ShortcutOverrides, ReduceMotion = true, Accent = "#1B5DD3",
+            AudioPassthrough = true, ShortcutOverrides = current.ShortcutOverrides, ReduceMotion = true, Accent = "#1B5DD3", AutoHideControls = false,
         }, current);
         // The stored audio options are the next core's (phase 9c moved them from the engine's constructor).
         Assert.Equal(["--aout=directsound", "--spdif", "--audio-filter=normvol", "--norm-max-level=2.5"], PlayerEngineOptions.Arguments(current, windows: true, macOS: false));
-        Assert.Contains("\"Version\": 7", storage.Content);
+        Assert.Contains("\"Version\": 8", storage.Content);
         Assert.Contains("\"HardwareDecoding\": \"Automatic\"", storage.Content);
     }
 
@@ -279,15 +282,19 @@ public sealed class PlayerSettingsServiceTests
         service.Load();
 
         PlayerSettings current = service.Current;
-        Assert.Equal((7, false, "directsound", (double?)3, (bool?)true, "fr"), (current.Version, current.RememberVolume, current.AudioOutputModule, current.NormalizationMaximumLevel, current.AudioPassthrough, current.AudioLanguage));
+        Assert.Equal((8, false, "directsound", (double?)3, (bool?)true, "fr"), (current.Version, current.RememberVolume, current.AudioOutputModule, current.NormalizationMaximumLevel, current.AudioPassthrough, current.AudioLanguage));
         PlayerSettings d = PlayerSettings.Default;
         Assert.Equal((d.AudioEnabled, d.AudioDevice, d.MaximumVolume, d.StartupVolume, d.VolumeStep), (current.AudioEnabled, current.AudioDevice, current.MaximumVolume, current.StartupVolume, current.VolumeStep));
         Assert.Equal((true, "", 200, 100, 2), (current.AudioEnabled, current.AudioDevice, current.MaximumVolume, current.StartupVolume, current.VolumeStep));
         Assert.Equal(("none", 0d, false, "flat", 12d, "0 0 0 0 0 0 0 0 0 0"), (current.ReplayGain, current.ReplayGainPreamp, current.Equalizer, current.EqualizerPreset, current.EqualizerPreamp, current.EqualizerBands));
         Assert.Equal((false, "Headphones", false, 0d, false), (current.SpatialAudio, current.SpatialAudioMode, current.Compressor, current.PitchShift, current.Karaoke));
         Assert.Equal(("Automatic", "Balanced", 0), (current.DolbySurround, current.ResamplerQuality, current.AudioDelay));
-        // No stored value changed meaning, so the document is not rewritten.
-        Assert.DoesNotContain("\"Equalizer\"", storage.Content);
+        // Version 8 changed what Reduce motion means, so a version 7
+        // document is rewritten as version 8 (Reduce motion off here keeps
+        // the controls hiding).
+        Assert.True(current.AutoHideControls);
+        Assert.Contains("\"Version\": 8", storage.Content);
+        Assert.Contains("\"Equalizer\": false", storage.Content);
     }
 
     [Fact]
@@ -321,6 +328,90 @@ public sealed class PlayerSettingsServiceTests
             Assert.Equal(SettingApplyMode.NextOpen, PlayerSettingsService.ApplyMode(key));
         Assert.Equal(SettingApplyMode.Restart, PlayerSettingsService.ApplyMode(nameof(PlayerSettings.StartupVolume)));
         Assert.All(AudioEngineOptions.LiveKeys.Concat(AudioEngineOptions.NextOpenKeys), key => Assert.NotNull(typeof(PlayerSettings).GetProperty(key)));
+    }
+
+    [Fact]
+    public void Version7ReduceMotionKeepsTheControlsUpAsAutoHideOff()
+    {
+        // A complete phase 9c (version 7) document with Reduce motion on:
+        // it used to keep the playback controls from hiding.
+        MemoryStorage storage = new() { Content = """
+            {"Version":7,"ResumePlayback":true,"RememberVolume":true,"Theme":"Dark","Density":"Comfortable","ControlTimeoutSeconds":4,"DefaultSpeed":1,
+             "SkipBackwardSeconds":10,"SkipForwardSeconds":10,"ReduceMotion":true,"SubtitleLanguage":"none","Equalizer":true,"EqualizerPreset":"rock"}
+            """ };
+        PlayerSettingsService service = new(storage);
+
+        service.Load();
+
+        PlayerSettings current = service.Current;
+        Assert.Null(service.LoadDiagnostic);
+        Assert.Equal((8, true, false, 4), (current.Version, current.ReduceMotion, current.AutoHideControls, current.ControlTimeoutSeconds));
+        Assert.Equal(("none", true, "rock"), (current.SubtitleLanguage, current.Equalizer, current.EqualizerPreset));
+        // The version 8 fields other than auto-hide take their defaults.
+        PlayerSettings d = PlayerSettings.Default;
+        Assert.Equal((d.SubtitlesEnabled, d.SubtitleAutoload, d.SubtitleColor, d.ShowControlsInFullscreen, d.KeepOnTop, d.FolderOpening),
+            (current.SubtitlesEnabled, current.SubtitleAutoload, current.SubtitleColor, current.ShowControlsInFullscreen, current.KeepOnTop, current.FolderOpening));
+        Assert.Contains("\"Version\": 8", storage.Content);
+        Assert.Contains("\"AutoHideControls\": false", storage.Content);
+
+        // A version 8 document is read as it is: Reduce motion and auto-hide are separate.
+        MemoryStorage version8 = new() { Content = "{\"Version\":8,\"ReduceMotion\":true,\"AutoHideControls\":true}" };
+        PlayerSettingsService reloaded = new(version8);
+        reloaded.Load();
+        Assert.Equal((true, true), (reloaded.Current.ReduceMotion, reloaded.Current.AutoHideControls));
+        Assert.Equal("{\"Version\":8,\"ReduceMotion\":true,\"AutoHideControls\":true}", version8.Content);
+    }
+
+    [Fact]
+    public void OlderReduceMotionDocumentsKeepTheControlsUpToo()
+    {
+        MemoryStorage storage = new() { Content = "{\"Version\":4,\"Theme\":\"Dark\",\"ReduceMotion\":true}" };
+        PlayerSettingsService service = new(storage);
+        service.Load();
+        Assert.False(service.Current.AutoHideControls);
+
+        MemoryStorage without = new() { Content = "{\"Version\":6,\"Theme\":\"Dark\"}" };
+        PlayerSettingsService other = new(without);
+        other.Load();
+        Assert.True(other.Current.AutoHideControls);
+    }
+
+    [Fact]
+    public void Version8ValuesRoundTripAndInvalidOnesFallBack()
+    {
+        MemoryStorage storage = new();
+        new PlayerSettingsService(storage).Update(s => s with
+        {
+            SubtitlesEnabled = false, SubtitleEncoding = "Klingon", SubtitleMatching = 9, SubtitleFont = "  Segoe UI	 ", SubtitleTextScale = 20,
+            SubtitleColor = "ffcc00", SubtitleOpacity = 140, SubtitleOutline = "Huge", SubtitleOutlineColor = "red", SubtitleShadowDistance = "Large",
+            SubtitleBackgroundOpacity = -4, SubtitleMargin = 5000, SubtitleDelay = 1234, FileNameSeconds = 0, ShortcutFeedbackSeconds = 1.3,
+            VeryShortSkipSeconds = 0, LongSkipSeconds = 99999, ClickAction = "Triple", WheelAction = "Seek", HorizontalWheelAction = "Zoom",
+            AutoHideControls = false, KeepOnTop = true, FolderOpening = "Recursive", ShowHiddenFiles = true,
+        });
+        PlayerSettingsService reloaded = new(storage);
+
+        reloaded.Load();
+
+        PlayerSettings current = reloaded.Current;
+        Assert.Equal((false, "", 4, "Segoe UI", 50), (current.SubtitlesEnabled, current.SubtitleEncoding, current.SubtitleMatching, current.SubtitleFont, current.SubtitleTextScale));
+        Assert.Equal(("#FFCC00", 100, "Normal", "#000000", "Large"), (current.SubtitleColor, current.SubtitleOpacity, current.SubtitleOutline, current.SubtitleOutlineColor, current.SubtitleShadowDistance));
+        Assert.Equal((0, SubtitleEngineOptions.MaximumMargin, 1200, 1, 1.5), (current.SubtitleBackgroundOpacity, current.SubtitleMargin, current.SubtitleDelay, current.FileNameSeconds, current.ShortcutFeedbackSeconds));
+        Assert.Equal((1, InterfaceOptions.MaximumSkipSeconds, "None", "Seek", "Seek"), (current.VeryShortSkipSeconds, current.LongSkipSeconds, current.ClickAction, current.WheelAction, current.HorizontalWheelAction));
+        Assert.Equal((false, true, "Subfolders", true), (current.AutoHideControls, current.KeepOnTop, current.FolderOpening, current.ShowHiddenFiles));
+    }
+
+    [Fact]
+    public void Phase9dSettingsApplyLiveAtTheNextOpenOrAtTheNextStart()
+    {
+        foreach (string key in SubtitleEngineOptions.LiveKeys.Concat(InterfaceOptions.LiveKeys))
+            Assert.Equal(SettingApplyMode.Live, PlayerSettingsService.ApplyMode(key));
+        foreach (string key in SubtitleEngineOptions.NextOpenKeys.Concat(InterfaceOptions.NextOpenKeys))
+            Assert.Equal(SettingApplyMode.NextOpen, PlayerSettingsService.ApplyMode(key));
+        // The window opens at its remembered size, or not, when the app starts.
+        Assert.Equal(SettingApplyMode.Restart, PlayerSettingsService.ApplyMode(nameof(PlayerSettings.RememberWindowGeometry)));
+        Assert.All(SubtitleEngineOptions.LiveKeys.Concat(SubtitleEngineOptions.NextOpenKeys).Concat(InterfaceOptions.LiveKeys).Concat(InterfaceOptions.NextOpenKeys),
+            key => Assert.NotNull(typeof(PlayerSettings).GetProperty(key)));
+        Assert.Empty(SubtitleEngineOptions.LiveKeys.Intersect(SubtitleEngineOptions.NextOpenKeys));
     }
 
     private sealed class MemoryStorage : IPlayerSettingsStorage

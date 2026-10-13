@@ -8,7 +8,7 @@ using Player.Application;
 using Player.Contracts;
 using VLCAvalonia.Interop;
 using VLCAvalonia.Interop.Windows;
-using Sample = VLCAvalonia.Interop.Windows.ScreenSampler.Sample;
+using Sample = VLCAvalonia.Interop.ScreenSample;
 
 namespace VLCAvalonia;
 

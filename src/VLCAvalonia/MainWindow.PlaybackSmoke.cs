@@ -141,7 +141,10 @@ public partial class MainWindow
                 _keyboardNavigation = false;
                 MuteButton.Focus(NavigationMethod.Pointer);
                 await Task.Delay(400);
-                Require(!PlayerDock.IsVisible && !TopChrome.IsVisible, "fullscreen bars hide after inactivity; mouse focus does not block it");
+                // The real pointer over a bar rightly holds it up: park the
+                // cursor away from the screen's top and bottom edges.
+                Require(!PlayerDock.IsVisible && !TopChrome.IsVisible, "fullscreen bars hide after inactivity; mouse focus does not block it" +
+                    (TopChrome.IsPointerOver || PlayerDock.IsPointerOver ? " (the real pointer rests on a bar: park the cursor mid-screen)" : ""));
                 SavePlaybackCapture("playback-hidden.png");
                 WakeChrome();
                 Require(PlayerDock.IsVisible && TopChrome.IsVisible, "interaction reveals the fullscreen bars");

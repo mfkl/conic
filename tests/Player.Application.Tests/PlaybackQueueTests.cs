@@ -62,4 +62,28 @@ public sealed class PlaybackQueueTests
         }
         finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
     }
+
+    [Fact]
+    public async Task FolderScanFollowsSubfoldersAndHiddenFiles()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "vlc-avalonia-scan-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            Directory.CreateDirectory(Path.Combine(root, "sub"));
+            File.WriteAllText(Path.Combine(root, "a.mp4"), "x");
+            File.WriteAllText(Path.Combine(root, "sub", "b.mp4"), "x");
+            // Hidden on Windows by its attribute, on Linux and macOS by its name.
+            string hidden = Path.Combine(root, ".c.mp4");
+            File.WriteAllText(hidden, "x");
+            if (OperatingSystem.IsWindows()) File.SetAttributes(hidden, File.GetAttributes(hidden) | FileAttributes.Hidden);
+            MediaSourceExpander expander = new(new MediaSourceValidator(new SystemMediaFileSystem()));
+            string[] Names(MediaSourceExpansion expansion) => expansion.Sources.Select(source => Path.GetRelativePath(root, source.CanonicalSource).Replace('\\', '/')).ToArray();
+
+            Assert.Equal([".c.mp4", "a.mp4", "sub/b.mp4"], Names(await expander.ExpandAsync(root, MediaSourceKind.Folder)));
+            Assert.Equal(["a.mp4", "sub/b.mp4"], Names(await expander.ExpandAsync(root, MediaSourceKind.Folder, MediaFolderScan.For(PlayerSettings.Default))));
+            Assert.Equal(["a.mp4"], Names(await expander.ExpandAsync(root, MediaSourceKind.Folder, MediaFolderScan.For(PlayerSettings.Default with { FolderOpening = "FolderOnly" }))));
+            Assert.Equal([".c.mp4", "a.mp4"], Names(await expander.ExpandAsync(root, MediaSourceKind.Folder, new MediaFolderScan(false, true))));
+        }
+        finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
+    }
 }

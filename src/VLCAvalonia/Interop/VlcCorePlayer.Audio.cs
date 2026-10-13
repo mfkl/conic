@@ -92,6 +92,9 @@ internal sealed partial class VlcCorePlayer
         set();
     }
 
+    /// <summary>Whether the playing core's output has the last live audio settings, for the smoke.</summary>
+    internal bool LiveAudioAppliedForSmoke { get { lock (_gate) return _liveAudio is not null && _liveAudio == _appliedAudio; } }
+
     /// <summary>The playing core's audio output: its filter chain, device and passthrough option, for the smoke.</summary>
     internal (string? Filters, string Device, bool Passthrough) ReadAudioOutputForSmoke() => InvokeMediaCapabilityForSmoke(_ =>
     {

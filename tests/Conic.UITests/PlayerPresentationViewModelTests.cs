@@ -1305,6 +1305,77 @@ public sealed class PlayerPresentationViewModelTests
         Assert.False(vm.PreviousCommand.CanExecute(null));
     }
 
+    [Fact]
+    public async Task APickedFileOrFolderOpensAndLeavesHome()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "conic-pick-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            string folder = Path.Combine(root, "show");
+            Directory.CreateDirectory(Path.Combine(folder, "sub"));
+            File.WriteAllText(Path.Combine(folder, "a.mp4"), "x");
+            File.WriteAllText(Path.Combine(folder, "sub", "b.mp4"), "x");
+            string file = Path.Combine(root, "movie.mp4");
+            File.WriteAllText(file, "x");
+            QueueTransport transport = new();
+            MediaPicker picker = new(file, folder);
+            PlayerPresentationViewModel vm = new(transport, picker, () => { }, sourceValidator: new MediaSourceValidator(new SystemMediaFileSystem()));
+            Assert.True(vm.IsHomeOpen);
+
+            // Open File: the picked file becomes the queue and the player shows.
+            vm.OpenMediaCommand.Execute(null);
+            await WaitForAsync(() => transport.OpenedQueues.Count == 1);
+            Assert.Equal([file], transport.OpenedQueues[0]);
+            Assert.Equal((false, false, PlaybackStatus.Opening), (vm.IsHomeOpen, vm.HasOpenError, vm.PlaybackStatus));
+
+            // Open Folder: the picked folder's media, subfolders included, in name order.
+            vm.ShowHomeCommand.Execute(null);
+            vm.OpenFolderCommand.Execute(null);
+            await WaitForAsync(() => transport.OpenedQueues.Count == 2);
+            Assert.Equal([Path.Combine(folder, "a.mp4"), Path.Combine(folder, "sub", "b.mp4")], transport.OpenedQueues[1]);
+            // Home gives way when the engine starts opening the first item.
+            vm.ApplyEngineState(State(0, PlaybackStatus.Opening, false) with { Generation = 2, Source = Path.Combine(folder, "a.mp4") });
+            Assert.Equal((false, false), (vm.IsHomeOpen, vm.HasOpenError));
+            Assert.Equal(["media", "folder"], picker.Requests);
+        }
+        finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
+    }
+
+    [Fact]
+    public void RecentLibraryAndHomeRowsOpenAnExistingFile()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "conic-recent-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            string recent = Path.Combine(root, "recent.mp4"), resumed = Path.Combine(root, "resumed.mp4");
+            File.WriteAllText(recent, "x");
+            File.WriteAllText(resumed, "x");
+            MediaHistoryService history = new(new HistoryStorage());
+            history.RecordOpened(new(recent, MediaSourceKind.File, "recent"), true);
+            history.Checkpoint(new(resumed, MediaSourceKind.File, "resumed"), TimeSpan.FromSeconds(40), TimeSpan.FromSeconds(100), true, 30, 20);
+            QueueTransport transport = new();
+            PlayerPresentationViewModel vm = new(transport, new EmptyPicker(), () => { }, sourceValidator: new MediaSourceValidator(new SystemMediaFileSystem()), history: history);
+
+            // A recent row (More menu, library drawer) opens its file and keeps it in the list.
+            vm.OpenRecentCommand.Execute(recent);
+            Assert.Equal([recent], Assert.Single(transport.OpenedQueues));
+            Assert.Equal((false, false), (vm.IsHomeOpen, vm.HasOpenError));
+            Assert.Contains(vm.RecentItems, item => item.Source == recent);
+
+            // A Home card opens the same way; a Continue watching one offers its position once it plays.
+            vm.ShowHomeCommand.Execute(null);
+            vm.SelectHomeSectionCommand.Execute("Continue watching");
+            HomeMediaItem card = Assert.Single(vm.HomeItems);
+            vm.OpenRecentCommand.Execute(card.Source);
+            Assert.Equal([resumed], transport.OpenedQueues[1]);
+            Assert.False(vm.IsHomeOpen);
+            vm.ApplyEngineState(State(.1, PlaybackStatus.Playing, true) with { Generation = 2, Source = resumed });
+            Assert.True(vm.HasPendingResume);
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
     private static PlayerPresentationViewModel CreateViewModel(
         RecordingTransport transport) => new(transport, new EmptyPicker(), () => { });
 
@@ -1387,6 +1458,13 @@ public sealed class PlayerPresentationViewModelTests
             Task.FromResult<string?>(null);
         public Task<string?> PickFolderAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult<string?>(null);
+    }
+
+    private sealed class MediaPicker(string? file, string? folder) : IMediaSourcePicker
+    {
+        public List<string> Requests { get; } = [];
+        public Task<string?> PickMediaAsync(CancellationToken cancellationToken = default) { Requests.Add("media"); return Task.FromResult(file); }
+        public Task<string?> PickFolderAsync(CancellationToken cancellationToken = default) { Requests.Add("folder"); return Task.FromResult(folder); }
     }
 
     private sealed class ExternalPicker(string? path) : IMediaSourcePicker, IExternalTrackPicker

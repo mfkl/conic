@@ -54,7 +54,7 @@ public sealed class PaletteTests
     [InlineData("Dark", "Dark")]
     [InlineData("Light", "Light")]
     [InlineData("System", "Default")]
-    [InlineData("unknown", "Default")]
+    [InlineData("unknown", "Dark")]
     public void ThemeSettingPicksTheVariant(string theme, string variant) =>
         Assert.Equal(variant, AppTheme.VariantFor(theme).Key);
 

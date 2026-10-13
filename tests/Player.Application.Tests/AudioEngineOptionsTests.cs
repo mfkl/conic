@@ -29,14 +29,17 @@ public sealed class AudioEngineOptionsTests
         PlayerSettings settings = PlayerSettings.Default with
         {
             Karaoke = true, PitchShift = -2.5, Equalizer = true, EqualizerBands = "8 4.8 -5.6 -8 -3.2 4 8.8 11.2 11.2 11.2", EqualizerPreamp = 5,
-            Compressor = true, SpatialAudio = true, StereoWidening = true, NormalizationMaximumLevel = 1.5,
+            Compressor = true, SpatialAudio = true, NormalizationMaximumLevel = 1.5,
         };
 
         Assert.Equal([
-            "--audio-filter=karaoke:scaletempo_pitch:equalizer:compressor:spatialaudio:stereo_widen:normvol",
+            "--audio-filter=karaoke:scaletempo_pitch:equalizer:compressor:spatialaudio:normvol",
             "--equalizer-bands=8 4.8 -5.6 -8 -3.2 4 8.8 11.2 11.2 11.2", "--equalizer-preamp=5", "--norm-max-level=1.5", "--pitch-shift=-2.5",
             "--spatialaudio-headphones"], Windows(settings));
         Assert.Equal(["--audio-filter=spatializer"], Windows(PlayerSettings.Default with { SpatialAudio = true, SpatialAudioMode = "Room" }));
+        // An equalizer that would end the chain is followed by the neutral gain filter (16-bit outputs).
+        Assert.Equal(["equalizer", "gain"], AudioEngineOptions.Filters(PlayerSettings.Default with { Equalizer = true }));
+        Assert.Equal(["equalizer", "compressor"], AudioEngineOptions.Filters(PlayerSettings.Default with { Equalizer = true, Compressor = true }));
         // The equalizer's bands and preamp matter only while it is on.
         Assert.Empty(Windows(PlayerSettings.Default with { EqualizerBands = "1 2 3 4 5 6 7 8 9 10", EqualizerPreamp = 0 }));
     }
@@ -58,7 +61,7 @@ public sealed class AudioEngineOptionsTests
         try
         {
             System.Globalization.CultureInfo.CurrentCulture = new System.Globalization.CultureInfo("fr-FR");
-            Assert.Equal(["--audio-filter=equalizer", "--equalizer-bands=0.5 0 0 0 0 0 0 0 0 -1.5", "--equalizer-preamp=10.5"],
+            Assert.Equal(["--audio-filter=equalizer:gain", "--equalizer-bands=0.5 0 0 0 0 0 0 0 0 -1.5", "--equalizer-preamp=10.5"],
                 Windows(PlayerSettings.Default with { Equalizer = true, EqualizerBands = "0.5 0 0 0 0 0 0 0 0 -1.5", EqualizerPreamp = 10.5 }));
         }
         finally { System.Globalization.CultureInfo.CurrentCulture = previous; }

@@ -133,6 +133,9 @@ public partial class HomeView : UserControl
         }
     }
 
+    /// <summary>Focus for the title bar's "…" button, where the More menu and its dialogs return.</summary>
+    public void FocusMore() => HomeMoreButton.Focus();
+
     public void FocusPrimary()
     {
         if (HomeOpenFile.IsEffectivelyVisible) HomeOpenFile.Focus(); else HomeSearchBox.Focus();

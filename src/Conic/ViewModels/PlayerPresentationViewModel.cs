@@ -94,7 +94,7 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
             TryHistory(() => { if (!updated.RememberRecentMedia) _history?.ClearRecent(); if (!updated.RememberResumeHistory) _history?.ClearResume(); });
             NotifyLibrary();
             if (!updated.RememberResumeHistory) { _pendingResume = null; _resumeReady = false; NotifyPendingResume(); }
-            OnPropertyChanged(nameof(SkipBackwardLabel)); OnPropertyChanged(nameof(SkipForwardLabel)); OnPropertyChanged(nameof(RecentItems));
+            OnPropertyChanged(nameof(SkipBackwardLabel)); OnPropertyChanged(nameof(SkipForwardLabel)); OnPropertyChanged(nameof(SkipBackwardMenuText)); OnPropertyChanged(nameof(SkipForwardMenuText)); OnPropertyChanged(nameof(RecentItems));
         };
         PlayerCommandRegistry registry = new();
         Registry = registry;
@@ -273,6 +273,9 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
     public ICommand SnapshotCommand { get; }
     public string SkipBackwardLabel => $"−{_settings?.Current.SkipBackwardSeconds ?? 10}";
     public string SkipForwardLabel => $"+{_settings?.Current.SkipForwardSeconds ?? 10}";
+    // Right-click menu labels (design: Title Case options).
+    public string SkipBackwardMenuText => $"Skip Back {_settings?.Current.SkipBackwardSeconds ?? 10} Seconds";
+    public string SkipForwardMenuText => $"Skip Forward {_settings?.Current.SkipForwardSeconds ?? 10} Seconds";
 
     public event PropertyChangedEventHandler? PropertyChanged;
 

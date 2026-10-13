@@ -68,6 +68,8 @@ public partial class App : Application
             window.EnableMediaInformationSmoke(desktopArg());
         else if (args.Contains("--settings-smoke", StringComparer.OrdinalIgnoreCase))
             window.EnableSettingsSmoke(desktopArg());
+        else if (args.FirstOrDefault(arg => arg.StartsWith("--settings-capture=", StringComparison.OrdinalIgnoreCase)) is { } capture)
+            window.EnableSettingsCapture(desktopArg(), capture["--settings-capture=".Length..]);
         else if (args.Contains("--settings-review", StringComparer.OrdinalIgnoreCase))
             window.EnableSettingsReview();
         else if (args.Contains("--pip-smoke", StringComparer.OrdinalIgnoreCase))
@@ -90,6 +92,8 @@ public partial class App : Application
             window.EnablePlaybackReview();
         else if (args.Contains("--settings-apply-smoke", StringComparer.OrdinalIgnoreCase))
             window.EnableSettingsApplySmoke(desktopArg());
+        else if (args.Contains("--engine-settings-smoke", StringComparer.OrdinalIgnoreCase))
+            window.EnableEngineSettingsSmoke(desktopArg());
         else if (args.Contains("--menu-smoke", StringComparer.OrdinalIgnoreCase))
             window.EnableMenuSmoke(desktopArg());
         else if (args.FirstOrDefault(arg => arg.StartsWith("--menu-review=", StringComparison.OrdinalIgnoreCase)) is { } review)

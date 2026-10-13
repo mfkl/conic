@@ -66,10 +66,23 @@ public static class MenuShortcuts
         catch (FormatException) { return null; }
     }
 
-    /// <summary>The shortcut a key press makes, written as <see cref="PlayerShortcutPolicy"/> writes them ("Ctrl+O", "Alt+Left", "Ctrl+,").</summary>
+    /// <summary>
+    /// The shortcut a key press makes, written as <see cref="PlayerShortcutPolicy"/>
+    /// writes them ("Ctrl+O", "Alt+Left", "Ctrl+,"). Digits (top row or
+    /// keypad), brackets and "=" are the characters the shortcut editor accepts.
+    /// </summary>
     public static string FromKey(Key key, KeyModifiers modifiers)
     {
-        string name = key == Key.OemComma ? "," : key.ToString();
+        string name = key switch
+        {
+            Key.OemComma => ",",
+            Key.OemOpenBrackets => "[",
+            Key.OemCloseBrackets => "]",
+            Key.OemPlus => "=",
+            >= Key.D0 and <= Key.D9 => ((char)('0' + (key - Key.D0))).ToString(),
+            >= Key.NumPad0 and <= Key.NumPad9 => ((char)('0' + (key - Key.NumPad0))).ToString(),
+            _ => key.ToString(),
+        };
         string prefix = (modifiers.HasFlag(KeyModifiers.Control) ? "Ctrl+" : "") +
             (modifiers.HasFlag(KeyModifiers.Alt) ? "Alt+" : "") +
             (modifiers.HasFlag(KeyModifiers.Shift) ? "Shift+" : "") +

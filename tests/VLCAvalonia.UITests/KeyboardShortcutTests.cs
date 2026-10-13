@@ -63,6 +63,25 @@ public sealed class KeyboardShortcutTests
         Assert.Equal(checkedCommands.Order(), PlayerShortcutPolicy.Defaults(player.ViewModel.Registry).Select(shortcut => shortcut.Command).Order());
     }
 
+    // The shortcut editor accepts digits, brackets and "=" (PlayerShortcutPolicy);
+    // their keys must make the same gesture.
+    [Theory]
+    [InlineData(Key.D1, KeyModifiers.Control, "Ctrl+1")]
+    [InlineData(Key.NumPad7, KeyModifiers.Alt, "Alt+7")]
+    [InlineData(Key.OemOpenBrackets, KeyModifiers.None, "[")]
+    [InlineData(Key.OemCloseBrackets, KeyModifiers.Shift, "Shift+]")]
+    [InlineData(Key.OemPlus, KeyModifiers.Control, "Ctrl+=")]
+    [InlineData(Key.OemComma, KeyModifiers.Control, "Ctrl+,")]
+    public void KeysForEditableShortcutsMakeTheirGesture(Key key, KeyModifiers modifiers, string gesture)
+    {
+        Player player = new();
+        Dictionary<string, string> overrides = new() { [nameof(PlayerCommandId.ToggleMute)] = gesture };
+
+        Assert.Equal(gesture, MenuShortcuts.FromKey(key, modifiers));
+        Assert.True(PlayerShortcutPolicy.TryDispatch(player.ViewModel.Registry, PlayerShortcutPolicy.Effective(player.ViewModel.Registry, overrides), MenuShortcuts.FromKey(key, modifiers)));
+        Assert.Equal(["mute True"], player.Effects());
+    }
+
     /// <summary>A view model playing a seekable file, with every capability a default shortcut needs; it records what each command did.</summary>
     private sealed class Player
     {

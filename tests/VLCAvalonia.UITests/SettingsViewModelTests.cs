@@ -136,7 +136,9 @@ public sealed class SettingsViewModelTests
         Assert.Equal("Dark", viewModel.Theme);
         Assert.Contains("Compact", viewModel.DensityOptions);
         Assert.True(viewModel.IsGeneral);
-        Assert.Equal("Live", viewModel.LabelFor(nameof(PlayerSettings.Theme)));
+        // The appearance rows apply at once and carry the "Live" tag.
+        foreach (string key in new[] { nameof(PlayerSettings.Theme), nameof(PlayerSettings.Accent), nameof(PlayerSettings.Density), nameof(PlayerSettings.ReduceMotion) })
+            Assert.Equal("Live", viewModel.LabelFor(key));
         Assert.Equal("Next open", viewModel.LabelFor(nameof(PlayerSettings.DefaultSpeed)));
         Assert.Equal("Restart", viewModel.LabelFor("Unknown"));
     }

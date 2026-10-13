@@ -90,7 +90,6 @@ public sealed record PlayerSettings(
     string EqualizerPreset = "flat",
     double EqualizerPreamp = AudioEngineOptions.NeutralEqualizerPreamp,
     string EqualizerBands = "0 0 0 0 0 0 0 0 0 0",
-    bool StereoWidening = false,
     bool SpatialAudio = false,
     string SpatialAudioMode = "Headphones",
     bool Compressor = false,

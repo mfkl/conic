@@ -284,7 +284,7 @@ public sealed class PlayerSettingsServiceTests
         Assert.Equal((d.AudioEnabled, d.AudioDevice, d.MaximumVolume, d.StartupVolume, d.VolumeStep), (current.AudioEnabled, current.AudioDevice, current.MaximumVolume, current.StartupVolume, current.VolumeStep));
         Assert.Equal((true, "", 200, 100, 2), (current.AudioEnabled, current.AudioDevice, current.MaximumVolume, current.StartupVolume, current.VolumeStep));
         Assert.Equal(("none", 0d, false, "flat", 12d, "0 0 0 0 0 0 0 0 0 0"), (current.ReplayGain, current.ReplayGainPreamp, current.Equalizer, current.EqualizerPreset, current.EqualizerPreamp, current.EqualizerBands));
-        Assert.Equal((false, false, "Headphones", false, 0d, false), (current.StereoWidening, current.SpatialAudio, current.SpatialAudioMode, current.Compressor, current.PitchShift, current.Karaoke));
+        Assert.Equal((false, "Headphones", false, 0d, false), (current.SpatialAudio, current.SpatialAudioMode, current.Compressor, current.PitchShift, current.Karaoke));
         Assert.Equal(("Automatic", "Balanced", 0), (current.DolbySurround, current.ResamplerQuality, current.AudioDelay));
         // No stored value changed meaning, so the document is not rewritten.
         Assert.DoesNotContain("\"Equalizer\"", storage.Content);

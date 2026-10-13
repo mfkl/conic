@@ -389,7 +389,7 @@ public partial class MainWindow
                 await Open(gop);
                 Click(1);
                 await Task.Delay(800);
-                Require(_presentation.IsPlaying && WindowState != WindowState.FullScreen, "a single click does nothing by default");
+                Require(_presentation.IsPlaying && WindowState != WindowState.FullScreen, $"a single click does nothing by default (status {_presentation.PlaybackStatus}, window {WindowState}, chrome fullscreen {_chromeVisibility.IsFullscreen})");
                 Click(1);
                 Click(2);
                 await WaitFor(() => WindowState == WindowState.FullScreen && _chromeVisibility.IsFullscreen, "a double click goes fullscreen by default", 3);

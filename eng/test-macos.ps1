@@ -110,7 +110,7 @@ if ($Window) {
     $cases['pip'] = @('--pip-smoke')
     $cases['caption-click'] = @('--caption-click-smoke')
     foreach ($smoke in 'home', 'home-session', 'layout', 'drawer', 'menu', 'playback-controls', 'stop', 'media-information',
-        'thumbnail', 'accessibility', 'scale', 'settings', 'settings-apply', 'audio-settings', 'engine-settings') {
+        'thumbnail', 'accessibility', 'scale', 'settings', 'settings-apply', 'audio-settings', 'engine-settings', 'interactions') {
         $cases[$smoke] = @("--$smoke-smoke")
     }
     # The drawer's native tracks and the settings smokes play the fixtures;

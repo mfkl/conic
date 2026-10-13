@@ -4,10 +4,10 @@ using System.Text.Json;
 
 namespace Conic.Services;
 
-/// <summary>A volume in percent (0 to 200, as the volume slider) and the mute state.</summary>
+/// <summary>A volume in percent (0 to 300, the volume slider's widest range) and the mute state.</summary>
 internal sealed record RememberedVolume(double Volume, bool Muted)
 {
-    /// <summary>Where playback starts when Remember volume is off or nothing was saved.</summary>
+    /// <summary>Where playback starts without settings (Settings › Audio › Startup volume otherwise).</summary>
     public static RememberedVolume Default { get; } = new(100, false);
 }
 
@@ -34,7 +34,7 @@ internal sealed class FileVolumeMemory(string path) : IVolumeMemory
             if (!File.Exists(path)) return null;
             RememberedVolume? value = JsonSerializer.Deserialize<RememberedVolume>(File.ReadAllText(path), Options);
             return value is not null && double.IsFinite(value.Volume)
-                ? value with { Volume = Math.Clamp(value.Volume, 0, 200) }
+                ? value with { Volume = Math.Clamp(value.Volume, 0, Player.Application.AudioEngineOptions.MaximumVolumeLimit) }
                 : null;
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException)

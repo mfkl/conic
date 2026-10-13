@@ -1,5 +1,6 @@
 using Player.Application;
 using Player.Contracts;
+using Conic.Services;
 using Conic.ViewModels;
 using Xunit;
 
@@ -312,6 +313,87 @@ public sealed class PlayerPresentationViewModelTests
         viewModel.Volume = 250;
         viewModel.Volume = -10;
         Assert.Equal(new[] { 1.5, 2, 0 }, transport.Volumes);
+    }
+
+    [Fact]
+    public void RememberVolumeRestoresTheLastSessionAndWritesOnlyChanges()
+    {
+        RecordingTransport transport = new();
+        PlayerSettingsService settings = new(new SettingsStorage());
+        Assert.True(settings.Current.RememberVolume);
+        Assert.Equal(SettingApplyMode.Restart, PlayerSettingsService.ApplyMode(nameof(PlayerSettings.RememberVolume)));
+        MemoryVolume memory = new() { Saved = new(60, true) };
+        var vm = new PlayerPresentationViewModel(transport, new EmptyPicker(), () => { }, settings: settings, volumeMemory: memory);
+        Assert.Equal((60d, true), (vm.Volume, vm.IsMuted));
+
+        // Windows kept another volume for the app's audio session: the remembered one is sent.
+        MediaEngineState playing = State(0, PlaybackStatus.Playing, false) with { Volume = .4, IsMuted = false };
+        vm.ApplyEngineState(playing with { Status = PlaybackStatus.Opening });
+        Assert.Empty(transport.Volumes);
+        vm.ApplyEngineState(playing);
+        Assert.Equal([.6], transport.Volumes);
+        Assert.True(transport.Muted);
+        vm.ApplyEngineState(playing with { Volume = .6, IsMuted = true });
+        vm.ApplyEngineState(playing with { Volume = .6, IsMuted = true });
+        Assert.Single(transport.Volumes);
+        vm.SaveVolume();
+        Assert.Equal(0, memory.Writes);
+
+        // The volume the user sets is the one to remember, written once.
+        vm.Volume = 80;
+        vm.ApplyEngineState(playing with { Volume = .8, IsMuted = true });
+        vm.SaveVolume();
+        vm.SaveVolume();
+        Assert.Equal(new RememberedVolume(80, true), memory.Saved);
+        Assert.Equal(1, memory.Writes);
+
+        // The next open keeps the volume; nothing more is sent. Closing writes what changed.
+        vm.ApplyEngineState(playing with { Generation = 2, Volume = .8, IsMuted = true });
+        Assert.Equal([.6, .8], transport.Volumes);
+        vm.Registry.Execute(PlayerCommandId.ToggleMute);
+        vm.ApplyEngineState(playing with { Generation = 2, Volume = .8, IsMuted = false });
+        vm.OnClosing();
+        Assert.Equal(new RememberedVolume(80, false), memory.Saved);
+        Assert.Equal(2, memory.Writes);
+    }
+
+    [Fact]
+    public void WithRememberVolumeOffPlaybackStartsAtTheDefaultAndNothingIsWritten()
+    {
+        RecordingTransport transport = new();
+        PlayerSettingsService settings = new(new SettingsStorage());
+        settings.Update(s => s with { RememberVolume = false });
+        MemoryVolume memory = new() { Saved = new(30, true) };
+        var vm = new PlayerPresentationViewModel(transport, new EmptyPicker(), () => { }, settings: settings, volumeMemory: memory);
+        Assert.Equal((100d, false), (vm.Volume, vm.IsMuted));
+
+        MediaEngineState playing = State(0, PlaybackStatus.Playing, false) with { Volume = .3, IsMuted = true };
+        vm.ApplyEngineState(playing);
+        Assert.Equal([1d], transport.Volumes);
+        Assert.False(transport.Muted);
+        vm.ApplyEngineState(playing with { Volume = 1, IsMuted = false });
+        vm.Volume = 70;
+        vm.ApplyEngineState(playing with { Volume = .7, IsMuted = false });
+        vm.OnClosing();
+
+        Assert.Equal(0, memory.Writes);
+        Assert.Equal(new RememberedVolume(30, true), memory.Saved);
+    }
+
+    [Fact]
+    public void VolumeRestoreStopsWhenTheEngineKeepsItsOwnVolume()
+    {
+        RecordingTransport transport = new();
+        PlayerSettingsService settings = new(new SettingsStorage());
+        MemoryVolume memory = new() { Saved = new(60, false) };
+        var vm = new PlayerPresentationViewModel(transport, new EmptyPicker(), () => { }, settings: settings, volumeMemory: memory);
+        MediaEngineState playing = State(0, PlaybackStatus.Playing, false) with { Volume = .4 };
+
+        for (int i = 0; i < 8; i++) vm.ApplyEngineState(playing with { Position = i / 100d });
+
+        Assert.Equal(5, transport.Volumes.Count);
+        vm.SaveVolume();
+        Assert.Equal(new RememberedVolume(40, false), memory.Saved);
     }
 
     [Theory]
@@ -1031,6 +1113,14 @@ public sealed class PlayerPresentationViewModelTests
         public Task<string?> PickFolderAsync(CancellationToken cancellationToken = default) => Task.FromResult<string?>(null);
         public Task<string?> PickPlaylistToOpenAsync(CancellationToken cancellationToken = default) => Task.FromResult(openPath);
         public Task<string?> PickPlaylistToSaveAsync(CancellationToken cancellationToken = default) => Task.FromResult(savePath);
+    }
+
+    private sealed class MemoryVolume : IVolumeMemory
+    {
+        public RememberedVolume? Saved { get; set; }
+        public int Writes { get; private set; }
+        public RememberedVolume? Load() => Saved;
+        public void Save(RememberedVolume value) { Saved = value; Writes++; }
     }
 
     private sealed class SettingsStorage : IPlayerSettingsStorage

@@ -49,15 +49,15 @@ public sealed class PlayerSettingsServiceTests
     public void AtomicWriteFailureDoesNotChangeCurrentSettings()
     {
         MemoryStorage storage = new() { ThrowOnWrite = true }; PlayerSettingsService service = new(storage);
-        Assert.Throws<IOException>(() => service.Update(s => s with { Theme = "Dark" }));
-        Assert.Equal("System", service.Current.Theme);
+        Assert.Throws<IOException>(() => service.Update(s => s with { Theme = "Light" }));
+        Assert.Equal("Dark", service.Current.Theme);
     }
     [Fact]
     public void PageAndGlobalResetsHaveDistinctScopes()
     {
         MemoryStorage storage = new(); PlayerSettingsService service = new(storage);
-        service.Update(s => s with { Theme = "Dark", SkipForwardSeconds = 42, ResumePlayback = false }); service.ResetAppearance();
-        Assert.Equal("System", service.Current.Theme); Assert.Equal(42, service.Current.SkipForwardSeconds); Assert.False(service.Current.ResumePlayback);
+        service.Update(s => s with { Theme = "Light", SkipForwardSeconds = 42, ResumePlayback = false }); service.ResetAppearance();
+        Assert.Equal("Dark", service.Current.Theme); Assert.Equal(42, service.Current.SkipForwardSeconds); Assert.False(service.Current.ResumePlayback);
         service.ResetAll(); Assert.Equal(PlayerSettings.Default, service.Current);
     }
     [Fact]
@@ -121,6 +121,24 @@ public sealed class PlayerSettingsServiceTests
         Assert.Equal(PlayerSettings.Default.Theme, service.Current.Theme);
         Assert.Equal(AccentPalette.DefaultHex, service.Current.Accent);
         Assert.Equal(20, service.Current.SkipForwardSeconds);
+    }
+
+    [Theory]
+    [InlineData(null, "Dark")]
+    [InlineData("{\"Version\":6,\"Theme\":\"System\"}", "System")]
+    [InlineData("{\"Version\":6,\"Theme\":\"Light\"}", "Light")]
+    [InlineData("{\"Version\":6,\"Theme\":\"Sepia\"}", "Dark")]
+    [InlineData("{\"Version\":4,\"Density\":\"Compact\"}", "Dark")]
+    public void DarkIsTheDefaultThemeAndStoredChoicesAreKept(string? document, string expected)
+    {
+        MemoryStorage storage = new() { Content = document };
+        PlayerSettingsService service = new(storage);
+
+        service.Load();
+
+        Assert.Equal("Dark", PlayerSettings.Default.Theme);
+        // A stored "System" is a choice, not an old default: it is not migrated.
+        Assert.Equal(expected, service.Current.Theme);
     }
 
     [Fact]

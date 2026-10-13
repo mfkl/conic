@@ -19,7 +19,9 @@ internal sealed record AccentFamily(
 /// swatch's saturation relative to orange, and the token's lightness moved by
 /// the swatch's lightness difference (the BG tokens keep the token's
 /// lightness). Text, icon and label colors are then moved until they reach
-/// 4.5:1 (text, labels) or 3:1 (icons) on the theme's surfaces.
+/// 4.5:1 (text, labels) or 3:1 (icons) on the theme's surfaces. The VLC
+/// cone (Accent/Logo) is not part of the family: it stays the design's
+/// orange in every accent.
 /// </summary>
 internal static class AccentTheme
 {
@@ -47,7 +49,9 @@ internal static class AccentTheme
         Color textHover = light ? Lightness(text, -0.06) : Reach(bright, textSurfaces, 4.5, lighter: true);
         Color icon = Reach(main, surfaces, 3, lighter: !light);
         Color onAccent = Contrast(DarkLabel, main) >= 4.5 || Contrast(DarkLabel, main) >= Contrast(Colors.White, main) ? DarkLabel : Colors.White;
-        return new AccentFamily(main, bright, dim, tokens[3], backgroundBright, tokens[5], text, textHover, icon, onAccent);
+        // The cone is VLC's mark, not an accent: always the design's orange for the theme.
+        Color logo = design[3];
+        return new AccentFamily(main, bright, dim, logo, backgroundBright, tokens[5], text, textHover, icon, onAccent);
     }
 
     /// <summary>Recolors the accent brushes of both theme dictionaries (so

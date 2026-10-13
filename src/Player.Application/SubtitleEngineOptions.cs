@@ -82,7 +82,8 @@ public static class SubtitleEngineOptions
     public static double ShadowDistance(string distance) => distance switch { "Medium" => .1, "Large" => .15, _ => .06 };
 
     /// <summary>A percentage as VLC's 0 to 255 opacity.</summary>
-    public static int Opacity(int percent) => (int)Math.Round(Math.Clamp(percent, 0, 100) * 2.55, MidpointRounding.AwayFromZero);
+    // In integers: 50 % * 2.55 is 127.49999999999999 in floating point.
+    public static int Opacity(int percent) => (Math.Clamp(percent, 0, 100) * 255 + 50) / 100;
 
     /// <summary>"#rrggbb" or "rrggbb" -> "#RRGGBB"; anything else is <paramref name="fallback"/>.</summary>
     public static string NormalizeColor(string? value, string fallback)

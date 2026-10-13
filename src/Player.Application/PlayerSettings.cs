@@ -91,7 +91,8 @@ public sealed class PlayerSettingsService
         nameof(PlayerSettings.Theme) or nameof(PlayerSettings.Accent) or nameof(PlayerSettings.Density) or nameof(PlayerSettings.ControlTimeoutSeconds) or nameof(PlayerSettings.ReduceMotion)
             or nameof(PlayerSettings.SkipBackwardSeconds) or nameof(PlayerSettings.SkipForwardSeconds) => SettingApplyMode.Live,
         nameof(PlayerSettings.RememberRecentMedia) or nameof(PlayerSettings.RememberResumeHistory) => SettingApplyMode.Live,
-        nameof(PlayerSettings.DefaultSpeed) or nameof(PlayerSettings.ResumePlayback) or nameof(PlayerSettings.RememberVolume)
+        // RememberVolume decides the volume the next start begins at, so it is Restart.
+        nameof(PlayerSettings.DefaultSpeed) or nameof(PlayerSettings.ResumePlayback)
             or nameof(PlayerSettings.ResumeMinimumElapsedSeconds) or nameof(PlayerSettings.ResumeMaximumRemainingSeconds) => SettingApplyMode.NextOpen,
         _ => SettingApplyMode.Restart,
     };

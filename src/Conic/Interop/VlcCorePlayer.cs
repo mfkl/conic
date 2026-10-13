@@ -192,10 +192,11 @@ internal sealed unsafe partial class VlcCorePlayer : IMediaEngine, IQueueTranspo
         long generation = _states.BeginOpen(stateSource);
         string[] openArguments = [.. RateArguments(OpenPlaybackRate), .. OpenArguments];
         LiveAudioSettings? startupAudio = LiveAudio;
+        LiveSubtitleSettings? startupSubtitles = LiveSubtitles;
         PublishQueue(new PlaybackQueueState(generation, 0, QueueLoadState.Loading, [], -1, _requestedRepeat, _requestedOrder));
         PublishMediaCapabilities(new MediaCapabilitiesState(generation, 0, MediaCapabilityLoadState.Loading, [], [], [], [], new(0, 0)));
         ManualResetEventSlim stop = new(false);
-        Thread thread = new(() => Run(launchSources, initialEnqueueSources, openArguments, startupAudio, generation, stop))
+        Thread thread = new(() => Run(launchSources, initialEnqueueSources, openArguments, startupAudio, startupSubtitles, generation, stop))
         {
             IsBackground = true,
             Name = "VLCLR composition playback",
@@ -665,6 +666,7 @@ internal sealed unsafe partial class VlcCorePlayer : IMediaEngine, IQueueTranspo
         IReadOnlyList<string> initialEnqueueSources,
         IReadOnlyList<string> openArguments,
         LiveAudioSettings? startupAudio,
+        LiveSubtitleSettings? startupSubtitles,
         long generation,
         ManualResetEventSlim stop)
     {
@@ -733,13 +735,15 @@ internal sealed unsafe partial class VlcCorePlayer : IMediaEngine, IQueueTranspo
                     _mediaGeneration = 0;
                     _lastObservedInputIdentity = 0;
                     _queue = new VLCPlaylistQueue(TryGetPlaylistLease);
-                    // The core started with the audio options of these settings.
+                    // The core started with the audio and subtitle options of these settings.
                     ResetAppliedAudio(startupAudio);
+                    ResetAppliedSubtitles(startupSubtitles);
                 }
             }
 
             ApplyRequestedModes(generation);
             ApplyLiveAudio();
+            ApplyLiveSubtitles();
 
             VLCCore.libvlc_InternalPlay(core);
             if (initialEnqueueSources.Count != 0)

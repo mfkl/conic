@@ -23,7 +23,7 @@ internal interface IVideoBackend : IDisposable
     bool HasCpuFrame { get; }
     bool HasGpuFrame { get; }
     Task InitializeAsync();
-    IMediaEngine CreatePlayer(IReadOnlyList<string> audioStartupArguments);
+    IMediaEngine CreatePlayer();
     Task PresentLatestFrameAsync();
     void UpdateLayout();
     void Render(DrawingContext context);

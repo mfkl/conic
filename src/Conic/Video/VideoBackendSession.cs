@@ -17,19 +17,19 @@ internal sealed class VideoBackendSession(IVideoBackend backend) : IDisposable
     public void PostNotification(Action<Action> post, Action notification) =>
         post(() => { if (!_disposed) notification(); });
 
-    public Task<IMediaEngine?> InitializeAsync(IReadOnlyList<string> audioStartupArguments)
+    public Task<IMediaEngine?> InitializeAsync()
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
-        return _initialization ??= InitializeCoreAsync(audioStartupArguments.ToArray());
+        return _initialization ??= InitializeCoreAsync();
     }
 
-    private async Task<IMediaEngine?> InitializeCoreAsync(IReadOnlyList<string> audioStartupArguments)
+    private async Task<IMediaEngine?> InitializeCoreAsync()
     {
         try
         {
             await Backend.InitializeAsync();
             if (_disposed) return null;
-            return _player = Backend.CreatePlayer(audioStartupArguments);
+            return _player = Backend.CreatePlayer();
         }
         catch
         {

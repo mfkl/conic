@@ -1403,6 +1403,19 @@ public sealed class PlayerPresentationViewModelTests
         Assert.Equal("Subtitle delay 10000", transport.Calls[^1]);
     }
 
+    // Clear queue counts an open without starting a core, so the opens and
+    // VLCLR's cores no longer have the same numbers: a choice from the drawer
+    // must still name the core that is playing.
+    [Fact]
+    public void TrackTitleAndChapterChoicesNameTheCoreThatPlays()
+    {
+        MediaCapabilitiesState state = new(7, 3, MediaCapabilityLoadState.Ready, [], [], [], [], new(0, 0));
+
+        Assert.Equal(new VLCLR.VLCInputGeneration(5, 3), VLCAvalonia.Interop.VlcCorePlayer.NativeGeneration(state, openGeneration: 7, coreGeneration: 5));
+        // A list read during an earlier open names no core: the choice is refused as stale.
+        Assert.Equal(-1, VLCAvalonia.Interop.VlcCorePlayer.NativeGeneration(state, openGeneration: 8, coreGeneration: 6).CoreGeneration);
+    }
+
     [Fact]
     public async Task AddAudioFileAttachesAnAudioFileForTheNextOpenOnly()
     {

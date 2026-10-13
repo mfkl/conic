@@ -11,23 +11,27 @@ namespace VLCAvalonia;
 // shortcut shows (and works) in the menu too.
 public partial class MainWindow
 {
+    private readonly List<(NativeMenuItem Item, PlayerCommandId Command)> _macMenuCommands = [];
+
     private void InitializeMacMenu()
     {
         if (!OperatingSystem.IsMacOS()) return;
         BuildMacMenu();
-        _settings.Changed += (_, _) => BuildMacMenu();
+        UpdateMacMenuGestures();
+        _settings.Changed += (_, _) => UpdateMacMenuGestures();
     }
 
+    // Built once: Avalonia's macOS exporter binds the window to its first
+    // NativeMenu and throws when given another one, so later changes edit
+    // these items in place.
     private void BuildMacMenu()
     {
-        IReadOnlyDictionary<PlayerCommandId, string> shortcuts =
-            PlayerShortcutPolicy.Effective(_presentation.Registry, _settings.Current.ShortcutOverrides);
-
-        NativeMenuItem Item(string header, PlayerCommandId command) => new(header)
+        NativeMenuItem Item(string header, PlayerCommandId command)
         {
-            Command = new RegistryCommand(_presentation.Registry, command),
-            Gesture = shortcuts.TryGetValue(command, out string? gesture) ? MenuGesture(gesture) : null,
-        };
+            NativeMenuItem item = new(header) { Command = new RegistryCommand(_presentation.Registry, command) };
+            _macMenuCommands.Add((item, command));
+            return item;
+        }
         NativeMenuItem Action(string header, Action action, KeyGesture? gesture = null) => new(header)
         {
             Command = new RelayCommand(_ => action()),
@@ -83,6 +87,14 @@ public partial class MainWindow
         // Items added to the application menu, after "About".
         NativeMenu application = [Item("Settings…", PlayerCommandId.OpenSettings)];
         if (Application.Current is { } app) NativeMenu.SetMenu(app, application);
+    }
+
+    private void UpdateMacMenuGestures()
+    {
+        IReadOnlyDictionary<PlayerCommandId, string> shortcuts =
+            PlayerShortcutPolicy.Effective(_presentation.Registry, _settings.Current.ShortcutOverrides);
+        foreach ((NativeMenuItem item, PlayerCommandId command) in _macMenuCommands)
+            item.Gesture = shortcuts.TryGetValue(command, out string? gesture) ? MenuGesture(gesture) : null;
     }
 
     /// <summary>

@@ -1,7 +1,8 @@
-# Writes the media --engine-settings-smoke (phase 9b) and
-# --audio-settings-smoke (phase 9c) play to
-# artifacts/settings-fixtures, with ffmpeg from PATH. Every file is
-# synthetic: testsrc video, sine audio, two tiny subtitle files.
+# Writes the media --engine-settings-smoke (phase 9b),
+# --audio-settings-smoke (phase 9c) and --interface-settings-smoke (phase
+# 9d) play to artifacts/settings-fixtures, with ffmpeg from PATH. Every
+# file is synthetic: testsrc and black video, sine audio, small subtitle
+# files.
 [CmdletBinding()]
 param([string] $Output = (Join-Path (Split-Path $PSScriptRoot -Parent) 'artifacts/settings-fixtures'))
 
@@ -57,6 +58,20 @@ try {
     # Tones for the resampler: 6 kHz (images) and 20 kHz (the top of the band).
     Invoke-Ffmpeg -f lavfi -i 'aevalsrc=0.4*sin(2*PI*6000*t)|0.4*sin(2*PI*6000*t):s=48000:d=20' '-c:a' pcm_s16le audio-6k.wav
     Invoke-Ffmpeg -f lavfi -i 'aevalsrc=0.4*sin(2*PI*20000*t)|0.4*sin(2*PI*20000*t):s=48000:d=20' '-c:a' pcm_s16le audio-20k.wav
+    # Subtitles (--interface-settings-smoke, phase 9d): black video, so the
+    # text is all that shows. dark.srt (loaded with dark.mp4) has a new line
+    # every second, so a style changed while playing shows within one.
+    Invoke-Ffmpeg -f lavfi -i color=c=black:s=640x360:r=25 -t 20 '-c:v' libx264 -preset veryfast -pix_fmt yuv420p dark.mp4
+    $lines = foreach ($i in 0..19) { "{0}`n00:00:{1:00},000 --> 00:00:{2:00},000`nSUBTITLE LINE {0}`n" -f ($i + 1), $i, ($i + 1) }
+    Set-Content -NoNewline -Path dark.srt -Value ($lines -join "`n")
+    # Cyrillic in Windows-1251 (not UTF-8): read right only with that encoding.
+    Copy-Item dark.mp4 cyrillic.mp4
+    [byte[]] $cyrillic = [Text.Encoding]::ASCII.GetBytes("1`n00:00:00,000 --> 00:00:20,000`n") + [byte[]](0xCF, 0xF0, 0xE8, 0xE2, 0xE5, 0xF2) + [byte[]](0x0A)
+    [IO.File]::WriteAllBytes((Join-Path $Output 'cyrillic.srt'), $cyrillic)
+    # A subtitle file whose name has nothing of the media's: only "any subtitle file" matching loads it.
+    New-Item -ItemType Directory -Force -Path matching | Out-Null
+    Copy-Item dark.mp4 matching/film.mp4
+    Set-Content -NoNewline -Path matching/unrelated.srt -Value "1`n00:00:00,000 --> 00:00:20,000`nUnrelated`n"
     Write-Output "Fixtures written to $Output"
 }
 finally { Pop-Location }

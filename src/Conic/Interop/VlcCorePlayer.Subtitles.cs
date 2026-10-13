@@ -66,13 +66,16 @@ internal sealed partial class VlcCorePlayer
     }
 
     /// <summary>The playing core's subtitle style variables (as the text renderer inherits them), for the smoke.</summary>
-    internal IReadOnlyDictionary<string, long> ReadSubtitleVariablesForSmoke() => InvokeMediaCapabilityForSmoke(_ =>
+    internal IReadOnlyDictionary<string, long> ReadSubtitleVariablesForSmoke() => ReadIntegerVariablesForSmoke(SubtitleVariables);
+
+    /// <summary>Integer variables as the playing core's objects inherit them (its options, then the live changes), for the smoke.</summary>
+    internal IReadOnlyDictionary<string, long> ReadIntegerVariablesForSmoke(params string[] names) => InvokeMediaCapabilityForSmoke(_ =>
     {
         nint playlist;
         lock (_gate) playlist = _playlist;
         Dictionary<string, long> values = new(StringComparer.Ordinal);
         if (playlist == 0) return (IReadOnlyDictionary<string, long>)values;
-        foreach (string name in SubtitleVariables)
+        foreach (string name in names)
             if (VLCCore.VarInherit(playlist, name, VLCVarType.Integer, out VLCValueNative value) == 0) values[name] = value.Integer;
         return values;
     });

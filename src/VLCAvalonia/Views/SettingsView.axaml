@@ -252,6 +252,16 @@
             <Setter Property="TextAlignment" Value="Right" />
             <Setter Property="Foreground" Value="{DynamicResource Vlc.Fg.A2}" />
         </Style>
+        <!-- Color fields (design: Subtitles › Appearance): the hex value with
+             its color in a small square at the right of the field. -->
+        <Style Selector="Border.colorSwatch">
+            <Setter Property="Width" Value="20" />
+            <Setter Property="Height" Value="20" />
+            <Setter Property="Margin" Value="0,0,8,0" />
+            <Setter Property="CornerRadius" Value="3" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="BorderBrush" Value="{DynamicResource Vlc.Divider.Bright}" />
+        </Style>
         <Style Selector="Button.settingAction">
             <Setter Property="HorizontalContentAlignment" Value="Center" />
             <Setter Property="VerticalContentAlignment" Value="Center" />
@@ -682,6 +692,28 @@
                                                       AutomationProperties.HelpText="Compact narrows the gaps in the control bar and tightens the rows in Settings" />
                                         </controls:SettingRow>
                                     </StackPanel>
+                                    <!-- App › Interface › Window (design 3046:10057, 3062:11379). Not
+                                         built: skins, video in a separate window, window decorations,
+                                         fullscreen screen, compact mode, tray and popups, playlist
+                                         tree, window opacity (see the phase 9d log). -->
+                                    <StackPanel Classes="settingsSection" IsVisible="{Binding IsInterface}">
+                                        <TextBlock Classes="sectionTitle" Text="Window" />
+                                        <controls:SettingRow Label="Resize window to fit video" Badge="Next open" Help="When a video opens, a window that is not maximized takes the video's size, within the screen" ControlWidth="68">
+                                            <CheckBox IsChecked="{Binding ResizeToVideo, Mode=TwoWay}" AutomationProperties.Name="Resize window to fit video" AutomationProperties.HelpText="When a video opens, a window that is not maximized takes the video's size, within the screen" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Remember window size and position" Badge="Restart" Help="VLC starts where the window was when it closed; when off, it starts maximized" ControlWidth="68">
+                                            <CheckBox IsChecked="{Binding RememberWindowGeometry, Mode=TwoWay}" AutomationProperties.Name="Remember window size and position" AutomationProperties.HelpText="VLC starts where the window was when it closed; when off, it starts maximized" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Keep window above other windows" Badge="Live" Help="The same as Always on Top in the More menu, kept for the next start" ControlWidth="68">
+                                            <CheckBox IsChecked="{Binding KeepOnTop, Mode=TwoWay}" AutomationProperties.Name="Keep window above other windows" AutomationProperties.HelpText="The same as Always on Top in the More menu, kept for the next start" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Show the file name in the title bar" Badge="Live" Help="When off, the title bar shows the app's name" ControlWidth="68">
+                                            <CheckBox IsChecked="{Binding ShowFileNameInTitle, Mode=TwoWay}" AutomationProperties.Name="Show the file name in the title bar" AutomationProperties.HelpText="When off, the title bar shows the app's name" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Pause video when window is minimized" Badge="Live" Help="Video pauses while the window is minimized and plays again when it comes back; audio keeps playing" ControlWidth="68">
+                                            <CheckBox IsChecked="{Binding PauseWhenMinimized, Mode=TwoWay}" AutomationProperties.Name="Pause video when window is minimized" AutomationProperties.HelpText="Video pauses while the window is minimized and plays again when it comes back; audio keeps playing" />
+                                        </controls:SettingRow>
+                                    </StackPanel>
                                     <StackPanel Classes="settingsSection" IsVisible="{Binding IsInterface}">
                                         <TextBlock Classes="sectionTitle" Text="Playback Controls" />
                                         <controls:SettingRow Label="Auto-hide the controls" Badge="Live" Help="Hides the bars over fullscreen video and picture in picture while playing; in a window they stay beside the video" ControlWidth="68">
@@ -695,6 +727,9 @@
                                                            Value="{Binding ControlTimeoutSeconds, Mode=TwoWay}"
                                                            IsEnabled="{Binding AutoHideControls}"
                                                            AutomationProperties.Name="Controls hide after" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Show controls in fullscreen" Badge="Live" Help="When off, the bars stay hidden over fullscreen video; the keyboard and the mouse still work" ControlWidth="68">
+                                            <CheckBox IsChecked="{Binding ShowControlsInFullscreen, Mode=TwoWay}" AutomationProperties.Name="Show controls in fullscreen" AutomationProperties.HelpText="When off, the bars stay hidden over fullscreen video; the keyboard and the mouse still work" />
                                         </controls:SettingRow>
                                         <controls:SettingRow Label="Reduce motion" Help="Turns off animation (fades, button press scaling, the sliding loading bar)" ControlWidth="68">
                                             <CheckBox IsChecked="{Binding ReduceMotion, Mode=TwoWay}"
@@ -763,17 +798,46 @@
                                     <!-- App › Controls -->
                                     <StackPanel Classes="settingsSection" IsVisible="{Binding IsControls}">
                                         <TextBlock Classes="sectionTitle" Text="Skip Amounts" />
-                                        <controls:SettingRow Label="Skip backward (seconds)">
+                                        <controls:SettingRow Label="Very short skip (seconds)" Badge="Live" Help="Shift with the Left and Right arrow keys">
+                                            <NumericUpDown Minimum="1" Maximum="{Binding MaximumSkipSeconds}" Increment="1" FormatString="0" Value="{Binding VeryShortSkipSeconds, Mode=TwoWay}" AutomationProperties.Name="Very short skip (seconds)" AutomationProperties.HelpText="Shift with the Left and Right arrow keys" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Skip backward (seconds)" Badge="Live" Help="The short skip: the skip buttons, and Alt with the Left arrow key">
                                             <NumericUpDown Minimum="1"
                                                            Maximum="120"
                                                            Value="{Binding SkipBackwardSeconds, Mode=TwoWay}"
                                                            AutomationProperties.Name="Skip backward (seconds)" />
                                         </controls:SettingRow>
-                                        <controls:SettingRow Label="Skip forward (seconds)">
+                                        <controls:SettingRow Label="Skip forward (seconds)" Badge="Live" Help="The short skip: the skip buttons, and Alt with the Right arrow key">
                                             <NumericUpDown Minimum="1"
                                                            Maximum="120"
                                                            Value="{Binding SkipForwardSeconds, Mode=TwoWay}"
                                                            AutomationProperties.Name="Skip forward (seconds)" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Medium skip (seconds)" Badge="Live" Help="Ctrl with the Left and Right arrow keys">
+                                            <NumericUpDown Minimum="1" Maximum="{Binding MaximumSkipSeconds}" Increment="5" FormatString="0" Value="{Binding MediumSkipSeconds, Mode=TwoWay}" AutomationProperties.Name="Medium skip (seconds)" AutomationProperties.HelpText="Ctrl with the Left and Right arrow keys" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Long skip (seconds)" Badge="Live" Help="Ctrl+Alt with the Left and Right arrow keys">
+                                            <NumericUpDown Minimum="1" Maximum="{Binding MaximumSkipSeconds}" Increment="30" FormatString="0" Value="{Binding LongSkipSeconds, Mode=TwoWay}" AutomationProperties.Name="Long skip (seconds)" AutomationProperties.HelpText="Ctrl+Alt with the Left and Right arrow keys" />
+                                        </controls:SettingRow>
+                                    </StackPanel>
+                                    <!-- App › Controls › Mouse (design 6536:14482). Remotes (web
+                                         remote control) are not built (see the phase 9d log). -->
+                                    <StackPanel Classes="settingsSection" IsVisible="{Binding IsControls}">
+                                        <TextBlock Classes="sectionTitle" Text="Mouse" />
+                                        <controls:SettingRow Label="Single click on the video" Badge="Live" Help="With a double-click action, a single click waits out the double-click time">
+                                            <ComboBox ItemsSource="{Binding ClickActions}" SelectedItem="{Binding ClickAction, Mode=TwoWay}" AutomationProperties.Name="Single click on the video" AutomationProperties.HelpText="With a double-click action, a single click waits out the double-click time" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Double click on the video" Badge="Live" Help="In picture in picture a double click always returns to the main window">
+                                            <ComboBox ItemsSource="{Binding DoubleClickActions}" SelectedItem="{Binding DoubleClickAction, Mode=TwoWay}" AutomationProperties.Name="Double click on the video" AutomationProperties.HelpText="In picture in picture a double click always returns to the main window" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Scroll wheel" Badge="Live" Help="Each notch over the video changes the volume by the volume step (Audio), or seeks by the very short skip">
+                                            <ComboBox ItemsSource="{Binding WheelActions}" SelectedItem="{Binding WheelAction, Mode=TwoWay}" AutomationProperties.Name="Scroll wheel" AutomationProperties.HelpText="Each notch over the video changes the volume by the volume step (Audio), or seeks by the very short skip" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Horizontal scroll" Badge="Live" Help="Tilting the wheel or scrolling sideways on a touchpad over the video">
+                                            <ComboBox ItemsSource="{Binding WheelActions}" SelectedItem="{Binding HorizontalWheelAction, Mode=TwoWay}" AutomationProperties.Name="Horizontal scroll" AutomationProperties.HelpText="Tilting the wheel or scrolling sideways on a touchpad over the video" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Reverse scroll direction" Badge="Live" Help="Up and right lower the volume and seek backward" ControlWidth="68">
+                                            <CheckBox IsChecked="{Binding ReverseWheel, Mode=TwoWay}" AutomationProperties.Name="Reverse scroll direction" AutomationProperties.HelpText="Up and right lower the volume and seek backward" />
                                         </controls:SettingRow>
                                     </StackPanel>
                                     <!-- The design's Keyboard Shortcuts editor (2437:14832) as
@@ -1125,13 +1189,139 @@
                                         </controls:SettingRow>
                                     </StackPanel>
 
-                                    <!-- Media › Subtitles -->
+                                    <!-- Media › Subtitles (design 3180:17989, 6536:13908): Tracks &
+                                         Languages, Loading Subtitles, Appearance, Timing and On-Screen
+                                         Messages. VLC's text renderer draws the subtitles, so these are
+                                         its options for new media; the size, color, outline and
+                                         background also reach the playing media. Not built: pixel
+                                         sizes, subtitle folders, ASS styling, shadow angle, text
+                                         direction, monospace font (see the phase 9d log). -->
                                     <StackPanel Classes="settingsSection" IsVisible="{Binding IsSubtitles}">
-                                        <TextBlock Classes="sectionTitle" Text="Tracks" />
+                                        <TextBlock Classes="sectionTitle" Text="Tracks &amp; Languages" />
+                                        <controls:SettingRow Label="Enable subtitles" Badge="Next open" Help="When off, no subtitle track is shown or loaded" ControlWidth="68">
+                                            <CheckBox IsChecked="{Binding SubtitlesEnabled, Mode=TwoWay}" AutomationProperties.Name="Enable subtitles" AutomationProperties.HelpText="When off, no subtitle track is shown or loaded" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Preferred language" Badge="Next open" Help="Language codes in order of preference, such as en, fr; none turns subtitles off. The same setting as in Playback">
+                                            <TextBox Text="{Binding SubtitleLanguage, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" PlaceholderText="Media default (e.g. en, fr)" AutomationProperties.Name="Preferred subtitle language" AutomationProperties.HelpText="Language codes in order of preference, such as en, fr; none turns subtitles off. The same setting as in Playback" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Text encoding" Badge="Next open" Help="The character set of text subtitle files; Automatic reads UTF-8 and falls back to your system's">
+                                            <ComboBox ItemsSource="{Binding SubtitleEncodings}" SelectedItem="{Binding SubtitleEncoding, Mode=TwoWay}" AutomationProperties.Name="Subtitle text encoding" AutomationProperties.HelpText="The character set of text subtitle files; Automatic reads UTF-8 and falls back to your system's" />
+                                        </controls:SettingRow>
+                                    </StackPanel>
+                                    <StackPanel Classes="settingsSection" IsVisible="{Binding IsSubtitles}">
+                                        <TextBlock Classes="sectionTitle" Text="Loading Subtitles" />
+                                        <controls:SettingRow Label="Load subtitle files automatically" Badge="Next open" Help="Loads subtitle files next to the media file, and in its subs and subtitles folders" ControlWidth="68">
+                                            <CheckBox IsChecked="{Binding SubtitleAutoload, Mode=TwoWay}" AutomationProperties.Name="Load subtitle files automatically" AutomationProperties.HelpText="Loads subtitle files next to the media file, and in its subs and subtitles folders" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="File name matching" Badge="Next open" Help="Which subtitle files belong to the media, from any file to only the exact title">
+                                            <ComboBox ItemsSource="{Binding SubtitleMatchings}" SelectedItem="{Binding SubtitleMatching, Mode=TwoWay}" IsEnabled="{Binding SubtitleAutoload}" AutomationProperties.Name="Subtitle file name matching" AutomationProperties.HelpText="Which subtitle files belong to the media, from any file to only the exact title" />
+                                        </controls:SettingRow>
+                                    </StackPanel>
+                                    <StackPanel Classes="settingsSection" IsVisible="{Binding IsSubtitles}">
+                                        <TextBlock Classes="sectionTitle" Text="Appearance" />
+                                        <controls:SettingRow Label="Font" Badge="Next open" Help="A font family installed on this computer; empty uses VLC's default">
+                                            <TextBox Text="{Binding SubtitleFont, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" PlaceholderText="VLC default" AutomationProperties.Name="Subtitle font" AutomationProperties.HelpText="A font family installed on this computer; empty uses VLC's default" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Font size (%)" Badge="Live" Help="Relative to VLC's size for the video's height; 100 is VLC's size">
+                                            <NumericUpDown Minimum="50" Maximum="300" Increment="10" FormatString="0" Value="{Binding SubtitleTextScale, Mode=TwoWay}" AutomationProperties.Name="Subtitle font size (percent)" AutomationProperties.HelpText="Relative to VLC's size for the video's height; 100 is VLC's size" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Bold" Badge="Next open" ControlWidth="68">
+                                            <CheckBox IsChecked="{Binding SubtitleBold, Mode=TwoWay}" AutomationProperties.Name="Bold subtitles" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Text color" Badge="Live" Help="A hex color such as #FFFFFF">
+                                            <TextBox Text="{Binding SubtitleColor, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" AutomationProperties.Name="Subtitle text color" AutomationProperties.HelpText="A hex color such as #FFFFFF">
+                                                <TextBox.InnerRightContent><Border Classes="colorSwatch" Background="{Binding SubtitleColorSwatch}" /></TextBox.InnerRightContent>
+                                            </TextBox>
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Text opacity" Badge="Next open">
+                                            <Grid ColumnDefinitions="*,52" ColumnSpacing="8">
+                                                <Slider Classes="setting" Minimum="0" Maximum="100" SmallChange="1" LargeChange="10" Value="{Binding SubtitleOpacity, Mode=TwoWay}" AutomationProperties.Name="Subtitle text opacity" />
+                                                <TextBlock Grid.Column="1" Classes="settingValue" Text="{Binding SubtitleOpacity, StringFormat='{}{0:0}%'}" />
+                                            </Grid>
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Outline thickness" Badge="Live">
+                                            <ComboBox ItemsSource="{Binding SubtitleOutlines}" SelectedItem="{Binding SubtitleOutline, Mode=TwoWay}" AutomationProperties.Name="Subtitle outline thickness" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Outline color" Badge="Next open" Help="A hex color such as #000000">
+                                            <TextBox Text="{Binding SubtitleOutlineColor, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" AutomationProperties.Name="Subtitle outline color" AutomationProperties.HelpText="A hex color such as #000000">
+                                                <TextBox.InnerRightContent><Border Classes="colorSwatch" Background="{Binding SubtitleOutlineColorSwatch}" /></TextBox.InnerRightContent>
+                                            </TextBox>
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Shadow" Badge="Next open" ControlWidth="68">
+                                            <CheckBox IsChecked="{Binding SubtitleShadow, Mode=TwoWay}" AutomationProperties.Name="Subtitle shadow" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Shadow color" Badge="Next open" Help="A hex color such as #000000">
+                                            <TextBox Text="{Binding SubtitleShadowColor, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" IsEnabled="{Binding SubtitleShadow}" AutomationProperties.Name="Subtitle shadow color" AutomationProperties.HelpText="A hex color such as #000000">
+                                                <TextBox.InnerRightContent><Border Classes="colorSwatch" Background="{Binding SubtitleShadowColorSwatch}" /></TextBox.InnerRightContent>
+                                            </TextBox>
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Shadow distance" Badge="Next open">
+                                            <ComboBox ItemsSource="{Binding SubtitleShadowDistances}" SelectedItem="{Binding SubtitleShadowDistance, Mode=TwoWay}" IsEnabled="{Binding SubtitleShadow}" AutomationProperties.Name="Subtitle shadow distance" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Background" Badge="Live" Help="A box behind the text" ControlWidth="68">
+                                            <CheckBox IsChecked="{Binding SubtitleBackground, Mode=TwoWay}" AutomationProperties.Name="Subtitle background" AutomationProperties.HelpText="A box behind the text" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Background color" Badge="Live" Help="A hex color such as #000000">
+                                            <TextBox Text="{Binding SubtitleBackgroundColor, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" IsEnabled="{Binding SubtitleBackground}" AutomationProperties.Name="Subtitle background color" AutomationProperties.HelpText="A hex color such as #000000">
+                                                <TextBox.InnerRightContent><Border Classes="colorSwatch" Background="{Binding SubtitleBackgroundColorSwatch}" /></TextBox.InnerRightContent>
+                                            </TextBox>
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Background opacity" Badge="Live">
+                                            <Grid ColumnDefinitions="*,52" ColumnSpacing="8">
+                                                <Slider Classes="setting" Minimum="0" Maximum="100" SmallChange="1" LargeChange="10" Value="{Binding SubtitleBackgroundOpacity, Mode=TwoWay}" IsEnabled="{Binding SubtitleBackground}" AutomationProperties.Name="Subtitle background opacity" />
+                                                <TextBlock Grid.Column="1" Classes="settingValue" Text="{Binding SubtitleBackgroundOpacity, StringFormat='{}{0:0}%'}" />
+                                            </Grid>
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Distance from the bottom (pixels)" Badge="Next open" Help="Raises the subtitles above the bottom of the video, in pixels; 0 is VLC's position">
+                                            <NumericUpDown Minimum="0" Maximum="1000" Increment="10" FormatString="0" Value="{Binding SubtitleMargin, Mode=TwoWay}" AutomationProperties.Name="Subtitle distance from the bottom (pixels)" AutomationProperties.HelpText="Raises the subtitles above the bottom of the video, in pixels; 0 is VLC's position" />
+                                        </controls:SettingRow>
+                                    </StackPanel>
+                                    <StackPanel Classes="settingsSection" IsVisible="{Binding IsSubtitles}">
+                                        <TextBlock Classes="sectionTitle" Text="Timing" />
+                                        <controls:SettingRow Label="Subtitle delay (ms)" Badge="Next open" Help="The delay new media starts with; positive shows the subtitles later. The Subtitles panel changes the media that is playing">
+                                            <NumericUpDown Minimum="-10000" Maximum="10000" Increment="100" FormatString="0" Value="{Binding SubtitleDelay, Mode=TwoWay}" AutomationProperties.Name="Default subtitle delay (milliseconds)" AutomationProperties.HelpText="The delay new media starts with; positive shows the subtitles later. The Subtitles panel changes the media that is playing" />
+                                        </controls:SettingRow>
                                         <controls:SettingRow Label="Subtitle tracks and timing" Help="Choose tracks and adjust timing during playback">
                                             <Button Classes="secondary settingAction"
                                                     Content="Subtitle tracks and timing"
                                                     Command="{Binding OpenSubtitleControlsCommand}" />
+                                        </controls:SettingRow>
+                                    </StackPanel>
+                                    <StackPanel Classes="settingsSection" IsVisible="{Binding IsSubtitles}">
+                                        <TextBlock Classes="sectionTitle" Text="On-Screen Messages" />
+                                        <controls:SettingRow Label="Show feedback for shortcuts" Badge="Live" Help="Shows over the video what a shortcut, a click or the scroll wheel did" ControlWidth="68">
+                                            <CheckBox IsChecked="{Binding ShortcutFeedback, Mode=TwoWay}" AutomationProperties.Name="Show feedback for shortcuts" AutomationProperties.HelpText="Shows over the video what a shortcut, a click or the scroll wheel did" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Show feedback for" Badge="Live">
+                                            <Grid ColumnDefinitions="*,52" ColumnSpacing="8">
+                                                <Slider Classes="setting" Minimum="0.5" Maximum="5" SmallChange="0.5" LargeChange="1" Value="{Binding ShortcutFeedbackSeconds, Mode=TwoWay}" IsEnabled="{Binding ShortcutFeedback}" AutomationProperties.Name="Show feedback for (seconds)" />
+                                                <TextBlock Grid.Column="1" Classes="settingValue" Text="{Binding ShortcutFeedbackSeconds, StringFormat='{}{0:0.#} s'}" />
+                                            </Grid>
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Show file name when a video starts" Badge="Next open" Help="VLC shows the media's title over the video when it starts" ControlWidth="68">
+                                            <CheckBox IsChecked="{Binding ShowFileNameOnStart, Mode=TwoWay}" AutomationProperties.Name="Show file name when a video starts" AutomationProperties.HelpText="VLC shows the media's title over the video when it starts" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Show file name for" Badge="Next open">
+                                            <Grid ColumnDefinitions="*,52" ColumnSpacing="8">
+                                                <Slider Classes="setting" Minimum="1" Maximum="10" SmallChange="1" LargeChange="1" Value="{Binding FileNameSeconds, Mode=TwoWay}" IsEnabled="{Binding ShowFileNameOnStart}" AutomationProperties.Name="Show file name for (seconds)" />
+                                                <TextBlock Grid.Column="1" Classes="settingValue" Text="{Binding FileNameSeconds, StringFormat='{}{0:0} s'}" />
+                                            </Grid>
+                                        </controls:SettingRow>
+                                    </StackPanel>
+
+                                    <!-- Media › Library (design 6542:15251): Opening Files. Not built:
+                                         one VLC window, files from the file manager, titles and
+                                         artwork, the media library (see the phase 9d log). -->
+                                    <StackPanel Classes="settingsSection" IsVisible="{Binding IsLibrary}">
+                                        <TextBlock Classes="sectionTitle" Text="Opening Files" />
+                                        <controls:SettingRow Label="Add to the queue instead of replacing it" Badge="Next open" Help="While media plays, a file, a folder, a URL or a drop joins the queue; recent and library items still replace it" ControlWidth="68">
+                                            <CheckBox IsChecked="{Binding EnqueueOnOpen, Mode=TwoWay}" AutomationProperties.Name="Add to the queue instead of replacing it" AutomationProperties.HelpText="While media plays, a file, a folder, a URL or a drop joins the queue; recent and library items still replace it" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="When opening a folder" Badge="Next open" Help="Whether the files in its subfolders are queued too">
+                                            <ComboBox ItemsSource="{Binding FolderOpenings}" SelectedItem="{Binding FolderOpening, Mode=TwoWay}" AutomationProperties.Name="When opening a folder" AutomationProperties.HelpText="Whether the files in its subfolders are queued too" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Show hidden files" Badge="Next open" Help="Queues hidden and system files, and the files in hidden folders, when a folder opens" ControlWidth="68">
+                                            <CheckBox IsChecked="{Binding ShowHiddenFiles, Mode=TwoWay}" AutomationProperties.Name="Show hidden files" AutomationProperties.HelpText="Queues hidden and system files, and the files in hidden folders, when a folder opens" />
                                         </controls:SettingRow>
                                     </StackPanel>
 

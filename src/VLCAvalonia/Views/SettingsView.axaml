@@ -727,9 +727,10 @@
                                     <!-- Media › Audio -->
                                     <StackPanel Classes="settingsSection" IsVisible="{Binding IsAudio}">
                                         <TextBlock Classes="sectionTitle" Text="Volume" />
-                                        <controls:SettingRow Label="Remember volume" Badge="Next open" ControlWidth="68">
+                                        <controls:SettingRow Label="Remember volume" Badge="Restart" Help="Starts with the volume and mute of your last session; when off, VLC starts at 100%" ControlWidth="68">
                                             <CheckBox IsChecked="{Binding RememberVolume, Mode=TwoWay}"
-                                                      AutomationProperties.Name="Remember volume" />
+                                                      AutomationProperties.Name="Remember volume"
+                                                      AutomationProperties.HelpText="Starts with the volume and mute of your last session; when off, VLC starts at 100%" />
                                         </controls:SettingRow>
                                     </StackPanel>
                                     <StackPanel Classes="settingsSection" IsVisible="{Binding IsAudio}">

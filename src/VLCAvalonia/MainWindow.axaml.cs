@@ -22,6 +22,8 @@ public partial class MainWindow : Window
     private readonly PlayerSettingsService _settings;
     private readonly SettingsViewModel _settingsViewModel;
     private readonly DispatcherTimer _autoHideTimer = new() { Interval = TimeSpan.FromSeconds(3) };
+    // Remember volume writes once the volume has settled, not on every step of a drag.
+    private readonly DispatcherTimer _volumeSaveTimer = new() { Interval = TimeSpan.FromSeconds(2) };
     private readonly ChromeVisibilityController _chromeVisibility = new();
     private readonly WindowGeometryStore _windowGeometry;
     private WindowState _preFullscreenState = WindowState.Normal;
@@ -56,7 +58,8 @@ public partial class MainWindow : Window
             new MediaSourceValidator(new SystemMediaFileSystem()),
             CreateHistory(),
             showUrlPanel: ShowUrlPanel,
-            clipboard: new AvaloniaClipboardService(() => Clipboard));
+            clipboard: new AvaloniaClipboardService(() => Clipboard),
+            volumeMemory: new FileVolumeMemory(PlayerProfile.FilePath("volume.json")));
         _settingsViewModel = new SettingsViewModel(_settings, _presentation.Registry);
         SettingsPanel.Initialize(_settingsViewModel, _presentation);
         SettingsPanel.CloseRequested += (_, _) => CloseSettings();
@@ -64,6 +67,12 @@ public partial class MainWindow : Window
         HomeScreen.MoreRequested += (_, _) => OnOpenOptions(null, new RoutedEventArgs());
         OpenMenu.AddHandler(Button.ClickEvent, OnOpenMenuClick);
         _presentation.PropertyChanged += OnPresentationPropertyChanged;
+        _presentation.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName is nameof(PlayerPresentationViewModel.Volume) or nameof(PlayerPresentationViewModel.IsMuted))
+            { _volumeSaveTimer.Stop(); _volumeSaveTimer.Start(); }
+        };
+        _volumeSaveTimer.Tick += (_, _) => { _volumeSaveTimer.Stop(); _presentation.SaveVolume(); };
         InitializePictureInPicture();
         InitializeMacMenu();
         UpdatePlaybackRateSelection();
@@ -87,7 +96,7 @@ public partial class MainWindow : Window
         };
         VideoSurface.EngineStateChanged += OnEngineStateChanged;
         SubtitleLayer.Surface = VideoSurface;
-        Closed += (_, _) => { SaveWindowGeometry(); _presentation.OnClosing(); _autoHideTimer.Stop(); };
+        Closed += (_, _) => { SaveWindowGeometry(); _presentation.OnClosing(); _autoHideTimer.Stop(); _volumeSaveTimer.Stop(); };
         SizeChanged += (_, _) => { ApplyResponsiveChrome(); ApplyResponsiveSettings(); PlaceCaptionButtons(); };
         Activated += (_, _) => { WakeChrome(); PlaceCaptionButtons(); };
         Deactivated += (_, _) => PlaceCaptionButtons();

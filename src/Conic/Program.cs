@@ -10,9 +10,19 @@ internal static class Program
 {
     internal static PlaybackStartupFailure? StartupFailure { get; private set; }
 
+    /// <summary>
+    /// Review captures (--menu-review) draw popups (menus) inside the window,
+    /// so a capture of the window shows them even while it is in the
+    /// background, where a separate popup window would close.
+    /// </summary>
+    private static bool _overlayPopups;
+
     [STAThread]
     public static int Main(string[] args)
     {
+#if SMOKE
+        _overlayPopups = args.Any(arg => arg.StartsWith("--menu-review=", StringComparison.OrdinalIgnoreCase));
+#endif
         if (args.Contains("--graphics-probe", StringComparer.OrdinalIgnoreCase))
             return BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
 #if SMOKE
@@ -134,6 +144,8 @@ internal static class Program
             .UsePlatformDetect()
             .WithInterFont()
             .LogToTrace();
+        if (_overlayPopups)
+            builder = builder.With(new Win32PlatformOptions { OverlayPopups = true });
         // Diagnostics: pick the X11 rendering backend (glx, egl, vulkan, software)
         // so --graphics-probe can report each one's GPU interop on Linux.
         if (Enum.TryParse(Environment.GetEnvironmentVariable("CONIC_X11_RENDERING"), ignoreCase: true, out X11RenderingMode mode))

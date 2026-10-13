@@ -515,10 +515,11 @@
                                     <!-- App › Interface -->
                                     <StackPanel Classes="settingsSection" IsVisible="{Binding IsInterface}">
                                         <TextBlock Classes="sectionTitle" Text="Layout" />
-                                        <controls:SettingRow Label="Density" Help="Compact tightens spacing in the player and Settings">
+                                        <controls:SettingRow Label="Density" Help="Compact narrows the gaps in the control bar and tightens the rows in Settings">
                                             <ComboBox ItemsSource="{Binding DensityOptions}"
                                                       SelectedItem="{Binding Density, Mode=TwoWay}"
-                                                      AutomationProperties.Name="Density" />
+                                                      AutomationProperties.Name="Density"
+                                                      AutomationProperties.HelpText="Compact narrows the gaps in the control bar and tightens the rows in Settings" />
                                         </controls:SettingRow>
                                     </StackPanel>
                                     <StackPanel Classes="settingsSection" IsVisible="{Binding IsInterface}">

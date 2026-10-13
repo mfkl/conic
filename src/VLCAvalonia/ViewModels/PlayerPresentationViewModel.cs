@@ -93,9 +93,11 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
         _volumeMemory = volumeMemory;
         if (volumeMemory is not null)
         {
-            // Remember volume: the last session's volume and mute, else 100%, unmuted.
+            // Remember volume: the last session's volume and mute, else the
+            // startup volume (Settings › Audio), unmuted; never above the maximum.
             _savedVolume = (settings?.Current.RememberVolume ?? false) ? volumeMemory.Load() : null;
-            _wantedVolume = _savedVolume ?? RememberedVolume.Default;
+            _wantedVolume = _savedVolume ?? (settings is null ? RememberedVolume.Default : new(settings.Current.StartupVolume, false));
+            _wantedVolume = _wantedVolume with { Volume = Math.Min(_wantedVolume.Volume, MaximumVolume) };
             _volume = _wantedVolume.Volume;
             _isMuted = _wantedVolume.Muted;
         }
@@ -113,6 +115,7 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
             NotifyLibrary();
             if (!updated.RememberResumeHistory) { _pendingResume = null; _resumeReady = false; NotifyPendingResume(); }
             OnPropertyChanged(nameof(SkipBackwardLabel)); OnPropertyChanged(nameof(SkipForwardLabel)); OnPropertyChanged(nameof(SkipBackwardMenuText)); OnPropertyChanged(nameof(SkipForwardMenuText)); OnPropertyChanged(nameof(RecentItems));
+            ApplyVolumeSettings();
         };
         PlayerCommandRegistry registry = new();
         Registry = registry;
@@ -145,7 +148,7 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
         registry.Register(new(PlayerCommandId.Seek, "Seek", "Playback"), parameter => _transport.Seek(ToDouble(parameter)));
         registry.Register(new(PlayerCommandId.SetVolume, "Set volume", "Audio"), parameter =>
         {
-            double volume = Math.Clamp(ToDouble(parameter), 0, 200);
+            double volume = Math.Clamp(ToDouble(parameter), 0, MaximumVolume);
             _wantedVolume = _wantedVolume with { Volume = volume };
             _transport.SetVolume(volume / 100);
         }, _ => HasPlayableMedia);
@@ -351,7 +354,9 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
         get => _volume;
         set
         {
-            value = Math.Clamp(value, 0, 200);
+            // The engine may report more than the maximum (another app, an
+            // earlier session); the slider and the commands stay within it.
+            value = Math.Clamp(value, 0, _isUpdatingFromEngine ? AudioEngineOptions.MaximumVolumeLimit : MaximumVolume);
             if (!Set(ref _volume, value))
                 return;
             OnPropertyChanged(nameof(IsVolumeAmplified));
@@ -402,6 +407,11 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
     public string FullscreenName => IsFullscreen ? "Exit fullscreen" : "Enter fullscreen";
     public string FavoriteName => IsCurrentFavorite ? "Remove from favorites" : "Add to favorites";
     public bool IsVolumeAmplified => Volume > 100;
+    /// <summary>Settings › Audio › Maximum volume, in percent (100 to 300).</summary>
+    public double MaximumVolume => _settings?.Current.MaximumVolume ?? PlayerSettings.Default.MaximumVolume;
+    /// <summary>Settings › Audio › Volume step: the arrow keys' step on the volume slider.</summary>
+    public double VolumeStep => _settings?.Current.VolumeStep ?? PlayerSettings.Default.VolumeStep;
+    public string VolumeHelpText => $"0 to {MaximumVolume:0} percent. Values above 100 percent are amplified.";
     public string VolumeText => IsVolumeAmplified ? $"Volume {Volume:0}% · Amplified" : $"Volume {Volume:0}%";
     public VolumeLevel VolumeLevel => VolumeLevels.For(IsMuted, Volume);
     public bool IsAlwaysOnTop { get => _isAlwaysOnTop; set => Set(ref _isAlwaysOnTop, value); }
@@ -933,6 +943,16 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
             _volumeSyncedGeneration = state.Generation;
         }
         _wantedVolume = new(Math.Round(state.Volume * 100, 1), state.IsMuted);
+    }
+
+    // Maximum volume and Volume step apply at once; a volume above a lowered
+    // maximum comes down to it.
+    private void ApplyVolumeSettings()
+    {
+        OnPropertyChanged(nameof(MaximumVolume));
+        OnPropertyChanged(nameof(VolumeStep));
+        OnPropertyChanged(nameof(VolumeHelpText));
+        if (Volume > MaximumVolume) Volume = MaximumVolume;
     }
 
     /// <summary>Writes the volume to remember, when Remember volume is on and it changed since the last write.</summary>

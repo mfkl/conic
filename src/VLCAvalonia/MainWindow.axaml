@@ -1659,19 +1659,21 @@
                         <controls:VlcIcon Width="24" Height="24"
                                           Icon="{Binding VolumeLevel, Converter={x:Static controls:VolumeIconConverter.Instance}}" />
                     </Button>
-                    <!-- The level shows in the tooltip and through automation
-                         (0-200 %); the fill turns bright above 100 %. -->
+                    <!-- The level shows in the tooltip and through automation (0 to
+                         Settings › Audio › Maximum volume, 200 % by default); the fill
+                         turns bright above 100 %. The arrow keys move it by the
+                         volume step. -->
                     <controls:PlayerVolumeSlider x:Name="PlayerVolume"
                                                  Classes="volume monochrome"
                                                  Minimum="0"
-                                                 Maximum="200"
+                                                 Maximum="{Binding MaximumVolume}"
                                                  IsEnabled="{Binding HasPlayableMedia}"
                                                  TickFrequency="100"
-                                                 SmallChange="2"
+                                                 SmallChange="{Binding VolumeStep}"
                                                  LargeChange="10"
                                                  Value="{Binding Volume, Mode=TwoWay}"
                                                  AutomationProperties.Name="Volume"
-                                                 AutomationProperties.HelpText="0 to 200 percent. Values above 100 percent are amplified."
+                                                 AutomationProperties.HelpText="{Binding VolumeHelpText}"
                                                  ToolTip.Tip="{Binding VolumeText}"
                                                  DragStarted="OnVolumeDragStarted"
                                                  DragCompleted="OnVolumeDragCompleted" />

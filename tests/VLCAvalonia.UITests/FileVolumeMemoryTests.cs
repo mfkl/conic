@@ -21,7 +21,7 @@ public sealed class FileVolumeMemoryTests : IDisposable
 
     [Theory]
     [InlineData("{ broken", null)]
-    [InlineData("{\"Volume\":500,\"Muted\":false}", 200d)]
+    [InlineData("{\"Volume\":500,\"Muted\":false}", 300d)]
     [InlineData("{\"Volume\":-3,\"Muted\":true}", 0d)]
     public void UnreadableOrOutOfRangeFilesStayUsable(string content, double? expected)
     {

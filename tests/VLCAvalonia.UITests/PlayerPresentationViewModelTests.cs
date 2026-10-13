@@ -381,6 +381,46 @@ public sealed class PlayerPresentationViewModelTests
     }
 
     [Fact]
+    public void WithRememberVolumeOffPlaybackStartsAtTheStartupVolumeWithinTheMaximum()
+    {
+        PlayerSettingsService settings = new(new SettingsStorage());
+        settings.Update(s => s with { RememberVolume = false, StartupVolume = 60 });
+        var vm = new PlayerPresentationViewModel(new RecordingTransport(), new EmptyPicker(), () => { }, settings: settings, volumeMemory: new MemoryVolume { Saved = new(30, true) });
+        Assert.Equal((60d, false), (vm.Volume, vm.IsMuted));
+
+        // A remembered or startup volume above the maximum starts at the maximum.
+        settings.Update(s => s with { RememberVolume = true, MaximumVolume = 150 });
+        vm = new PlayerPresentationViewModel(new RecordingTransport(), new EmptyPicker(), () => { }, settings: settings, volumeMemory: new MemoryVolume { Saved = new(250, false) });
+        Assert.Equal(150d, vm.Volume);
+    }
+
+    [Fact]
+    public void MaximumVolumeAndStepFollowTheSettingsAtOnce()
+    {
+        RecordingTransport transport = new();
+        PlayerSettingsService settings = new(new SettingsStorage());
+        var vm = new PlayerPresentationViewModel(transport, new EmptyPicker(), () => { }, settings: settings);
+        vm.ApplyEngineState(State(0, PlaybackStatus.Playing, false));
+        List<string?> changes = [];
+        vm.PropertyChanged += (_, e) => changes.Add(e.PropertyName);
+        Assert.Equal((200d, 2d), (vm.MaximumVolume, vm.VolumeStep));
+
+        settings.Update(s => s with { MaximumVolume = 300, VolumeStep = 5 });
+        vm.Volume = 280;
+        Assert.Equal((300d, 5d, 280d), (vm.MaximumVolume, vm.VolumeStep, vm.Volume));
+        Assert.Contains(nameof(PlayerPresentationViewModel.MaximumVolume), changes);
+        Assert.Contains("0 to 300 percent", vm.VolumeHelpText);
+        Assert.Equal(2.8, transport.Volumes[^1], 3);
+
+        // A lower maximum brings the volume down to it and tells VLC.
+        settings.Update(s => s with { MaximumVolume = 125 });
+        Assert.Equal(125d, vm.Volume);
+        Assert.Equal(1.25, transport.Volumes[^1], 3);
+        vm.Volume = 180;
+        Assert.Equal(125d, vm.Volume);
+    }
+
+    [Fact]
     public void VolumeRestoreStopsWhenTheEngineKeepsItsOwnVolume()
     {
         RecordingTransport transport = new();

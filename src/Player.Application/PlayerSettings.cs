@@ -23,9 +23,58 @@ public sealed record PlayerSettings(
     bool? AudioPassthrough = null,
     IReadOnlyDictionary<string, string>? ShortcutOverrides = null,
     bool ReduceMotion = false,
-    string Accent = AccentPalette.DefaultHex)
+    string Accent = AccentPalette.DefaultHex,
+    // Version 7 (phase 9b): Playback, Video, Performance and Network. Every
+    // field below has a default, so an older document reads as is.
+    // Playback › Startup: Continue where you left off is Never (ResumePlayback
+    // off), Ask (on) or Always (on, and ResumeAutomatically).
+    bool ResumeAutomatically = false,
+    bool AutoPlay = true,
+    // Playback › Tracks: comma-separated ISO 639 codes, empty for no preference.
+    string AudioLanguage = "",
+    string SubtitleLanguage = "",
+    // Playback › Order.
+    string QueueRepeat = "Off",
+    bool QueueShuffle = false,
+    bool StopAfterEachItem = false,
+    string PlaybackFinished = "Stop",
+    // Playback › Seeking and Files.
+    bool SeekPrecisely = true,
+    string AviRepair = "Never",
+    // Video › Output.
+    bool VideoEnabled = true,
+    bool StartFullscreen = false,
+    bool StopScreensaver = true,
+    // Video › Picture (the adjust filter's ranges and neutral values).
+    double Hue = 0,
+    double Brightness = 1,
+    double Contrast = 1,
+    double Saturation = 1,
+    double Gamma = 1,
+    // Video › Deinterlacing and Framing ("" is the media's own aspect/crop).
+    string Deinterlace = "Automatic",
+    string DeinterlaceMethod = "Automatic",
+    string DefaultAspectRatio = "",
+    string DefaultCrop = "",
+    string DefaultZoom = "fit",
+    // Performance.
+    string HardwareDecoding = "Automatic",
+    int PostProcessing = 0,
+    int SkipLoopFilter = 0,
+    int DecodingThreads = 0,
+    bool DropLateFrames = true,
+    // Network: caching in milliseconds, used as is only with Buffering Custom.
+    string Buffering = "Normal",
+    int FileCaching = PlayerEngineOptions.DefaultFileCaching,
+    int NetworkCaching = PlayerEngineOptions.DefaultNetworkCaching,
+    int LiveCaching = PlayerEngineOptions.DefaultLiveCaching,
+    string HttpProxy = "",
+    // The proxy password, protected for the current Windows user (DPAPI), base64.
+    string? HttpProxyPasswordProtected = null,
+    bool VerifyCertificates = true,
+    string CipherPreference = "Normal")
 {
-    public const int CurrentVersion = 6;
+    public const int CurrentVersion = 7;
     public const double MinimumDefaultSpeed = .25, MaximumDefaultSpeed = 2;
     public static IReadOnlyList<string> Themes { get; } = Array.AsReadOnly(new[] { "Dark", "Light", "System" });
     // Dark is the default and the fallback for an unknown value; a stored
@@ -93,17 +142,26 @@ public sealed class PlayerSettingsService
         nameof(PlayerSettings.Theme) or nameof(PlayerSettings.Accent) or nameof(PlayerSettings.Density) or nameof(PlayerSettings.ControlTimeoutSeconds) or nameof(PlayerSettings.ReduceMotion)
             or nameof(PlayerSettings.SkipBackwardSeconds) or nameof(PlayerSettings.SkipForwardSeconds) => SettingApplyMode.Live,
         nameof(PlayerSettings.RememberRecentMedia) or nameof(PlayerSettings.RememberResumeHistory) => SettingApplyMode.Live,
+        // The app applies these itself, at once: the queue modes go to the
+        // playing queue, the end action and the screensaver follow playback.
+        nameof(PlayerSettings.QueueRepeat) or nameof(PlayerSettings.QueueShuffle) or nameof(PlayerSettings.PlaybackFinished)
+            or nameof(PlayerSettings.StopScreensaver) => SettingApplyMode.Live,
         // RememberVolume decides the volume the next start begins at, so it is Restart.
-        nameof(PlayerSettings.DefaultSpeed) or nameof(PlayerSettings.ResumePlayback)
-            or nameof(PlayerSettings.ResumeMinimumElapsedSeconds) or nameof(PlayerSettings.ResumeMaximumRemainingSeconds) => SettingApplyMode.NextOpen,
+        nameof(PlayerSettings.DefaultSpeed) or nameof(PlayerSettings.ResumePlayback) or nameof(PlayerSettings.ResumeAutomatically)
+            or nameof(PlayerSettings.ResumeMinimumElapsedSeconds) or nameof(PlayerSettings.ResumeMaximumRemainingSeconds)
+            or nameof(PlayerSettings.StartFullscreen) => SettingApplyMode.NextOpen,
+        // Every open starts a new VLC core; these are its options (PlayerEngineOptions).
+        _ when PlayerEngineOptions.Keys.Contains(key) => SettingApplyMode.NextOpen,
         _ => SettingApplyMode.Restart,
     };
 
     private static PlayerSettings Migrate(JsonElement root, int version) => version switch
     {
-        // Version 6 added Accent; a version 5 document reads as is and the
-        // missing value takes the record's default.
-        5 or PlayerSettings.CurrentVersion => JsonSerializer.Deserialize<PlayerSettings>(root, JsonOptions) ?? throw new JsonException("Settings document was empty."),
+        // Version 6 added Accent and version 7 the Playback, Video,
+        // Performance and Network fields. Every added field has a default,
+        // so a version 5 or 6 document reads as is: the values it holds stay
+        // and the missing ones take the record's defaults.
+        5 or 6 or PlayerSettings.CurrentVersion => JsonSerializer.Deserialize<PlayerSettings>(root, JsonOptions) ?? throw new JsonException("Settings document was empty."),
         0 or 1 or 2 or 3 or 4 => PlayerSettings.Default with
         {
             ResumePlayback = Read(root, nameof(PlayerSettings.ResumePlayback), PlayerSettings.Default.ResumePlayback),
@@ -136,7 +194,7 @@ public sealed class PlayerSettingsService
         value = default; return false;
     }
 
-    private static PlayerSettings Normalize(PlayerSettings value) => value with
+    private static PlayerSettings Normalize(PlayerSettings value) => PlayerEngineOptions.Normalize(value) with
     {
         Version = PlayerSettings.CurrentVersion,
         Theme = PlayerSettings.Themes.Contains(value.Theme) ? value.Theme : PlayerSettings.Default.Theme,

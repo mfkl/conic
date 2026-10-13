@@ -35,6 +35,9 @@ public sealed class CompositionVideoSurface : Control, IDisposable
     private IReadOnlyList<string>? _pendingQueueSources;
     private IReadOnlyList<string> _audioStartupArguments = [];
     private double _openPlaybackRate = 1;
+    private IReadOnlyList<string> _openArguments = [];
+    private IReadOnlyList<string> _extraOpenArguments = [];
+    private (QueueRepeatMode Repeat, QueueOrder Order) _queueModes = (QueueRepeatMode.None, QueueOrder.Normal);
 
     /// <summary>Default speed for the next open (<see cref="VlcCorePlayer.OpenPlaybackRate"/>).</summary>
     internal double OpenPlaybackRate
@@ -46,6 +49,32 @@ public sealed class CompositionVideoSurface : Control, IDisposable
             if (_player is VlcCorePlayer core) core.OpenPlaybackRate = value;
         }
     }
+    /// <summary>The settings' libVLC options for the next open (<see cref="VlcCorePlayer.OpenArguments"/>).</summary>
+    internal IReadOnlyList<string> OpenArguments
+    {
+        get => _openArguments;
+        set { _openArguments = Array.AsReadOnly((value ?? []).ToArray()); PushOpenArguments(); }
+    }
+
+    /// <summary>Options a smoke adds after the settings' ones (a VLC log file).</summary>
+    internal IReadOnlyList<string> ExtraOpenArgumentsForSmoke
+    {
+        get => _extraOpenArguments;
+        set { _extraOpenArguments = Array.AsReadOnly((value ?? []).ToArray()); PushOpenArguments(); }
+    }
+
+    /// <summary>The repeat and shuffle modes new queues start with (<see cref="VlcCorePlayer.RequestQueueModes"/>).</summary>
+    internal (QueueRepeatMode Repeat, QueueOrder Order) QueueModes
+    {
+        get => _queueModes;
+        set { _queueModes = value; if (_player is VlcCorePlayer core) core.RequestQueueModes(value.Repeat, value.Order); }
+    }
+
+    private void PushOpenArguments()
+    {
+        if (_player is VlcCorePlayer core) core.OpenArguments = [.. _openArguments, .. _extraOpenArguments];
+    }
+
     internal IReadOnlyList<string> AudioStartupArguments
     {
         get => _audioStartupArguments;
@@ -256,7 +285,12 @@ public sealed class CompositionVideoSurface : Control, IDisposable
         try
         {
             _player = player;
-            if (player is VlcCorePlayer core) core.OpenPlaybackRate = _openPlaybackRate;
+            if (player is VlcCorePlayer core)
+            {
+                core.OpenPlaybackRate = _openPlaybackRate;
+                core.OpenArguments = [.. _openArguments, .. _extraOpenArguments];
+                core.RequestQueueModes(_queueModes.Repeat, _queueModes.Order);
+            }
             _player.StateChanged += StateChanged;
             if (_player is IQueueTransport queue)
                 queue.QueueStateChanged += QueueChanged;

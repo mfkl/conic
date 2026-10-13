@@ -74,6 +74,7 @@ public partial class MainWindow : Window
         };
         _volumeSaveTimer.Tick += (_, _) => { _volumeSaveTimer.Stop(); _presentation.SaveVolume(); };
         InitializePictureInPicture();
+        InitializePlaybackSettings();
         InitializeMacMenu();
         UpdatePlaybackRateSelection();
         UpdateHistorySettingsControls();
@@ -149,6 +150,7 @@ public partial class MainWindow : Window
         }
         _autoHideTimer.Interval = TimeSpan.FromSeconds(settings.ControlTimeoutSeconds);
         VideoSurface.OpenPlaybackRate = settings.DefaultSpeed;
+        ApplyEngineSettings(settings);
         Classes.Set("reduced-motion", settings.ReduceMotion);
         Theming.ReducedMotion.Apply(settings.ReduceMotion, this);
         if (settings.ReduceMotion) SetChromeVisibility(true);

@@ -1,10 +1,11 @@
 using System.Windows.Input;
 using Player.Application;
 using Conic.Commands;
+using Conic.Interop.Windows;
 
 namespace Conic.ViewModels;
 
-// Playback, Video and Performance rows (phase 9b). Most of them are
+// Playback, Video, Performance and Network rows (phase 9b). Most of them are
 // libVLC options the next open's core starts with (PlayerEngineOptions); the
 // choices offered are the ones PlayerEngineOptions knows how to map.
 internal sealed partial class SettingsViewModel
@@ -17,6 +18,8 @@ internal sealed partial class SettingsViewModel
         nameof(Saturation), nameof(Gamma), nameof(CanAdjustGamma), nameof(Deinterlace), nameof(DeinterlaceMethod), nameof(DefaultAspectRatio),
         nameof(DefaultCrop), nameof(DefaultZoom),
         nameof(HardwareDecoding), nameof(SkipLoopFilter), nameof(DecodingThreads), nameof(DropLateFrames),
+        nameof(Buffering), nameof(IsCustomBuffering), nameof(FileCaching), nameof(NetworkCaching),
+        nameof(HttpProxy), nameof(HttpProxyPassword), nameof(VerifyCertificates), nameof(CipherPreference),
     ];
 
     private PlayerSettings Current => _service.Current;
@@ -100,6 +103,29 @@ internal sealed partial class SettingsViewModel
     public decimal DecodingThreads { get => Current.DecodingThreads; set => Update(s => s with { DecodingThreads = (int)value }); }
     public bool DropLateFrames { get => Current.DropLateFrames; set => Update(s => s with { DropLateFrames = value }); }
 
+    // Network › Buffering: the fields show the preset's values and can be
+    // edited with Custom.
+    public IReadOnlyList<SettingOption> BufferingPresets => PlayerEngineOptions.BufferingPresets;
+    public SettingOption Buffering { get => Find(BufferingPresets, Current.Buffering); set { if (value is not null) Update(s => s with { Buffering = value.Value }); } }
+    public bool IsCustomBuffering => Current.Buffering == "Custom";
+    public decimal FileCaching { get => PlayerEngineOptions.Caching(Current).File; set => UpdateCaching(s => s with { FileCaching = (int)value }); }
+    public decimal NetworkCaching { get => PlayerEngineOptions.Caching(Current).Network; set => UpdateCaching(s => s with { NetworkCaching = (int)value }); }
+    private void UpdateCaching(Func<PlayerSettings, PlayerSettings> update) { if (IsCustomBuffering) Update(update); }
+
+    // Network › Proxy and Security. VLC 3 reads the proxy only on Windows,
+    // where the password is kept with DPAPI (ProxyPasswordProtection).
+    public bool ShowsProxy { get; } = OperatingSystem.IsWindows();
+    public bool ShowsProxyOnNetwork => ShowsProxy && IsNetwork;
+    public string HttpProxy { get => Current.HttpProxy; set => Update(s => s with { HttpProxy = value ?? string.Empty }); }
+    public string HttpProxyPassword
+    {
+        get => OperatingSystem.IsWindows() ? ProxyPasswordProtection.Unprotect(Current.HttpProxyPasswordProtected) ?? string.Empty : string.Empty;
+        set { if (OperatingSystem.IsWindows() && value != HttpProxyPassword) Update(s => s with { HttpProxyPasswordProtected = ProxyPasswordProtection.Protect(value) }); }
+    }
+    public bool VerifyCertificates { get => Current.VerifyCertificates; set => Update(s => s with { VerifyCertificates = value }); }
+    public IReadOnlyList<SettingOption> CipherPreferences => PlayerEngineOptions.CipherPreferences;
+    public SettingOption CipherPreference { get => Find(CipherPreferences, Current.CipherPreference); set { if (value is not null) Update(s => s with { CipherPreference = value.Value }); } }
+
     private static PlayerSettings ResetPlaybackPage(PlayerSettings s, PlayerSettings d) => s with
     {
         ResumePlayback = d.ResumePlayback, ResumeAutomatically = d.ResumeAutomatically, ResumeMinimumElapsedSeconds = d.ResumeMinimumElapsedSeconds,
@@ -119,5 +145,12 @@ internal sealed partial class SettingsViewModel
     {
         HardwareDecoding = d.HardwareDecoding, SkipLoopFilter = d.SkipLoopFilter,
         DecodingThreads = d.DecodingThreads, DropLateFrames = d.DropLateFrames,
+    };
+
+    private static PlayerSettings ResetNetworkPage(PlayerSettings s, PlayerSettings d) => s with
+    {
+        Buffering = d.Buffering, FileCaching = d.FileCaching, NetworkCaching = d.NetworkCaching,
+        HttpProxy = d.HttpProxy, HttpProxyPasswordProtected = d.HttpProxyPasswordProtected, VerifyCertificates = d.VerifyCertificates,
+        CipherPreference = d.CipherPreference,
     };
 }

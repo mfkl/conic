@@ -1,13 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- macOS app icon: the VLC cone (VideoLAN's vlc/modules/gui/qt/pixmaps/misc/cone.svg)
-     on a dark rounded square in Apple's icon grid (824 px body on a 1024 px canvas).
-     AppIcon.icns and src/Conic/Assets/conic-macos.png are rendered from it
-     with AppKit (NSImage reads SVG; it ignores the drop shadow filter). -->
+<!-- macOS app icon: the app's two-tone cone (a cleaned-up redraw of VideoLAN's
+     vlc/modules/gui/qt/pixmaps/misc/cone.svg in the redesign's Accent colours, the same
+     cone as Assets/conic.ico) on a dark rounded square in Apple's icon grid
+     (824 px body on a 1024 px canvas). AppIcon.icns and
+     src/Conic/Assets/conic-macos.png (512 px) are rendered from it with
+     AppKit (NSImage reads SVG; it ignores the drop shadow filter).
+     To rebuild AppIcon.icns on a Mac: render this file to AppIcon.iconset/icon_NxN.png
+     and icon_NxN@2x.png for N = 16, 32, 128, 256 and 512, then run
+     iconutil -c icns AppIcon.iconset -o eng/macos/AppIcon.icns -->
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
   <defs>
     <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#3A3A3C"/>
-      <stop offset="1" stop-color="#121214"/>
+      <stop offset="0" stop-color="#262626"/>
+      <stop offset="1" stop-color="#0E0E0E"/>
     </linearGradient>
     <filter id="shadow" x="-10%" y="-10%" width="120%" height="125%">
       <feDropShadow dx="0" dy="12" stdDeviation="14" flood-color="#000" flood-opacity="0.35"/>
@@ -15,8 +20,14 @@
   </defs>
   <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#body)" filter="url(#shadow)"/>
   <rect x="100.5" y="100.5" width="823" height="823" rx="184.5" fill="none" stroke="#FFFFFF" stroke-opacity="0.12"/>
-  <g transform="translate(512 520) scale(4.9) translate(-65 -65)">
-    <path fill="#FF8800" d="M65 8.76c-1.511 0-3.023.369-4.219 1.108-2.675 1.654-4.219 8.438-4.219 8.438L54.031 25.9c7.312 4.599 14.625 4.647 21.938 0l-2.532-7.594s-1.543-6.784-4.218-8.438C68.022 9.129 66.511 8.761 65 8.761zM47.281 46.15l-8.437 25.312c17.304 11.16 34.739 11.376 52.312 0L82.72 46.15c-11.912 8.86-23.725 8.888-35.438 0zM22.812 81.587 11 121.243h108l-11.813-39.656H94.531l1.688 5.063s1.401 4.523 0 5.906c-14.817 14.618-47.82 13.973-62.438-.844-1.185-1.201 0-5.062 0-5.062l1.688-5.063z"/>
-    <path fill="#FFFFFF" d="m35.469 81.585-1.688 5.063s-1.185 3.86 0 5.062c14.618 14.817 47.62 15.462 62.438.844 1.401-1.383 0-5.906 0-5.906l-1.688-5.063-3.375-10.125c-17.573 11.376-35.008 11.159-52.312 0zm11.812-35.437c11.713 8.888 23.526 8.86 35.438 0l-6.75-20.25c-7.313 4.647-14.625 4.599-21.938 0z"/>
+  <g transform="translate(512 512) scale(2.4) translate(-128 -128)">
+    <path fill="#D37918" d="M128 160 V240 H26 Q20 240 21.69 234.24 L41.81 165.76 Q43.5 160 49.5 160 Z"/>
+    <path fill="#AB6314" d="M128 160 H206.5 Q212.5 160 214.19 165.76 L234.31 234.24 Q236 240 230 240 H128 Z"/>
+    <path fill="#FC9729" d="M128 16 A13.87 13.87 0 0 0 114.84 25.49 L70 160 A58 24.36 0 0 0 128 184.36 Z"/>
+    <path fill="#D37918" d="M128 16 A13.87 13.87 0 0 1 141.16 25.49 L186 160 A58 24.36 0 0 1 128 184.36 Z"/>
+    <path fill="#FFFFFF" d="M128 54.43 A20.67 6.43 0 0 1 107.33 48 L94 88 A34 11.9 0 0 0 128 99.9 Z"/>
+    <path fill="#EFE5D9" d="M128 54.43 A20.67 6.43 0 0 0 148.67 48 L162 88 A34 11.9 0 0 1 128 99.9 Z"/>
+    <path fill="#FFFFFF" d="M128 146.41 A47.33 18.41 0 0 1 80.67 128 L70 160 A58 24.36 0 0 0 128 184.36 Z"/>
+    <path fill="#EFE5D9" d="M128 146.41 A47.33 18.41 0 0 0 175.33 128 L186 160 A58 24.36 0 0 1 128 184.36 Z"/>
   </g>
 </svg>

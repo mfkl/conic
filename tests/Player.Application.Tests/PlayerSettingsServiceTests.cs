@@ -220,7 +220,8 @@ public sealed class PlayerSettingsServiceTests
             ResumeMinimumElapsedSeconds = 60, ResumeMaximumRemainingSeconds = 90, AudioOutputModule = "directsound", NormalizationMaximumLevel = 2.5,
             AudioPassthrough = true, ShortcutOverrides = current.ShortcutOverrides, ReduceMotion = true, Accent = "#1B5DD3",
         }, current);
-        Assert.Empty(PlayerEngineOptions.Arguments(current, windows: true, macOS: false));
+        // The stored audio options are the next core's (phase 9c moved them from the engine's constructor).
+        Assert.Equal(["--aout=directsound", "--spdif", "--audio-filter=normvol", "--norm-max-level=2.5"], PlayerEngineOptions.Arguments(current, windows: true, macOS: false));
         Assert.Contains("\"Version\": 7", storage.Content);
         Assert.Contains("\"HardwareDecoding\": \"Automatic\"", storage.Content);
     }
@@ -264,6 +265,62 @@ public sealed class PlayerSettingsServiceTests
             Assert.Equal(SettingApplyMode.Live, PlayerSettingsService.ApplyMode(key));
         // Every Keys entry names a settings field.
         Assert.All(PlayerEngineOptions.Keys, key => Assert.NotNull(typeof(PlayerSettings).GetProperty(key)));
+    }
+
+    [Fact]
+    public void Version7DocumentWithoutTheAudioFieldsGetsTheirDefaults()
+    {
+        MemoryStorage storage = new() { Content = """
+            {"Version":7,"ResumePlayback":true,"RememberVolume":false,"Theme":"Light","Density":"Compact","ControlTimeoutSeconds":5,"DefaultSpeed":1.5,
+             "SkipBackwardSeconds":10,"SkipForwardSeconds":10,"AudioOutputModule":"directsound","NormalizationMaximumLevel":3,"AudioPassthrough":true,"AudioLanguage":"fr"}
+            """ };
+        PlayerSettingsService service = new(storage);
+
+        service.Load();
+
+        PlayerSettings current = service.Current;
+        Assert.Equal((7, false, "directsound", (double?)3, (bool?)true, "fr"), (current.Version, current.RememberVolume, current.AudioOutputModule, current.NormalizationMaximumLevel, current.AudioPassthrough, current.AudioLanguage));
+        PlayerSettings d = PlayerSettings.Default;
+        Assert.Equal((d.AudioEnabled, d.AudioDevice, d.MaximumVolume, d.StartupVolume, d.VolumeStep), (current.AudioEnabled, current.AudioDevice, current.MaximumVolume, current.StartupVolume, current.VolumeStep));
+        Assert.Equal((true, "", 200, 100, 2), (current.AudioEnabled, current.AudioDevice, current.MaximumVolume, current.StartupVolume, current.VolumeStep));
+        Assert.Equal(("none", 0d, false, "flat", 12d, "0 0 0 0 0 0 0 0 0 0"), (current.ReplayGain, current.ReplayGainPreamp, current.Equalizer, current.EqualizerPreset, current.EqualizerPreamp, current.EqualizerBands));
+        Assert.Equal((false, false, "Headphones", false, 0d, false), (current.StereoWidening, current.SpatialAudio, current.SpatialAudioMode, current.Compressor, current.PitchShift, current.Karaoke));
+        Assert.Equal(("Automatic", "Balanced", 0), (current.DolbySurround, current.ResamplerQuality, current.AudioDelay));
+        // No stored value changed meaning, so the document is not rewritten.
+        Assert.DoesNotContain("\"Equalizer\"", storage.Content);
+    }
+
+    [Fact]
+    public void AudioValuesRoundTripAndInvalidOnesFallBack()
+    {
+        MemoryStorage storage = new();
+        new PlayerSettingsService(storage).Update(s => s with
+        {
+            AudioEnabled = false, AudioDevice = " {0.0.0.00000000}.{id} ", MaximumVolume = 450, StartupVolume = -5, VolumeStep = 0,
+            ReplayGain = "loud", ReplayGainPreamp = 6.04, Equalizer = true, EqualizerPreset = "rock", EqualizerPreamp = 5,
+            EqualizerBands = "8 4.8 -5.6 -8 -3.2 4 8.8 11.2 11.2 11.2", SpatialAudioMode = "Hall", PitchShift = 40, DolbySurround = "Maybe",
+            ResamplerQuality = "Best", AudioDelay = 99999,
+        });
+        PlayerSettingsService reloaded = new(storage);
+
+        reloaded.Load();
+
+        PlayerSettings current = reloaded.Current;
+        Assert.Equal((false, "{0.0.0.00000000}.{id}", 300, 0, 1), (current.AudioEnabled, current.AudioDevice, current.MaximumVolume, current.StartupVolume, current.VolumeStep));
+        Assert.Equal(("none", 6d), (current.ReplayGain, current.ReplayGainPreamp));
+        Assert.Equal((true, "rock", 5d), (current.Equalizer, current.EqualizerPreset, current.EqualizerPreamp));
+        Assert.Equal(("Headphones", 12d, "Automatic", "Best", 10_000), (current.SpatialAudioMode, current.PitchShift, current.DolbySurround, current.ResamplerQuality, current.AudioDelay));
+    }
+
+    [Fact]
+    public void AudioSettingsApplyLiveAtTheNextOpenOrAtTheNextStart()
+    {
+        foreach (string key in AudioEngineOptions.LiveKeys.Concat([nameof(PlayerSettings.MaximumVolume), nameof(PlayerSettings.VolumeStep)]))
+            Assert.Equal(SettingApplyMode.Live, PlayerSettingsService.ApplyMode(key));
+        foreach (string key in AudioEngineOptions.NextOpenKeys)
+            Assert.Equal(SettingApplyMode.NextOpen, PlayerSettingsService.ApplyMode(key));
+        Assert.Equal(SettingApplyMode.Restart, PlayerSettingsService.ApplyMode(nameof(PlayerSettings.StartupVolume)));
+        Assert.All(AudioEngineOptions.LiveKeys.Concat(AudioEngineOptions.NextOpenKeys), key => Assert.NotNull(typeof(PlayerSettings).GetProperty(key)));
     }
 
     private sealed class MemoryStorage : IPlayerSettingsStorage

@@ -111,7 +111,6 @@ public partial class MainWindow
                 }
                 async Task<Sample> SampleVideo(int columns = 64, int rows = 36)
                 {
-                    Activate();
                     await Task.Delay(600);
                     PixelRect area = VideoArea();
                     Require(area.Width > 50 && area.Height > 50, $"video area on screen ({area})");

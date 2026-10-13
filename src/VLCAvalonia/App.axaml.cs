@@ -44,6 +44,13 @@ public partial class App : Application
         MainWindow window, string[]? args)
     {
         if (args is null) return;
+        // Smoke and capture windows open without taking focus, so test runs
+        // do not pull the user out of other apps. The screen checks keep
+        // their windows Topmost instead; only --menu-smoke activates its
+        // window, because its focus checks need an active one.
+        if (args.Any(arg => arg.StartsWith("--", StringComparison.Ordinal) &&
+            (arg.Contains("smoke", StringComparison.OrdinalIgnoreCase) || arg.Contains("capture", StringComparison.OrdinalIgnoreCase) || arg.Contains("review", StringComparison.OrdinalIgnoreCase))))
+            window.ShowActivated = false;
         if (args.Contains("--video-smoke", StringComparer.OrdinalIgnoreCase))
             window.EnableVideoSmoke(desktopArg(), false);
         else if (args.Contains("--video-cpu-smoke", StringComparer.OrdinalIgnoreCase))

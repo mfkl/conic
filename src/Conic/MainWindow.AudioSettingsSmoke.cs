@@ -59,9 +59,13 @@ public partial class MainWindow
                 }
 
                 // Every case starts from the defaults (resuming off). With
-                // afile, VLC writes the sound it plays to <name>.wav.
+                // afile, VLC writes the sound it plays to <name>.wav (32-bit
+                // float, or 16-bit with sixteenBits). The cases that play on
+                // the real device are silent (--gain=0).
                 string? currentLog = null, currentWav = null, closedLog = null;
-                async Task Open(string name, Func<PlayerSettings, PlayerSettings> change, string media, bool toFile = true, params string[] extra)
+                async Task Open(string name, Func<PlayerSettings, PlayerSettings> change, string media, bool toFile = true, params string[] extra) =>
+                    await OpenAs(name, change, media, toFile, false, extra);
+                async Task OpenAs(string name, Func<PlayerSettings, PlayerSettings> change, string media, bool toFile, bool sixteenBits, params string[] extra)
                 {
                     _presentation.StopCommand.Execute(null);
                     _presentation.IsHomeOpen = false;
@@ -70,7 +74,7 @@ public partial class MainWindow
                     currentLog = Path.Combine(logs, name + ".log");
                     currentWav = toFile ? Path.Combine(logs, name + ".wav") : null;
                     closedLog = null;
-                    string[] output = currentWav is null ? [] : ["--aout=afile", $"--audiofile-file={currentWav}", "--audiofile-wav", "--audiofile-format=float32"];
+                    string[] output = currentWav is null ? ["--gain=0"] : ["--aout=afile", $"--audiofile-file={currentWav}", "--audiofile-wav", $"--audiofile-format={(sixteenBits ? "s16" : "float32")}"];
                     VideoSurface.ExtraOpenArgumentsForSmoke = ["--file-logging", $"--logfile={currentLog}", "--log-verbose=2", .. output, .. extra];
                     long previous = VideoSurface.Player?.State.Generation ?? 0;
                     _presentation.OpenSource(media, MediaSourceKind.File);
@@ -274,36 +278,39 @@ public partial class MainWindow
                 await Close();
                 Pass("Pass compressed audio to the receiver reaches the output (no receiver here to accept it)");
 
-                // The effects on the device output too, kept silent by VLC's
-                // gain: a 16-bit WAV plays through a 16-bit output (Windows;
-                // macOS's auhal output is always float), where the gain filter
-                // ends the equalizer's chain; a 44.1 kHz AAC track plays
-                // through the float output (48 kHz on Windows; the device's
-                // rate on macOS), every effect at once.
+                // VLC 3 plays 16-bit sources through a 16-bit output (Windows;
+                // macOS's auhal output is always float), where the equalizer
+                // only runs because the gain filter ends its chain.
                 static string[] Skipped(string log) => Regex.Matches(log, "cannot add user audio filter \"([^\"]+)\"").Select(m => m.Groups[1].Value).ToArray();
-                await Open("effects-device-16bit", s => s with { Equalizer = true }, mix, false, "--gain=0.001");
-                await WaitFor(() => Output().Filters == "equalizer:gain", "the device output has the equalizer's chain", 5);
-                await Task.Delay(1000);
+                await OpenAs("eq-16bit", s => s with { Equalizer = true, EqualizerPreset = "fulltreble", EqualizerPreamp = fullTreble.Preamp, EqualizerBands = AudioEngineOptions.FormatBands(fullTreble.Bands) }, mix, true, true);
+                await Task.Delay(2500);
                 if (OperatingSystem.IsWindows()) await RequireLog("main debug: output 's16l'", "a 16-bit WAV plays through a 16-bit output");
-                await RequireLog("using audio filter module \"equalizer\"", "the equalizer runs on a 16-bit device output");
-                Require(Skipped(await Close()).Length == 0, "and no effect is skipped");
+                Require(Skipped(await Close()).Length == 0, "the equalizer is not skipped there");
+                Sound sixteen = Sound.Read(currentWav!);
+                double tilt16 = (sixteen.Tone(10000) - sixteen.Tone(80)) - (flat.Tone(10000) - flat.Tone(80));
+                Require(tilt16 > 15, $"and Full treble tilts the 16-bit output too ({tilt16:0.0} dB)");
+                Pass($"Equalizer on a 16-bit output ({tilt16:0.0} dB tilt)");
+
+                // Every effect at once on the real device (silent), in
+                // whatever format it plays: a 44.1 kHz AAC track, which most
+                // devices (48 kHz) resample.
                 foreach ((string name, Func<PlayerSettings, PlayerSettings> effects, string[] filters) in new (string, Func<PlayerSettings, PlayerSettings>, string[])[]
                 {
                     ("effects-device-room", s => s with { Karaoke = true, PitchShift = 1, Equalizer = true, Compressor = true, SpatialAudio = true, SpatialAudioMode = "Room", NormalizationMaximumLevel = 4 },
                         ["karaoke", "scaletempo_pitch", "equalizer", "compressor", "spatializer", "normvol"]),
-                    ("effects-device-headphones", s => s with { SpatialAudio = true, SpatialAudioMode = "Headphones" }, ["spatialaudio"]),
+                    ("effects-device-headphones", s => s with { SpatialAudio = true, SpatialAudioMode = "Headphones", Equalizer = true }, ["spatialaudio", "equalizer"]),
                 })
                 {
-                    await Open(name, effects, Fixture("languages.mkv"), false, "--gain=0.001");
+                    await Open(name, effects, Fixture("languages.mkv"), false);
                     await Task.Delay(1000);
-                    await RequireLog("main debug: input 'f32l' 44100 Hz", "the AAC track is 44.1 kHz");
-                    await RequireLog(OperatingSystem.IsWindows() ? "main debug: output 'f32l' 48000 Hz" : "main debug: output 'f32l'", "the device output is float (48 kHz on Windows)");
+                    string log = await Close();
+                    Console.WriteLine($"[audio-settings-smoke] {name}: {Regex.Match(log, "main debug: input '[^\r\n]+").Value} -> {Regex.Match(log, "main debug: output '[^\r\n]+").Value}");
                     foreach (string filter in filters)
                         await RequireLog($"using audio filter module \"{filter}\"", $"{filter} runs on the device output");
-                    string[] skipped = Skipped(await Close());
+                    string[] skipped = Skipped(log);
                     Require(skipped.Length == 0, $"no effect is skipped ({string.Join(", ", skipped)})");
                 }
-                Pass("Effects on the device output (the equalizer with a 16-bit WAV; every effect with 44.1 kHz AAC on the float output)");
+                Pass("Every effect on the device output (44.1 kHz AAC)");
 
                 // ---- Tracks: default delay ----
                 await Open("delay", s => s with { AudioDelay = 500 }, mix);
@@ -313,8 +320,8 @@ public partial class MainWindow
 
                 // ---- Volume: maximum and step (live, the app's own) ----
                 // The file output has no volume, so this case plays on the
-                // device, kept silent by VLC's gain, and leaves 100 %.
-                await Open("volume", s => s, mix, false, "--gain=0.001");
+                // device (silent) and leaves 100 %.
+                await Open("volume", s => s, mix, false);
                 _settingsViewModel.MaximumVolume = 300;
                 Require(PlayerVolume.Maximum == 300, "Maximum volume 300% widens the volume slider");
                 _presentation.Volume = 250;
@@ -351,14 +358,16 @@ public partial class MainWindow
         public static Sound Read(string path)
         {
             byte[] bytes = File.ReadAllBytes(path);
-            int channels = BitConverter.ToInt16(bytes, 22), rate = BitConverter.ToInt32(bytes, 24);
+            int channels = BitConverter.ToInt16(bytes, 22), rate = BitConverter.ToInt32(bytes, 24), bits = BitConverter.ToInt16(bytes, 34);
             int data = 12;
             while (data + 8 <= bytes.Length && System.Text.Encoding.ASCII.GetString(bytes, data, 4) != "data")
                 data += 8 + BitConverter.ToInt32(bytes, data + 4);
             Require(data + 8 <= bytes.Length && channels is 1 or 2, $"{path} is a WAV file with sound");
-            int count = (bytes.Length - data - 8) / 4 / channels * channels;
+            int size = bits == 16 ? 2 : 4;
+            int count = (bytes.Length - data - 8) / size / channels * channels;
             float[] samples = new float[count];
-            Buffer.BlockCopy(bytes, data + 8, samples, 0, count * 4);
+            if (size == 4) Buffer.BlockCopy(bytes, data + 8, samples, 0, count * 4);
+            else for (int i = 0; i < count; i++) samples[i] = BitConverter.ToInt16(bytes, data + 8 + 2 * i) / 32768f;
             Require(count > rate, $"{path} holds more than a second of sound");
             return new(samples, channels, rate);
         }

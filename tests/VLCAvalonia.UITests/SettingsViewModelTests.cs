@@ -113,6 +113,7 @@ public sealed class SettingsViewModelTests
     [InlineData("diagnostics", "Advanced")]
     [InlineData("shuffle", "Playback")]
     [InlineData("deinterlace", "Video")]
+    [InlineData("hardware", "Performance")]
     public void SearchSelectsTheMatchingPage(string query, string page)
     {
         SettingsViewModel viewModel = Create(out _);
@@ -139,9 +140,9 @@ public sealed class SettingsViewModelTests
     {
         SettingsViewModel viewModel = Create(out _);
 
-        Assert.Equal(["General", "Interface", "Privacy", "Controls", "Playback", "Video", "Audio", "Subtitles", "Advanced"], viewModel.Pages.Select(page => page.Name));
-        Assert.Equal(["App", "App", "App", "App", "Media", "Media", "Media", "Media", "System"], viewModel.Pages.Select(page => page.Group));
-        Assert.Equal(["General", "Playback", "Advanced"], viewModel.Pages.Where(page => page.ShowsGroupHeader).Select(page => page.Name));
+        Assert.Equal(["General", "Interface", "Privacy", "Controls", "Playback", "Video", "Audio", "Subtitles", "Performance", "Advanced"], viewModel.Pages.Select(page => page.Name));
+        Assert.Equal(["App", "App", "App", "App", "Media", "Media", "Media", "Media", "System", "System"], viewModel.Pages.Select(page => page.Group));
+        Assert.Equal(["General", "Playback", "Performance"], viewModel.Pages.Where(page => page.ShowsGroupHeader).Select(page => page.Name));
         Assert.Equal("General Settings", viewModel.DialogTitle);
         viewModel.SelectedPage = viewModel.Pages[6];
         Assert.True(viewModel.IsAudio);
@@ -158,7 +159,7 @@ public sealed class SettingsViewModelTests
         Assert.Equal(["Audio", "Subtitles"], viewModel.FilteredPages.Select(page => page.Name));
         Assert.Equal(["Audio"], viewModel.Pages.Where(page => page.ShowsGroupHeader).Select(page => page.Name));
         viewModel.Search = "";
-        Assert.Equal(["General", "Playback", "Advanced"], viewModel.Pages.Where(page => page.ShowsGroupHeader).Select(page => page.Name));
+        Assert.Equal(["General", "Playback", "Performance"], viewModel.Pages.Where(page => page.ShowsGroupHeader).Select(page => page.Name));
     }
 
     [Fact]
@@ -257,8 +258,7 @@ public sealed class SettingsViewModelTests
         viewModel.Gamma = 2;
         Assert.Equal((33.33, 1.5, 2d), (service.Current.Hue, service.Current.Brightness, service.Current.Gamma));
         Assert.False(viewModel.CanAdjustGamma);
-        service.Update(s => s with { HardwareDecoding = "Off" });
-        viewModel.Refresh();
+        viewModel.HardwareDecoding = viewModel.HardwareDecodingModes.Single(option => option.Value == "Off");
         Assert.True(viewModel.CanAdjustGamma);
 
         viewModel.ResetPictureCommand.Execute(null);

@@ -928,6 +928,29 @@
                                         </controls:SettingRow>
                                     </StackPanel>
 
+                                    <!-- System › Performance (design 6571:15958). Not built: video
+                                         post-processing (VLC 3.0.24's filter gets no quantizers from
+                                         its FFmpeg and barely changes the picture), real-time and
+                                         process priority, rescan plugins, the developer options. -->
+                                    <StackPanel Classes="settingsSection" IsVisible="{Binding IsPerformance}">
+                                        <TextBlock Classes="sectionTitle" Text="Decoding" />
+                                        <controls:SettingRow Label="Hardware-accelerated decoding" Badge="Next open" Help="Decodes video on the graphics card, frames staying on the GPU; Off decodes on the processor">
+                                            <ComboBox ItemsSource="{Binding HardwareDecodingModes}" SelectedItem="{Binding HardwareDecoding, Mode=TwoWay}" AutomationProperties.Name="Hardware-accelerated decoding" AutomationProperties.HelpText="Decodes video on the graphics card, frames staying on the GPU; Off decodes on the processor" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Skip the H.264 loop filter" Badge="Next open" Help="Saves processor time in software decoding at some cost in picture quality">
+                                            <ComboBox ItemsSource="{Binding LoopFilterModes}" SelectedItem="{Binding SkipLoopFilter, Mode=TwoWay}" AutomationProperties.Name="Skip the H.264 loop filter" AutomationProperties.HelpText="Saves processor time in software decoding at some cost in picture quality" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Decoding threads" Badge="Next open" Help="Threads for software decoding; 0 lets VLC choose">
+                                            <NumericUpDown Minimum="0" Maximum="16" Increment="1" FormatString="0" Value="{Binding DecodingThreads, Mode=TwoWay}" AutomationProperties.Name="Decoding threads" AutomationProperties.HelpText="Threads for software decoding; 0 lets VLC choose" />
+                                        </controls:SettingRow>
+                                    </StackPanel>
+                                    <StackPanel Classes="settingsSection" IsVisible="{Binding IsPerformance}">
+                                        <TextBlock Classes="sectionTitle" Text="Smooth Playback" />
+                                        <controls:SettingRow Label="Drop frames when the system can't keep up" Badge="Next open" Help="Skips frames that are too late instead of showing them late" ControlWidth="68">
+                                            <CheckBox IsChecked="{Binding DropLateFrames, Mode=TwoWay}" AutomationProperties.Name="Drop frames when the system can't keep up" AutomationProperties.HelpText="Skips frames that are too late instead of showing them late" />
+                                        </controls:SettingRow>
+                                    </StackPanel>
+
                                     <!-- System › Advanced -->
                                     <StackPanel Classes="settingsSection" IsVisible="{Binding IsAdvanced}">
                                         <TextBlock Classes="sectionTitle" Text="Diagnostics" />

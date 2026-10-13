@@ -1166,6 +1166,68 @@ public sealed class PlayerPresentationViewModelTests
     }
 
     [Fact]
+    public void AddToTheQueueInsteadOfReplacingItJoinsThePlayingQueue()
+    {
+        PlayerSettingsService settings = new(new SettingsStorage());
+        settings.Update(s => s with { EnqueueOnOpen = true });
+        QueueTransport transport = new();
+        PlayerPresentationViewModel vm = new(transport, new EmptyPicker(), () => { }, settings: settings, sourceValidator: new MediaSourceValidator(new ExistingFiles()));
+
+        // Nothing plays: the first open starts a queue.
+        vm.OpenSource("a.mp4", MediaSourceKind.File);
+        Assert.Equal(["a.mp4"], Assert.Single(transport.OpenedQueues));
+        vm.ApplyEngineState(State(.5, PlaybackStatus.Playing, true) with { Source = "a.mp4" });
+        transport.Publish(new PlaybackQueueState(1, 1, QueueLoadState.Ready, [new QueueItem("1:1:a", "a", "a.mp4", 0, true)], 0, QueueRepeatMode.None, QueueOrder.Normal));
+
+        // While it plays, a file, a URL or a drop joins it; a recent item replaces it.
+        vm.OpenSource("b.mp4", MediaSourceKind.File);
+        vm.OpenDroppedSources(["c.mp4"]);
+        Assert.Equal([["b.mp4"], ["c.mp4"]], transport.Enqueued);
+        Assert.Single(transport.OpenedQueues);
+        Assert.True(vm.IsPlaying);
+        vm.OpenSource("d.mp4", MediaSourceKind.Recent);
+        Assert.Equal(2, transport.OpenedQueues.Count);
+
+        // Off, a file replaces the queue.
+        settings.Update(s => s with { EnqueueOnOpen = false });
+        vm.ApplyEngineState(State(.5, PlaybackStatus.Playing, true) with { Generation = 2, Source = "d.mp4" });
+        vm.OpenSource("e.mp4", MediaSourceKind.File);
+        Assert.Equal(3, transport.OpenedQueues.Count);
+    }
+
+    [Fact]
+    public async Task DroppedFoldersAreReadWithTheLibraryFolderSettings()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "conic-drop-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            string folder = Path.Combine(root, "show");
+            Directory.CreateDirectory(Path.Combine(folder, "sub"));
+            File.WriteAllText(Path.Combine(folder, "a.mp4"), "x");
+            File.WriteAllText(Path.Combine(folder, "sub", "b.mp4"), "x");
+            string single = Path.Combine(root, "z.mp4");
+            File.WriteAllText(single, "x");
+            PlayerSettingsService settings = new(new SettingsStorage());
+            settings.Update(s => s with { FolderOpening = "FolderOnly" });
+            QueueTransport transport = new();
+            PlayerPresentationViewModel vm = new(transport, new EmptyPicker(), () => { }, settings: settings, sourceValidator: new MediaSourceValidator(new SystemMediaFileSystem()));
+            async Task<string[]> NextQueue(int count)
+            {
+                for (int i = 0; i < 200 && transport.OpenedQueues.Count < count; i++) await Task.Delay(25);
+                return transport.OpenedQueues[count - 1].Select(source => Path.GetRelativePath(root, source).Replace('\\', '/')).ToArray();
+            }
+
+            // One folder, then a folder with a file: this folder only, in drop order.
+            vm.OpenDroppedSources([folder]);
+            Assert.Equal(["show/a.mp4"], await NextQueue(1));
+            settings.Update(s => s with { FolderOpening = "Subfolders" });
+            vm.OpenDroppedSources([folder, single]);
+            Assert.Equal(["show/a.mp4", "show/sub/b.mp4", "z.mp4"], await NextQueue(2));
+        }
+        finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
+    }
+
+    [Fact]
     public void PlaybackFinishedIsRaisedWhenPlaybackEndsByItselfOnly()
     {
         RecordingTransport transport = new();
@@ -1236,9 +1298,10 @@ public sealed class PlayerPresentationViewModelTests
         public string? Selected { get; private set; }
         public QueueRepeatMode Repeat { get; private set; }
         public List<IReadOnlyList<string>> OpenedQueues { get; } = [];
+        public List<IReadOnlyList<string>> Enqueued { get; } = [];
         public void Publish(PlaybackQueueState state) { QueueState = state; QueueStateChanged?.Invoke(this, state); }
         public void Open(string source) { } public void TogglePause() { } public void Stop() { } public void Seek(double normalizedPosition) { } public void SetVolume(double normalizedVolume) { } public void SetMuted(bool muted) { } public void Skip(TimeSpan offset) { } public void SetPlaybackRate(double playbackRate) { }
-        public void OpenQueue(IReadOnlyList<string> sources) => OpenedQueues.Add(sources.ToArray()); public void Enqueue(IEnumerable<string> sources) { } public void SelectAndPlay(string token) => Selected = token; public void Move(string token, int destinationIndex) { } public void Remove(string token) { } public void ClearQueue() { } public void Previous() { } public void Next() { } public void SetRepeatMode(QueueRepeatMode mode) => Repeat = mode; public void SetOrder(QueueOrder order) { }
+        public void OpenQueue(IReadOnlyList<string> sources) => OpenedQueues.Add(sources.ToArray()); public void Enqueue(IEnumerable<string> sources) => Enqueued.Add(sources.ToArray()); public void SelectAndPlay(string token) => Selected = token; public void Move(string token, int destinationIndex) { } public void Remove(string token) { } public void ClearQueue() { } public void Previous() { } public void Next() { } public void SetRepeatMode(QueueRepeatMode mode) => Repeat = mode; public void SetOrder(QueueOrder order) { }
     }
 
     private sealed class CapabilityTransport : IPlayerTransport, IMediaCapabilitiesTransport, IMediaInformationTransport

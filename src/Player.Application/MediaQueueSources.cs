@@ -4,6 +4,15 @@ namespace Player.Application;
 
 public sealed record MediaSourceExpansion(IReadOnlyList<MediaSource> Sources, IReadOnlyList<string> Failures, bool WasBounded);
 
+/// <summary>How a folder is read (Settings › Library › Opening Files):
+/// with its subfolders or not, with hidden and system files or not.</summary>
+public sealed record MediaFolderScan(bool Subfolders, bool Hidden)
+{
+    public static MediaFolderScan Everything { get; } = new(true, true);
+
+    public static MediaFolderScan For(PlayerSettings settings) => new(settings.FolderOpening != "FolderOnly", settings.ShowHiddenFiles);
+}
+
 /// <summary>Bounded, cancellable source expansion. It deliberately flattens folders and playlists.</summary>
 public sealed class MediaSourceExpander
 {
@@ -11,8 +20,12 @@ public sealed class MediaSourceExpander
     private readonly MediaSourceValidator _validator;
     public MediaSourceExpander(MediaSourceValidator validator) => _validator = validator;
 
-    public async Task<MediaSourceExpansion> ExpandAsync(string value, MediaSourceKind kind, int maximumItems = DefaultMaximumItems, CancellationToken cancellationToken = default)
+    public Task<MediaSourceExpansion> ExpandAsync(string value, MediaSourceKind kind, int maximumItems = DefaultMaximumItems, CancellationToken cancellationToken = default) =>
+        ExpandAsync(value, kind, MediaFolderScan.Everything, maximumItems, cancellationToken);
+
+    public async Task<MediaSourceExpansion> ExpandAsync(string value, MediaSourceKind kind, MediaFolderScan scan, int maximumItems = DefaultMaximumItems, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(scan);
         if (maximumItems is < 1 or > DefaultMaximumItems) throw new ArgumentOutOfRangeException(nameof(maximumItems));
         if (kind != MediaSourceKind.Folder) {
             MediaOpenResult single = _validator.Validate(value, kind);
@@ -22,7 +35,14 @@ public sealed class MediaSourceExpander
         List<MediaSource> sources = []; List<string> failures = []; bool bounded = false;
         try
         {
-            foreach (string file in Directory.EnumerateFiles(value, "*", SearchOption.AllDirectories).OrderBy(x => x, StringComparer.OrdinalIgnoreCase))
+            // As SearchOption did (inaccessible folders are reported), plus the
+            // scan's choices; a hidden folder's files are skipped with it.
+            EnumerationOptions options = new()
+            {
+                RecurseSubdirectories = scan.Subfolders, IgnoreInaccessible = false, MatchType = MatchType.Win32,
+                AttributesToSkip = scan.Hidden ? 0 : FileAttributes.Hidden | FileAttributes.System,
+            };
+            foreach (string file in Directory.EnumerateFiles(value, "*", options).OrderBy(x => x, StringComparer.OrdinalIgnoreCase))
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 if (sources.Count == maximumItems) { bounded = true; break; }

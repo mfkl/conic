@@ -10,9 +10,6 @@ namespace Conic.Views;
 
 public partial class SettingsView : UserControl
 {
-    /// <summary>Below this width the dialog fills the window and a ComboBox replaces the category pane.</summary>
-    private const double CompactWidth = 720;
-    private static readonly Thickness HeaderPadding = new(8, 0, 14, 0);
 
     private PlayerPresentationViewModel? _player;
     public event EventHandler? CloseRequested;
@@ -38,27 +35,35 @@ public partial class SettingsView : UserControl
 
     internal void ApplyResponsiveLayout()
     {
-        bool compact = Bounds.Width < CompactWidth;
+        // Below ModalDialog.CompactWidth the dialog fills the window and a
+        // ComboBox replaces the category pane.
+        bool compact = Bounds.Width < ModalDialog.CompactWidth;
         Classes.Set("compact", compact);
         SettingsCategoryPane.IsVisible = !compact;
         SettingsPages.IsVisible = !compact;
         CompactSettingsPages.IsVisible = compact;
         SettingsColumns.ColumnDefinitions[0].Width = new GridLength(compact ? 0 : 216);
         SettingsPageContent.Margin = compact ? new Thickness(16, 16, 16, 24) : new Thickness(24, 20, 24, 32);
-        // The compact dialog fills the window, so its header reaches the
-        // macOS traffic lights; the centered dialog stays below the title bar.
-        SettingsHeader.Padding = compact ? PlatformChrome.ClearOfCaptionButtons(HeaderPadding) : HeaderPadding;
     }
 
-    // The dimmed backdrop: pressing it closes Settings, except over the
-    // title bar band, where it still moves the window.
-    private void OnScrimPointerPressed(object? sender, PointerPressedEventArgs e)
+    /// <summary>The dialog surface inside the shared shell (the backdrop excluded).</summary>
+    internal Control SettingsDialog => SettingsShell.DialogPart ?? SettingsShell;
+
+    // The backdrop (ModalDialog) closes Settings.
+    private void OnShellCloseRequested(object? sender, EventArgs e) => CloseRequested?.Invoke(this, EventArgs.Empty);
+
+    /// <summary>Keyboard Shortcuts (More menu, right-click menu): the Controls page's shortcut search, scrolled into view.</summary>
+    internal void FocusShortcuts() => Dispatcher.UIThread.Post(() =>
     {
-        if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) return;
-        if (e.GetPosition(this).Y < PlatformChrome.TitleBarHeight && TopLevel.GetTopLevel(this) is Window { WindowState: not WindowState.FullScreen } window)
-            window.BeginMoveDrag(e);
-        else
-            CloseRequested?.Invoke(this, EventArgs.Empty);
+        ShortcutsSection.BringIntoView();
+        ShortcutSearchBox.Focus(NavigationMethod.Directional);
+    }, DispatcherPriority.Loaded);
+
+    // Enter in a hotkey field saves that shortcut, like its Save button.
+    private void OnShortcutFieldKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Enter || (sender as Control)?.DataContext is not ShortcutRow row) return;
+        if (row.SaveCommand.CanExecute(null)) row.SaveCommand.Execute(null);
         e.Handled = true;
     }
 

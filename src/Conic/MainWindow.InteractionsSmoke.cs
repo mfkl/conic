@@ -331,6 +331,9 @@ public partial class MainWindow
                 await Shortcut(PlayerCommandId.TogglePictureInPicture, () => Within(() => _presentation.IsPictureInPicture, 3), "enters picture in picture");
                 await Shortcut(PlayerCommandId.TogglePictureInPicture, () => Within(() => !_presentation.IsPictureInPicture, 3), "leaves picture in picture");
                 if (_presentation.IsPictureInPicture) ExitPictureInPicture();
+                await Shortcut(PlayerCommandId.ShowMessages, () => Within(() => _messagesWindow?.IsVisible == true, 3), "opens Messages");
+                _messagesWindow?.Close();
+                Activate();
                 await Shortcut(PlayerCommandId.ShowHome, () => Task.FromResult(_presentation.IsHomeOpen), "shows Home");
                 _presentation.ShowPlayerCommand.Execute(null);
                 await Settle();

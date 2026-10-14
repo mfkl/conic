@@ -16,6 +16,7 @@ internal sealed partial class SettingsViewModel
     public ICommand OpenSubtitleControlsCommand { get; private set; } = null!;
     public ICommand OpenVideoControlsCommand { get; private set; } = null!;
     public ICommand OpenMediaInformationCommand { get; private set; } = null!;
+    public ICommand OpenMessagesCommand { get; private set; } = null!;
 
     private void InitializeNavigationCommands()
     {
@@ -23,6 +24,7 @@ internal sealed partial class SettingsViewModel
         OpenSubtitleControlsCommand = Route(PlayerCommandId.ToggleMediaControls, "Subtitles");
         OpenVideoControlsCommand = Route(PlayerCommandId.ToggleMediaControls, "Video");
         OpenMediaInformationCommand = Route(PlayerCommandId.MediaInformation);
+        OpenMessagesCommand = Route(PlayerCommandId.ShowMessages);
     }
 
     private ICommand Route(PlayerCommandId command, object? tab = null) => new RegistryCommand(_registry ?? new PlayerCommandRegistry(), command, tab);

@@ -38,6 +38,26 @@ public sealed class KeyboardShortcutTests
     [InlineData(PlayerCommandId.TogglePictureInPicture, "picture in picture")]
     [InlineData(PlayerCommandId.ShowHome, "home")]
     [InlineData(PlayerCommandId.ShowMessages, "messages")]
+    [InlineData(PlayerCommandId.Stop, "stop")]
+    [InlineData(PlayerCommandId.QueuePrevious, "previous")]
+    [InlineData(PlayerCommandId.QueueNext, "next")]
+    [InlineData(PlayerCommandId.VolumeUp, "volume 0.52")]
+    [InlineData(PlayerCommandId.VolumeDown, "volume 0.48")]
+    [InlineData(PlayerCommandId.PlaybackFaster, "rate 1.1")]
+    [InlineData(PlayerCommandId.PlaybackSlower, "rate 0.9")]
+    [InlineData(PlayerCommandId.PlaybackNormal, "rate 1")]
+    [InlineData(PlayerCommandId.PreviousChapter, "previous chapter")]
+    [InlineData(PlayerCommandId.NextChapter, "next chapter")]
+    [InlineData(PlayerCommandId.NextFrame, "next frame")]
+    [InlineData(PlayerCommandId.AudioDelayDown, "Audio delay -50")]
+    [InlineData(PlayerCommandId.AudioDelayUp, "Audio delay 50")]
+    [InlineData(PlayerCommandId.SubtitleDelayDown, "Subtitle delay -50")]
+    [InlineData(PlayerCommandId.SubtitleDelayUp, "Subtitle delay 50")]
+    [InlineData(PlayerCommandId.CycleAudioTrack, "track Audio 2")]
+    [InlineData(PlayerCommandId.CycleSubtitleTrack, "track Subtitle 3")]
+    [InlineData(PlayerCommandId.JumpToTime, "jump to time")]
+    [InlineData(PlayerCommandId.OpenFromClipboard, "read clipboard")]
+    [InlineData(PlayerCommandId.ShowAbout, "about")]
     public async Task EachDefaultShortcutKeyRunsItsCommand(PlayerCommandId command, string effect)
     {
         Player player = new();
@@ -60,7 +80,7 @@ public sealed class KeyboardShortcutTests
             .GetCustomAttributes(typeof(InlineDataAttribute), false).Cast<InlineDataAttribute>()
             .Select(data => (PlayerCommandId)data.GetData(null!).Single()[0]).ToArray();
 
-        Assert.Equal(22, checkedCommands.Length);
+        Assert.Equal(42, checkedCommands.Length);
         Assert.Equal(checkedCommands.Order(), PlayerShortcutPolicy.Defaults(player.ViewModel.Registry).Select(shortcut => shortcut.Command).Order());
     }
 
@@ -97,11 +117,21 @@ public sealed class KeyboardShortcutTests
             ViewModel = new PlayerPresentationViewModel(_transport, new Picker(_effects), () => { },
                 toggleFullscreen: () => _effects.Add("fullscreen"), openSettings: () => _effects.Add("settings"), settings: settings,
                 sourceValidator: new MediaSourceValidator(new ExistingFiles()), history: new MediaHistoryService(new HistoryStorage()),
-                showUrlPanel: () => _effects.Add("url panel"));
+                showUrlPanel: () => _effects.Add("url panel"), clipboard: new Clipboard(_effects));
             ViewModel.PictureInPictureRequested += (_, _) => _effects.Add("picture in picture");
+            ViewModel.JumpToTimeRequested += (_, _) => _effects.Add("jump to time");
+            ViewModel.AboutRequested += (_, _) => _effects.Add("about");
             ViewModel.MessagesRequested += (_, _) => _effects.Add("messages");
             ViewModel.OpenSource("a.mp4", MediaSourceKind.File);
             ViewModel.ApplyEngineState(new(1, PlaybackStatus.Playing, "a.mp4", .5, TimeSpan.FromSeconds(50), TimeSpan.FromSeconds(100), .5, true, null));
+            // Three queue items with the middle one playing, two audio
+            // tracks, a subtitle track and two chapters: every cycle and
+            // step has somewhere to go.
+            ViewModel.ApplyQueueState(new(1, 1, QueueLoadState.Ready, [new("1", "a", "a.mp4", 0, false), new("2", "b", "b.mp4", 1, true), new("3", "c", "c.mp4", 2, false)], 1, QueueRepeatMode.None, QueueOrder.Normal));
+            ViewModel.ApplyMediaCapabilities(new(1, 1, MediaCapabilityLoadState.Ready,
+                [new("-1", "Disable", true, false), new("1", "English", false, true), new("2", "French", false, false)],
+                [new("-1", "Disable", true, true), new("3", "English", false, false)],
+                [], [new("0", "One", true), new("1", "Two", false)], new(0, 0)));
             ViewModel.ShowPlayerCommand.Execute(null);
             _effects.Clear();
         }
@@ -120,17 +150,26 @@ public sealed class KeyboardShortcutTests
         }
     }
 
-    private sealed class Transport(List<string> effects) : IPlayerTransport, IQueueTransport, IMediaCapabilitiesTransport, IMediaInformationTransport
+    private sealed class Clipboard(List<string> effects) : IClipboardService
+    {
+        public Task<string?> SetTextAsync(string text) => Task.FromResult<string?>(null);
+        public Task<string?> GetTextAsync() { effects.Add("read clipboard"); return Task.FromResult<string?>(null); }
+    }
+
+    private sealed class Transport(List<string> effects) : IPlayerTransport, IQueueTransport, IMediaCapabilitiesTransport, IMediaInformationTransport, IPlaybackNavigationTransport
     {
         public bool Refreshed { get; private set; }
         public void Open(string source) { }
         public void TogglePause() => effects.Add("pause");
         public void Stop() => effects.Add("stop");
         public void Seek(double normalizedPosition) => effects.Add($"seek {normalizedPosition}");
-        public void SetVolume(double normalizedVolume) { }
+        public void SetVolume(double normalizedVolume) => effects.Add("volume " + normalizedVolume.ToString(System.Globalization.CultureInfo.InvariantCulture));
         public void SetMuted(bool muted) => effects.Add($"mute {muted}");
         public void Skip(TimeSpan offset) => effects.Add($"skip {offset.TotalSeconds}");
-        public void SetPlaybackRate(double playbackRate) { }
+        public void SetPlaybackRate(double playbackRate) => effects.Add("rate " + playbackRate.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        public void NextFrame() => effects.Add("next frame");
+        public void NextChapter() => effects.Add("next chapter");
+        public void PreviousChapter() => effects.Add("previous chapter");
 
         public PlaybackQueueState QueueState => PlaybackQueueState.Initial;
         public event EventHandler<PlaybackQueueState>? QueueStateChanged { add { } remove { } }
@@ -140,17 +179,17 @@ public sealed class KeyboardShortcutTests
         public void Move(string token, int destinationIndex) { }
         public void Remove(string token) { }
         public void ClearQueue() { }
-        public void Previous() { }
-        public void Next() { }
+        public void Previous() => effects.Add("previous");
+        public void Next() => effects.Add("next");
         public void SetRepeatMode(QueueRepeatMode mode) { }
         public void SetOrder(QueueOrder order) { }
 
         public MediaCapabilitiesState MediaCapabilities => MediaCapabilitiesState.Initial;
         public event EventHandler<MediaCapabilitiesState>? MediaCapabilitiesChanged { add { } remove { } }
-        public void SelectTrack(MediaTrackKind kind, string id) { }
+        public void SelectTrack(MediaTrackKind kind, string id) => effects.Add($"track {kind} {id}");
         public void SelectTitle(string id) { }
         public void SelectChapter(string id) { }
-        public void SetDelayMilliseconds(MediaTrackKind kind, int milliseconds) { }
+        public void SetDelayMilliseconds(MediaTrackKind kind, int milliseconds) => effects.Add($"{kind} delay {milliseconds}");
         public void ResetDelay(MediaTrackKind kind) { }
         public ExternalTrackAttachmentState AttachExternalTrack(MediaTrackKind kind, string path) => new(false, false, false);
 

@@ -213,14 +213,16 @@ public partial class MainWindow
                 await WaitFor(() => Plays(gop) && !_presentation.IsHomeOpen, $"the Home card opens its file and leaves Home ({Queue()})");
                 Pass("a Home card opens its file");
 
-                // Drag and drop on the window: local files are accepted, anything else is not.
+                // Drag and drop on the window: local files and text (a link from a browser) are accepted, nothing else is.
                 DragEventArgs over = Drag(DragDrop.DragOverEvent, await Files(dark));
                 VideoArea.RaiseEvent(over);
                 DataTransfer text = new();
                 text.Add(DataTransferItem.CreateText("https://example.invalid/clip.mp4"));
                 DragEventArgs overText = Drag(DragDrop.DragOverEvent, text);
                 VideoArea.RaiseEvent(overText);
-                Require(over.Handled && over.DragEffects == DragDropEffects.Copy && overText.Handled && overText.DragEffects == DragDropEffects.None, $"a file drag is accepted as a copy, text is refused ({over.DragEffects}, {overText.DragEffects})");
+                DragEventArgs overEmpty = Drag(DragDrop.DragOverEvent, new DataTransfer());
+                VideoArea.RaiseEvent(overEmpty);
+                Require(over.Handled && over.DragEffects == DragDropEffects.Copy && overText.Handled && overText.DragEffects == DragDropEffects.Copy && overEmpty.Handled && overEmpty.DragEffects == DragDropEffects.None, $"file and text drags are accepted as a copy, an empty drag is refused ({over.DragEffects}, {overText.DragEffects}, {overEmpty.DragEffects})");
                 VideoArea.RaiseEvent(Drag(DragDrop.DropEvent, await Files(dark)));
                 await WaitFor(() => Plays(dark) && _presentation.QueueItems.Count == 1, $"a dropped file plays ({Queue()})");
                 DragEventArgs drop = Drag(DragDrop.DropEvent, await Files(gop, dark, chapters));
@@ -458,16 +460,12 @@ public partial class MainWindow
                 int audioTracks = _presentation.AudioTracks.Count(track => !track.IsDisabled);
                 _mediaPicker.PicksForSmoke.Enqueue(audio);
                 await Press(Named(QueueDrawer, "Add audio file"), "Add audio file");
-                await WaitFor(() => _mediaPicker.RequestsForSmoke[^1] == "audio" && _presentation.MediaControlsNotice.StartsWith("Added for the next media open", StringComparison.Ordinal), $"Add audio file takes the picked file for the next open ({_presentation.MediaControlsNotice})", 5);
-                // The file is added to the queue item: playing the item again from its
-                // queue row opens it with one more audio track.
+                // While the media plays, the file opens at once as one more audio track, as in VLC.
                 int Tracks() => _presentation.AudioTracks.Count(track => !track.IsDisabled);
                 string TrackList() => string.Join(", ", _presentation.AudioTracks.Select(track => track.Label));
-                _presentation.DrawerTab = "Queue";
-                await Settle();
-                await Press(QueueDrawer.GetVisualDescendants().OfType<Button>().First(button => button.IsEffectivelyVisible && button.Classes.Contains("panelRow") && button.DataContext is QueueItem { IsCurrent: true }), "the queue row of languages.mkv");
-                await WaitFor(() => _presentation.IsPlaying && Tracks() == audioTracks + 1, $"the item played again has one more audio track ({audioTracks} -> {Tracks()}: {TrackList()})");
-                Pass("Add audio file, as a track when the item plays again");
+                await WaitFor(() => _mediaPicker.RequestsForSmoke[^1] == "audio" && _presentation.MediaControlsNotice == "Added to the playing media.", $"Add audio file adds the picked file to the playing media ({_presentation.MediaControlsNotice})", 5);
+                await WaitFor(() => _presentation.IsPlaying && Tracks() == audioTracks + 1, $"the playing media has one more audio track ({audioTracks} -> {Tracks()}: {TrackList()})");
+                Pass("Add audio file, as a live track");
                 // Stop starts a new VLC core on Play, without the item's added track: say what it does.
                 _presentation.StopCommand.Execute(null);
                 await WaitFor(() => _presentation.PlaybackStatus == PlaybackStatus.Stopped, "stopped");

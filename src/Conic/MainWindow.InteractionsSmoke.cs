@@ -349,9 +349,9 @@ public partial class MainWindow
                     if (!UrlPanel.IsVisible) ShowUrlPanel();
                     await Settle();
                     UrlTextBox.Focus();
-                    UrlTextBox.Text = "ftp://example.invalid/clip.mp4";
+                    UrlTextBox.Text = "gopher://example.invalid/clip.mp4";
                     await Key(Avalonia.Input.Key.Enter);
-                    Require(UrlPanel.IsVisible && _presentation.HasOpenError && UrlTextBox.IsFocused, $"Enter on an ftp address keeps the dialog with its error ({_presentation.OpenError})");
+                    Require(UrlPanel.IsVisible && _presentation.HasOpenError && UrlTextBox.IsFocused, $"Enter on an unsupported address keeps the dialog with its error ({_presentation.OpenError})");
                     UrlTextBox.Text = server.Url;
                     await Key(Avalonia.Input.Key.Enter);
                     await WaitFor(() => !UrlPanel.IsVisible && _presentation.IsPlaying && Engine().Source?.StartsWith("http://127.0.0.1", StringComparison.Ordinal) == true, $"Enter in the address plays the stream ({Engine().Source}, {_presentation.PlaybackStatus})");

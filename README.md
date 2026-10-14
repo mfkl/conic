@@ -50,6 +50,14 @@ signed, so each OS warns on the first launch.
 To remove the app, delete its folder (Windows) or the app (macOS). Settings
 and history stay in your user profile.
 
+### Reporting a problem
+
+As in VLC, **Messages** shows the engine's log live: press **Ctrl+Shift+M**
+(**Cmd+Shift+M** on macOS), or open it from the right-click menu (**More
+Settings > Messages**), the macOS **Window** menu or **Settings > Advanced**.
+Set **Verbosity** to **Debug**, reproduce the problem (opening the media again
+if it fails to open), then **Save…** the log and attach it to your report.
+
 ## Windows review package
 
 Build a local portable ZIP with PowerShell 7 and the pinned official VLC 3.0.24

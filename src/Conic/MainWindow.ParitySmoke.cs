@@ -76,7 +76,9 @@ public partial class MainWindow
                 async Task<bool> Open(string path)
                 {
                     _presentation.OpenSource(path, MediaSourceKind.File);
-                    return await Within(() => _presentation.IsPlaying && Engine().Source is { } source && source.EndsWith(Path.GetFileName(path), StringComparison.OrdinalIgnoreCase), 15);
+                    // VLC's playlist runs before its input has started, which
+                    // drops settings and seeks sent meanwhile: wait for the time to move.
+                    return await Within(() => _presentation.IsPlaying && Engine().Source is { } source && source.EndsWith(Path.GetFileName(path), StringComparison.OrdinalIgnoreCase) && Elapsed() > 0, 15);
                 }
                 void Run(PlayerCommandId command) => _presentation.Registry.Execute(command);
                 async Task Set(Func<PlayerSettings, PlayerSettings> update)

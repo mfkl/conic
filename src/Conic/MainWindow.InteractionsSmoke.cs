@@ -132,7 +132,9 @@ public partial class MainWindow
                 async Task Open(string path)
                 {
                     _presentation.OpenSource(path, MediaSourceKind.File);
-                    await WaitFor(() => Plays(path), $"{Path.GetFileName(path)} plays (queue {Queue()})");
+                    // VLC's playlist runs before its input has started, which
+                    // drops a seek sent meanwhile: wait for the time to move.
+                    await WaitFor(() => Plays(path) && Elapsed() > 0, $"{Path.GetFileName(path)} plays (queue {Queue()})");
                 }
                 Point VideoCenter() => VideoSurface.TranslatePoint(new Point(VideoSurface.Bounds.Width / 2, VideoSurface.Bounds.Height / 2), this)!.Value;
                 void Click(int count)

@@ -163,10 +163,6 @@ public partial class MainWindow
 
                 _settings.ResetAll();
                 _settings.Update(s => s with { ResumePlayback = false });
-                // --software-decoding: VLC's software decoder for every open,
-                // as Settings › Hardware decoding Off asks; the cases reset the settings.
-                if (Environment.GetCommandLineArgs().Contains("--software-decoding", StringComparer.OrdinalIgnoreCase))
-                    VideoSurface.ExtraOpenArgumentsForSmoke = ["--avcodec-hw=none", "--no-videotoolbox"];
                 _mediaPicker.ScriptedForSmoke = true;
                 int finished = 0;
                 _presentation.PlaybackFinished += (_, _) => finished++;
@@ -375,7 +371,8 @@ public partial class MainWindow
                     if (_presentation.HasPendingResume) _presentation.Registry.Execute(PlayerCommandId.DismissResume);
                     _presentation.Registry.Execute(PlayerCommandId.Seek, .5);
                     // Stop once the player shows the new position, as a user would.
-                    await WaitFor(() => Math.Abs(Elapsed() - 15) < 1.5 && Math.Abs(_presentation.Position - .5) < .05, $"the player shows 15 s ({_presentation.ElapsedText})");
+                    bool AtMiddle() => Math.Abs(Elapsed() - 15) < 1.5 && Math.Abs(_presentation.Position - .5) < .05;
+                    Require(await Within(AtMiddle, 15), $"the player shows 15 s ({_presentation.ElapsedText}, engine at {Elapsed():0.0} s, position {_presentation.Position:0.00}, {_presentation.PlaybackStatus}, {Engine().Source})");
                     _presentation.StopCommand.Execute(null);
                     await WaitFor(() => !_presentation.IsPlaying, "stopped, the position saved");
                     _presentation.OpenSource(gop, MediaSourceKind.File);

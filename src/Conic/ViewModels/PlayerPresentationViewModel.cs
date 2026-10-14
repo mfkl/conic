@@ -771,8 +771,9 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
     private async Task OpenMediaAsync()
     {
         RequestMainLayout();
-        string? source = await _mediaSourcePicker.PickMediaAsync();
-        if (!string.IsNullOrWhiteSpace(source)) OpenSource(source, MediaSourceKind.File);
+        IReadOnlyList<string> sources = await _mediaSourcePicker.PickMediaFilesAsync();
+        if (sources.Count == 1) OpenSource(sources[0], MediaSourceKind.File);
+        else if (sources.Count > 1) await OpenMultipleAsync(sources, MediaSourceKind.File);
     }
 
     private async Task OpenFolderAsync()
@@ -782,7 +783,22 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
         if (!string.IsNullOrWhiteSpace(source)) await OpenFolderSourcesAsync(source);
     }
 
-    public void OpenUrl() => OpenSource(UrlText, MediaSourceKind.NetworkUrl);
+    /// <summary>Open Network Stream: one URL per line; several open as a queue, as dropped files do.</summary>
+    public void OpenUrl()
+    {
+        string[] urls = (UrlText ?? string.Empty).Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (urls.Length <= 1) { OpenSource(urls.FirstOrDefault() ?? UrlText, MediaSourceKind.NetworkUrl); return; }
+        List<MediaSource> sources = [];
+        for (int line = 0; line < urls.Length; line++)
+        {
+            MediaOpenResult result = _sourceValidator.Validate(urls[line], MediaSourceKind.NetworkUrl);
+            if (!result.Succeeded || result.Source is null) { _diagnostic?.Invoke(result.Diagnostic ?? "Media source validation failed."); OpenError = $"Line {line + 1}: {result.UserMessage}"; return; }
+            sources.Add(result.Source);
+        }
+        RequestMainLayout();
+        OpenError = string.Empty;
+        OpenExpandedSources(new(sources, [], false), replace: !EnqueuesOnOpen(MediaSourceKind.NetworkUrl));
+    }
 
     private void TogglePlayback()
     {
@@ -853,7 +869,7 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
     {
         if (sources is null || sources.Count == 0) { OpenError = "Drop one local media file to open it."; return; }
         if (sources.Count == 1) { OpenSource(sources[0], MediaSourceKind.DragDrop); return; }
-        _ = OpenMultipleDroppedAsync(sources);
+        _ = OpenMultipleAsync(sources, MediaSourceKind.DragDrop);
     }
 
     private async Task OpenFolderSourcesAsync(string folder)
@@ -862,7 +878,8 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
         OpenExpandedSources(expansion, replace: !EnqueuesOnOpen(MediaSourceKind.Folder));
     }
 
-    private async Task OpenMultipleDroppedAsync(IReadOnlyList<string> sources)
+    /// <summary>Several files (Open File, a drop, the command line) open as one queue, in order.</summary>
+    private async Task OpenMultipleAsync(IReadOnlyList<string> sources, MediaSourceKind kind)
     {
         RequestMainLayout();
         await Task.Yield();
@@ -870,7 +887,7 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
         MediaFolderScan scan = MediaFolderScan.For(_settings?.Current ?? PlayerSettings.Default);
         foreach (string source in sources)
         {
-            MediaOpenResult result = _sourceValidator.Validate(source, MediaSourceKind.DragDrop);
+            MediaOpenResult result = _sourceValidator.Validate(source, kind);
             if (!result.Succeeded || result.Source is null) { failures.Add(result.UserMessage ?? source); continue; }
             // Dropped folders are read as Open folder reads one, in drop order.
             if (result.Source.Kind != MediaSourceKind.Folder || _queue is null) { accepted.Add(result.Source); continue; }
@@ -878,7 +895,7 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
             accepted.AddRange(folder.Sources); failures.AddRange(folder.Failures); bounded |= folder.WasBounded;
         }
         if (accepted.Count > MediaSourceExpander.DefaultMaximumItems) { accepted.RemoveRange(MediaSourceExpander.DefaultMaximumItems, accepted.Count - MediaSourceExpander.DefaultMaximumItems); bounded = true; }
-        OpenExpandedSources(new(accepted, failures, bounded), replace: !EnqueuesOnOpen(MediaSourceKind.DragDrop));
+        OpenExpandedSources(new(accepted, failures, bounded), replace: !EnqueuesOnOpen(kind));
     }
 
     private void OpenExpandedSources(MediaSourceExpansion expansion, bool replace)

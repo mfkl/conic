@@ -26,7 +26,19 @@ public sealed record LiveAudioSettings(
     string ReplayGainMode,
     double ReplayGainPreamp,
     string? Device,
-    int StereoMode = 0);
+    int StereoMode = 0,
+    double CompressorRmsPeak = 0.2,
+    double CompressorAttack = 25,
+    double CompressorRelease = 100,
+    double CompressorThreshold = -11,
+    double CompressorRatio = 4,
+    double CompressorKnee = 5,
+    double CompressorMakeupGain = 7,
+    double SpatializerRoomSize = 0.85,
+    double SpatializerWidth = 1,
+    double SpatializerWet = 0.4,
+    double SpatializerDry = 0.5,
+    double SpatializerDamp = 0.5);
 
 /// <summary>
 /// Settings › Audio as libVLC options (phase 9c). The effects are VLC 3 audio
@@ -110,6 +122,7 @@ public static class AudioEngineOptions
         nameof(PlayerSettings.EqualizerPreamp), nameof(PlayerSettings.EqualizerBands),
         nameof(PlayerSettings.SpatialAudio), nameof(PlayerSettings.SpatialAudioMode), nameof(PlayerSettings.Compressor),
         nameof(PlayerSettings.PitchShift), nameof(PlayerSettings.Karaoke), nameof(PlayerSettings.StereoMode),
+        nameof(PlayerSettings.CompressorRmsPeak), nameof(PlayerSettings.CompressorAttack), nameof(PlayerSettings.CompressorRelease), nameof(PlayerSettings.CompressorThreshold), nameof(PlayerSettings.CompressorRatio), nameof(PlayerSettings.CompressorKnee), nameof(PlayerSettings.CompressorMakeupGain), nameof(PlayerSettings.SpatializerRoomSize), nameof(PlayerSettings.SpatializerWidth), nameof(PlayerSettings.SpatializerWet), nameof(PlayerSettings.SpatializerDry), nameof(PlayerSettings.SpatializerDamp),
     };
 
     /// <summary>The device belongs to the MMDevice output (VLC's default on Windows).</summary>
@@ -152,6 +165,24 @@ public static class AudioEngineOptions
         if (settings.NormalizationMaximumLevel is double level) arguments.Add("--norm-max-level=" + Format(level));
         if (settings.PitchShift != 0) arguments.Add("--pitch-shift=" + Format(settings.PitchShift));
         if (settings.SpatialAudio && settings.SpatialAudioMode != "Room") arguments.Add("--spatialaudio-headphones");
+        if (settings.Compressor)
+        {
+            if (settings.CompressorRmsPeak != 0.2) arguments.Add("--compressor-rms-peak=" + Format(settings.CompressorRmsPeak));
+            if (settings.CompressorAttack != 25) arguments.Add("--compressor-attack=" + Format(settings.CompressorAttack));
+            if (settings.CompressorRelease != 100) arguments.Add("--compressor-release=" + Format(settings.CompressorRelease));
+            if (settings.CompressorThreshold != -11) arguments.Add("--compressor-threshold=" + Format(settings.CompressorThreshold));
+            if (settings.CompressorRatio != 4) arguments.Add("--compressor-ratio=" + Format(settings.CompressorRatio));
+            if (settings.CompressorKnee != 5) arguments.Add("--compressor-knee=" + Format(settings.CompressorKnee));
+            if (settings.CompressorMakeupGain != 7) arguments.Add("--compressor-makeup-gain=" + Format(settings.CompressorMakeupGain));
+        }
+        if (settings.SpatialAudio && settings.SpatialAudioMode == "Room")
+        {
+            if (settings.SpatializerRoomSize != 0.85) arguments.Add("--spatializer-roomsize=" + Format(settings.SpatializerRoomSize));
+            if (settings.SpatializerWidth != 1) arguments.Add("--spatializer-width=" + Format(settings.SpatializerWidth));
+            if (settings.SpatializerWet != 0.4) arguments.Add("--spatializer-wet=" + Format(settings.SpatializerWet));
+            if (settings.SpatializerDry != 0.5) arguments.Add("--spatializer-dry=" + Format(settings.SpatializerDry));
+            if (settings.SpatializerDamp != 0.5) arguments.Add("--spatializer-damp=" + Format(settings.SpatializerDamp));
+        }
         if (settings.ReplayGain != "none")
         {
             arguments.Add("--audio-replay-gain-mode=" + settings.ReplayGain);
@@ -179,7 +210,19 @@ public static class AudioEngineOptions
         settings.ReplayGain,
         settings.ReplayGainPreamp,
         UsesDevice(settings, windows) ? settings.AudioDevice : null,
-        StereoModeValue(settings.StereoMode));
+        StereoModeValue(settings.StereoMode),
+        settings.CompressorRmsPeak,
+        settings.CompressorAttack,
+        settings.CompressorRelease,
+        settings.CompressorThreshold,
+        settings.CompressorRatio,
+        settings.CompressorKnee,
+        settings.CompressorMakeupGain,
+        settings.SpatializerRoomSize,
+        settings.SpatializerWidth,
+        settings.SpatializerWet,
+        settings.SpatializerDry,
+        settings.SpatializerDamp);
 
     /// <summary>The preset whose preamp and bands these are, or Custom.</summary>
     public static string PresetFor(double preamp, string bands) =>
@@ -229,6 +272,18 @@ public static class AudioEngineOptions
             DolbySurround = Choice(value.DolbySurround, DolbySurroundModes, "Automatic"),
             ResamplerQuality = Choice(value.ResamplerQuality, ResamplerQualities, "Balanced"),
             StereoMode = Choice(value.StereoMode, StereoModes, "Unset"),
+            CompressorRmsPeak = Range(value.CompressorRmsPeak, 0, 1, 0.2, 2),
+            CompressorAttack = Range(value.CompressorAttack, 1.5, 400, 25, 2),
+            CompressorRelease = Range(value.CompressorRelease, 2, 800, 100, 2),
+            CompressorThreshold = Range(value.CompressorThreshold, -30, 0, -11, 2),
+            CompressorRatio = Range(value.CompressorRatio, 1, 20, 4, 2),
+            CompressorKnee = Range(value.CompressorKnee, 1, 10, 5, 2),
+            CompressorMakeupGain = Range(value.CompressorMakeupGain, 0, 24, 7, 2),
+            SpatializerRoomSize = Range(value.SpatializerRoomSize, 0, 1.1, 0.85, 2),
+            SpatializerWidth = Range(value.SpatializerWidth, 0, 1, 1, 2),
+            SpatializerWet = Range(value.SpatializerWet, 0, 1, 0.4, 2),
+            SpatializerDry = Range(value.SpatializerDry, 0, 1, 0.5, 2),
+            SpatializerDamp = Range(value.SpatializerDamp, 0, 1, 0.5, 2),
             AudioDelay = Math.Clamp(value.AudioDelay, -MediaDelayPolicy.MaximumMilliseconds, MediaDelayPolicy.MaximumMilliseconds),
         };
     }

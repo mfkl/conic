@@ -194,10 +194,11 @@ internal sealed unsafe partial class VlcCorePlayer : IMediaEngine, IQueueTranspo
         string[] openArguments = [.. RateArguments(OpenPlaybackRate), .. OpenArguments];
         LiveAudioSettings? startupAudio = LiveAudio;
         LiveSubtitleSettings? startupSubtitles = LiveSubtitles;
+        LiveVideoSettings? startupVideo = LiveVideo;
         PublishQueue(new PlaybackQueueState(generation, 0, QueueLoadState.Loading, [], -1, _requestedRepeat, _requestedOrder));
         PublishMediaCapabilities(new MediaCapabilitiesState(generation, 0, MediaCapabilityLoadState.Loading, [], [], [], [], new(0, 0)));
         ManualResetEventSlim stop = new(false);
-        Thread thread = new(() => Run(launchSources, initialEnqueueSources, openArguments, startupAudio, startupSubtitles, generation, stop))
+        Thread thread = new(() => Run(launchSources, initialEnqueueSources, openArguments, startupAudio, startupSubtitles, startupVideo, generation, stop))
         {
             IsBackground = true,
             Name = "VLCLR composition playback",
@@ -312,6 +313,16 @@ internal sealed unsafe partial class VlcCorePlayer : IMediaEngine, IQueueTranspo
         QueueMediaRequest(() => { MediaCapabilitiesState snapshot = MediaCapabilities; _ = _mediaControls.SelectTitle(ToNativeTitles(snapshot, NativeGeneration(snapshot)), value); PublishMediaCapabilitiesSnapshot(snapshot.QueueGeneration); });
     }
 
+    public void SelectProgram(string id)
+    {
+        if (!long.TryParse(id, out long value)) return;
+        QueueMediaRequest(() =>
+        {
+            if (_mediaControls.TryGetPrograms(out _) is { } programs) _ = _mediaControls.SelectProgram(programs, value);
+            PublishMediaCapabilitiesSnapshot(State.Generation);
+        });
+    }
+
     public void SelectChapter(string id)
     {
         if (!long.TryParse(id, out long value)) return;
@@ -330,15 +341,20 @@ internal sealed unsafe partial class VlcCorePlayer : IMediaEngine, IQueueTranspo
 
     public ExternalTrackAttachmentState AttachExternalTrack(MediaTrackKind kind, string path)
     {
+        // While media plays, the input opens the file at once and selects it
+        // (VLC's Add Subtitle File); otherwise the item keeps it for its next open.
+        bool live = State.Status is PlaybackStatus.Playing or PlaybackStatus.Paused;
+        VLCExternalTrackKind nativeKind = kind == MediaTrackKind.Audio ? VLCExternalTrackKind.Audio : VLCExternalTrackKind.Subtitle;
         if (!QueueMediaRequest(() =>
         {
-            VLCExternalTrackAttachmentResult result = _mediaControls.AttachExternalTrack(path, kind == MediaTrackKind.Audio ? VLCExternalTrackKind.Audio : VLCExternalTrackKind.Subtitle);
+            VLCExternalTrackAttachmentResult result = live ? _mediaControls.AttachExternalTrackLive(path, nativeKind) : _mediaControls.AttachExternalTrack(path, nativeKind);
+            Console.WriteLine($"[external-track] live={live} result={result.Result.Code}");
             PublishMediaCapabilitiesSnapshot(State.Generation);
             if (result.AcceptedIntoItem && result.PendingUntilNextOpen)
                 PublishMediaCapabilities(MediaCapabilities with { Error = "External track added for the next open; it is not a current live track." });
         }))
             return new(false, false, false, "Media controls are unavailable while VLC is opening or closing.");
-        return new(true, true, false, null);
+        return new(true, !live, false, null);
     }
 
     private bool QueueMediaRequest(Action request)
@@ -600,6 +616,7 @@ internal sealed unsafe partial class VlcCorePlayer : IMediaEngine, IQueueTranspo
         VLCTrackSnapshot? tracks = _mediaControls.TryGetTracks(out VLCMediaResult tracksResult);
         VLCTitleChapterSnapshot? titles = _mediaControls.TryGetTitlesAndChapters(out VLCMediaResult titlesResult);
         VLCMediaDelaySnapshot? delays = _mediaControls.TryGetDelays(out VLCMediaResult delaysResult);
+        VLCProgramSnapshot? programs = _mediaControls.TryGetPrograms(out _);
         if (tracks is null || titles is null || delays is null)
         {
             VLCMediaResult error = !tracksResult.Succeeded ? tracksResult : !titlesResult.Succeeded ? titlesResult : delaysResult;
@@ -616,7 +633,13 @@ internal sealed unsafe partial class VlcCorePlayer : IMediaEngine, IQueueTranspo
             tracks.SubtitleTracks.Select(x => new MediaTrack(x.Id.ToString(), string.IsNullOrWhiteSpace(x.Label) ? "Subtitle track" : x.Label, x.IsDisabled, x.Id == tracks.SelectedSubtitleId)).ToArray(),
             titles.Titles.Select(x => new MediaTitle(x.Id.ToString(), string.IsNullOrWhiteSpace(x.Label) ? "Title" : x.Label, x.Id == titles.SelectedTitleId)).ToArray(),
             titles.Chapters.Select(x => new MediaChapter(x.Id.ToString(), string.IsNullOrWhiteSpace(x.Label) ? "Chapter" : x.Label, x.Id == titles.SelectedChapterId)).ToArray(),
-            new((int)Math.Clamp(delays.Value.Audio.TotalMilliseconds, int.MinValue, int.MaxValue), (int)Math.Clamp(delays.Value.Subtitle.TotalMilliseconds, int.MinValue, int.MaxValue)));
+            new((int)Math.Clamp(delays.Value.Audio.TotalMilliseconds, int.MinValue, int.MaxValue), (int)Math.Clamp(delays.Value.Subtitle.TotalMilliseconds, int.MinValue, int.MaxValue)))
+        {
+            // One program is no choice; VLC lists a single program for most media.
+            Programs = programs is { Programs.Count: > 1 } && programs.Generation == tracks.Generation
+                ? programs.Programs.Select(x => new MediaProgram(x.Id.ToString(System.Globalization.CultureInfo.InvariantCulture), x.Label, x.Id == programs.SelectedId)).ToArray()
+                : [],
+        };
         PublishMediaCapabilities(state);
     }
 
@@ -683,6 +706,7 @@ internal sealed unsafe partial class VlcCorePlayer : IMediaEngine, IQueueTranspo
         IReadOnlyList<string> openArguments,
         LiveAudioSettings? startupAudio,
         LiveSubtitleSettings? startupSubtitles,
+        LiveVideoSettings? startupVideo,
         long generation,
         ManualResetEventSlim stop)
     {
@@ -758,6 +782,7 @@ internal sealed unsafe partial class VlcCorePlayer : IMediaEngine, IQueueTranspo
                     // The core started with the audio and subtitle options of these settings.
                     ResetAppliedAudio(startupAudio);
                     ResetAppliedSubtitles(startupSubtitles);
+                    ResetAppliedVideo(startupVideo);
                 }
             }
 

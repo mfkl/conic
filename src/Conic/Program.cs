@@ -3,6 +3,7 @@ using Conic.Interop.MacOS;
 using Conic.Interop.Windows;
 using Avalonia;
 using Conic.Interop;
+using Conic.Services;
 
 namespace Conic;
 
@@ -16,6 +17,9 @@ internal static class Program
     /// background, where a separate popup window would close.
     /// </summary>
     private static bool _overlayPopups;
+
+    /// <summary>Settings › Interface › Allow only one instance: this Conic listens for later starts.</summary>
+    internal static bool ListensForOtherStarts { get; private set; }
 
     [STAThread]
     public static int Main(string[] args)
@@ -48,6 +52,12 @@ internal static class Program
             return headless ? RunSmoke(args) : BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
         }
 #endif
+        // Allow only one instance: hand the media to the Conic that runs, if one does.
+        if (ReadsOneInstance())
+        {
+            if (SingleInstance.TrySend(Player.Application.CommandLineSources.From(args).Select(AbsoluteSource).ToArray())) return 0;
+            ListensForOtherStarts = true;
+        }
         StartupFailure = PlaybackStartup.TryInitialize(VideoBackendFactory.InitializeRuntime);
         if (StartupFailure is { } failure)
         {
@@ -138,6 +148,22 @@ internal static class Program
         return cycles;
     }
 #endif
+
+    private static bool ReadsOneInstance()
+    {
+        try
+        {
+            Player.Application.PlayerSettingsService settings = new(new FilePlayerSettingsStorage());
+            settings.Load();
+            return settings.Current.OneInstance;
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException) { return false; }
+    }
+
+    // The running Conic has another working directory: paths go as full paths.
+    private static string AbsoluteSource(string source) =>
+        Player.Application.NetworkSources.TryGetScheme(source, out _) || Uri.TryCreate(source, UriKind.Absolute, out Uri? uri) && uri.IsFile
+            ? source : Path.GetFullPath(source);
 
     public static AppBuilder BuildAvaloniaApp()
     {

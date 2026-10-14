@@ -31,16 +31,16 @@ internal sealed partial class PlayerPresentationViewModel
     {
         registry.Register(new(PlayerCommandId.ShowHome, "Home", "Navigation", "Alt+Home"), _ => IsHomeOpen = true);
         registry.Register(new(PlayerCommandId.ShowPlayer, "Return to player", "Navigation"), _ => IsHomeOpen = false, _ => HasPlayableMedia);
-        registry.Register(new(PlayerCommandId.SelectHomeSection, "Browse library section", "Navigation"), p =>
+        registry.Register(new(PlayerCommandId.SelectHomeSection, "Browse library section", "Navigation", TakesValue: true), p =>
         {
             if (p is string section && section is "Home" or "Recent" or "Favorites" or "Continue watching")
             { HomeSection = section; IsHomeOpen = true; }
         });
-        registry.Register(new(PlayerCommandId.RemoveHomeItem, "Remove library item", "Library"), p =>
+        registry.Register(new(PlayerCommandId.RemoveHomeItem, "Remove library item", "Library", TakesValue: true), p =>
         {
             if (p is HomeMediaItem item) registry.Execute(item.RemoveCommand, item.Source);
         }, p => p is HomeMediaItem);
-        registry.Register(new(PlayerCommandId.Enqueue, "Add to queue", "Library"), p =>
+        registry.Register(new(PlayerCommandId.Enqueue, "Add to queue", "Library", TakesValue: true), p =>
         {
             MediaOpenResult result = _sourceValidator.Validate(p as string, MediaSourceKind.Recent);
             if (!result.Succeeded || result.Source is null) { OpenError = result.UserMessage ?? "Media could not be queued."; return; }

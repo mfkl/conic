@@ -57,6 +57,40 @@ public sealed record PlayerSettings(
     string DefaultAspectRatio = "",
     string DefaultCrop = "",
     string DefaultZoom = "fit",
+    // Video › Effects: VLC 3's Effects and Filters (VideoEngineOptions), live.
+    string VideoTransform = "None",
+    bool InvertColors = false,
+    bool Sepia = false,
+    int SepiaIntensity = VideoEngineOptions.DefaultSepiaIntensity,
+    bool Posterize = false,
+    int PosterizeLevel = VideoEngineOptions.DefaultPosterizeLevel,
+    bool ColorExtract = false,
+    string ColorExtractColor = "#FF0000",
+    bool ColorThreshold = false,
+    string ColorThresholdColor = "#FF0000",
+    bool Sharpen = false,
+    double SharpenSigma = VideoEngineOptions.DefaultSharpenSigma,
+    bool Debanding = false,
+    bool FilmGrain = false,
+    bool Denoise = false,
+    bool MotionBlur = false,
+    bool Mirror = false,
+    bool AntiFlicker = false,
+    bool Anaglyph = false,
+    // Video › Overlay: VLC's logo and marquee; positions are VLC's values.
+    string LogoFile = "",
+    string LogoPosition = "6",
+    int LogoOpacity = VideoEngineOptions.DefaultLogoOpacity,
+    string MarqueeText = "",
+    string MarqueePosition = "8",
+    // Video › Framing: pixels cut from each edge (overrides the crop ratio).
+    int CropLeft = 0,
+    int CropTop = 0,
+    int CropRight = 0,
+    int CropBottom = 0,
+    // Video › Snapshots: "" is the system's pictures folder.
+    string SnapshotFolder = "",
+    string SnapshotFormat = "png",
     // Performance.
     string HardwareDecoding = "Automatic",
     int SkipLoopFilter = 0,
@@ -95,6 +129,19 @@ public sealed record PlayerSettings(
     bool Compressor = false,
     double PitchShift = 0,
     bool Karaoke = false,
+    // The compressor's and the Room spatializer's parameters (VLC's defaults).
+    double CompressorRmsPeak = 0.2,
+    double CompressorAttack = 25,
+    double CompressorRelease = 100,
+    double CompressorThreshold = -11,
+    double CompressorRatio = 4,
+    double CompressorKnee = 5,
+    double CompressorMakeupGain = 7,
+    double SpatializerRoomSize = 0.85,
+    double SpatializerWidth = 1,
+    double SpatializerWet = 0.4,
+    double SpatializerDry = 0.5,
+    double SpatializerDamp = 0.5,
     // Advanced, and the audio delay new media starts with (milliseconds).
     string DolbySurround = "Automatic",
     string ResamplerQuality = "Balanced",
@@ -148,6 +195,8 @@ public sealed record PlayerSettings(
     bool RememberWindowGeometry = true,
     bool KeepOnTop = false,
     bool ShowFileNameInTitle = true,
+    // VLC's one-instance: a second start hands its media to the running Conic.
+    bool OneInstance = false,
     bool ResizeToVideo = false,
     bool PauseWhenMinimized = false,
     bool ShowControlsInFullscreen = true,
@@ -231,6 +280,9 @@ public sealed class PlayerSettingsService
             or nameof(PlayerSettings.StopScreensaver) or nameof(PlayerSettings.MaximumVolume) or nameof(PlayerSettings.VolumeStep) => SettingApplyMode.Live,
         // The audio effects, replay gain and the device also reach a playing core.
         _ when AudioEngineOptions.LiveKeys.Contains(key) => SettingApplyMode.Live,
+        // The video filters, overlays, deinterlacing and pixel crop too.
+        _ when VideoEngineOptions.LiveKeys.Contains(key) => SettingApplyMode.Live,
+        _ when VideoEngineOptions.NextOpenKeys.Contains(key) => SettingApplyMode.NextOpen,
         // The subtitle text's size, color, outline and background reach a
         // playing core; the controls, window and mouse settings are the app's own.
         _ when SubtitleEngineOptions.LiveKeys.Contains(key) || InterfaceOptions.LiveKeys.Contains(key) => SettingApplyMode.Live,
@@ -291,7 +343,7 @@ public sealed class PlayerSettingsService
         value = default; return false;
     }
 
-    private static PlayerSettings Normalize(PlayerSettings value) => InterfaceOptions.Normalize(SubtitleEngineOptions.Normalize(AudioEngineOptions.Normalize(PlayerEngineOptions.Normalize(value)))) with
+    private static PlayerSettings Normalize(PlayerSettings value) => InterfaceOptions.Normalize(SubtitleEngineOptions.Normalize(AudioEngineOptions.Normalize(VideoEngineOptions.Normalize(PlayerEngineOptions.Normalize(value))))) with
     {
         Version = PlayerSettings.CurrentVersion,
         Theme = PlayerSettings.Themes.Contains(value.Theme) ? value.Theme : PlayerSettings.Default.Theme,

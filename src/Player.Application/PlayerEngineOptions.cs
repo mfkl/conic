@@ -28,9 +28,8 @@ public static class PlayerEngineOptions
     {
         nameof(PlayerSettings.AutoPlay), nameof(PlayerSettings.AudioLanguage), nameof(PlayerSettings.SubtitleLanguage),
         nameof(PlayerSettings.StopAfterEachItem), nameof(PlayerSettings.SeekPrecisely), nameof(PlayerSettings.AviRepair),
-        nameof(PlayerSettings.VideoEnabled), nameof(PlayerSettings.Hue), nameof(PlayerSettings.Brightness),
-        nameof(PlayerSettings.Contrast), nameof(PlayerSettings.Saturation), nameof(PlayerSettings.Gamma),
-        nameof(PlayerSettings.Deinterlace), nameof(PlayerSettings.DeinterlaceMethod), nameof(PlayerSettings.DefaultAspectRatio),
+        // The picture and deinterlacing are VideoEngineOptions.LiveKeys: they also reach a playing core.
+        nameof(PlayerSettings.VideoEnabled), nameof(PlayerSettings.DefaultAspectRatio),
         nameof(PlayerSettings.DefaultCrop), nameof(PlayerSettings.DefaultZoom), nameof(PlayerSettings.HardwareDecoding),
         nameof(PlayerSettings.SkipLoopFilter), nameof(PlayerSettings.DecodingThreads),
         nameof(PlayerSettings.DropLateFrames), nameof(PlayerSettings.Buffering), nameof(PlayerSettings.FileCaching),
@@ -110,24 +109,13 @@ public static class PlayerEngineOptions
 
         // Video.
         if (!settings.VideoEnabled) arguments.Add("--no-video");
-        List<string> filters = [];
-        List<string> filterOptions = [];
-        if (!IsNeutralPicture(settings))
-        {
-            filters.Add("adjust");
-            if (settings.Hue != 0) filterOptions.Add($"--hue={Format(settings.Hue)}");
-            if (settings.Brightness != 1) filterOptions.Add($"--brightness={Format(settings.Brightness)}");
-            if (settings.Contrast != 1) filterOptions.Add($"--contrast={Format(settings.Contrast)}");
-            if (settings.Saturation != 1) filterOptions.Add($"--saturation={Format(settings.Saturation)}");
-            if (settings.Gamma != 1) filterOptions.Add($"--gamma={Format(settings.Gamma)}");
-        }
-        if (filters.Count > 0) arguments.Add($"--video-filter={string.Join(':', filters)}");
-        arguments.AddRange(filterOptions);
+        // The picture, effects, overlays, pixel crop and snapshots (VideoEngineOptions).
+        arguments.AddRange(VideoEngineOptions.Arguments(settings));
         if (settings.Deinterlace == "On") arguments.Add("--deinterlace=1");
         else if (settings.Deinterlace == "Off") arguments.Add("--deinterlace=0");
         if (settings.DeinterlaceMethod != "Automatic") arguments.Add($"--deinterlace-mode={settings.DeinterlaceMethod}");
         if (settings.DefaultAspectRatio.Length > 0) arguments.Add($"--aspect-ratio={settings.DefaultAspectRatio}");
-        if (settings.DefaultCrop.Length > 0) arguments.Add($"--crop={settings.DefaultCrop}");
+        if (settings.DefaultCrop.Length > 0 && !VideoEngineOptions.HasPixelCrop(settings)) arguments.Add($"--crop={settings.DefaultCrop}");
         if (settings.DefaultZoom != "fit") { arguments.Add("--no-autoscale"); arguments.Add($"--zoom={settings.DefaultZoom}"); }
 
         // Performance. The core already starts with --avcodec-hw=any; a later

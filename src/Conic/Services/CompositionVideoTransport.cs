@@ -3,7 +3,7 @@ using Conic.Controls;
 
 namespace Conic.Services;
 
-internal sealed class CompositionVideoTransport : IPlayerTransport, IQueueTransport, IMediaCapabilitiesTransport, IMediaInformationTransport, IVideoAdjustmentTransport, IPlaybackNavigationTransport
+internal sealed class CompositionVideoTransport : IPlayerTransport, IQueueTransport, IMediaCapabilitiesTransport, IMediaInformationTransport, IVideoAdjustmentTransport, IPlaybackNavigationTransport, IVideoSnapshotTransport
 {
     private readonly CompositionVideoSurface _surface;
     public CompositionVideoTransport(CompositionVideoSurface surface)
@@ -52,7 +52,9 @@ internal sealed class CompositionVideoTransport : IPlayerTransport, IQueueTransp
     public void SelectTrack(MediaTrackKind kind, string id) => _surface.SelectTrack(kind, id);
     public void SelectTitle(string id) => _surface.SelectTitle(id);
     public void SelectChapter(string id) => _surface.SelectChapter(id);
+    public void SelectProgram(string id) => _surface.SelectProgram(id);
     public void NextFrame() => _surface.NextFrame();
+    public bool RequestSnapshot() => _surface.RequestSnapshot();
     public void NextChapter() => _surface.NextChapter();
     public void PreviousChapter() => _surface.PreviousChapter();
     public void SetDelayMilliseconds(MediaTrackKind kind, int milliseconds) => _surface.SetDelayMilliseconds(kind, milliseconds);

@@ -34,7 +34,7 @@ public sealed class KeyboardShortcutTests
     [InlineData(PlayerCommandId.OpenLibrary, "library drawer")]
     [InlineData(PlayerCommandId.ToggleQueue, "Queue drawer")]
     [InlineData(PlayerCommandId.MediaInformation, "Information drawer, refresh")]
-    [InlineData(PlayerCommandId.Snapshot, "snapshot notice")]
+    [InlineData(PlayerCommandId.Snapshot, "snapshot; snapshot notice")]
     [InlineData(PlayerCommandId.TogglePictureInPicture, "picture in picture")]
     [InlineData(PlayerCommandId.ShowHome, "home")]
     [InlineData(PlayerCommandId.ShowMessages, "messages")]
@@ -58,6 +58,10 @@ public sealed class KeyboardShortcutTests
     [InlineData(PlayerCommandId.JumpToTime, "jump to time")]
     [InlineData(PlayerCommandId.OpenFromClipboard, "read clipboard")]
     [InlineData(PlayerCommandId.ShowAbout, "about")]
+    [InlineData(PlayerCommandId.ToggleABLoop, "loop A set")]
+    [InlineData(PlayerCommandId.ToggleMinimalInterface, "hide ui")]
+    [InlineData(PlayerCommandId.ShowHelp, "help")]
+    [InlineData(PlayerCommandId.CycleProgram, "program 2")]
     public async Task EachDefaultShortcutKeyRunsItsCommand(PlayerCommandId command, string effect)
     {
         Player player = new();
@@ -69,7 +73,7 @@ public sealed class KeyboardShortcutTests
         Assert.True(PlayerShortcutPolicy.TryDispatch(player.ViewModel.Registry, PlayerShortcutPolicy.Effective(player.ViewModel.Registry, null), pressed), $"{pressed} runs a command");
         await Task.Yield();
 
-        Assert.Equal([effect], player.Effects());
+        Assert.Equal(effect.Split("; "), player.Effects());
     }
 
     [Fact]
@@ -80,7 +84,7 @@ public sealed class KeyboardShortcutTests
             .GetCustomAttributes(typeof(InlineDataAttribute), false).Cast<InlineDataAttribute>()
             .Select(data => (PlayerCommandId)data.GetData(null!).Single()[0]).ToArray();
 
-        Assert.Equal(42, checkedCommands.Length);
+        Assert.Equal(46, checkedCommands.Length);
         Assert.Equal(checkedCommands.Order(), PlayerShortcutPolicy.Defaults(player.ViewModel.Registry).Select(shortcut => shortcut.Command).Order());
     }
 
@@ -121,6 +125,8 @@ public sealed class KeyboardShortcutTests
             ViewModel.PictureInPictureRequested += (_, _) => _effects.Add("picture in picture");
             ViewModel.JumpToTimeRequested += (_, _) => _effects.Add("jump to time");
             ViewModel.AboutRequested += (_, _) => _effects.Add("about");
+            ViewModel.MinimalInterfaceRequested += (_, _) => _effects.Add("hide ui");
+            ViewModel.HelpRequested += (_, _) => _effects.Add("help");
             ViewModel.MessagesRequested += (_, _) => _effects.Add("messages");
             ViewModel.OpenSource("a.mp4", MediaSourceKind.File);
             ViewModel.ApplyEngineState(new(1, PlaybackStatus.Playing, "a.mp4", .5, TimeSpan.FromSeconds(50), TimeSpan.FromSeconds(100), .5, true, null));
@@ -131,7 +137,7 @@ public sealed class KeyboardShortcutTests
             ViewModel.ApplyMediaCapabilities(new(1, 1, MediaCapabilityLoadState.Ready,
                 [new("-1", "Disable", true, false), new("1", "English", false, true), new("2", "French", false, false)],
                 [new("-1", "Disable", true, true), new("3", "English", false, false)],
-                [], [new("0", "One", true), new("1", "Two", false)], new(0, 0)));
+                [], [new("0", "One", true), new("1", "Two", false)], new(0, 0)) { Programs = [new("1", "News", true), new("2", "Sports", false)] });
             ViewModel.ShowPlayerCommand.Execute(null);
             _effects.Clear();
         }
@@ -145,6 +151,7 @@ public sealed class KeyboardShortcutTests
             if (ViewModel.IsLibraryOpen) effects.Add("library drawer");
             if (ViewModel.IsQueueOpen) effects.Add(ViewModel.DrawerTab + " drawer" + (_transport.Refreshed ? ", refresh" : ""));
             if (ViewModel.HasMediaControlsNotice) effects.Add("snapshot notice");
+            if (ViewModel.ABLoopLabel == "A-B Loop: Set B") effects.Add("loop A set");
             if (ViewModel.IsHomeOpen) effects.Add("home");
             return effects;
         }
@@ -156,8 +163,10 @@ public sealed class KeyboardShortcutTests
         public Task<string?> GetTextAsync() { effects.Add("read clipboard"); return Task.FromResult<string?>(null); }
     }
 
-    private sealed class Transport(List<string> effects) : IPlayerTransport, IQueueTransport, IMediaCapabilitiesTransport, IMediaInformationTransport, IPlaybackNavigationTransport
+    private sealed class Transport(List<string> effects) : IPlayerTransport, IQueueTransport, IMediaCapabilitiesTransport, IMediaInformationTransport, IPlaybackNavigationTransport, IVideoSnapshotTransport
     {
+        public bool RequestSnapshot() { effects.Add("snapshot"); return true; }
+        public void SelectProgram(string id) => effects.Add($"program {id}");
         public bool Refreshed { get; private set; }
         public void Open(string source) { }
         public void TogglePause() => effects.Add("pause");

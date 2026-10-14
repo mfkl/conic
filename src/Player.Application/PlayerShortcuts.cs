@@ -8,7 +8,7 @@ public sealed class PlayerShortcutEditor
 {
     private readonly PlayerSettingsService _settings; private readonly IPlayerCommandRegistry _registry;
     public PlayerShortcutEditor(PlayerSettingsService settings, IPlayerCommandRegistry registry) => (_settings, _registry) = (settings, registry);
-    public IReadOnlyList<EditablePlayerShortcut> Items(string? search = null) => _registry.Commands.Where(x => string.IsNullOrWhiteSpace(search) || (x.DisplayName + " " + x.Category).Contains(search, StringComparison.OrdinalIgnoreCase)).Select(x => new EditablePlayerShortcut(x.Id, x.DisplayName, x.Category, PlayerShortcutPolicy.DefaultGesture(x), PlayerShortcutPolicy.Effective(_registry, _settings.Current.ShortcutOverrides).GetValueOrDefault(x.Id, ""))).ToArray();
+    public IReadOnlyList<EditablePlayerShortcut> Items(string? search = null) => _registry.Commands.Where(x => !x.TakesValue).Where(x => string.IsNullOrWhiteSpace(search) || (x.DisplayName + " " + x.Category).Contains(search, StringComparison.OrdinalIgnoreCase)).Select(x => new EditablePlayerShortcut(x.Id, x.DisplayName, x.Category, PlayerShortcutPolicy.DefaultGesture(x), PlayerShortcutPolicy.Effective(_registry, _settings.Current.ShortcutOverrides).GetValueOrDefault(x.Id, ""))).ToArray();
     public bool TrySave(IEnumerable<PlayerShortcut> changes, out string? error)
     {
         var effective = PlayerShortcutPolicy.Effective(_registry, _settings.Current.ShortcutOverrides).ToDictionary(x => x.Key, x => x.Value);

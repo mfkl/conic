@@ -45,6 +45,11 @@ public partial class App : Application
     private void OpenRequestedMedia(MainWindow window, string[]? args)
     {
         window.OpenOnStart(Player.Application.CommandLineSources.From(args));
+        if (Program.ListensForOtherStarts)
+        {
+            Services.SingleInstance listener = Services.SingleInstance.Listen(sources => Avalonia.Threading.Dispatcher.UIThread.Post(() => window.OpenFromOtherStart(sources)));
+            window.Closed += (_, _) => listener.Dispose();
+        }
         if (this.TryGetFeature<IActivatableLifetime>() is { } activatable)
             activatable.Activated += (_, e) =>
             {

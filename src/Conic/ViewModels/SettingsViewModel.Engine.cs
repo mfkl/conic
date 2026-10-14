@@ -17,6 +17,7 @@ internal sealed partial class SettingsViewModel
         nameof(VideoEnabled), nameof(StartFullscreen), nameof(StopScreensaver), nameof(Hue), nameof(Brightness), nameof(Contrast),
         nameof(Saturation), nameof(Gamma), nameof(CanAdjustGamma), nameof(Deinterlace), nameof(DeinterlaceMethod), nameof(DefaultAspectRatio),
         nameof(DefaultCrop), nameof(DefaultZoom),
+        nameof(VideoTransform), nameof(InvertColors), nameof(Sepia), nameof(Posterize), nameof(ColorExtract), nameof(ColorThreshold), nameof(Sharpen), nameof(Debanding), nameof(FilmGrain), nameof(Denoise), nameof(MotionBlur), nameof(Mirror), nameof(AntiFlicker), nameof(Anaglyph), nameof(SepiaIntensity), nameof(PosterizeLevel), nameof(ColorExtractColor), nameof(ColorThresholdColor), nameof(SharpenSigma), nameof(LogoFile), nameof(LogoPosition), nameof(LogoOpacity), nameof(MarqueeText), nameof(MarqueePosition), nameof(CropLeft), nameof(CropTop), nameof(CropRight), nameof(CropBottom), nameof(SnapshotFolder), nameof(SnapshotFormat),
         nameof(HardwareDecoding), nameof(SkipLoopFilter), nameof(DecodingThreads), nameof(DropLateFrames),
         nameof(Buffering), nameof(IsCustomBuffering), nameof(FileCaching), nameof(NetworkCaching),
         nameof(HttpProxy), nameof(HttpProxyPassword), nameof(VerifyCertificates), nameof(CipherPreference),
@@ -91,6 +92,45 @@ internal sealed partial class SettingsViewModel
     public IReadOnlyList<SettingOption> Zooms => PlayerEngineOptions.Zooms;
     public SettingOption DefaultZoom { get => Find(Zooms, Current.DefaultZoom); set { if (value is not null) Update(s => s with { DefaultZoom = value.Value }); } }
 
+    // Video › Effects and Overlay (VideoEngineOptions): VLC's video filters, live.
+    public IReadOnlyList<SettingOption> VideoTransforms => VideoEngineOptions.Transforms;
+    public SettingOption VideoTransform { get => Find(VideoTransforms, Current.VideoTransform); set { if (value is not null) Update(s => s with { VideoTransform = value.Value }); } }
+    public bool InvertColors { get => Current.InvertColors; set => Update(s => s with { InvertColors = value }); }
+    public bool Sepia { get => Current.Sepia; set => Update(s => s with { Sepia = value }); }
+    public bool Posterize { get => Current.Posterize; set => Update(s => s with { Posterize = value }); }
+    public bool ColorExtract { get => Current.ColorExtract; set => Update(s => s with { ColorExtract = value }); }
+    public bool ColorThreshold { get => Current.ColorThreshold; set => Update(s => s with { ColorThreshold = value }); }
+    public bool Sharpen { get => Current.Sharpen; set => Update(s => s with { Sharpen = value }); }
+    public bool Debanding { get => Current.Debanding; set => Update(s => s with { Debanding = value }); }
+    public bool FilmGrain { get => Current.FilmGrain; set => Update(s => s with { FilmGrain = value }); }
+    public bool Denoise { get => Current.Denoise; set => Update(s => s with { Denoise = value }); }
+    public bool MotionBlur { get => Current.MotionBlur; set => Update(s => s with { MotionBlur = value }); }
+    public bool Mirror { get => Current.Mirror; set => Update(s => s with { Mirror = value }); }
+    public bool AntiFlicker { get => Current.AntiFlicker; set => Update(s => s with { AntiFlicker = value }); }
+    public bool Anaglyph { get => Current.Anaglyph; set => Update(s => s with { Anaglyph = value }); }
+    public decimal SepiaIntensity { get => Current.SepiaIntensity; set => Update(s => s with { SepiaIntensity = (int)value }); }
+    public decimal PosterizeLevel { get => Current.PosterizeLevel; set => Update(s => s with { PosterizeLevel = (int)value }); }
+    public string ColorExtractColor { get => Current.ColorExtractColor; set => Update(s => s with { ColorExtractColor = value }); }
+    public string ColorThresholdColor { get => Current.ColorThresholdColor; set => Update(s => s with { ColorThresholdColor = value }); }
+    public decimal SharpenSigma { get => (decimal)Current.SharpenSigma; set => Update(s => s with { SharpenSigma = (double)value }); }
+    public IReadOnlyList<SettingOption> OverlayPositions => VideoEngineOptions.OverlayPositions;
+    public string LogoFile { get => Current.LogoFile; set => Update(s => s with { LogoFile = value ?? string.Empty }); }
+    public SettingOption LogoPosition { get => Find(OverlayPositions, Current.LogoPosition); set { if (value is not null) Update(s => s with { LogoPosition = value.Value }); } }
+    // Opacity in percent; VLC's logo-opacity is 0 to 255.
+    public decimal LogoOpacity { get => Math.Round(Current.LogoOpacity * 100m / 255); set => Update(s => s with { LogoOpacity = (int)Math.Round(value * 255 / 100) }); }
+    public string MarqueeText { get => Current.MarqueeText; set => Update(s => s with { MarqueeText = value ?? string.Empty }); }
+    public SettingOption MarqueePosition { get => Find(OverlayPositions, Current.MarqueePosition); set { if (value is not null) Update(s => s with { MarqueePosition = value.Value }); } }
+    // Video › Framing: pixels cut from each edge.
+    public decimal CropLeft { get => Current.CropLeft; set => Update(s => s with { CropLeft = (int)value }); }
+    public decimal CropTop { get => Current.CropTop; set => Update(s => s with { CropTop = (int)value }); }
+    public decimal CropRight { get => Current.CropRight; set => Update(s => s with { CropRight = (int)value }); }
+    public decimal CropBottom { get => Current.CropBottom; set => Update(s => s with { CropBottom = (int)value }); }
+    public int MaximumCrop => VideoEngineOptions.MaximumCrop;
+    // Video › Snapshots.
+    public string SnapshotFolder { get => Current.SnapshotFolder; set => Update(s => s with { SnapshotFolder = value ?? string.Empty }); }
+    public IReadOnlyList<SettingOption> SnapshotFormats => VideoEngineOptions.SnapshotFormats;
+    public SettingOption SnapshotFormat { get => Find(SnapshotFormats, Current.SnapshotFormat); set { if (value is not null) Update(s => s with { SnapshotFormat = value.Value }); } }
+
     // Performance.
     public IReadOnlyList<SettingOption> HardwareDecodingModes { get; } = PlayerEngineOptions.HardwareDecodingModes();
     public SettingOption HardwareDecoding { get => Find(HardwareDecodingModes, Current.HardwareDecoding); set { if (value is not null) Update(s => s with { HardwareDecoding = value.Value }); } }
@@ -143,6 +183,7 @@ internal sealed partial class SettingsViewModel
         VideoEnabled = d.VideoEnabled, StartFullscreen = d.StartFullscreen, StopScreensaver = d.StopScreensaver, Hue = d.Hue, Brightness = d.Brightness,
         Contrast = d.Contrast, Saturation = d.Saturation, Gamma = d.Gamma, Deinterlace = d.Deinterlace, DeinterlaceMethod = d.DeinterlaceMethod,
         DefaultAspectRatio = d.DefaultAspectRatio, DefaultCrop = d.DefaultCrop, DefaultZoom = d.DefaultZoom,
+        VideoTransform = d.VideoTransform, InvertColors = d.InvertColors, Sepia = d.Sepia, Posterize = d.Posterize, ColorExtract = d.ColorExtract, ColorThreshold = d.ColorThreshold, Sharpen = d.Sharpen, Debanding = d.Debanding, FilmGrain = d.FilmGrain, Denoise = d.Denoise, MotionBlur = d.MotionBlur, Mirror = d.Mirror, AntiFlicker = d.AntiFlicker, Anaglyph = d.Anaglyph, SepiaIntensity = d.SepiaIntensity, PosterizeLevel = d.PosterizeLevel, ColorExtractColor = d.ColorExtractColor, ColorThresholdColor = d.ColorThresholdColor, SharpenSigma = d.SharpenSigma, LogoFile = d.LogoFile, LogoPosition = d.LogoPosition, LogoOpacity = d.LogoOpacity, MarqueeText = d.MarqueeText, MarqueePosition = d.MarqueePosition, CropLeft = d.CropLeft, CropTop = d.CropTop, CropRight = d.CropRight, CropBottom = d.CropBottom, SnapshotFolder = d.SnapshotFolder, SnapshotFormat = d.SnapshotFormat,
     };
 
     private static PlayerSettings ResetPerformancePage(PlayerSettings s, PlayerSettings d) => s with

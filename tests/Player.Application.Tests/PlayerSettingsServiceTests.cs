@@ -266,8 +266,13 @@ public sealed class PlayerSettingsServiceTests
             Assert.Equal(SettingApplyMode.NextOpen, PlayerSettingsService.ApplyMode(key));
         foreach (string key in new[] { nameof(PlayerSettings.QueueRepeat), nameof(PlayerSettings.QueueShuffle), nameof(PlayerSettings.PlaybackFinished), nameof(PlayerSettings.StopScreensaver) })
             Assert.Equal(SettingApplyMode.Live, PlayerSettingsService.ApplyMode(key));
+        // The picture, effects, overlays, deinterlacing and pixel crop reach a playing core.
+        foreach (string key in VideoEngineOptions.LiveKeys)
+            Assert.Equal(SettingApplyMode.Live, PlayerSettingsService.ApplyMode(key));
+        foreach (string key in VideoEngineOptions.NextOpenKeys)
+            Assert.Equal(SettingApplyMode.NextOpen, PlayerSettingsService.ApplyMode(key));
         // Every Keys entry names a settings field.
-        Assert.All(PlayerEngineOptions.Keys, key => Assert.NotNull(typeof(PlayerSettings).GetProperty(key)));
+        Assert.All(PlayerEngineOptions.Keys.Concat(VideoEngineOptions.LiveKeys).Concat(VideoEngineOptions.NextOpenKeys), key => Assert.NotNull(typeof(PlayerSettings).GetProperty(key)));
     }
 
     [Fact]

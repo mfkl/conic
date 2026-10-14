@@ -89,4 +89,9 @@ public enum PlayerCommandId
     JumpToTime,
     OpenFromClipboard,
     ShowAbout,
+    CycleProgram,
+    ToggleABLoop,
+    ToggleMinimalInterface,
+    ShowHelp,
+    SortQueue,
 }

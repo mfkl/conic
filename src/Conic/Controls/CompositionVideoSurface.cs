@@ -86,6 +86,14 @@ public sealed class CompositionVideoSurface : Control, IDisposable
         set { _liveAudio = value; if (_player is VlcCorePlayer core) core.LiveAudio = value; }
     }
 
+    /// <summary>The video filters, overlays, deinterlacing and crop for the playing core (<see cref="VlcCorePlayer.LiveVideo"/>).</summary>
+    internal LiveVideoSettings? LiveVideo
+    {
+        get => _liveVideo;
+        set { _liveVideo = value; if (_player is VlcCorePlayer core) core.LiveVideo = value; }
+    }
+    private LiveVideoSettings? _liveVideo;
+
     /// <summary>The subtitle style for the playing core (<see cref="VlcCorePlayer.LiveSubtitles"/>).</summary>
     internal LiveSubtitleSettings? LiveSubtitles
     {
@@ -229,7 +237,9 @@ public sealed class CompositionVideoSurface : Control, IDisposable
     public void SelectTrack(MediaTrackKind kind, string id) => (_player as IMediaCapabilitiesTransport)?.SelectTrack(kind, id);
     public void SelectTitle(string id) => (_player as IMediaCapabilitiesTransport)?.SelectTitle(id);
     public void SelectChapter(string id) => (_player as IMediaCapabilitiesTransport)?.SelectChapter(id);
+    public void SelectProgram(string id) => (_player as IMediaCapabilitiesTransport)?.SelectProgram(id);
     public void NextFrame() => (_player as IPlaybackNavigationTransport)?.NextFrame();
+    public bool RequestSnapshot() => (_player as IVideoSnapshotTransport)?.RequestSnapshot() ?? false;
     public void NextChapter() => (_player as IPlaybackNavigationTransport)?.NextChapter();
     public void PreviousChapter() => (_player as IPlaybackNavigationTransport)?.PreviousChapter();
     public void SetDelayMilliseconds(MediaTrackKind kind, int milliseconds) => (_player as IMediaCapabilitiesTransport)?.SetDelayMilliseconds(kind, milliseconds);
@@ -319,6 +329,7 @@ public sealed class CompositionVideoSurface : Control, IDisposable
                 core.RequestQueueModes(_queueModes.Repeat, _queueModes.Order);
                 core.LiveAudio = _liveAudio;
                 core.LiveSubtitles = _liveSubtitles;
+                core.LiveVideo = _liveVideo;
             }
             _player.StateChanged += StateChanged;
             if (_player is IQueueTransport queue)

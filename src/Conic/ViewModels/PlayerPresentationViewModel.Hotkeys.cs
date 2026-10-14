@@ -20,6 +20,18 @@ internal sealed partial class PlayerPresentationViewModel
     /// <summary>About asks the window for its dialog.</summary>
     public event EventHandler? AboutRequested;
 
+    /// <summary>Hide UI asks the window to overlay its bars on the video.</summary>
+    public event EventHandler? MinimalInterfaceRequested;
+
+    /// <summary>Help asks the window to open the online help.</summary>
+    public event EventHandler? HelpRequested;
+
+    // VLC 3's A-B loop: the first press marks A, the second B (playback then
+    // goes back to A whenever it reaches B), the third clears both.
+    private TimeSpan? _loopStart, _loopEnd;
+    public bool IsABLoopActive => _loopEnd is not null;
+    public string ABLoopLabel => _loopStart is null ? "A-B Loop: Set A" : _loopEnd is null ? "A-B Loop: Set B" : "A-B Loop: Off";
+
     private void InitializeHotkeyCommands(PlayerCommandRegistry registry)
     {
         IPlaybackNavigationTransport? navigation = _transport as IPlaybackNavigationTransport;
@@ -40,6 +52,12 @@ internal sealed partial class PlayerPresentationViewModel
         registry.Register(new(PlayerCommandId.JumpToTime, "Jump to time", "Playback", "Ctrl+T"), _ => JumpToTimeRequested?.Invoke(this, EventArgs.Empty), _ => CanSeek && _duration > TimeSpan.Zero);
         registry.Register(new(PlayerCommandId.OpenFromClipboard, "Open location from clipboard", "Media", "Ctrl+V"), _ => _ = OpenFromClipboardAsync(), _ => _clipboard is not null);
         registry.Register(new(PlayerCommandId.ShowAbout, "About", "Window", "Shift+F1"), _ => AboutRequested?.Invoke(this, EventArgs.Empty));
+        registry.Register(new(PlayerCommandId.ToggleABLoop, "A-B loop", "Playback", "Shift+L"), _ => ToggleABLoop(), _ => CanSeek && _duration > TimeSpan.Zero);
+        registry.Register(new(PlayerCommandId.ToggleMinimalInterface, "Hide UI", "Window", "Ctrl+H"), _ => MinimalInterfaceRequested?.Invoke(this, EventArgs.Empty));
+        registry.Register(new(PlayerCommandId.ShowHelp, "Help", "Window", "F1"), _ => HelpRequested?.Invoke(this, EventArgs.Empty));
+        registry.Register(new(PlayerCommandId.SortQueue, "Sort queue by name", "Playback"), _ => SortQueue(), _ => _queue is not null && QueueItems.Count > 1);
+        // VLC 3's X: the next program of a multi-program stream (DVB, MPEG-TS).
+        registry.Register(new(PlayerCommandId.CycleProgram, "Next program", "Playback", "X"), _ => { if (NextProgram() is { } program) _mediaControls?.SelectProgram(program.Id); }, _ => NextProgram() is not null);
         foreach (PlayerCommandId id in HotkeyMenuCommands) _hotkeyCommands[id] = new RegistryCommand(registry, id);
     }
 
@@ -49,6 +67,8 @@ internal sealed partial class PlayerPresentationViewModel
         PlayerCommandId.JumpToTime, PlayerCommandId.NextFrame, PlayerCommandId.PreviousChapter, PlayerCommandId.NextChapter,
         PlayerCommandId.PlaybackFaster, PlayerCommandId.PlaybackSlower, PlayerCommandId.PlaybackNormal,
         PlayerCommandId.VolumeUp, PlayerCommandId.VolumeDown, PlayerCommandId.OpenFromClipboard, PlayerCommandId.ShowAbout,
+        PlayerCommandId.CycleProgram, PlayerCommandId.ToggleABLoop, PlayerCommandId.ToggleMinimalInterface, PlayerCommandId.ShowHelp,
+        PlayerCommandId.SortQueue,
     ];
     private readonly Dictionary<PlayerCommandId, RegistryCommand> _hotkeyCommands = [];
     public ICommand JumpToTimeCommand => _hotkeyCommands[PlayerCommandId.JumpToTime];
@@ -62,6 +82,56 @@ internal sealed partial class PlayerPresentationViewModel
     public ICommand VolumeDownCommand => _hotkeyCommands[PlayerCommandId.VolumeDown];
     public ICommand OpenFromClipboardCommand => _hotkeyCommands[PlayerCommandId.OpenFromClipboard];
     public ICommand ShowAboutCommand => _hotkeyCommands[PlayerCommandId.ShowAbout];
+    public ICommand CycleProgramCommand => _hotkeyCommands[PlayerCommandId.CycleProgram];
+    public ICommand ToggleABLoopCommand => _hotkeyCommands[PlayerCommandId.ToggleABLoop];
+    public ICommand ToggleMinimalInterfaceCommand => _hotkeyCommands[PlayerCommandId.ToggleMinimalInterface];
+    public ICommand ShowHelpCommand => _hotkeyCommands[PlayerCommandId.ShowHelp];
+    public ICommand SortQueueCommand => _hotkeyCommands[PlayerCommandId.SortQueue];
+
+    /// <summary>Where playback is now, from the last engine state.</summary>
+    private TimeSpan CurrentTime => _duration * Position;
+
+    private void ToggleABLoop()
+    {
+        if (_loopStart is null) _loopStart = CurrentTime;
+        else if (_loopEnd is null)
+        {
+            // B before A swaps them, so the loop is always forward.
+            TimeSpan end = CurrentTime;
+            if (end < _loopStart) (_loopStart, end) = (end, _loopStart.Value);
+            _loopEnd = end;
+            _transport.Seek(_loopStart.Value.TotalSeconds / _duration.TotalSeconds);
+        }
+        else ClearABLoop();
+        OnPropertyChanged(nameof(ABLoopLabel)); OnPropertyChanged(nameof(IsABLoopActive));
+    }
+
+    private void ClearABLoop()
+    {
+        if (_loopStart is null && _loopEnd is null) return;
+        _loopStart = _loopEnd = null;
+        OnPropertyChanged(nameof(ABLoopLabel)); OnPropertyChanged(nameof(IsABLoopActive));
+    }
+
+    /// <summary>Each engine state: back to A once playback reaches B.</summary>
+    private void FollowABLoop(MediaEngineState state)
+    {
+        if (_loopStart is not { } start || _loopEnd is not { } end || state.Duration <= TimeSpan.Zero) return;
+        if (state.Status == PlaybackStatus.Playing && state.Elapsed >= end) _transport.Seek(start.TotalSeconds / state.Duration.TotalSeconds);
+    }
+
+    public IReadOnlyList<MediaProgram> Programs => MediaCapabilities.Programs;
+    public bool HasPrograms => Programs.Count > 1;
+
+    /// <summary>The program X selects: the one after the selected one, round.</summary>
+    internal MediaProgram? NextProgram()
+    {
+        IReadOnlyList<MediaProgram> programs = Programs;
+        if (programs.Count < 2) return null;
+        int current = -1;
+        for (int index = 0; index < programs.Count; index++) if (programs[index].IsSelected) current = index;
+        return programs[(current + 1) % programs.Count];
+    }
 
     private void RaiseHotkeyCommands()
     {
@@ -101,6 +171,9 @@ internal sealed partial class PlayerPresentationViewModel
         PlayerCommandId.SubtitleDelayUp => DelayText("Subtitle", SubtitleDelayMilliseconds + HotkeyDelayStepMilliseconds),
         PlayerCommandId.CycleAudioTrack => NextTrack(MediaTrackKind.Audio) is { } audio ? "Audio track: " + audio.Label : null,
         PlayerCommandId.CycleSubtitleTrack => NextTrack(MediaTrackKind.Subtitle) is { } subtitle ? "Subtitle track: " + subtitle.Label : null,
+        PlayerCommandId.ToggleABLoop => _loopStart is null ? "A-B loop: A set" : _loopEnd is null ? "A-B loop: B set, looping" : "A-B loop off",
+        PlayerCommandId.CycleProgram => NextProgram() is { } program ? "Program: " + program.Label : null,
+        PlayerCommandId.Snapshot => "Snapshot",
         _ => null,
     };
 

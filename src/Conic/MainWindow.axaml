@@ -83,6 +83,11 @@
                           controls:MenuShortcuts.Command="SkipForward">
                     <MenuItem.Icon><controls:VlcIcon Classes="menuIcon" Icon="{StaticResource Icon.SkipForwardArrow}" /></MenuItem.Icon>
                 </MenuItem>
+                <MenuItem Header="Hide UI"
+                          Command="{Binding ToggleMinimalInterfaceCommand}"
+                          controls:MenuShortcuts.Command="ToggleMinimalInterface">
+                    <MenuItem.Icon><controls:VlcIcon Classes="menuIcon" Icon="{StaticResource Icon.Fullscreen}" /></MenuItem.Icon>
+                </MenuItem>
                 <Separator />
                 <MenuItem Header="Playback">
                     <MenuItem.Icon><controls:VlcIcon Classes="menuIcon" Icon="{StaticResource Icon.Playback}" /></MenuItem.Icon>
@@ -120,6 +125,13 @@
                     <MenuItem Header="Next Frame"
                               Command="{Binding NextFrameCommand}"
                               controls:MenuShortcuts.Command="NextFrame" />
+                    <MenuItem Header="{Binding ABLoopLabel}"
+                              Command="{Binding ToggleABLoopCommand}"
+                              controls:MenuShortcuts.Command="ToggleABLoop" />
+                    <MenuItem Header="Next Program"
+                              IsVisible="{Binding HasPrograms}"
+                              Command="{Binding CycleProgramCommand}"
+                              controls:MenuShortcuts.Command="CycleProgram" />
                 </MenuItem>
                 <MenuItem Header="Video">
                     <MenuItem.Icon><controls:VlcIcon Classes="menuIcon" Icon="{StaticResource Icon.Video}" /></MenuItem.Icon>
@@ -180,6 +192,9 @@
                               controls:MenuShortcuts.Command="OpenSettings">
                         <MenuItem.Icon><controls:VlcIcon Classes="menuIcon" Icon="{StaticResource Icon.Preferences}" /></MenuItem.Icon>
                     </MenuItem>
+                    <MenuItem Header="Help"
+                              Command="{Binding ShowHelpCommand}"
+                              controls:MenuShortcuts.Command="ShowHelp" />
                     <MenuItem Header="About Conic"
                               Command="{Binding ShowAboutCommand}"
                               controls:MenuShortcuts.Command="ShowAbout">
@@ -1296,12 +1311,19 @@
                 <Grid Grid.Row="1">
                     <!-- Queue (design: "4 items" and the queue tools, then
                          30-tall rows with a drag handle and the title). -->
-                    <Grid IsVisible="{Binding IsQueueTab}" RowDefinitions="Auto,*,Auto" Margin="16,8,12,8" RowSpacing="4">
+                    <Grid IsVisible="{Binding IsQueueTab}" RowDefinitions="Auto,Auto,*,Auto" Margin="16,8,12,8" RowSpacing="4">
                         <Grid ColumnDefinitions="*,Auto">
                             <TextBlock Classes="panelCaption"
                                        VerticalAlignment="Center"
                                        Text="{Binding QueueSummaryText}" />
                             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="2">
+                                <Button Classes="icon"
+                                        Command="{Binding SortQueueCommand}"
+                                        ToolTip.Tip="Sort by name"
+                                        AutomationProperties.Name="Sort queue by name">
+                                    <controls:VlcIcon Width="24" Height="24"
+                                                      Icon="{StaticResource Icon.Sort}" />
+                                </Button>
                                 <Button Classes="icon"
                                         Classes.active="{Binding IsRepeatOn}"
                                         Command="{Binding CycleRepeatCommand}"
@@ -1339,7 +1361,19 @@
                                 </Button>
                             </StackPanel>
                         </Grid>
-                        <Grid Grid.Row="1">
+                        <!-- VLC's playlist search (not in the design's panel). -->
+                        <TextBox Grid.Row="1"
+                                 Classes="dialogField"
+                                 IsVisible="{Binding CanSearchQueue}"
+                                 Text="{Binding QueueSearch, Mode=TwoWay}"
+                                 PlaceholderText="Search the queue"
+                                 AutomationProperties.Name="Search the queue" />
+                        <Grid Grid.Row="2">
+                            <TextBlock IsVisible="{Binding HasNoQueueMatch}"
+                                       Text="No item matches."
+                                       Classes="settingHint"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center" />
                             <TextBlock IsVisible="{Binding IsQueueLoading}"
                                        Text="Loading queue…"
                                        Classes="settingHint"
@@ -1348,7 +1382,7 @@
                             <ScrollViewer x:Name="QueueScroll"
                                           IsVisible="{Binding HasQueueItems}"
                                           HorizontalScrollBarVisibility="Disabled">
-                                <ItemsControl ItemsSource="{Binding QueueItems}">
+                                <ItemsControl ItemsSource="{Binding VisibleQueueItems}">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate x:DataType="application:QueueItem">
                                             <Border Classes="panelItem">
@@ -1399,7 +1433,7 @@
                                 </ItemsControl>
                             </ScrollViewer>
                         </Grid>
-                        <StackPanel Grid.Row="2">
+                        <StackPanel Grid.Row="3">
                             <TextBlock IsVisible="{Binding HasEmptyQueue}"
                                        Text="Your queue is empty. Open or drop media to start playing."
                                        Classes="panelHint" />

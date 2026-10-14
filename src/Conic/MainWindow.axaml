@@ -1576,13 +1576,13 @@
                                 <Button Grid.Column="1"
                                         Classes="icon"
                                         Command="{Binding AttachExternalAudioCommand}"
-                                        ToolTip.Tip="Add an audio file. It plays from the next time this media opens."
+                                        ToolTip.Tip="Add an audio file to the playing media."
                                         AutomationProperties.Name="Add audio file">
                                     <controls:VlcIcon Width="24" Height="24"
                                                       Icon="{StaticResource Icon.Add}" />
                                 </Button>
                             </Grid>
-                            <TextBlock Classes="panelHint" Text="Adds a track only for the next media open." />
+                            <TextBlock Classes="panelHint" Text="Adds the file to the playing media, or keeps it for the next open." />
                         </StackPanel>
                     </ScrollViewer>
 
@@ -1657,13 +1657,13 @@
                                 <Button Grid.Column="1"
                                         Classes="icon"
                                         Command="{Binding AttachExternalSubtitleCommand}"
-                                        ToolTip.Tip="Add a subtitle file. It shows from the next time this media opens."
+                                        ToolTip.Tip="Add a subtitle file to the playing media."
                                         AutomationProperties.Name="Add subtitle file">
                                     <controls:VlcIcon Width="24" Height="24"
                                                       Icon="{StaticResource Icon.Add}" />
                                 </Button>
                             </Grid>
-                            <TextBlock Classes="panelHint" Text="Adds a track only for the next media open." />
+                            <TextBlock Classes="panelHint" Text="Adds the file to the playing media, or keeps it for the next open." />
                         </StackPanel>
                     </ScrollViewer>
 

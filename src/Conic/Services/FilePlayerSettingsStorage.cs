@@ -15,8 +15,7 @@ internal sealed class FilePlayerSettingsStorage : IPlayerSettingsStorage
         {
             using (FileStream stream = new(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None))
             using (StreamWriter writer = new(stream)) { writer.Write(content); writer.Flush(); stream.Flush(true); }
-            if (File.Exists(_path)) File.Replace(temporary, _path, null);
-            else File.Move(temporary, _path);
+            AtomicFile.Commit(temporary, _path);
         }
         finally { try { if (File.Exists(temporary)) File.Delete(temporary); } catch (IOException) { } catch (UnauthorizedAccessException) { } }
     }

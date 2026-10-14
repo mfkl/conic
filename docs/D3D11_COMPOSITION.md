@@ -197,5 +197,6 @@ timeout 120s dotnet run --no-build --project src/Conic -- \
   fixtures is not established.
 - Multi-GPU behavior has a safe mismatch fallback but has not been qualified on
   a physical multi-GPU machine.
-- Subtitle/subpicture composition is not implemented by this vout.
+- Subtitles are rendered by VLC and drawn above the video; styled ASS and
+  image subtitles are not qualified.
 - macOS and Linux composition work remains outside this Windows package.

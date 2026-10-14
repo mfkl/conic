@@ -115,9 +115,12 @@ public sealed class VideoEngineOptionsTests
     [Fact]
     public void XspfPlaylistsRoundTrip()
     {
-        string xspf = PlaylistDocument.WriteXspf([@"C:\Media\A & B.mkv", "https://example.com/a.mp4?x=1&y=2"]);
-        Assert.Contains("<location>file:///C:/Media/A%20&amp;%20B.mkv</location>", xspf);
-        Assert.Equal([@"C:\Media\A & B.mkv", "https://example.com/a.mp4?x=1&y=2"], PlaylistDocument.Parse(xspf, "list.xspf"));
+        (string file, string location) = OperatingSystem.IsWindows()
+            ? (@"C:\Media\A & B.mkv", "file:///C:/Media/A%20&amp;%20B.mkv")
+            : ("/Media/A & B.mkv", "file:///Media/A%20&amp;%20B.mkv");
+        string xspf = PlaylistDocument.WriteXspf([file, "https://example.com/a.mp4?x=1&y=2"]);
+        Assert.Contains($"<location>{location}</location>", xspf);
+        Assert.Equal([file, "https://example.com/a.mp4?x=1&y=2"], PlaylistDocument.Parse(xspf, "list.xspf"));
     }
 
     [Fact]

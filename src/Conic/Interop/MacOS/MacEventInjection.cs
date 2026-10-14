@@ -14,7 +14,13 @@ internal static unsafe partial class MacEventInjection
 {
     private const string ObjectiveCLibrary = "/usr/lib/libobjc.A.dylib";
 
-    private static readonly nint MessageSend = NativeLibrary.GetExport(NativeLibrary.Load(ObjectiveCLibrary), "objc_msgSend");
+    private static readonly nint Library = NativeLibrary.Load(ObjectiveCLibrary);
+    private static readonly nint MessageSend = NativeLibrary.GetExport(Library, "objc_msgSend");
+    // A 32-byte CGRect comes back through a hidden pointer on x64, which
+    // objc_msgSend_stret expects; arm64 returns it in registers.
+    private static readonly nint MessageSendRect = RuntimeInformation.ProcessArchitecture == Architecture.X64
+        ? NativeLibrary.GetExport(Library, "objc_msgSend_stret")
+        : MessageSend;
 
     // NSEventType values.
     private const nuint LeftMouseDown = 1;
@@ -41,12 +47,19 @@ internal static unsafe partial class MacEventInjection
     public static void Move(nint handle, bool isView, double x, double y) =>
         Post(handle, isView, x, y, [MouseMoved]);
 
+    /// <summary>
+    /// Moves the real pointer to <paramref name="x"/>, <paramref name="y"/>, in
+    /// points from the top left of the main display. It posts no event.
+    /// </summary>
+    public static void Warp(double x, double y) =>
+        CGWarpMouseCursorPosition(new CGPoint { X = x, Y = y });
+
     private static void Post(nint handle, bool isView, double x, double y, nuint[] types)
     {
         nint window = isView ? Send(handle, Selector("window")) : handle;
         if (window == 0) throw new InvalidOperationException("The view has no window.");
         nint windowNumber = Send(window, Selector("windowNumber"));
-        double height = ((delegate* unmanaged<nint, nint, CGRect>)MessageSend)(window, Selector("frame")).Height;
+        double height = ((delegate* unmanaged<nint, nint, CGRect>)MessageSendRect)(window, Selector("frame")).Height;
         // Window coordinates start at the bottom left.
         CGPoint location = new() { X = x, Y = height - y };
         nint application = Send(objc_getClass("NSApplication"), Selector("sharedApplication"));
@@ -118,5 +131,8 @@ internal static unsafe partial class MacEventInjection
 
     [LibraryImport(ObjectiveCLibrary, StringMarshalling = StringMarshalling.Utf8)]
     private static partial nint objc_getClass(string name);
+
+    [LibraryImport("/System/Library/Frameworks/CoreGraphics.framework/CoreGraphics")]
+    private static partial int CGWarpMouseCursorPosition(CGPoint point);
 }
 #endif // SMOKE

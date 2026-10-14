@@ -137,6 +137,8 @@ public partial class App : Application
             window.EnableInterfaceSettingsSmoke(desktopArg());
         else if (args.Contains("--interactions-smoke", StringComparer.OrdinalIgnoreCase))
             window.EnableInteractionsSmoke(desktopArg());
+        else if (args.Contains("--parity-smoke", StringComparer.OrdinalIgnoreCase))
+            window.EnableParitySmoke(desktopArg());
         else if (args.Contains("--messages-smoke", StringComparer.OrdinalIgnoreCase))
             window.EnableMessagesSmoke(desktopArg());
         else if (args.Contains("--menu-smoke", StringComparer.OrdinalIgnoreCase))

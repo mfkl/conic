@@ -25,12 +25,12 @@ public partial class MainWindow
     [
         "Open File…", "Open Folder…", "Open Network Stream…", "Load Playlist…", "Open Recent",
         "Stop", "Tracks and Synchronization", "Video Adjustments", "Media Information", "Picture in Picture",
-        "Keyboard Shortcuts", "Settings",
+        "Keyboard Shortcuts", "Settings", "About Conic",
     ];
 
     private static readonly string[] VideoMenuOptions =
     [
-        "Pause", "Stop", "Previous Item", "Next Item", "Skip Back 10 Seconds", "Skip Forward 10 Seconds",
+        "Pause", "Stop", "Previous Item", "Next Item", "Skip Back 10 Seconds", "Skip Forward 10 Seconds", "Hide UI",
         "Playback", "Video", "Audio", "Subtitle", "More Settings", "Playlist", "Open Media",
     ];
 

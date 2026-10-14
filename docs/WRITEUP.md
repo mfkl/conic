@@ -64,16 +64,18 @@ proxy password storage).
 
 ## Completeness
 
-Conic reaches 59% parity with VLC 3.
+Conic reaches 69% parity with VLC 3.
 [Feature parity with VLC 3](FEATURE_PARITY.md) compares 183 VLC 3 features:
-57 work the same, 44 work differently or in part, 52 are missing and 30 were
+71 work the same, 45 work differently or in part, 37 are missing and 30 were
 left out on purpose (disc menus, streaming and conversion, capture, skins,
-extensions). Conic adds 13 features VLC 3 doesn't have, such as picture in
-picture and a Continue watching list.
+extensions). The everyday ways in are there: VLC's hotkeys, several files or
+URLs at once, its network protocols, the command line, the clipboard and
+drops. Conic adds 13 features VLC 3 doesn't have, such as picture in picture
+and a Continue watching list.
 
 ## Quality
 
-- 557 unit tests for the engine contract, state and view models.
+- 635 unit tests for the engine contract, state and view models.
 - About 40 smoke tests drive the real app with real VLC and real media on
   Windows and macOS: every playback path, every default shortcut, the queue,
   menus, Settings (the equalizer is measured on the audio output, network

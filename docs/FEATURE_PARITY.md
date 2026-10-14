@@ -46,21 +46,21 @@ carries its tag.
 
 | Section | Same | Different | Partial | Missing | Out of scope | Total | Parity |
 |---|---|---|---|---|---|---|---|
-| Media menu | 1 | 3 | 4 | 2 | 4 | 14 | 60% |
-| Playback menu | 5 | 0 | 2 | 5 | 2 | 14 | 50% |
-| Audio menu | 2 | 1 | 1 | 2 | 0 | 6 | 58% |
+| Media menu | 3 | 4 | 3 | 0 | 4 | 14 | 85% |
+| Playback menu | 9 | 0 | 0 | 3 | 2 | 14 | 75% |
+| Audio menu | 3 | 2 | 0 | 1 | 0 | 6 | 83% |
 | Video menu | 3 | 2 | 1 | 4 | 0 | 10 | 55% |
 | Subtitle menu | 1 | 0 | 1 | 0 | 0 | 2 | 75% |
 | Tools menu | 1 | 4 | 5 | 8 | 4 | 22 | 42% |
-| View menu | 2 | 3 | 0 | 3 | 1 | 9 | 63% |
-| Help menu | 0 | 0 | 0 | 2 | 1 | 3 | 0% |
-| Preferences | 30 | 2 | 5 | 6 | 6 | 49 | 80% |
+| View menu | 2 | 3 | 1 | 2 | 1 | 9 | 69% |
+| Help menu | 1 | 0 | 0 | 1 | 1 | 3 | 50% |
+| Preferences | 31 | 2 | 5 | 5 | 6 | 49 | 83% |
 | Playlist and queue | 6 | 3 | 1 | 3 | 0 | 13 | 73% |
 | Library | 0 | 1 | 0 | 1 | 3 | 5 | 50% |
-| Hotkeys and mouse | 3 | 1 | 1 | 3 | 0 | 8 | 56% |
-| Command line and OS integration | 1 | 1 | 1 | 8 | 2 | 13 | 23% |
-| Network and streaming | 2 | 1 | 0 | 5 | 7 | 15 | 38% |
-| **Total** | **57** | **22** | **22** | **52** | **30** | **183** | **59%** |
+| Hotkeys and mouse | 4 | 1 | 1 | 2 | 0 | 8 | 69% |
+| Command line and OS integration | 3 | 1 | 3 | 4 | 2 | 13 | 50% |
+| Network and streaming | 4 | 1 | 0 | 3 | 7 | 15 | 63% |
+| **Total** | **71** | **24** | **21** | **37** | **30** | **183** | **69%** |
 
 The Conic only section lists 13 features VLC 3's Qt interface does not have; they are not counted above.
 
@@ -68,13 +68,13 @@ The Conic only section lists 13 features VLC 3's Qt interface does not have; the
 
 | Feature | VLC 3 | Conic | Status | Notes |
 |---|---|---|---|---|
-| Open File | Ctrl+O, multiple selection | Ctrl+O, one file per pick | Partial | More menu, right-click Open Media, Home, macOS File menu. The picker allows one file; filter lists mp4, mkv, avi, mov, mp3, flac plus All files. |
-| Open Multiple Files | Ctrl+Shift+O, file list, subtitle file, options | None | Missing | Several files can be dropped on the window instead. Ctrl+Shift+O opens a folder in Conic. |
+| Open File | Ctrl+O, multiple selection | Ctrl+O, multiple selection | Same | More menu, right-click Open Media, Home, macOS File menu. Several files open as a queue. The filter lists common video and audio formats plus All files. |
+| Open Multiple Files | Ctrl+Shift+O, file list, subtitle file, options | Open File with several files | Different | No separate dialog, subtitle file or options field: Open File takes several files, and so does a drop. Ctrl+Shift+O opens a folder in Conic. |
 | Open Folder | Ctrl+F, opens the directory | Ctrl+Shift+O | Different | Flattened into the queue, sorted by name, at most 2,000 items. Settings › Library: subfolders or not, hidden files or not (Next open). |
-| Open Disc (DVD, Blu-ray, audio CD, VCD) | Yes | None | Out of scope | Conic opens local files and http(s) URLs only. |
-| Open Network Stream | Ctrl+N, any VLC protocol, options | Ctrl+L, one URL | Partial | Only `http` and `https`; URLs with user:password are rejected; no multi-URL field, no `:option` field. HLS and DASH over http(s) go to the engine as usual. |
+| Open Disc (DVD, Blu-ray, audio CD, VCD) | Yes | None | Out of scope | Conic opens local files and network URLs only. |
+| Open Network Stream | Ctrl+N, any VLC protocol, options | Ctrl+L, one URL per line | Partial | http, https, ftp, ftps, sftp, smb, rtsp, rtp, udp, mms, mmsh and rtmp, passed to VLC as typed; several lines open as a queue. URLs with user:password are rejected, and there is no `:option` field. Only http(s) is checked by the tests; the other protocols are VLC's own. |
 | Open Capture Device | Yes | None | Out of scope | Left out in the menus redesign. |
-| Open Location from clipboard | Ctrl+V | None | Missing | |
+| Open Location from clipboard | Ctrl+V | Ctrl+V, right-click Open Media, macOS File menu | Same | Each line that is a URL or a path opens; several as a queue. On macOS the File menu shows no Cmd+V, so text fields keep Paste. |
 | Open Recent Media | Submenu, clear | More menu › Open Recent page, Home › Recent | Same | 50 entries, per-entry remove, Clear recent. Settings › Privacy turns history off (clears at once). |
 | Open a playlist file | Through Open File (XSPF, M3U, PLS, and more) | Load Playlist (M3U, M3U8) | Partial | Flat, at most 2,000 entries, no nested playlists. Not verified what happens when a playlist file is opened with Open File (it is handed to VLC as a file). |
 | Save Playlist to File | Ctrl+Y, XSPF, M3U, M3U8, HTML | Save Playlist | Partial | M3U8 only. In the queue panel and the macOS File menu. |
@@ -88,29 +88,29 @@ The Conic only section lists 13 features VLC 3's Qt interface does not have; the
 | Feature | VLC 3 | Conic | Status | Notes |
 |---|---|---|---|---|
 | Title | Submenu | Queue panel › Chapters tab, "Titles and chapters" | Same | Selection is read back from VLC. Disc menus are out of scope (no disc input). |
-| Chapter | Submenu, prev/next chapter | Chapters tab, right-click Playback › Chapters | Partial | Pick from the list. No previous/next chapter command or hotkey. |
+| Chapter | Submenu, prev/next chapter | Chapters tab, right-click Playback, Shift+P / Shift+N | Same | Pick from the list, or step with VLC's keys; Previous restarts the chapter after 1.5 s, as in VLC. |
 | Program | Submenu (DVB, TS programs) | None | Missing | |
 | Custom Bookmarks | Ctrl+B, manage | None | Missing | Hidden on purpose (redesign decision D2). |
 | Renderer (Chromecast) | Submenu, discovery | None | Out of scope | Casting is out of this experiment. |
-| Speed | Faster, slower, normal, fine steps, 0.25x to 4x slider | Menu 0.5x, 1x, 1.5x, 2x; panel slider 0.25x to 2x in 0.25 steps | Partial | No faster/slower/normal commands or hotkeys. Default speed in Settings › Playback (Next open). |
+| Speed | Faster, slower, normal, fine steps, 0.25x to 4x slider | Menu 0.5x to 2x, faster, slower, normal; panel slider 0.25x to 2x | Same | "]" and "[" take VLC's fine 0.1 steps and "=" resets; VLC's coarse "+" and "-" keys are not available (a shortcut cannot use them). Default speed in Settings › Playback (Next open). |
 | Jump forward / backward | 4 sizes, Shift/Alt/Ctrl/Ctrl+Alt with arrows | Same 4 sizes and keys | Same | Defaults 3, 10, 60, 300 s as in VLC; Settings › Controls › Skip Amounts (Live). Short skip in bar, right-click menu, macOS menu. |
-| Jump to specific time | Ctrl+T dialog | None | Missing | |
+| Jump to specific time | Ctrl+T dialog | Ctrl+T dialog | Same | h:mm:ss, m:ss or seconds. Right-click Playback, macOS Playback menu. |
 | Play / Pause | Space | Space | Same | Bar, right-click menu, macOS Playback menu. |
-| Stop | S | Bar, right-click menu, More menu | Same | No default shortcut (assignable). |
-| Previous / Next | P / N | Bar, right-click menu, macOS menu | Same | No default shortcuts (assignable). |
+| Stop | S | S, bar, right-click menu, More menu | Same | |
+| Previous / Next | P / N | P / N, bar, right-click menu, macOS menu | Same | |
 | Record | Advanced controls | None | Out of scope | Recording is out of this experiment. |
 | A-B loop | Advanced controls | None | Missing | |
-| Frame by frame | E, advanced controls | None | Missing | |
+| Frame by frame | E, advanced controls | E, right-click Playback, macOS menu | Same | VLC's own frame-next: the first press pauses, as in VLC. |
 
 ## Audio menu
 
 | Feature | VLC 3 | Conic | Status | Notes |
 |---|---|---|---|---|
-| Audio Track | Submenu, cycle (B) | Tracks panel › Audio, right-click Audio › Audio Tracks | Same | Includes VLC's Disable choice. No cycle hotkey. |
+| Audio Track | Submenu, cycle (B) | Tracks panel › Audio, right-click Audio › Audio Tracks | Same | Includes VLC's Disable choice. B cycles the tracks, skipping Disable, as in VLC. |
 | Audio Device | Submenu, live | Settings › Audio › Output device | Different | Windows only (MMDevice endpoints), Live. Not in a menu. macOS and Linux use the system default. |
-| Stereo Mode | Stereo, reverse, left, right, mono, Dolby Surround | None | Missing | Settings › Audio has Detect Dolby Surround (Next open) only. |
+| Stereo Mode | Stereo, reverse, left, right, mono, Dolby Surround | Settings › Audio › Stereo mode | Different | VLC's modes (Stereo, Reverse stereo, Left, Right, Dolby Surround, Headphones, Mono), Live. In Settings, not a menu. |
 | Visualizations | Spectrometer, scope, VU meter, goom, projectM | None | Missing | Not built (phase 9c scope). |
-| Increase / Decrease Volume | Ctrl+Up / Ctrl+Down, menu | Volume slider, scroll wheel over video | Partial | No volume up/down commands, so no hotkeys. Arrow keys move the focused slider by the volume step. Maximum volume 100 to 300% (default 200%), Settings › Audio. |
+| Increase / Decrease Volume | Ctrl+Up / Ctrl+Down, menu | Ctrl+Up / Ctrl+Down, right-click Audio, slider, scroll wheel | Same | By the volume step (Settings › Audio). Maximum volume 100 to 300% (default 200%). |
 | Mute | M | M | Same | Bar, right-click menu, macOS menu. |
 
 ## Video menu
@@ -132,8 +132,8 @@ The Conic only section lists 13 features VLC 3's Qt interface does not have; the
 
 | Feature | VLC 3 | Conic | Status | Notes |
 |---|---|---|---|---|
-| Add Subtitle File | Live, while playing | Tracks panel › Subtitles › add file | Partial | Applies from the next open of that media, not live. srt, ass, ssa, vtt, sub. Same for external audio. |
-| Sub Track | Submenu, cycle (V) | Tracks panel › Subtitles, right-click Subtitle › Subtitle Tracks | Same | Includes Disable. VLC renders the subtitles, Conic composes them over the video. No cycle hotkey. |
+| Add Subtitle File | Live, while playing | Tracks panel › Subtitles › add file, or a drop | Partial | Applies from the next open of that media, not live. srt, ass, ssa, vtt, sub. Same for external audio. |
+| Sub Track | Submenu, cycle (V) | Tracks panel › Subtitles, right-click Subtitle › Subtitle Tracks | Same | Includes Disable. VLC renders the subtitles, Conic composes them over the video. V cycles the tracks, Disable included, as in VLC. |
 
 ## Tools menu
 
@@ -151,7 +151,7 @@ The Conic only section lists 13 features VLC 3's Qt interface does not have; the
 | Video overlay | Logo, marquee | None | Missing | |
 | AtmoLight | Yes | None | Missing | |
 | Video advanced | Denoiser, anaglyph, mirror, blur, antiflicker, and others | None | Missing | |
-| Synchronization | Audio delay, subtitle delay, subtitle speed and duration | Tracks panel delay fields | Partial | Audio and subtitle delay, live, ±100 ms buttons, typed ms, reset, ±10 s range. Defaults in Settings (Next open). No subtitle speed or duration factor. |
+| Synchronization | Audio delay, subtitle delay, subtitle speed and duration | Tracks panel delay fields | Partial | Audio and subtitle delay, live, ±100 ms buttons, typed ms, reset, ±10 s range; VLC's J/K and G/H keys move them by 50 ms. Defaults in Settings (Next open). No subtitle speed or duration factor. |
 | Media Information | Ctrl+I, general (editable metadata), metadata, codec, statistics | Ctrl+I, Playback panel › Information tab | Partial | Read-only metadata and codec streams, refresh, Copy diagnostics (redacted). No metadata editing, no statistics tab. |
 | Codec Information | Ctrl+J | Information tab, codec streams | Different | Merged with Media Information. Ctrl+J opens the queue in Conic. |
 | VLM Configuration | Yes | None | Out of scope | Broadcasting is a non-goal. |
@@ -172,7 +172,7 @@ The Conic only section lists 13 features VLC 3's Qt interface does not have; the
 | Always on top | Toggle | More menu toggle, Settings › Interface | Same | Remembered for the next start. |
 | Minimal interface | Ctrl+H | None | Missing | Closest: picture in picture (Conic only). |
 | Fullscreen interface (controls in fullscreen) | Toggle | Settings › Interface › Show controls in fullscreen | Same | Plus auto-hide on/off and timeout. |
-| Advanced controls | Record, snapshot, A-B, frame step | None | Missing | See the rows above. |
+| Advanced controls | Record, snapshot, A-B, frame step | Next Frame and Jump to Time in menus | Partial | Frame step is there (E); record, snapshot and A-B loop are not. |
 | Media library / playlist sidebar | Toggle | Home screen, Library panel (Ctrl+Shift+L) | Different | History only. See Library. |
 | Extensions view | Yes | None | Out of scope | |
 
@@ -182,7 +182,7 @@ The Conic only section lists 13 features VLC 3's Qt interface does not have; the
 |---|---|---|---|---|
 | Help | F1 | None | Missing | Settings rows have help tooltips. |
 | Check for updates | Yes | None | Out of scope | Update checks are out of this experiment. |
-| About | Yes | None | Missing | Left out in the menus redesign. |
+| About | Yes | Shift+F1, More menu, right-click More Settings, macOS Help menu | Same | Version, VLC engine version, credits and license. |
 
 ## Preferences
 
@@ -212,7 +212,7 @@ preferences categories.
 | Force Dolby Surround detection | Yes | Audio › Detect Dolby Surround | Same | Next open. |
 | Volume normalizer | Yes | Audio › Normalize loudness, Target level | Same | Live. |
 | Replay gain | Yes | Audio › Replay gain, preamp | Same | Live. |
-| Time-stretching audio | Yes | None | Missing | |
+| Time-stretching audio | Yes | Audio › Keep the pitch when the speed changes | Same | On by default, as in VLC. Next open. |
 | Preferred audio language | Yes | Playback and Audio › Preferred audio language | Same | Next open. |
 | Visualization | Yes | None | Missing | |
 | Last.fm | Yes | None | Out of scope | |
@@ -276,10 +276,10 @@ preferences categories.
 | Feature | VLC 3 | Conic | Status | Notes |
 |---|---|---|---|---|
 | Hotkeys editor | Preferences › Hotkeys, search | Settings › Controls › Keyboard Shortcuts | Same | Search, per-row save and reset, Reset All, conflict checks. Live. |
-| Number of bindable actions | About 90 actions | 67 registered commands | Partial | Some listed commands need a parameter (seek, volume, delay, track) and do nothing from a key. |
+| Number of bindable actions | About 90 actions | 84 registered commands | Partial | Some listed commands need a value (seek, set volume, select a track) and do nothing from a key; the step commands beside them do. |
 | Global hotkeys | Yes | None | Missing | |
-| Default keys | VLC's set | Mostly different | Different | Same: Space, M, Ctrl+O, Ctrl+I, Shift+S, skip keys. Different: F11 (fullscreen), Ctrl+L (network), Ctrl+J (queue), Ctrl+, (settings), Ctrl+Shift+M (messages). Cmd on macOS. |
-| Volume, speed, delay, track cycle, chapter keys | Yes | None | Missing | No default keys and no parameterless commands to bind. |
+| Default keys | VLC's set | Mostly VLC's | Different | Same: Space, S, P, N, M, E, B, V, G, H, J, K, [, ], =, Shift+P, Shift+N, Ctrl+Up, Ctrl+Down, Ctrl+O, Ctrl+V, Ctrl+T, Ctrl+I, Shift+S, Esc, skip keys. Different: F11 (fullscreen), Ctrl+L (network), Ctrl+J (queue), Ctrl+, (settings), Ctrl+Shift+M (messages); no + and -. Cmd on macOS. |
+| Volume, speed, delay, track cycle, chapter keys | Yes | VLC's keys | Same | Ctrl+Up/Down, [ ] =, J/K, G/H, B, V, Shift+P/N; each can be changed in the editor and shows its feedback. |
 | Mouse wheel action | Volume or position, vertical and horizontal | Settings › Controls › Mouse | Same | Live; reverse direction option. |
 | Double-click | Fullscreen | Configurable (fullscreen default) | Same | Live. |
 | Mouse gestures interface | Yes | None | Missing | |
@@ -288,27 +288,27 @@ preferences categories.
 
 | Feature | VLC 3 | Conic | Status | Notes |
 |---|---|---|---|---|
-| Open a file from the command line | `vlc file` | None | Missing | Program.cs reads only diagnostic and smoke flags. |
+| Open a file from the command line | `vlc file` | `Conic file` (several files, URLs) | Same | Arguments that are not options open, several as a queue. Options (`--…`) are ignored. |
 | VLC options on the command line | Yes | None | Missing | Options come from Settings only. |
-| File associations, "Open with" | Installer, macOS document types | None | Missing | Portable archives, no installer. |
+| File associations, "Open with" | Installer, macOS document types | "Open with" by choosing Conic; macOS open-file events | Partial | Portable archives register nothing: no default-player associations, no document types in the macOS bundle. |
 | Single instance, enqueue from file manager | Option | None | Missing | |
 | Tray icon | Yes | None | Out of scope | |
 | System notifications | Yes | None | Out of scope | |
 | Taskbar thumbnail buttons and progress (Windows) | Yes | None | Missing | |
-| Media keys | Global | Assignable, window focus only | Partial | MediaPlayPause and similar keys can be set in the editor; no defaults; no global capture. |
+| Media keys | Global | Play/Pause, Stop, Previous, Next, window focus only | Partial | Work while the window has the focus (unless a shortcut uses the key); no global capture. |
 | OS media session (MPRIS on Linux) | Yes | None | Missing | |
 | Drag and drop files and folders | Yes | Yes | Same | Several dropped files become the queue (or join it with Add to the queue); folders follow Settings › Library. |
-| Drop a subtitle file onto the video | Adds the subtitle | Opened as media | Missing | No special handling of subtitle files found in the drop path. |
-| Drop a URL or text | Yes | Rejected | Missing | Local files only. |
-| macOS menu bar | Cocoa interface (not Qt) | File, Playback, View, Window | Different | No Help menu. |
+| Drop a subtitle file onto the video | Adds the subtitle | Added to the playing media | Partial | As Add Subtitle File: it applies from the next open of that media, not live. With nothing playing, the file opens as media. |
+| Drop a URL or text | Yes | Yes | Same | A dragged link, or text with one URL or path per line; several open as a queue. |
+| macOS menu bar | Cocoa interface (not Qt) | File, Playback, View, Window, Help | Different | Help has About Conic. |
 
 ## Network and streaming
 
 | Feature | VLC 3 | Conic | Status | Notes |
 |---|---|---|---|---|
 | HTTP / HTTPS streams | Yes | Yes | Same | Includes HLS and DASH over http(s) as far as the engine handles them. |
-| RTSP, RTP, UDP, MMS | Yes | None | Missing | Rejected by the URL validator. |
-| FTP, SMB, SFTP | Yes | None | Missing | Rejected by the URL validator. |
+| RTSP, RTP, UDP, MMS | Yes | Yes | Same | Passed to VLC as typed, including udp://@:port. Not checked by the tests (no stream server for them). |
+| FTP, SMB, SFTP | Yes | Yes | Same | Passed to VLC as typed, without credentials in the URL. Not checked by the tests. |
 | Credentials in the URL | Yes | None | Missing | Rejected on purpose. |
 | Streaming output, transcoding | Yes | None | Out of scope | |
 | Web, telnet, HTTP remote interfaces | Yes | None | Out of scope | |

@@ -618,7 +618,7 @@
                 </StackPanel>
                 <TextBlock x:Name="HomeTitle"
                            Classes="windowTitle"
-                           Text="VLC Media Player" />
+                           Text="Conic" />
                 <StackPanel Orientation="Horizontal" Spacing="10">
                     <Button Classes="titleBar"
                             Command="{Binding ToggleQueueCommand}"

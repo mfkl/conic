@@ -21,6 +21,18 @@ public partial class MainWindow
             e.Handled = true;
             return;
         }
+        if (e.Key == Key.Escape && JumpPanel.IsVisible)
+        {
+            CloseJumpPanel();
+            e.Handled = true;
+            return;
+        }
+        if (e.Key == Key.Escape && AboutPanel.IsVisible)
+        {
+            CloseAboutPanel();
+            e.Handled = true;
+            return;
+        }
         if (e.Key == Key.Escape && QueueDrawer.IsVisible)
         {
             CloseDrawer();
@@ -66,11 +78,12 @@ public partial class MainWindow
             e.Handled = true;
             return;
         }
-        if (SettingsPanel.IsVisible || ShortcutFocusPolicy.Suppresses(e.Source)) return;
+        if (SettingsPanel.IsVisible || IsDialogOpen || ShortcutFocusPolicy.Suppresses(e.Source)) return;
         string gesture = MenuShortcuts.FromKey(e.Key, e.KeyModifiers);
         IReadOnlyDictionary<PlayerCommandId, string> active =
             PlayerShortcutPolicy.Effective(_presentation.Registry, _settings.Current.ShortcutOverrides);
-        if (!PlayerShortcutPolicy.TryFind(_presentation.Registry, active, gesture, out PlayerCommandId command)) return;
+        if (!PlayerShortcutPolicy.TryFind(_presentation.Registry, active, gesture, out PlayerCommandId command) &&
+            !TryMediaKey(e.Key, e.KeyModifiers, active, out command)) return;
         // The feedback says what the shortcut does, before its result arrives from the engine.
         string? feedback = _presentation.ShortcutFeedbackText(command);
         _presentation.Registry.Execute(command);
@@ -78,23 +91,51 @@ public partial class MainWindow
         ShowShortcutFeedback(feedback);
     }
 
+    /// <summary>
+    /// The keyboard's media keys, as VLC 3 takes them while its window has the
+    /// focus: Play/Pause, Stop, Previous and Next, unless a shortcut uses the key.
+    /// </summary>
+    private bool TryMediaKey(Key key, KeyModifiers modifiers, IReadOnlyDictionary<PlayerCommandId, string> active, out PlayerCommandId command)
+    {
+        command = key switch
+        {
+            Key.MediaPlayPause => PlayerCommandId.TogglePause,
+            Key.MediaStop => PlayerCommandId.Stop,
+            Key.MediaPreviousTrack => PlayerCommandId.QueuePrevious,
+            Key.MediaNextTrack => PlayerCommandId.QueueNext,
+            _ => default,
+        };
+        if (modifiers != KeyModifiers.None || key is not (Key.MediaPlayPause or Key.MediaStop or Key.MediaPreviousTrack or Key.MediaNextTrack)) return false;
+        string gesture = MenuShortcuts.FromKey(key, modifiers);
+        return !active.Values.Contains(gesture, StringComparer.OrdinalIgnoreCase) && _presentation.Registry.CanExecute(command);
+    }
+
+    // Files, or text such as a link dragged from a browser (one URL or path per line).
     private void OnMediaDragOver(object? sender, DragEventArgs e)
     {
         IStorageItem[]? items = e.DataTransfer.TryGetFiles();
         bool local = items is { Length: > 0 } && items.All(item => item.Path.IsFile);
-        e.DragEffects = local ? DragDropEffects.Copy : DragDropEffects.None;
+        e.DragEffects = local || !string.IsNullOrWhiteSpace(DroppedText(e)) ? DragDropEffects.Copy : DragDropEffects.None;
         e.Handled = true;
     }
 
     private void OnMediaDrop(object? sender, DragEventArgs e)
     {
         IStorageItem[]? items = e.DataTransfer.TryGetFiles();
-        string[] localSources = items is { Length: > 0 } && items.All(item => item.Path.IsFile)
-            ? items.Select(item => item.Path.LocalPath).ToArray()
-            : [];
-        _presentation.OpenDroppedSources(localSources);
+        if (items is { Length: > 0 } && items.All(item => item.Path.IsFile))
+            _presentation.OpenDroppedSources(items.Select(item => item.Path.LocalPath).ToArray());
+        else if (DroppedText(e) is { } text && !string.IsNullOrWhiteSpace(text))
+            _presentation.OpenDroppedText(text);
+        else
+            _presentation.OpenDroppedSources([]);
         UpdateOpenErrorSurface();
         e.Handled = true;
+    }
+
+    private static string? DroppedText(DragEventArgs e)
+    {
+        try { return e.DataTransfer.TryGetText(); }
+        catch (Exception) { return null; }
     }
 
     private void OnQueueDrawerLayoutUpdated(object? sender, EventArgs e)

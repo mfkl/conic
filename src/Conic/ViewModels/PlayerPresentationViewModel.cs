@@ -143,7 +143,7 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
         registry.Register(new(PlayerCommandId.DismissResume, "Dismiss resume prompt", "Media"), _ => DismissResume(), _ => _pendingResume is not null && _resumeReady);
         registry.Register(new(PlayerCommandId.OpenTestMedia, "Open test video", "Media"), _ => _openTestMedia());
         registry.Register(new(PlayerCommandId.TogglePause, "Play or pause", "Playback", "Space"), _ => TogglePlayback(), _ => CanTogglePlayback);
-        registry.Register(new(PlayerCommandId.Stop, "Stop", "Playback"), _ =>
+        registry.Register(new(PlayerCommandId.Stop, "Stop", "Playback", "S"), _ =>
         {
             CheckpointCurrent(true);
             _stoppedSource = QueueItems.FirstOrDefault(item => item.IsCurrent)?.Source ?? _currentSource?.CanonicalSource ?? _lastState?.Source;
@@ -177,8 +177,8 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
         registry.Register(new(PlayerCommandId.SetAlwaysOnTop, "Always on top", "Window"), parameter => IsAlwaysOnTop = parameter is true);
         registry.Register(new(PlayerCommandId.OpenSettings, "Settings", "Window", "Ctrl+,"), _ => openSettings?.Invoke(), _ => openSettings is not null);
         registry.Register(new(PlayerCommandId.ToggleQueue, "Playback queue", "Playback", "Ctrl+J"), _ => { if (IsQueueOpen && IsQueuePanel) IsQueueOpen = false; else { if (!IsQueuePanel) DrawerTab = "Queue"; IsQueueOpen = true; } }, _ => _queue is not null);
-        registry.Register(new(PlayerCommandId.QueuePrevious, "Previous item", "Playback"), _ => _queue?.Previous(), _ => QueueState.CanPrevious);
-        registry.Register(new(PlayerCommandId.QueueNext, "Next item", "Playback"), _ => _queue?.Next(), _ => QueueState.CanNext);
+        registry.Register(new(PlayerCommandId.QueuePrevious, "Previous item", "Playback", "P"), _ => _queue?.Previous(), _ => QueueState.CanPrevious);
+        registry.Register(new(PlayerCommandId.QueueNext, "Next item", "Playback", "N"), _ => _queue?.Next(), _ => QueueState.CanNext);
         registry.Register(new(PlayerCommandId.QueueSelect, "Play queue item", "Playback"), p => _queue?.SelectAndPlay(p as string ?? string.Empty), p => p is string token && QueueItems.Any(x => x.Token == token));
         registry.Register(new(PlayerCommandId.QueueMove, "Move queue item", "Playback"), p => { if (p is QueueMove move) _queue?.Move(move.Token, move.DestinationIndex); }, p => p is QueueMove move && QueueItems.Any(x => x.Token == move.Token));
         registry.Register(new(PlayerCommandId.QueueRemove, "Remove queue item", "Playback"), p => _queue?.Remove(p as string ?? string.Empty), p => p is string token && QueueItems.Any(x => x.Token == token));
@@ -267,6 +267,7 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
         InitializeHomeCommands(registry);
         InitializePictureInPictureCommands(registry);
         InitializeMessagesCommand(registry);
+        InitializeHotkeyCommands(registry);
     }
 
     public IPlayerCommandRegistry Registry { get; }
@@ -315,7 +316,7 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
         PlayerCommandId.QueueRepeat => QueueState.Repeat switch { QueueRepeatMode.None => "Repeat item", QueueRepeatMode.CurrentItem => "Repeat all", _ => "Repeat off" },
         PlayerCommandId.QueueShuffle => QueueState.Order == QueueOrder.Random ? "Shuffle off" : "Shuffle on",
         _ when SkipSeconds(command) is int seconds and not 0 => SkipText(seconds),
-        _ => null,
+        _ => HotkeyFeedbackText(command),
     };
 
     /// <summary>Settings › Controls › Mouse: a wheel move over the video. Returns what it did, for the feedback.</summary>
@@ -743,6 +744,7 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
             OnPropertyChanged(nameof(CanSeek));
             (SkipBackwardCommand as RegistryCommand)?.RaiseCanExecuteChanged();
             (SkipForwardCommand as RegistryCommand)?.RaiseCanExecuteChanged();
+            RaiseHotkeyCommands();
             Volume = state.Volume * 100;
             IsMuted = state.IsMuted;
             SyncVolume(state);
@@ -868,6 +870,12 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
     public void OpenDroppedSources(IReadOnlyList<string>? sources)
     {
         if (sources is null || sources.Count == 0) { OpenError = "Drop one local media file to open it."; return; }
+        // As in VLC, a subtitle file dropped on playing media is added to it.
+        if (sources.Count == 1 && IsSubtitleFile(sources[0]) && _mediaControls is not null && PlaybackStatus is PlaybackStatus.Playing or PlaybackStatus.Paused)
+        {
+            ReportExternalTrack(_mediaControls.AttachExternalTrack(MediaTrackKind.Subtitle, sources[0]));
+            return;
+        }
         if (sources.Count == 1) { OpenSource(sources[0], MediaSourceKind.DragDrop); return; }
         _ = OpenMultipleAsync(sources, MediaSourceKind.DragDrop);
     }
@@ -975,6 +983,7 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
         finally { _isUpdatingCapabilities = false; }
         foreach (string property in new[] { nameof(AudioTracks), nameof(SubtitleTracks), nameof(Titles), nameof(Chapters), nameof(IsMediaCapabilitiesLoading), nameof(HasMediaCapabilitiesError), nameof(HasMediaCapabilitiesEmpty), nameof(AreMediaControlsUnavailable), nameof(MediaCapabilitiesError), nameof(AudioDelayMilliseconds), nameof(SubtitleDelayMilliseconds), nameof(CanAdjustDelays) }) OnPropertyChanged(property);
         foreach (RegistryCommand? command in new[] { SelectAudioTrackCommand, SelectSubtitleTrackCommand, SelectTitleCommand, SelectChapterCommand, AdjustAudioDelayCommand, AdjustSubtitleDelayCommand, ResetAudioDelayCommand, ResetSubtitleDelayCommand, AttachExternalAudioCommand, AttachExternalSubtitleCommand }.OfType<RegistryCommand>()) command.RaiseCanExecuteChanged();
+        RaiseHotkeyCommands();
     }
 
     private async Task AttachExternalTrackAsync(MediaTrackKind kind)
@@ -984,10 +993,16 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
         if (string.IsNullOrWhiteSpace(path)) return;
         string extension = Path.GetExtension(path);
         bool valid = kind == MediaTrackKind.Subtitle
-            ? extension is ".srt" or ".ass" or ".ssa" or ".vtt" or ".sub"
+            ? IsSubtitleFile(path)
             : extension is ".mp3" or ".m4a" or ".aac" or ".flac" or ".wav" or ".ogg";
         if (!valid) { MediaControlsNotice = kind == MediaTrackKind.Subtitle ? "Choose a supported subtitle file." : "Choose a supported audio file."; OnPropertyChanged(nameof(HasMediaControlsNotice)); return; }
-        ExternalTrackAttachmentState result = _mediaControls.AttachExternalTrack(kind, path);
+        ReportExternalTrack(_mediaControls.AttachExternalTrack(kind, path));
+    }
+
+    private static bool IsSubtitleFile(string path) => Path.GetExtension(path).ToLowerInvariant() is ".srt" or ".ass" or ".ssa" or ".vtt" or ".sub";
+
+    private void ReportExternalTrack(ExternalTrackAttachmentState result)
+    {
         MediaControlsNotice = result.AcceptedIntoItem && result.PendingUntilNextOpen
             ? "Added for the next media open. It is not a current live track."
             : result.Error ?? "The external track could not be added.";

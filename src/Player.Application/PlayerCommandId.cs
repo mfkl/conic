@@ -71,4 +71,22 @@ public enum PlayerCommandId
     SkipForwardLong,
     // VLC's Messages window: the engine's log, at a chosen verbosity.
     ShowMessages,
+    // VLC 3's hotkeys that take no value, so a key can run them.
+    VolumeUp,
+    VolumeDown,
+    PlaybackFaster,
+    PlaybackSlower,
+    PlaybackNormal,
+    PreviousChapter,
+    NextChapter,
+    NextFrame,
+    AudioDelayDown,
+    AudioDelayUp,
+    SubtitleDelayDown,
+    SubtitleDelayUp,
+    CycleAudioTrack,
+    CycleSubtitleTrack,
+    JumpToTime,
+    OpenFromClipboard,
+    ShowAbout,
 }

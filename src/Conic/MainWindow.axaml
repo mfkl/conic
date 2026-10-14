@@ -98,9 +98,28 @@
                     <MenuItem Header="Speed 2×" ToggleType="Radio" GroupName="VideoMenuSpeed"
                               IsChecked="{Binding PlaybackRate, Mode=OneWay, Converter={x:Static controls:RateEqualsConverter.Instance}, ConverterParameter=2}"
                               Command="{Binding SetPlaybackRateCommand}" CommandParameter="2" />
+                    <MenuItem Header="Faster"
+                              Command="{Binding PlaybackFasterCommand}"
+                              controls:MenuShortcuts.Command="PlaybackFaster" />
+                    <MenuItem Header="Slower"
+                              Command="{Binding PlaybackSlowerCommand}"
+                              controls:MenuShortcuts.Command="PlaybackSlower" />
                     <Separator />
+                    <MenuItem Header="Previous Chapter"
+                              Command="{Binding PreviousChapterCommand}"
+                              controls:MenuShortcuts.Command="PreviousChapter" />
+                    <MenuItem Header="Next Chapter"
+                              Command="{Binding NextChapterCommand}"
+                              controls:MenuShortcuts.Command="NextChapter" />
                     <MenuItem Header="Chapters"
                               Command="{Binding ToggleMediaControlsCommand}" CommandParameter="Chapters" />
+                    <Separator />
+                    <MenuItem Header="Jump to Time…"
+                              Command="{Binding JumpToTimeCommand}"
+                              controls:MenuShortcuts.Command="JumpToTime" />
+                    <MenuItem Header="Next Frame"
+                              Command="{Binding NextFrameCommand}"
+                              controls:MenuShortcuts.Command="NextFrame" />
                 </MenuItem>
                 <MenuItem Header="Video">
                     <MenuItem.Icon><controls:VlcIcon Classes="menuIcon" Icon="{StaticResource Icon.Video}" /></MenuItem.Icon>
@@ -126,6 +145,12 @@
                               controls:MenuShortcuts.Command="ToggleMute">
                         <MenuItem.Icon><controls:VlcIcon Classes="menuIcon" Icon="{StaticResource Icon.VolumeMute}" /></MenuItem.Icon>
                     </MenuItem>
+                    <MenuItem Header="Volume Up"
+                              Command="{Binding VolumeUpCommand}"
+                              controls:MenuShortcuts.Command="VolumeUp" />
+                    <MenuItem Header="Volume Down"
+                              Command="{Binding VolumeDownCommand}"
+                              controls:MenuShortcuts.Command="VolumeDown" />
                     <MenuItem Header="Audio Tracks"
                               Command="{Binding ToggleMediaControlsCommand}" CommandParameter="Audio" />
                 </MenuItem>
@@ -154,6 +179,11 @@
                               Command="{Binding OpenSettingsCommand}"
                               controls:MenuShortcuts.Command="OpenSettings">
                         <MenuItem.Icon><controls:VlcIcon Classes="menuIcon" Icon="{StaticResource Icon.Preferences}" /></MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="About Conic"
+                              Command="{Binding ShowAboutCommand}"
+                              controls:MenuShortcuts.Command="ShowAbout">
+                        <MenuItem.Icon><controls:VlcIcon Classes="menuIcon" Icon="{StaticResource Icon.Info}" /></MenuItem.Icon>
                     </MenuItem>
                 </MenuItem>
                 <MenuItem Header="Playlist">
@@ -185,6 +215,11 @@
                     <MenuItem Header="Open Network Stream…"
                               Command="{Binding OpenUrlCommand}"
                               controls:MenuShortcuts.Command="OpenUrl">
+                        <MenuItem.Icon><controls:VlcIcon Classes="menuIcon" Icon="{StaticResource Icon.Link}" /></MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="Open Location from Clipboard"
+                              Command="{Binding OpenFromClipboardCommand}"
+                              controls:MenuShortcuts.Command="OpenFromClipboard">
                         <MenuItem.Icon><controls:VlcIcon Classes="menuIcon" Icon="{StaticResource Icon.Link}" /></MenuItem.Icon>
                     </MenuItem>
                     <MenuItem Header="Load Playlist…"
@@ -481,9 +516,10 @@
         <!-- The More menu (design 6062:13354), shared by the player's and
              Home's title bar "…" buttons. The design's groups: opening media
              (with Open Recent), then the player's own commands (not in the
-             design's menu; kept), then Keyboard Shortcuts and Settings.
+             design's menu; kept), then Keyboard Shortcuts, Settings and
+             About (the design's "About VLC", Shift+F1, as About Conic).
              Options the app cannot do are left out (D2): Open Disc, Open
-             Capture Device, Convert, Profile, Customize Player, About.
+             Capture Device, Convert, Profile, Customize Player.
              Open Recent shows its page in place of the options (Right or
              Enter; Left, Backspace, Escape or the back row return). Arrow
              keys move between options (OnOpenMenuKeyDown); choosing one
@@ -592,6 +628,10 @@
                                           Icon="{StaticResource Icon.Settings}"
                                           controls:MenuShortcuts.Command="OpenSettings"
                                           Command="{Binding OpenSettingsCommand}" />
+                        <controls:MenuRow Content="About Conic"
+                                          Icon="{StaticResource Icon.Info}"
+                                          controls:MenuShortcuts.Command="ShowAbout"
+                                          Command="{Binding ShowAboutCommand}" />
                     </StackPanel>
 
                     <!-- Open Recent: the recent media, each with a remove
@@ -957,6 +997,115 @@
                                Foreground="{DynamicResource PlayerErrorText}"
                                TextWrapping="Wrap"
                                AutomationProperties.Name="URL open error" />
+                </StackPanel>
+            </StackPanel>
+        </controls:ModalDialog>
+
+        <!-- Jump to Time (VLC 3's Ctrl+T). The design has no frame for it:
+             it is Open Network Stream's dialog (shell, heading, hint, field,
+             Cancel and the action), 480 wide. Enter jumps; Escape, Cancel,
+             close and the backdrop dismiss it. -->
+        <controls:ModalDialog x:Name="JumpPanel"
+                              Grid.RowSpan="3"
+                              ZIndex="30"
+                              IsVisible="False"
+                              Classes="fit narrow"
+                              Background="{DynamicResource Vlc.Bg.A3}"
+                              CloseRequested="OnJumpDialogCloseRequested"
+                              AutomationProperties.Name="Jump to Time">
+            <controls:ModalDialog.Header>
+                <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Classes="dialogTitle"
+                               Margin="10,0,12,0"
+                               Text="Jump to Time" />
+                    <Button Grid.Column="1"
+                            Classes="icon dialogClose"
+                            Click="OnJumpCancel"
+                            ToolTip.Tip="Close (Escape)"
+                            AutomationProperties.Name="Close Jump to Time">
+                        <controls:VlcIcon Width="24" Height="24"
+                                          Icon="{StaticResource Icon.Close}" />
+                    </Button>
+                </Grid>
+            </controls:ModalDialog.Header>
+            <controls:ModalDialog.Footer>
+                <Grid ColumnDefinitions="Auto,*,Auto">
+                    <Button Classes="secondary dialogAction"
+                            Content="Cancel"
+                            Click="OnJumpCancel"
+                            AutomationProperties.Name="Cancel jump" />
+                    <Button x:Name="JumpSubmitButton"
+                            Grid.Column="2"
+                            Classes="primary dialogAction"
+                            Content="Go"
+                            Click="OnJumpSubmit"
+                            AutomationProperties.Name="Jump to this time" />
+                </Grid>
+            </controls:ModalDialog.Footer>
+            <StackPanel Classes="dialogBody">
+                <StackPanel>
+                    <TextBlock Classes="dialogHeading" Text="Time" />
+                    <TextBlock x:Name="JumpHint" Classes="dialogHint" />
+                </StackPanel>
+                <StackPanel Spacing="8">
+                    <TextBox x:Name="JumpTextBox"
+                             Classes="dialogField"
+                             KeyDown="OnJumpTextKeyDown"
+                             PlaceholderText="e.g., 1:23:45"
+                             AutomationProperties.Name="Time to jump to" />
+                    <TextBlock x:Name="JumpError"
+                               IsVisible="False"
+                               Foreground="{DynamicResource PlayerErrorText}"
+                               TextWrapping="Wrap"
+                               AutomationProperties.Name="Jump error" />
+                </StackPanel>
+            </StackPanel>
+        </controls:ModalDialog>
+
+        <!-- About (the design's More menu "About VLC", Shift+F1). The design
+             has no frame for it: the dialog shell with the cone, the name,
+             what Conic is, and the credits, 480 wide. -->
+        <controls:ModalDialog x:Name="AboutPanel"
+                              Grid.RowSpan="3"
+                              ZIndex="30"
+                              IsVisible="False"
+                              Classes="fit narrow"
+                              Background="{DynamicResource Vlc.Bg.A3}"
+                              CloseRequested="OnAboutDialogCloseRequested"
+                              AutomationProperties.Name="About Conic">
+            <controls:ModalDialog.Header>
+                <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Classes="dialogTitle"
+                               Margin="10,0,12,0"
+                               Text="About Conic" />
+                    <Button x:Name="AboutCloseButton"
+                            Grid.Column="1"
+                            Classes="icon dialogClose"
+                            Click="OnAboutClose"
+                            ToolTip.Tip="Close (Escape)"
+                            AutomationProperties.Name="Close About">
+                        <controls:VlcIcon Width="24" Height="24"
+                                          Icon="{StaticResource Icon.Close}" />
+                    </Button>
+                </Grid>
+            </controls:ModalDialog.Header>
+            <StackPanel Classes="dialogBody" Margin="20,22,20,24">
+                <StackPanel Orientation="Horizontal" Spacing="14">
+                    <controls:VlcCone Width="40" Height="40" />
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Classes="dialogHeading" Text="Conic" />
+                        <TextBlock x:Name="AboutVersion" Classes="dialogHint" Margin="0,2,0,0" />
+                    </StackPanel>
+                </StackPanel>
+                <TextBlock Classes="dialogHint"
+                           Margin="0"
+                           Text="A modern copy of VLC 3's desktop player: VLC 3's engine with a new interface written with Avalonia. Conic is a one-off experiment and will not be maintained. It is not made or endorsed by VideoLAN; to watch videos, use VLC." />
+                <Border Classes="dialogDivider" />
+                <StackPanel Spacing="6">
+                    <TextBlock Classes="dialogHint" Margin="0" Text="Design: VLC Redesign by Juxtopposed, from Figma Community." />
+                    <TextBlock x:Name="AboutEngine" Classes="dialogHint" Margin="0" />
+                    <TextBlock Classes="dialogHint" Margin="0" Text="Interface: Avalonia. Plugins: VLCLR." />
+                    <TextBlock Classes="dialogHint" Margin="0" Text="License: GNU GPL, version 2 or later. VLC is a trademark of VideoLAN." />
                 </StackPanel>
             </StackPanel>
         </controls:ModalDialog>

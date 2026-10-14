@@ -53,7 +53,8 @@ internal sealed partial class PlayerPresentationViewModel
         registry.Register(new(PlayerCommandId.OpenFromClipboard, "Open location from clipboard", "Media", "Ctrl+V"), _ => _ = OpenFromClipboardAsync(), _ => _clipboard is not null);
         registry.Register(new(PlayerCommandId.ShowAbout, "About", "Window", "Shift+F1"), _ => AboutRequested?.Invoke(this, EventArgs.Empty));
         registry.Register(new(PlayerCommandId.ToggleABLoop, "A-B loop", "Playback", "Shift+L"), _ => ToggleABLoop(), _ => CanSeek && _duration > TimeSpan.Zero);
-        registry.Register(new(PlayerCommandId.ToggleMinimalInterface, "Hide UI", "Window", "Ctrl+H"), _ => MinimalInterfaceRequested?.Invoke(this, EventArgs.Empty));
+        // Cmd+H hides the app on macOS, so Hide UI takes Cmd+Shift+H there.
+        registry.Register(new(PlayerCommandId.ToggleMinimalInterface, "Hide UI", "Window", OperatingSystem.IsMacOS() ? "Ctrl+Shift+H" : "Ctrl+H"), _ => MinimalInterfaceRequested?.Invoke(this, EventArgs.Empty));
         registry.Register(new(PlayerCommandId.ShowHelp, "Help", "Window", "F1"), _ => HelpRequested?.Invoke(this, EventArgs.Empty));
         registry.Register(new(PlayerCommandId.SortQueue, "Sort queue by name", "Playback"), _ => SortQueue(), _ => _queue is not null && QueueItems.Count > 1);
         // VLC 3's X: the next program of a multi-program stream (DVB, MPEG-TS).

@@ -118,6 +118,16 @@ $shortVersion = ($Version -split '-')[0]
 <dict>
   <key>CFBundleDevelopmentRegion</key><string>en</string>
   <key>CFBundleDisplayName</key><string>Conic</string>
+  <key>CFBundleDocumentTypes</key>
+  <array>
+    <dict>
+      <key>CFBundleTypeName</key><string>Media</string>
+      <key>CFBundleTypeRole</key><string>Viewer</string>
+      <key>LSHandlerRank</key><string>Alternate</string>
+      <key>LSItemContentTypes</key>
+      <array><string>public.movie</string><string>public.audio</string><string>public.mpeg-2-transport-stream</string><string>org.matroska.mkv</string></array>
+    </dict>
+  </array>
   <key>CFBundleExecutable</key><string>Conic</string>
   <key>CFBundleIconFile</key><string>AppIcon</string>
   <key>CFBundleIdentifier</key><string>$BundleIdentifier</string>

@@ -1,51 +1,91 @@
 # Conic
 
-## Migration in brief
+Conic is a modern copy of VLC 3's desktop player. Media plays through VLC
+3.0.24's own engine, and a new interface, written in C# with
+[Avalonia](https://avaloniaui.net/), replaces VLC's Qt one. It runs on Windows
+and macOS. On Linux the engine runs, but video output isn't written yet.
 
-This project rebuilds VLC desktop playback workflows in C# and Avalonia while
-retaining the VLC 3 engine through VLCLR. VLC 3.0.23 (December 2025) is the
-pre-contest source baseline; later VLC 4 UI references guide the appearance.
-This is a UI rewrite, with a deliberately smaller scope than the complete VLC
-application.
+> [!NOTE]
+> Conic is a one-off experiment. It is not made or endorsed by VideoLAN, it
+> will not be maintained, and issues and pull requests may go unanswered. To
+> watch videos, use [VLC](https://www.videolan.org/vlc/).
 
-The main technical challenge was presenting hardware-decoded video with
-ordinary Avalonia controls layered over it. On Windows, a C# Native AOT VLC
-output plugin converts decoded D3D11 surfaces into a shared texture imported
-by Avalonia. Recorded Intel Iris Xe checks show hardware decoding with no CPU
-video-frame uploads on that path. Queue, tracks, history/resume, preferences
-and PiP use shared commands and state; native resources stay behind the
-playback/backend boundary.
+<!-- SCREENSHOT: hero, Home and the player side by side, Dark, 1920x1080 -->
 
-The most useful lesson so far: proving a native frame renders is only the
-start. Surface ownership, stale callbacks, stop/reopen and package discovery
-need explicit checks. The repository includes managed tests and native
-smokes, now runnable against a self-contained Windows package outside the
-source tree. Windows has implemented playback; macOS playback is implemented
-and checked on CI's macOS runners, pending qualification on a real Mac; Linux
-native playback remains unfinished.
+## What it is
 
-AI-assisted implementation and validation were used. Total human effort has
-not yet been measured. [Current evidence and remaining work](docs/contest/STATUS.md)
-separate completed checks from release requirements.
-[Before/after captures](docs/contest/COMPARISON.md) show the current Windows
-result. Public downloads and final release qualification are still pending.
+Conic keeps VLC 3 as it is (the same engine, codecs, filters and options) and
+rebuilds the desktop app around it:
+
+- **Home**, with recent media, favorites and saved positions, in a grid or a
+  list, and a floating mini player while something plays.
+- **The player**, with a docked control bar and side panels for the queue,
+  audio, video, subtitles, chapters and media information.
+- **Picture in picture**, an always-on-top compact player.
+- **Settings**, in twelve pages. Each row takes effect, and a tag says when:
+  **Live**, at the **Next open**, or after a **Restart**.
+- **Messages**, VLC's log, live, as in VLC.
+- **Dark and Light themes**, accent colors and a compact density.
+
+<!-- SCREENSHOT: the player with the queue panel open -->
+<!-- SCREENSHOT: Settings, Audio page with the equalizer -->
+<!-- SCREENSHOT: picture in picture over another window -->
+
+Most of what you use VLC 3 for every day is there. Of 183 VLC 3 features
+compared, 57 work the same, 44 work differently or in part, 52 are missing and
+30 were left out on purpose. Missing are, among others, opening files from the
+command line or as the default player, snapshots, and network protocols other
+than HTTP(S). Disc menus, streaming and conversion,
+capture devices, skins and extensions were left out.
+[Feature parity with VLC 3](docs/FEATURE_PARITY.md) compares the two, feature by
+feature.
+
+## How it's built
+
+- **Avalonia 12** draws the whole interface, from one C# codebase for Windows,
+  macOS and Linux.
+- **VLC 3.0.24, through libvlccore.** Conic doesn't go through the public
+  LibVLC API. It loads libvlccore, VLC's core library, and starts each core
+  with the same internal entry points LibVLC is built on
+  (`libvlc_InternalCreate`, `libvlc_InternalInit`, `libvlc_InternalAddIntf`).
+  That lets it do what VLC's own interfaces do from inside the core: pass each
+  core its options, change variables on the playing input and audio output,
+  and load its own plugins.
+- **[VLCLR](https://github.com/mfkl/vlclr/tree/3.x)**, a C# framework for
+  writing VLC 3 plugins, compiled with Native AOT. Conic's control interface
+  and its video output are VLCLR plugins, so there is no native C shim.
+- **Video inside Avalonia's composition.** The video output plugin hands
+  decoded frames to Avalonia as GPU textures: a D3D11 shared texture on
+  Windows, an IOSurface on macOS. The controls draw over the video in the same
+  window, with hardware decoding on and no copy through the CPU on the
+  validated paths.
+
+## Design credit
+
+The interface, its icons and its Settings pages follow the
+[VLC Redesign](https://www.figma.com/community/file/1691465999134370980/vlc-redesign)
+Figma Community file by [Juxtopposed](https://www.youtube.com/@juxtopposed),
+presented in the video
+[I Redesigned VLC After 25 Years](https://www.youtube.com/watch?v=ERFeOgqk324).
+The design is Juxtopposed's work, shared on Figma Community, and Conic uses it
+with credit. Where the app differs from the design, the difference is ours.
 
 ## Install
 
 Preview builds are portable archives on the
-[Releases](https://github.com/mfkl/conic/releases) page. Each one
-bundles VLC 3.0.24, so no separate VLC install is needed. The builds are not
-signed, so each OS warns on the first launch.
+[Releases](https://github.com/mfkl/conic/releases) page. Each one bundles VLC
+3.0.24, so no separate VLC install is needed. The builds are not signed, so
+each OS warns on the first launch.
 
 - **Windows x64:** unzip `Conic-<version>-win-x64.zip` anywhere and run
   `Conic.exe`. If SmartScreen stops it, choose **More info**, then
   **Run anyway**.
 - **macOS:** unzip `Conic-<version>-osx-<arch>.zip` (`arm64` for Apple
-  silicon, `x64` for Intel) and move `Conic.app` to Applications. On
-  the first launch macOS refuses to open it; open **System Settings > Privacy
-  & Security** and choose **Open Anyway**.
-- **Linux x64:** not available yet, because video output on Linux is still
-  being written.
+  silicon, `x64` for Intel) and move `Conic.app` to Applications. On the
+  first launch macOS refuses to open it; open **System Settings > Privacy &
+  Security** and choose **Open Anyway**.
+- **Linux x64:** not available, because video output on Linux isn't written
+  yet.
 
 To remove the app, delete its folder (Windows) or the app (macOS). Settings
 and history stay in your user profile.
@@ -57,83 +97,63 @@ As in VLC, **Messages** shows the engine's log live: press **Ctrl+Shift+M**
 Settings > Messages**), the macOS **Window** menu or **Settings > Advanced**.
 Set **Verbosity** to **Debug**, reproduce the problem (opening the media again
 if it fails to open), then **Save…** the log and attach it to your report.
+Remember that Conic is not maintained.
 
-## Windows review package
+## Platform status
 
-Build a local portable ZIP with PowerShell 7 and the pinned official VLC 3.0.24
-runtime, which `eng/get-vlc.ps1` downloads from VideoLAN and verifies against
-the SHA-256 in `eng/versions.json`:
-
-```powershell
-./eng/package.ps1 -VlcDirectory (./eng/get-vlc.ps1)
-./eng/test-package.ps1 -Archive <path-to-zip> -Media <path-to-h264-fixture> -Cycles 25
-```
-
-Each build creates a new folder under `artifacts/packages` with the ZIP,
-checksums, manifest and logs. Package tests extract outside the repository and
-run the included executable with isolated profiles and no development runtime
-override. CI builds the same ZIP, plus the macOS ZIPs, on pushes to `main` and
-on `v*` tags, and publishes them as a GitHub release (see the [CI guide](docs/CI.md#releases)). [Quick start](docs/WINDOWS_QUICK_START.md) ·
-[Dependency/distribution status](docs/contest/DEPENDENCIES.md)
-
-An early modern Avalonia desktop UI for VLC 3. The Windows video path uses a
-pure-C# Native AOT VLC `vout display` plugin and a keyed-mutex D3D11 shared
-texture, allowing video and Avalonia controls to live in the same composition
-tree without child-window airspace limitations.
-
-The authoritative architecture boundary is recorded in
-[`docs/rfc/0001-port-boundaries.md`](docs/rfc/0001-port-boundaries.md), and the
-pinned native/framework inputs are recorded in [`eng/versions.json`](eng/versions.json).
-The [CI workflow](https://github.com/mfkl/conic/actions/workflows/ci.yml)
-runs Core tests across all three desktop OSes and full Windows build/test/AOT jobs.
-The [CI guide](docs/CI.md) documents coverage.
-
-The VLC 4 UI fidelity work covers
-the visual redesign in Avalonia while keeping VLCLR/VLC 3: Playback and the
-Home/navigation shell, PiP and Settings are implemented and qualified on Windows.
-The [integration report](docs/WINDOWS_UI_INTEGRATION_2026-09-10.md) records the
-passing checks, captures and remaining visual/platform reviews.
-It includes the local VLC master source map and visual acceptance criteria.
-The [September 10 Playback review](docs/PLAYBACK_REVIEW_2026-09-10.md) records
-the latest implementation, validation results, captures and review launcher.
-
-## Current state
-
-| Platform | Playback | Hosted CI |
+| Platform | Playback | Checked on |
 | --- | --- | --- |
-| Windows x64 | D3D11 hardware decoding and GPU presentation implemented | Full solution tests in Debug/Release; Release Native AOT publish |
-| Linux x64 | Engine runs on the distribution's VLC 3 (queue, transport, tracks, lifecycle); GPU video output still to be implemented | App build, managed UI tests, Core tests, and engine smokes against Ubuntu's VLC |
-| macOS arm64/x64 | VideoToolbox decoding and IOSurface presentation implemented; qualified on an M1 Pro | App build, managed UI tests, Core tests; engine, IOSurface and window smokes against VLC 3.0.24 on arm64 and x64 runners |
+| Windows x64 | D3D11 hardware decoding, GPU presentation, CPU fallback | Intel Iris Xe; 14-case package qualification |
+| macOS arm64/x64 | VideoToolbox decoding, IOSurface presentation | M1 Pro; CI's arm64 and x64 runners |
+| Linux x64 | Engine only (queue, transport, tracks, lifecycle); no video output yet, so the app reports playback as unavailable | CI, against Ubuntu's VLC 3 |
 
-Hardware decoding and GPU presentation are required for the Linux/macOS ports.
-On Linux the engine is native, but the app still reports playback as
-unavailable until the GPU video output exists.
+Windows checks cover H.264 (NV12) and HEVC Main 10 (P010) hardware decoding,
+software decoding uploaded to the GPU, and the CPU bitmap fallback. Subtitles
+are rendered by VLC and drawn above the video, so they also show with hardware
+decoding. Multi-GPU switching, sleep and resume, and styled ASS or image
+subtitles are not qualified.
 
-- Pure C#; no native C shim.
-- VLC 3 internal-core playback through [VLCLR](https://github.com/mfkl/vlclr/tree/3.x),
-  a C# VLC plugin framework, included as a git submodule.
-- D3D11 shared-texture transport from the managed vout to Avalonia.
-- Public Avalonia `ICompositionGpuInterop` import and
-  `CompositionSurfaceVisual` presentation.
-- Same-adapter D3D11 video-processor conversion from hardware-decoded NV12 or
-  P010 into the shared BGRA composition texture, with zero CPU frame uploads
-  on the validated hardware paths.
-- CPU BGRA fallback when the active Avalonia backend cannot import D3D11
-  keyed-mutex images.
-- Cross-device and real-compositor smoke modes.
-- An engine-neutral command/state contract with generation-safe snapshots.
-- Working local/file-folder/URL opening, queue controls, tracks and timing,
-  persistent settings, recent/resume history, and an optional no-scan library.
+## Avalonia Port Challenge
 
-Windows qualification covers H.264/NV12 and HEVC Main 10/P010 hardware decode
-on Intel Iris Xe, plus software-BGRA GPU upload and CPU-bitmap fallback. See
-the composition document for measured evidence and explicit coverage limits.
+Conic is an entry in the
+[Avalonia Port Challenge](https://avaloniaui.net/blog/avalonia-port-challenge).
+The application ported is VLC's desktop player; VLC 3.0.23 (December 2025) is
+the pre-contest baseline.
 
-## Repository layout
+**What was migrated.** VLC 3's everyday desktop workflows: opening files,
+folders and network streams, the queue, transport, tracks, subtitles and
+delays, video adjustments, media information, history and resume, picture in
+picture, the preferences that matter for playback, and VLC's log. The Qt
+widgets were not translated. The workflows were rebuilt as Avalonia views over
+an engine contract, with VLC 3's core underneath.
 
-VLCLR, the C# framework for VLC plugins that the app and the Native AOT vout
-are built on, is a git submodule at `external/vlclr`, tracking the `3.x` branch
-of [mfkl/vlclr](https://github.com/mfkl/vlclr/tree/3.x). That branch also holds
+**The hard part** was video. VLC normally draws into its own native window,
+which Avalonia controls can't sit on top of. Conic's video output is a C# VLC
+plugin that passes decoded GPU frames to Avalonia's compositor, so video is
+one more visual in the window. Proving a frame renders was only the start:
+surface ownership, stale callbacks, stopping and reopening, and package
+discovery each needed their own checks.
+
+**Settings that are real.** The engine rows map to VLC 3 options or
+variables, rows VLC 3 can't honor in this app were dropped rather than shown,
+and smoke tests play real media to check the effect: the equalizer is measured
+on the audio output, network options against a local server.
+
+**Tests.** 557 unit tests, and about 40 smoke tests that drive the real app
+with VLC on Windows and macOS: playback paths, every default shortcut, the
+queue, menus, Settings and picture in picture.
+
+AI assistance (Claude Code) was used for implementation and testing.
+[The migration write-up](docs/WRITEUP.md) ·
+[Before and after captures](docs/contest/COMPARISON.md) ·
+[Evidence and status](docs/contest/STATUS.md)
+
+## Building from source
+
+### Repository layout
+
+VLCLR is a git submodule at `external/vlclr`, tracking the `3.x` branch of
+[mfkl/vlclr](https://github.com/mfkl/vlclr/tree/3.x). That branch also holds
 the VLC 3 import library and the native layout probe. The pinned commit is
 recorded in [`eng/versions.json`](eng/versions.json). Clone with submodules:
 
@@ -145,9 +165,13 @@ git submodule update --init
 
 GitHub's "Download ZIP" leaves the submodule out; clone instead.
 
-## Build and run
+The architecture boundary is recorded in
+[`docs/rfc/0001-port-boundaries.md`](docs/rfc/0001-port-boundaries.md), and the
+pinned native and framework inputs in [`eng/versions.json`](eng/versions.json).
 
-Windows x64 playback development requires PowerShell 7, .NET 10 (CI pins SDK
+### Build and run
+
+Windows x64 development requires PowerShell 7, .NET 10 (CI pins SDK
 10.0.102), the Visual Studio C++ build tools and Windows SDK for Native AOT, and
 the VLC 3 runtime pinned in `eng/versions.json`. `eng/get-vlc.ps1` downloads it
 to `artifacts/dependencies/vlc-3.0.24`, where development runs find it.
@@ -181,122 +205,59 @@ dotnet run --project src/Conic -- --engine-smoke --cycles=25
 ```
 
 Override local paths with `VLCLR_ROOT`, `VLC_DIRECTORY`, and `CONIC_TEST_MEDIA`.
-Installed applications can discover VLC in an adjacent `vlc` directory without
-either source checkout. `VLC_DIRECTORY` takes precedence and must point to the
-directory containing the native VLC libraries. The default plugin location is
-`plugins/video_output` beneath that directory.
-
-On Linux x64, `eng/test-linux-engine.ps1 -Media <clip>` builds the plugin and
-app and runs the engine smokes against the installed VLC 3 packages
-(`libvlccore9`, `libvlc5`, `vlc-plugin-base`). The GPU video output, and so
-playback in the app, is still unimplemented on Linux.
+Installed applications find VLC in an adjacent `vlc` directory.
+`VLC_DIRECTORY` takes precedence and must point to the directory containing the
+native VLC libraries. The default plugin location is `plugins/video_output`
+beneath that directory. `VLCLR_ROOT` only points development runs at a
+directory containing the default smoke media (`test_01.mkv`).
 
 On macOS, `eng/get-vlc.ps1` downloads the pinned VLC 3.0.24 DMG (an installed
 `/Applications/VLC.app` also works), `eng/test-macos.ps1 -Media <clip> [-Window]`
 runs the engine, IOSurface and window smokes, and `eng/package-macos.ps1`
 builds an ad hoc signed `Conic.app`. See
-[the cross-platform status and qualification plan](docs/CROSS_PLATFORM.md).
+[the cross-platform status](docs/CROSS_PLATFORM.md).
 
-`VLCLR_ROOT` only points development runs at a directory containing the default
-smoke media (`test_01.mkv`); it no longer affects the build or the runtime. The app targets the VLC 3 internal ABI. The earlier VLC 4 migration
-experiment is preserved in [the compatibility record](docs/VLCLR_MAIN_MIGRATION.md).
+On Linux x64, `eng/test-linux-engine.ps1 -Media <clip>` builds the plugin and
+app and runs the engine smokes against the installed VLC 3 packages
+(`libvlccore9`, `libvlc5`, `vlc-plugin-base`).
 
-See [docs/D3D11_COMPOSITION.md](docs/D3D11_COMPOSITION.md) for the validated
-implementation, qualification commands, measured counters, and remaining work.
+### Packages
 
-## Tests and CI
+Build a portable Windows ZIP with the pinned VLC runtime, which
+`eng/get-vlc.ps1` downloads from VideoLAN and checks against the SHA-256 in
+`eng/versions.json`, then qualify it outside the repository:
 
-The eighteen-job GitHub Actions matrix runs on pushes and pull requests:
+```powershell
+./eng/package.ps1 -VlcDirectory (./eng/get-vlc.ps1)
+./eng/test-package.ps1 -Archive <path-to-zip> -Media <path-to-h264-fixture> -Cycles 25
+```
 
-- Core: 72 tests per configuration on Windows, Ubuntu and macOS.
-- Hosted graphics diagnostics in Release jobs: launch the compositor probe and
-  retain capability reports. Linux uses Xvfb; this does not qualify hardware playback.
-- Native ABI: compile and execute VLCLR's layout probe against the pinned VLC
-  source headers using the native Windows, Linux and macOS compilers.
-- Desktop app: build the app and run 157 managed UI tests per configuration on
-  Ubuntu and macOS.
-- Full Windows: all managed tests per configuration, plus the Release
-  Windows x64 Native AOT plugin publish.
-- Linux engine: queue, capability and 25-cycle lifecycle smokes against
-  Ubuntu's VLC 3 with a generated clip (dummy video output, software decoding).
-- macOS arm64 and x64: engine, IOSurface video output and window smokes
-  against the pinned VLC 3.0.24 with a generated clip.
+CI builds the same ZIP, plus the macOS ZIPs, on pushes to `main` and on `v*`
+tags, and publishes them as a GitHub release (see the
+[CI guide](docs/CI.md#releases)).
 
-All eight jobs passed for commit `f709051` in
-[the initial successful hosted run](https://github.com/mfkl/conic/actions/runs/34602849422).
-Run the same checks locally with PowerShell 7:
+### Tests
 
 ```powershell
 ./eng/test.ps1 -Scope Core -Configuration Release
 ./eng/test.ps1 -Scope Desktop -Configuration Release
 ./eng/test.ps1 -Scope Windows -Configuration Debug
-./eng/test.ps1 -Scope Windows -Configuration Release
 ```
 
-Core tests need neither VLCLR nor native VLC. Desktop tests do not load
-native VLC or open a graphical session. Hosted runners do not qualify hardware
-decoding or compositor behavior; those checks run separately on GPU machines.
-See [CI setup](docs/CI.md) and [platform qualification](docs/CROSS_PLATFORM.md).
-The [video backend guide](docs/VIDEO_BACKENDS.md) describes compositor ownership,
-attachment lifecycle, and the remaining native work for Linux/macOS.
-The [target qualification guide](docs/TARGET_QUALIFICATION.md) explains native
-layout checks and `--graphics-probe`, which queries the compositor without VLC.
-
-## Using the player
-
-- Start on Home to browse recent media, favorites and saved positions, with
-  search and grid/list views. `Alt+Home` returns there during playback; the
-  now-playing strip returns to the same playback session.
-- Use **Picture in picture** in More or `Ctrl+Shift+P` for a compact always-on-top
-  player. Escape restores the previous window and route; closing PiP exits VLC.
-- Preferences uses a searchable full page with eight categories. Changes save
-  automatically; Escape returns to Home or Playback. Advanced opens Media
-  information, and Audio/Subtitles link to the current media controls.
-- Open a file with `Ctrl+O`, a URL with `Ctrl+L`, the queue with `Ctrl+J`, the
-  Library with `Ctrl+Shift+L`, and Settings with `Ctrl+,`.
-- The Library is deliberately lightweight: it presents recent media, explicit
-  favorites, and saved resume positions from the same local atomic history
-  document. It never scans folders or disks. Add a favorite from the Library;
-  use **Clear library** to remove favorites, recents, and all resume positions.
-  Each recent, favorite, and saved-position entry also has its own keyboard-accessible remove action.
-- Turning off **Remember recent media** or **Remember resume history** in
-  Settings clears that respective history immediately. Favorites are explicit
-  library entries and are removed by **Clear library** or individually.
-- Keyboard focus returns to the invoking control after drawers and overlays
-  close. The Appearance page includes **Reduce motion**, which keeps playback
-  chrome visible and removes the nonessential play-button motion.
-
-The accessible controls expose names and hints for playback, timeline and
-volume adjustment, fullscreen, settings, queue, and Library actions. The dark
-surface uses neutral white controls with a restrained orange playback accent.
-
-## Qualification limits
-
-UI layout is exercised at 1280 and 480 logical pixels, plus deterministic
-100%, 125%, and 150% DIP-scale policy tests. The real Windows composition
-smokes verify fullscreen, reopen, clean shutdown, and safe forced
-adapter-mismatch CPU fallback. Physical multi-monitor/multi-GPU switching,
-OS suspend/resume, and arbitrary display scaling cannot be simulated here and
-remain unqualified. Subtitles are rendered by VLC and drawn as an overlay above
-the video, so they also show with hardware decoding. Text subtitles were
-checked by hand on Windows; styled ASS and image subtitles are not yet
-qualified.
-
-## Design credit
-
-The interface, its icons and its Settings pages follow the
-[VLC Redesign](https://www.figma.com/community/file/1691465999134370980/vlc-redesign)
-Figma Community file by [Juxtopposed](https://www.youtube.com/@juxtopposed),
-presented in the video
-[I Redesigned VLC After 25 Years](https://www.youtube.com/watch?v=ERFeOgqk324).
-It is used under the file's Figma Community license. Where the app differs
-from the design, the difference is ours.
+Core tests need neither VLCLR nor native VLC. Desktop tests do not load native
+VLC or open a window. Hosted CI runners don't qualify hardware decoding or
+compositor behavior; those checks run on GPU machines. See
+[CI setup](docs/CI.md), [video backends](docs/VIDEO_BACKENDS.md),
+[D3D11 composition](docs/D3D11_COMPOSITION.md) and
+[target qualification](docs/TARGET_QUALIFICATION.md).
 
 ## License
 
-Conic is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by the Free
-Software Foundation, either version 2 of the License, or (at your option) any
-later version. It is distributed in the hope that it will be useful, but
-WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-FITNESS FOR A PARTICULAR PURPOSE. See [LICENSE](LICENSE) for the full text.
+Conic is free software: you can redistribute it and/or modify it under the
+terms of the GNU General Public License as published by the Free Software
+Foundation, either version 2 of the License, or (at your option) any later
+version. It is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE. See [LICENSE](LICENSE) for the full text.
+
+VLC is a trademark of VideoLAN.

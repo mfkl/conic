@@ -15,8 +15,7 @@ internal sealed class FileMediaHistoryStorage : IMediaHistoryStorage
         {
             using (FileStream stream = new(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None))
             using (StreamWriter writer = new(stream)) { writer.Write(content); writer.Flush(); stream.Flush(true); }
-            if (File.Exists(_path)) File.Replace(temporary, _path, null);
-            else File.Move(temporary, _path);
+            AtomicFile.Commit(temporary, _path);
         }
         finally { if (File.Exists(temporary)) try { File.Delete(temporary); } catch (Exception e) when (e is IOException or UnauthorizedAccessException) { } }
     }

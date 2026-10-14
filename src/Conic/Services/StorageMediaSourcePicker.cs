@@ -26,26 +26,32 @@ internal sealed class StorageMediaSourcePicker(IStorageProvider storageProvider)
     }
 #endif
 
-    public async Task<string?> PickMediaAsync(CancellationToken cancellationToken = default)
+    // VLC 3's "Media Files" filter, shortened to the common formats.
+    private static readonly FilePickerFileType MediaFiles = new("Media Files")
+    {
+        Patterns = new[]
+        {
+            "*.mp4", "*.m4v", "*.mkv", "*.webm", "*.avi", "*.mov", "*.wmv", "*.flv", "*.mpg", "*.mpeg", "*.ts", "*.m2ts", "*.mts", "*.3gp", "*.ogv", "*.vob",
+            "*.mp3", "*.flac", "*.wav", "*.ogg", "*.opus", "*.m4a", "*.aac", "*.wma", "*.ac3", "*.mka",
+        },
+    };
+
+    public async Task<string?> PickMediaAsync(CancellationToken cancellationToken = default) =>
+        (await PickMediaFilesAsync(cancellationToken)).FirstOrDefault();
+
+    public async Task<IReadOnlyList<string>> PickMediaFilesAsync(CancellationToken cancellationToken = default)
     {
 #if SMOKE
-        if (Scripted("media", out string? scripted)) return scripted;
+        if (Scripted("media", out string? scripted)) return scripted is null ? [] : [scripted];
 #endif
         FilePickerOpenOptions options = new()
         {
-            Title = "Open Media File",
-            AllowMultiple = false,
-            FileTypeFilter = new[]
-            {
-                new FilePickerFileType("Media Files")
-                {
-                    Patterns = new[] { "*.mp4", "*.mkv", "*.avi", "*.mov", "*.mp3", "*.flac" },
-                },
-                FilePickerFileTypes.All,
-            },
+            Title = "Open Media Files",
+            AllowMultiple = true,
+            FileTypeFilter = new[] { MediaFiles, FilePickerFileTypes.All },
         };
         IReadOnlyList<IStorageFile> result = await storageProvider.OpenFilePickerAsync(options);
-        return result.Count == 0 ? null : result[0].Path.LocalPath;
+        return result.Select(file => file.Path.LocalPath).ToArray();
     }
 
     public async Task<string?> PickFolderAsync(CancellationToken cancellationToken = default)

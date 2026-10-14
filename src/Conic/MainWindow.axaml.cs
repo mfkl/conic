@@ -71,6 +71,8 @@ public partial class MainWindow : Window
         DataContext = _presentation;
         HomeScreen.MoreRequested += (_, _) => OnOpenOptions(null, new RoutedEventArgs());
         OpenMenu.AddHandler(Button.ClickEvent, OnOpenMenuClick);
+        // Tunnel: the multi-line field would take Enter for a new line first.
+        UrlTextBox.AddHandler(KeyDownEvent, OnUrlTextKeyDown, RoutingStrategies.Tunnel);
         _presentation.PropertyChanged += OnPresentationPropertyChanged;
         _presentation.PropertyChanged += (_, e) =>
         {

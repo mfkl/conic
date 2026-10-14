@@ -78,7 +78,7 @@ public partial class MainWindow
                 MenuRow[] rows = MoreMenuMain.GetVisualDescendants().OfType<MenuRow>().ToArray();
                 Require(rows.Select(row => row.Content as string).SequenceEqual(MoreMenuOptions), $"More menu options: {string.Join(", ", rows.Select(row => row.Content))}");
                 Require(rows.All(row => !string.IsNullOrWhiteSpace(ControlAutomationPeer.CreatePeerForElement(row).GetName())), "More menu options are named");
-                Require(rows[0].Shortcut == PlayerShortcutPolicy.Display(shortcuts[PlayerCommandId.OpenMedia]) && rows[^1].Shortcut == PlayerShortcutPolicy.Display(shortcuts[PlayerCommandId.OpenSettings]), "More menu shows the effective shortcuts");
+                Require(rows[0].Shortcut == PlayerShortcutPolicy.Display(shortcuts[PlayerCommandId.OpenMedia]) && rows[^1].Shortcut == PlayerShortcutPolicy.Display(shortcuts[PlayerCommandId.ShowAbout]), "More menu shows the effective shortcuts");
                 Require(rows.All(row => Math.Abs(row.Bounds.Height - 48) < .5) && Math.Abs(OpenMenu.Bounds.Width - 375) < .5, "design option and menu sizes");
                 CaptureMenu("more-menu");
 
@@ -245,7 +245,7 @@ public partial class MainWindow
                     break;
                 case "network-error":
                     ShowUrlPanel();
-                    _presentation.UrlText = "ftp://example.com/stream.mp4";
+                    _presentation.UrlText = "gopher://example.com/stream.mp4";
                     OnUrlSubmit(null, new RoutedEventArgs());
                     break;
                 case "shortcuts":

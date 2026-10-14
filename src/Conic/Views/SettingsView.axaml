@@ -720,6 +720,9 @@
                                         <controls:SettingRow Label="Show the file name in the title bar" Badge="Live" Help="When off, the title bar shows the app's name" ControlWidth="68">
                                             <CheckBox IsChecked="{Binding ShowFileNameInTitle, Mode=TwoWay}" AutomationProperties.Name="Show the file name in the title bar" AutomationProperties.HelpText="When off, the title bar shows the app's name" />
                                         </controls:SettingRow>
+                                        <controls:SettingRow Label="Allow only one instance" Badge="Restart" Help="Media opened from the file manager or the command line goes to the Conic that is open, as Library › Add to the queue says" ControlWidth="68">
+                                            <CheckBox IsChecked="{Binding OneInstance, Mode=TwoWay}" AutomationProperties.Name="Allow only one instance" AutomationProperties.HelpText="Media opened from the file manager or the command line goes to the Conic that is open, as Library › Add to the queue says" />
+                                        </controls:SettingRow>
                                         <controls:SettingRow Label="Pause video when window is minimized" Badge="Live" Help="Video pauses while the window is minimized and plays again when it comes back; audio keeps playing" ControlWidth="68">
                                             <CheckBox IsChecked="{Binding PauseWhenMinimized, Mode=TwoWay}" AutomationProperties.Name="Pause video when window is minimized" AutomationProperties.HelpText="Video pauses while the window is minimized and plays again when it comes back; audio keeps playing" />
                                         </controls:SettingRow>
@@ -1000,31 +1003,31 @@
                                     </StackPanel>
                                     <StackPanel Classes="settingsSection" IsVisible="{Binding IsVideo}">
                                         <TextBlock Classes="sectionTitle" Text="Picture" />
-                                        <controls:SettingRow Label="Hue" Badge="Next open" Help="Turns the colors around the color wheel, in degrees; 0 leaves them unchanged">
+                                        <controls:SettingRow Label="Hue" Badge="Live" Help="Turns the colors around the color wheel, in degrees; 0 leaves them unchanged">
                                             <Grid ColumnDefinitions="*,52" ColumnSpacing="8">
                                                 <Slider Classes="setting" Minimum="-180" Maximum="180" SmallChange="1" LargeChange="10" Value="{Binding Hue, Mode=TwoWay}" AutomationProperties.Name="Hue" AutomationProperties.HelpText="Turns the colors around the color wheel, in degrees; 0 leaves them unchanged" />
                                                 <TextBlock Grid.Column="1" Classes="settingValue" Text="{Binding Hue, StringFormat='{}{0:0}°'}" />
                                             </Grid>
                                         </controls:SettingRow>
-                                        <controls:SettingRow Label="Brightness" Badge="Next open" Help="1 leaves the picture unchanged">
+                                        <controls:SettingRow Label="Brightness" Badge="Live" Help="1 leaves the picture unchanged">
                                             <Grid ColumnDefinitions="*,52" ColumnSpacing="8">
                                                 <Slider Classes="setting" Minimum="0" Maximum="2" SmallChange="0.01" LargeChange="0.1" Value="{Binding Brightness, Mode=TwoWay}" AutomationProperties.Name="Brightness" AutomationProperties.HelpText="1 leaves the picture unchanged" />
                                                 <TextBlock Grid.Column="1" Classes="settingValue" Text="{Binding Brightness, StringFormat='{}{0:0.00}'}" />
                                             </Grid>
                                         </controls:SettingRow>
-                                        <controls:SettingRow Label="Contrast" Badge="Next open" Help="1 leaves the picture unchanged">
+                                        <controls:SettingRow Label="Contrast" Badge="Live" Help="1 leaves the picture unchanged">
                                             <Grid ColumnDefinitions="*,52" ColumnSpacing="8">
                                                 <Slider Classes="setting" Minimum="0" Maximum="2" SmallChange="0.01" LargeChange="0.1" Value="{Binding Contrast, Mode=TwoWay}" AutomationProperties.Name="Contrast" AutomationProperties.HelpText="1 leaves the picture unchanged" />
                                                 <TextBlock Grid.Column="1" Classes="settingValue" Text="{Binding Contrast, StringFormat='{}{0:0.00}'}" />
                                             </Grid>
                                         </controls:SettingRow>
-                                        <controls:SettingRow Label="Saturation" Badge="Next open" Help="1 leaves the colors unchanged; 0 is black and white">
+                                        <controls:SettingRow Label="Saturation" Badge="Live" Help="1 leaves the colors unchanged; 0 is black and white">
                                             <Grid ColumnDefinitions="*,52" ColumnSpacing="8">
                                                 <Slider Classes="setting" Minimum="0" Maximum="3" SmallChange="0.01" LargeChange="0.1" Value="{Binding Saturation, Mode=TwoWay}" AutomationProperties.Name="Saturation" AutomationProperties.HelpText="1 leaves the colors unchanged; 0 is black and white" />
                                                 <TextBlock Grid.Column="1" Classes="settingValue" Text="{Binding Saturation, StringFormat='{}{0:0.00}'}" />
                                             </Grid>
                                         </controls:SettingRow>
-                                        <controls:SettingRow Label="Gamma" Badge="Next open" Help="Needs hardware decoding off (Performance); 1 leaves the picture unchanged">
+                                        <controls:SettingRow Label="Gamma" Badge="Live" Help="Needs hardware decoding off (Performance); 1 leaves the picture unchanged">
                                             <Grid ColumnDefinitions="*,52" ColumnSpacing="8">
                                                 <Slider Classes="setting" Minimum="0.01" Maximum="10" SmallChange="0.01" LargeChange="0.1" Value="{Binding Gamma, Mode=TwoWay}" AutomationProperties.Name="Gamma" AutomationProperties.HelpText="Needs hardware decoding off (Performance); 1 leaves the picture unchanged" IsEnabled="{Binding CanAdjustGamma}" />
                                                 <TextBlock Grid.Column="1" Classes="settingValue" Text="{Binding Gamma, StringFormat='{}{0:0.00}'}" />
@@ -1035,11 +1038,89 @@
                                         </controls:SettingRow>
                                     </StackPanel>
                                     <StackPanel Classes="settingsSection" IsVisible="{Binding IsVideo}">
+                                        <TextBlock Classes="sectionTitle" Text="Effects" />
+                                        <controls:SettingRow Label="Rotate or flip" Badge="Live" Help="Turns or mirrors the picture">
+                                            <ComboBox ItemsSource="{Binding VideoTransforms}" SelectedItem="{Binding VideoTransform, Mode=TwoWay}" AutomationProperties.Name="Rotate or flip" AutomationProperties.HelpText="Turns or mirrors the picture" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Invert colors" Badge="Live" Help="Shows the negative of the picture" ControlWidth="68">
+                                            <CheckBox IsChecked="{Binding InvertColors, Mode=TwoWay}" AutomationProperties.Name="Invert colors" AutomationProperties.HelpText="Shows the negative of the picture" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Sepia" Badge="Live" Help="Gives the picture the brown tone of old photographs" ControlWidth="68">
+                                            <CheckBox IsChecked="{Binding Sepia, Mode=TwoWay}" AutomationProperties.Name="Sepia" AutomationProperties.HelpText="Gives the picture the brown tone of old photographs" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Sepia intensity" Badge="Live" Help="From 0, no tone, to 255">
+                                            <NumericUpDown Minimum="0" Maximum="255" Increment="10" FormatString="0" Value="{Binding SepiaIntensity, Mode=TwoWay}" IsEnabled="{Binding Sepia}" AutomationProperties.Name="Sepia intensity" AutomationProperties.HelpText="From 0, no tone, to 255" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Posterize" Badge="Live" Help="Reduces the picture to a few levels of each color" ControlWidth="68">
+                                            <CheckBox IsChecked="{Binding Posterize, Mode=TwoWay}" AutomationProperties.Name="Posterize" AutomationProperties.HelpText="Reduces the picture to a few levels of each color" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Posterize levels" Badge="Live" Help="Levels of each color, from 2 to 256">
+                                            <NumericUpDown Minimum="2" Maximum="256" Increment="1" FormatString="0" Value="{Binding PosterizeLevel, Mode=TwoWay}" IsEnabled="{Binding Posterize}" AutomationProperties.Name="Posterize levels" AutomationProperties.HelpText="Levels of each color, from 2 to 256" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Color extraction" Badge="Live" Help="Keeps only the color below, in shades of gray elsewhere" ControlWidth="68">
+                                            <CheckBox IsChecked="{Binding ColorExtract, Mode=TwoWay}" AutomationProperties.Name="Color extraction" AutomationProperties.HelpText="Keeps only the color below, in shades of gray elsewhere" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Extracted color" Badge="Live" Help="A color as #RRGGBB">
+                                            <TextBox Text="{Binding ColorExtractColor, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" IsEnabled="{Binding ColorExtract}" PlaceholderText="#FF0000" AutomationProperties.Name="Extracted color" AutomationProperties.HelpText="A color as #RRGGBB" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Color threshold" Badge="Live" Help="Keeps the colors close to the one below and turns the rest gray" ControlWidth="68">
+                                            <CheckBox IsChecked="{Binding ColorThreshold, Mode=TwoWay}" AutomationProperties.Name="Color threshold" AutomationProperties.HelpText="Keeps the colors close to the one below and turns the rest gray" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Threshold color" Badge="Live" Help="A color as #RRGGBB">
+                                            <TextBox Text="{Binding ColorThresholdColor, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" IsEnabled="{Binding ColorThreshold}" PlaceholderText="#FF0000" AutomationProperties.Name="Threshold color" AutomationProperties.HelpText="A color as #RRGGBB" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Sharpen" Badge="Live" Help="Makes edges crisper" ControlWidth="68">
+                                            <CheckBox IsChecked="{Binding Sharpen, Mode=TwoWay}" AutomationProperties.Name="Sharpen" AutomationProperties.HelpText="Makes edges crisper" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Sharpen strength" Badge="Live" Help="From 0 to 2">
+                                            <NumericUpDown Minimum="0" Maximum="2" Increment="0.05" FormatString="0.00" Value="{Binding SharpenSigma, Mode=TwoWay}" IsEnabled="{Binding Sharpen}" AutomationProperties.Name="Sharpen strength" AutomationProperties.HelpText="From 0 to 2" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Remove banding" Badge="Live" Help="Smooths the steps of color gradients" ControlWidth="68">
+                                            <CheckBox IsChecked="{Binding Debanding, Mode=TwoWay}" AutomationProperties.Name="Remove banding" AutomationProperties.HelpText="Smooths the steps of color gradients" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Film grain" Badge="Live" Help="Adds the grain of film" ControlWidth="68">
+                                            <CheckBox IsChecked="{Binding FilmGrain, Mode=TwoWay}" AutomationProperties.Name="Film grain" AutomationProperties.HelpText="Adds the grain of film" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Reduce noise" Badge="Live" Help="Smooths the grain and noise of the picture" ControlWidth="68">
+                                            <CheckBox IsChecked="{Binding Denoise, Mode=TwoWay}" AutomationProperties.Name="Reduce noise" AutomationProperties.HelpText="Smooths the grain and noise of the picture" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Motion blur" Badge="Live" Help="Blends each frame with the ones before it" ControlWidth="68">
+                                            <CheckBox IsChecked="{Binding MotionBlur, Mode=TwoWay}" AutomationProperties.Name="Motion blur" AutomationProperties.HelpText="Blends each frame with the ones before it" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Mirror" Badge="Live" Help="Mirrors the left half of the picture onto the right" ControlWidth="68">
+                                            <CheckBox IsChecked="{Binding Mirror, Mode=TwoWay}" AutomationProperties.Name="Mirror" AutomationProperties.HelpText="Mirrors the left half of the picture onto the right" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Reduce flicker" Badge="Live" Help="Evens out quick changes of brightness" ControlWidth="68">
+                                            <CheckBox IsChecked="{Binding AntiFlicker, Mode=TwoWay}" AutomationProperties.Name="Reduce flicker" AutomationProperties.HelpText="Evens out quick changes of brightness" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Anaglyph 3D" Badge="Live" Help="Turns side-by-side 3D into red and cyan for 3D glasses" ControlWidth="68">
+                                            <CheckBox IsChecked="{Binding Anaglyph, Mode=TwoWay}" AutomationProperties.Name="Anaglyph 3D" AutomationProperties.HelpText="Turns side-by-side 3D into red and cyan for 3D glasses" />
+                                        </controls:SettingRow>
+                                    </StackPanel>
+                                    <StackPanel Classes="settingsSection" IsVisible="{Binding IsVideo}">
+                                        <TextBlock Classes="sectionTitle" Text="Overlay" />
+                                        <controls:SettingRow Label="Logo" Badge="Live" Help="A PNG image shown over the video; empty shows none">
+                                            <TextBox Text="{Binding LogoFile, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" PlaceholderText="Path to a PNG image" AutomationProperties.Name="Logo image" AutomationProperties.HelpText="A PNG image shown over the video; empty shows none" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Logo position" Badge="Live" Help="Where the logo shows">
+                                            <ComboBox ItemsSource="{Binding OverlayPositions}" SelectedItem="{Binding LogoPosition, Mode=TwoWay}" AutomationProperties.Name="Logo position" AutomationProperties.HelpText="Where the logo shows" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Logo opacity (%)" Badge="Live" Help="0 is invisible, 100 opaque">
+                                            <NumericUpDown Minimum="0" Maximum="100" Increment="5" FormatString="0" Value="{Binding LogoOpacity, Mode=TwoWay}" AutomationProperties.Name="Logo opacity (percent)" AutomationProperties.HelpText="0 is invisible, 100 opaque" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Marquee text" Badge="Live" Help="Text shown over the video; empty shows none">
+                                            <TextBox Text="{Binding MarqueeText, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" PlaceholderText="Text to show over the video" AutomationProperties.Name="Marquee text" AutomationProperties.HelpText="Text shown over the video; empty shows none" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Marquee position" Badge="Live" Help="Where the text shows">
+                                            <ComboBox ItemsSource="{Binding OverlayPositions}" SelectedItem="{Binding MarqueePosition, Mode=TwoWay}" AutomationProperties.Name="Marquee position" AutomationProperties.HelpText="Where the text shows" />
+                                        </controls:SettingRow>
+                                    </StackPanel>
+                                    <StackPanel Classes="settingsSection" IsVisible="{Binding IsVideo}">
                                         <TextBlock Classes="sectionTitle" Text="Deinterlacing" />
-                                        <controls:SettingRow Label="Deinterlacing" Badge="Next open" Help="Automatic deinterlaces media marked as interlaced; On always does">
+                                        <controls:SettingRow Label="Deinterlacing" Badge="Live" Help="Automatic deinterlaces media marked as interlaced; On always does">
                                             <ComboBox ItemsSource="{Binding DeinterlaceModes}" SelectedItem="{Binding Deinterlace, Mode=TwoWay}" AutomationProperties.Name="Deinterlacing" AutomationProperties.HelpText="Automatic deinterlaces media marked as interlaced; On always does" />
                                         </controls:SettingRow>
-                                        <controls:SettingRow Label="Method" Badge="Next open" Help="How the two fields of an interlaced frame are combined">
+                                        <controls:SettingRow Label="Method" Badge="Live" Help="How the two fields of an interlaced frame are combined">
                                             <ComboBox ItemsSource="{Binding DeinterlaceMethods}" SelectedItem="{Binding DeinterlaceMethod, Mode=TwoWay}" AutomationProperties.Name="Deinterlacing method" AutomationProperties.HelpText="How the two fields of an interlaced frame are combined" />
                                         </controls:SettingRow>
                                     </StackPanel>
@@ -1054,8 +1135,25 @@
                                         <controls:SettingRow Label="Zoom" Badge="Next open" Help="Fit scales the video to the window; a fixed size keeps it at that scale">
                                             <ComboBox ItemsSource="{Binding Zooms}" SelectedItem="{Binding DefaultZoom, Mode=TwoWay}" AutomationProperties.Name="Default zoom" AutomationProperties.HelpText="Fit scales the video to the window; a fixed size keeps it at that scale" />
                                         </controls:SettingRow>
+                                        <controls:SettingRow Label="Crop (pixels)" Badge="Live" Help="Pixels cut from the left, top, right and bottom; they replace the crop ratio">
+                                            <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="6">
+                                                <NumericUpDown Grid.Column="0" Minimum="0" Maximum="4000" Increment="2" FormatString="0" Value="{Binding CropLeft, Mode=TwoWay}" ToolTip.Tip="Left" AutomationProperties.Name="Crop left (pixels)" />
+                                                <NumericUpDown Grid.Column="1" Minimum="0" Maximum="4000" Increment="2" FormatString="0" Value="{Binding CropTop, Mode=TwoWay}" ToolTip.Tip="Top" AutomationProperties.Name="Crop top (pixels)" />
+                                                <NumericUpDown Grid.Column="2" Minimum="0" Maximum="4000" Increment="2" FormatString="0" Value="{Binding CropRight, Mode=TwoWay}" ToolTip.Tip="Right" AutomationProperties.Name="Crop right (pixels)" />
+                                                <NumericUpDown Grid.Column="3" Minimum="0" Maximum="4000" Increment="2" FormatString="0" Value="{Binding CropBottom, Mode=TwoWay}" ToolTip.Tip="Bottom" AutomationProperties.Name="Crop bottom (pixels)" />
+                                            </Grid>
+                                        </controls:SettingRow>
                                         <controls:SettingRow Label="Video adjustments" Help="Aspect ratio, crop and zoom for the media that is playing">
                                             <Button Classes="secondary settingAction" Content="Open video adjustments" Command="{Binding OpenVideoControlsCommand}" />
+                                        </controls:SettingRow>
+                                    </StackPanel>
+                                    <StackPanel Classes="settingsSection" IsVisible="{Binding IsVideo}">
+                                        <TextBlock Classes="sectionTitle" Text="Snapshots" />
+                                        <controls:SettingRow Label="Folder" Badge="Next open" Help="Where Take Snapshot (Shift+S) saves; empty is your Pictures folder">
+                                            <TextBox Text="{Binding SnapshotFolder, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" PlaceholderText="Pictures folder" AutomationProperties.Name="Snapshot folder" AutomationProperties.HelpText="Where Take Snapshot (Shift+S) saves; empty is your Pictures folder" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Format" Badge="Next open" Help="The image format of snapshots">
+                                            <ComboBox ItemsSource="{Binding SnapshotFormats}" SelectedItem="{Binding SnapshotFormat, Mode=TwoWay}" AutomationProperties.Name="Snapshot format" AutomationProperties.HelpText="The image format of snapshots" />
                                         </controls:SettingRow>
                                     </StackPanel>
 
@@ -1159,8 +1257,44 @@
                                         <controls:SettingRow Label="Spatial audio mode" Badge="Live" Help="Headphone virtualization places the sound around you on headphones; Room adds the reverberation of a room">
                                             <ComboBox ItemsSource="{Binding SpatialAudioModes}" SelectedItem="{Binding SpatialAudioMode, Mode=TwoWay}" IsEnabled="{Binding SpatialAudio}" AutomationProperties.Name="Spatial audio mode" AutomationProperties.HelpText="Headphone virtualization places the sound around you on headphones; Room adds the reverberation of a room" />
                                         </controls:SettingRow>
+                                        <controls:SettingRow Label="Room size" Badge="Live" Help="The size of the room the reverberation imitates" IsVisible="{Binding HasRoomSettings}">
+                                            <NumericUpDown Minimum="0" Maximum="1.1" Increment="0.05" FormatString="0.00" Value="{Binding SpatializerRoomSize, Mode=TwoWay}" AutomationProperties.Name="Room Room size" AutomationProperties.HelpText="The size of the room the reverberation imitates" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Room width" Badge="Live" Help="How wide the reverberation spreads between the speakers" IsVisible="{Binding HasRoomSettings}">
+                                            <NumericUpDown Minimum="0" Maximum="1" Increment="0.05" FormatString="0.00" Value="{Binding SpatializerWidth, Mode=TwoWay}" AutomationProperties.Name="Room Room width" AutomationProperties.HelpText="How wide the reverberation spreads between the speakers" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Wet level" Badge="Live" Help="The level of the reverberation" IsVisible="{Binding HasRoomSettings}">
+                                            <NumericUpDown Minimum="0" Maximum="1" Increment="0.05" FormatString="0.00" Value="{Binding SpatializerWet, Mode=TwoWay}" AutomationProperties.Name="Room Wet level" AutomationProperties.HelpText="The level of the reverberation" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Dry level" Badge="Live" Help="The level of the original sound" IsVisible="{Binding HasRoomSettings}">
+                                            <NumericUpDown Minimum="0" Maximum="1" Increment="0.05" FormatString="0.00" Value="{Binding SpatializerDry, Mode=TwoWay}" AutomationProperties.Name="Room Dry level" AutomationProperties.HelpText="The level of the original sound" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Damping" Badge="Live" Help="How quickly the reverberation fades in the high frequencies" IsVisible="{Binding HasRoomSettings}">
+                                            <NumericUpDown Minimum="0" Maximum="1" Increment="0.05" FormatString="0.00" Value="{Binding SpatializerDamp, Mode=TwoWay}" AutomationProperties.Name="Room Damping" AutomationProperties.HelpText="How quickly the reverberation fades in the high frequencies" />
+                                        </controls:SettingRow>
                                         <controls:SettingRow Label="Compressor" Badge="Live" Help="Narrows the gap between loud and quiet passages" ControlWidth="68">
                                             <CheckBox IsChecked="{Binding Compressor, Mode=TwoWay}" AutomationProperties.Name="Compressor" AutomationProperties.HelpText="Narrows the gap between loud and quiet passages" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="RMS/peak" Badge="Live" Help="How the level is measured: 0 follows the average (RMS), 1 the peaks" IsVisible="{Binding Compressor}">
+                                            <NumericUpDown Minimum="0" Maximum="1" Increment="0.1" FormatString="0.0" Value="{Binding CompressorRmsPeak, Mode=TwoWay}" AutomationProperties.Name="Compressor RMS/peak" AutomationProperties.HelpText="How the level is measured: 0 follows the average (RMS), 1 the peaks" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Attack (ms)" Badge="Live" Help="How quickly the compressor reacts when the sound gets louder" IsVisible="{Binding Compressor}">
+                                            <NumericUpDown Minimum="1.5" Maximum="400" Increment="5" FormatString="0.#" Value="{Binding CompressorAttack, Mode=TwoWay}" AutomationProperties.Name="Compressor Attack (ms)" AutomationProperties.HelpText="How quickly the compressor reacts when the sound gets louder" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Release (ms)" Badge="Live" Help="How quickly it lets go when the sound gets quieter" IsVisible="{Binding Compressor}">
+                                            <NumericUpDown Minimum="2" Maximum="800" Increment="10" FormatString="0" Value="{Binding CompressorRelease, Mode=TwoWay}" AutomationProperties.Name="Compressor Release (ms)" AutomationProperties.HelpText="How quickly it lets go when the sound gets quieter" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Threshold (dB)" Badge="Live" Help="The level above which the sound is compressed" IsVisible="{Binding Compressor}">
+                                            <NumericUpDown Minimum="-30" Maximum="0" Increment="1" FormatString="0.#" Value="{Binding CompressorThreshold, Mode=TwoWay}" AutomationProperties.Name="Compressor Threshold (dB)" AutomationProperties.HelpText="The level above which the sound is compressed" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Ratio" Badge="Live" Help="How much the sound above the threshold is reduced, as input to output" IsVisible="{Binding Compressor}">
+                                            <NumericUpDown Minimum="1" Maximum="20" Increment="0.5" FormatString="0.0" Value="{Binding CompressorRatio, Mode=TwoWay}" AutomationProperties.Name="Compressor Ratio" AutomationProperties.HelpText="How much the sound above the threshold is reduced, as input to output" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Knee radius (dB)" Badge="Live" Help="How gradually compression starts around the threshold" IsVisible="{Binding Compressor}">
+                                            <NumericUpDown Minimum="1" Maximum="10" Increment="0.5" FormatString="0.0" Value="{Binding CompressorKnee, Mode=TwoWay}" AutomationProperties.Name="Compressor Knee radius (dB)" AutomationProperties.HelpText="How gradually compression starts around the threshold" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Makeup gain (dB)" Badge="Live" Help="Raises the level after compression" IsVisible="{Binding Compressor}">
+                                            <NumericUpDown Minimum="0" Maximum="24" Increment="1" FormatString="0.#" Value="{Binding CompressorMakeupGain, Mode=TwoWay}" AutomationProperties.Name="Compressor Makeup gain (dB)" AutomationProperties.HelpText="Raises the level after compression" />
                                         </controls:SettingRow>
                                         <controls:SettingRow Label="Pitch shift (semitones)" Badge="Live" Help="Raises or lowers the pitch without changing the speed">
                                             <NumericUpDown Minimum="-12" Maximum="12" Increment="0.5" FormatString="0.0" Value="{Binding PitchShift, Mode=TwoWay}" AutomationProperties.Name="Pitch shift (semitones)" AutomationProperties.HelpText="Raises or lowers the pitch without changing the speed" />

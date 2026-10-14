@@ -1,5 +1,6 @@
 using System;
 using System.Reflection;
+using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Threading;
 using Player.Application;
@@ -16,6 +17,19 @@ public partial class MainWindow
     {
         _presentation.JumpToTimeRequested += (_, _) => ShowJumpPanel();
         _presentation.AboutRequested += (_, _) => ShowAboutPanel();
+        _presentation.MinimalInterfaceRequested += (_, _) => ToggleMinimalInterface();
+        _presentation.HelpRequested += (_, _) => _ = Launcher.LaunchUriAsync(HelpUri);
+    }
+
+    /// <summary>F1: Conic's README, the closest it has to VLC's help.</summary>
+    internal static readonly Uri HelpUri = new("https://github.com/mfkl/conic#readme");
+
+    /// <summary>Hide UI (the design's Ctrl+\, VLC's minimal interface, Ctrl+H): the bars overlay the video and hide while it plays.</summary>
+    internal void ToggleMinimalInterface()
+    {
+        _chromeVisibility.SetMinimal(!_chromeVisibility.IsMinimal);
+        ApplyVideoLayout();
+        WakeChrome();
     }
 
     private bool IsDialogOpen => JumpPanel.IsVisible || AboutPanel.IsVisible;
@@ -88,6 +102,14 @@ public partial class MainWindow
         if (IsVisible) { Dispatcher.UIThread.Post(Open); return; }
         void OnOpened(object? sender, EventArgs e) { Opened -= OnOpened; Dispatcher.UIThread.Post(Open); }
         Opened += OnOpened;
+    }
+
+    /// <summary>A later start's media (Allow only one instance): it opens here, and the window comes forward.</summary>
+    internal void OpenFromOtherStart(IReadOnlyList<string> sources)
+    {
+        if (WindowState == WindowState.Minimized) WindowState = WindowState.Normal;
+        Activate();
+        OpenOnStart(sources);
     }
 
     /// <summary>The version packages are built with (eng/package.ps1 -Version), without the commit suffix.</summary>

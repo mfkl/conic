@@ -12,7 +12,7 @@ internal sealed partial class SettingsViewModel
     [
         nameof(VeryShortSkipSeconds), nameof(MediumSkipSeconds), nameof(LongSkipSeconds), nameof(ClickAction), nameof(DoubleClickAction),
         nameof(WheelAction), nameof(HorizontalWheelAction), nameof(ReverseWheel),
-        nameof(ResizeToVideo), nameof(RememberWindowGeometry), nameof(KeepOnTop), nameof(ShowFileNameInTitle), nameof(PauseWhenMinimized),
+        nameof(ResizeToVideo), nameof(RememberWindowGeometry), nameof(KeepOnTop), nameof(ShowFileNameInTitle), nameof(OneInstance), nameof(PauseWhenMinimized),
         nameof(ShowControlsInFullscreen), nameof(EnqueueOnOpen), nameof(FolderOpening), nameof(ShowHiddenFiles),
     ];
 
@@ -38,6 +38,7 @@ internal sealed partial class SettingsViewModel
     public bool RememberWindowGeometry { get => Current.RememberWindowGeometry; set => Update(s => s with { RememberWindowGeometry = value }); }
     public bool KeepOnTop { get => Current.KeepOnTop; set => Update(s => s with { KeepOnTop = value }); }
     public bool ShowFileNameInTitle { get => Current.ShowFileNameInTitle; set => Update(s => s with { ShowFileNameInTitle = value }); }
+    public bool OneInstance { get => Current.OneInstance; set => Update(s => s with { OneInstance = value }); }
     public bool PauseWhenMinimized { get => Current.PauseWhenMinimized; set => Update(s => s with { PauseWhenMinimized = value }); }
 
     // Interface › Playback Controls (with Auto-hide, Hide after and Reduce motion).
@@ -60,7 +61,7 @@ internal sealed partial class SettingsViewModel
     {
         Density = d.Density, ControlTimeoutSeconds = d.ControlTimeoutSeconds, ReduceMotion = d.ReduceMotion, AutoHideControls = d.AutoHideControls,
         ResizeToVideo = d.ResizeToVideo, RememberWindowGeometry = d.RememberWindowGeometry, KeepOnTop = d.KeepOnTop,
-        ShowFileNameInTitle = d.ShowFileNameInTitle, PauseWhenMinimized = d.PauseWhenMinimized, ShowControlsInFullscreen = d.ShowControlsInFullscreen,
+        ShowFileNameInTitle = d.ShowFileNameInTitle, OneInstance = d.OneInstance, PauseWhenMinimized = d.PauseWhenMinimized, ShowControlsInFullscreen = d.ShowControlsInFullscreen,
     };
 
     private static PlayerSettings ResetLibraryPage(PlayerSettings s, PlayerSettings d) => s with

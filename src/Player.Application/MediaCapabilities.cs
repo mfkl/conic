@@ -8,6 +8,8 @@ public enum MediaTrackKind { Audio, Subtitle }
 public sealed record MediaTrack(string Id, string Label, bool IsDisabled, bool IsSelected);
 public sealed record MediaTitle(string Id, string Label, bool IsSelected);
 public sealed record MediaChapter(string Id, string Label, bool IsSelected);
+/// <summary>A program of a multi-program stream (DVB, MPEG-TS).</summary>
+public sealed record MediaProgram(string Id, string Label, bool IsSelected);
 public sealed record MediaDelays(int AudioMilliseconds, int SubtitleMilliseconds);
 
 public sealed record MediaCapabilitiesState(
@@ -23,11 +25,14 @@ public sealed record MediaCapabilitiesState(
 {
     public static MediaCapabilitiesState Initial { get; } = new(0, 0, MediaCapabilityLoadState.Unavailable, [], [], [], [], new(0, 0));
 
+    /// <summary>The programs, when the media has more than one.</summary>
+    public IReadOnlyList<MediaProgram> Programs { get; init; } = [];
+
     // Lists compare by content: each poll builds new arrays, and an unchanged poll must not rebuild the views.
     public bool Equals(MediaCapabilitiesState? other) =>
         other is not null && QueueGeneration == other.QueueGeneration && MediaGeneration == other.MediaGeneration && Status == other.Status &&
         AudioTracks.SequenceEqual(other.AudioTracks) && SubtitleTracks.SequenceEqual(other.SubtitleTracks) &&
-        Titles.SequenceEqual(other.Titles) && Chapters.SequenceEqual(other.Chapters) && Delays == other.Delays && Error == other.Error;
+        Titles.SequenceEqual(other.Titles) && Chapters.SequenceEqual(other.Chapters) && Programs.SequenceEqual(other.Programs) && Delays == other.Delays && Error == other.Error;
 
     public override int GetHashCode() => HashCode.Combine(QueueGeneration, MediaGeneration, Status, AudioTracks.Count, SubtitleTracks.Count, Titles.Count, Chapters.Count, Delays);
 }
@@ -42,6 +47,7 @@ public interface IMediaCapabilitiesTransport
     void SelectTrack(MediaTrackKind kind, string id);
     void SelectTitle(string id);
     void SelectChapter(string id);
+    void SelectProgram(string id) { }
     void SetDelayMilliseconds(MediaTrackKind kind, int milliseconds);
     void ResetDelay(MediaTrackKind kind);
     ExternalTrackAttachmentState AttachExternalTrack(MediaTrackKind kind, string path);

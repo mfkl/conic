@@ -61,6 +61,19 @@ internal sealed partial class VlcCorePlayer
                 VLCCore.VarSetChecked(output, "spatialaudio-headphones", VLCVarType.Bool, new VLCValueNative { Bool = wanted.SpatialHeadphones ? (byte)1 : (byte)0 }) == 0);
             SetAudioVariable(output, "audio-replay-gain-mode", VLCVarType.String, () => variables.SetString("audio-replay-gain-mode", wanted.ReplayGainMode));
             SetAudioVariable(output, "audio-replay-gain-preamp", VLCVarType.Float, () => variables.SetFloat("audio-replay-gain-preamp", (float)wanted.ReplayGainPreamp));
+            // The compressor and the spatializer follow these at once.
+            SetAudioVariable(output, "compressor-rms-peak", VLCVarType.Float, () => variables.SetFloat("compressor-rms-peak", (float)wanted.CompressorRmsPeak));
+            SetAudioVariable(output, "compressor-attack", VLCVarType.Float, () => variables.SetFloat("compressor-attack", (float)wanted.CompressorAttack));
+            SetAudioVariable(output, "compressor-release", VLCVarType.Float, () => variables.SetFloat("compressor-release", (float)wanted.CompressorRelease));
+            SetAudioVariable(output, "compressor-threshold", VLCVarType.Float, () => variables.SetFloat("compressor-threshold", (float)wanted.CompressorThreshold));
+            SetAudioVariable(output, "compressor-ratio", VLCVarType.Float, () => variables.SetFloat("compressor-ratio", (float)wanted.CompressorRatio));
+            SetAudioVariable(output, "compressor-knee", VLCVarType.Float, () => variables.SetFloat("compressor-knee", (float)wanted.CompressorKnee));
+            SetAudioVariable(output, "compressor-makeup-gain", VLCVarType.Float, () => variables.SetFloat("compressor-makeup-gain", (float)wanted.CompressorMakeupGain));
+            SetAudioVariable(output, "spatializer-roomsize", VLCVarType.Float, () => variables.SetFloat("spatializer-roomsize", (float)wanted.SpatializerRoomSize));
+            SetAudioVariable(output, "spatializer-width", VLCVarType.Float, () => variables.SetFloat("spatializer-width", (float)wanted.SpatializerWidth));
+            SetAudioVariable(output, "spatializer-wet", VLCVarType.Float, () => variables.SetFloat("spatializer-wet", (float)wanted.SpatializerWet));
+            SetAudioVariable(output, "spatializer-dry", VLCVarType.Float, () => variables.SetFloat("spatializer-dry", (float)wanted.SpatializerDry));
+            SetAudioVariable(output, "spatializer-damp", VLCVarType.Float, () => variables.SetFloat("spatializer-damp", (float)wanted.SpatializerDamp));
             // Audio › Stereo Mode: the output restarts with the new channel
             // layout each time the variable is set, so only on a change.
             if (applied is null ? wanted.StereoMode != 0 : wanted.StereoMode != applied.StereoMode)

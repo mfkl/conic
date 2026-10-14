@@ -135,6 +135,7 @@ public partial class MainWindow
                 // Fullscreen: the video spans the window, the bars overlay it
                 // and hide after inactivity, even with mouse focus on a bar.
                 _presentation.ApplyEngineState(playing with { Position = .4 });
+                Size windowed = ClientSize;
                 ToggleFullscreen();
                 await Task.Delay(300);
                 WakeChrome();
@@ -160,7 +161,9 @@ public partial class MainWindow
                 _presentation.ApplyEngineState(playing with { Status = PlaybackStatus.Paused, Position = .4 });
                 ToggleFullscreen();
                 bool Docked() => WindowState == WindowState.Normal && Grid.GetRow(VideoSurface) == 1 && PlayerDock.IsVisible && TopChrome.IsVisible;
-                await Within(Docked, 3);
+                // macOS reports Normal before its exit animation ends by putting
+                // the earlier frame back: the resizes below wait for that frame.
+                await Within(() => Docked() && Math.Abs(ClientSize.Width - windowed.Width) < 1 && Math.Abs(ClientSize.Height - windowed.Height) < 1, 3);
                 Require(Docked(), "leaving fullscreen docks the bars again");
                 WakeChrome();
                 Width = 900;

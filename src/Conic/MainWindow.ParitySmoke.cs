@@ -121,11 +121,14 @@ public partial class MainWindow
 
                 // A-B loop: A now, B 2 s later; playback goes back to A.
                 await Within(() => _presentation.IsPlaying && Elapsed() > 1, 6);
+                // A and B are where the window shows playback when pressed,
+                // which can be a state behind the engine's time.
+                double Shown() => _presentation.Position * Engine().Duration.TotalSeconds;
+                double a = Shown();
                 Run(PlayerCommandId.ToggleABLoop);
-                double a = Elapsed();
-                await Within(() => Elapsed() >= a + 2, 5);
+                await Within(() => Shown() >= a + 2, 5);
                 // B is where playback is when pressed; the press itself goes back to A.
-                double b = Elapsed();
+                double b = Shown();
                 Run(PlayerCommandId.ToggleABLoop);
                 bool loopedOnce = await Within(() => Elapsed() < b - 1, 4);
                 bool cameBack = loopedOnce && await Within(() => Elapsed() >= b - .3, 4) && await Within(() => Elapsed() < b - 1, 5);

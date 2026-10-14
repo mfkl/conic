@@ -142,6 +142,11 @@
                               controls:MenuShortcuts.Command="MediaInformation">
                         <MenuItem.Icon><controls:VlcIcon Classes="menuIcon" Icon="{StaticResource Icon.Info}" /></MenuItem.Icon>
                     </MenuItem>
+                    <MenuItem Header="Messages"
+                              Command="{Binding ShowMessagesCommand}"
+                              controls:MenuShortcuts.Command="ShowMessages">
+                        <MenuItem.Icon><controls:VlcIcon Classes="menuIcon" Icon="{StaticResource Icon.Lists}" /></MenuItem.Icon>
+                    </MenuItem>
                     <MenuItem Header="Keyboard Shortcuts" Click="OnShowKeyboardShortcuts">
                         <MenuItem.Icon><controls:VlcIcon Classes="menuIcon" Icon="{StaticResource Icon.Hotkeys}" /></MenuItem.Icon>
                     </MenuItem>

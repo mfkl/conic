@@ -83,6 +83,7 @@ public partial class MainWindow : Window
         InitializeInterfaceSettings();
         InitializeControlSettings();
         InitializeMacMenu();
+        InitializeMessages();
         UpdatePlaybackRateSelection();
         UpdateHistorySettingsControls();
         _settings.Changed += (_, settings) => ApplyLiveSettings(settings);

@@ -69,4 +69,6 @@ public enum PlayerCommandId
     SkipForwardMedium,
     SkipBackwardLong,
     SkipForwardLong,
+    // VLC's Messages window: the engine's log, at a chosen verbosity.
+    ShowMessages,
 }

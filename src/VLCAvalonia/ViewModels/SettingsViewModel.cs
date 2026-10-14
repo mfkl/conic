@@ -77,7 +77,7 @@ internal sealed partial class SettingsViewModel : INotifyPropertyChanged
         new("Library", "Media", "Folder", "opening files add queue enqueue replace folder subfolders hidden files"),
         new("Network", "System", "Link", "buffering caching cache latency local files network streams proxy http password certificates trust tls ssl cipher security"),
         new("Performance", "System", "Preferences", "hardware accelerated decoding gpu d3d11 direct3d dxva loop filter deblocking h.264 threads drop frames late smooth"),
-        new("Advanced", "System", "Info", "engine diagnostics media information codec streams"),
+        new("Advanced", "System", "Info", "engine diagnostics media information codec streams messages log logging verbose verbosity debug"),
     ];
 
     public IReadOnlyList<string> DensityOptions { get; } = ["Comfortable", "Compact"];

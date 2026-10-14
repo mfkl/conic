@@ -25,7 +25,8 @@ public sealed record LiveAudioSettings(
     bool SpatialHeadphones,
     string ReplayGainMode,
     double ReplayGainPreamp,
-    string? Device);
+    string? Device,
+    int StereoMode = 0);
 
 /// <summary>
 /// Settings › Audio as libVLC options (phase 9c). The effects are VLC 3 audio
@@ -82,12 +83,23 @@ public static class AudioEngineOptions
     // libsamplerate's converters (--src-converter-type): linear, the fastest
     // sinc (VLC's default) and the best sinc.
     public static IReadOnlyList<SettingOption> ResamplerQualities { get; } = [new("Fast", "Fast"), new("Balanced", "Balanced"), new("Best", "Best")];
+    // VLC 3's stereo modes (--stereo-mode and the output's "stereo-mode"),
+    // in the order of their values; Unset lets VLC choose from the media.
+    public static IReadOnlyList<SettingOption> StereoModes { get; } =
+    [
+        new("Unset", "Automatic"), new("Stereo", "Stereo"), new("ReverseStereo", "Reverse stereo"), new("Left", "Left"),
+        new("Right", "Right"), new("DolbySurround", "Dolby Surround"), new("Headphones", "Headphones"), new("Mono", "Mono"),
+    ];
+
+    /// <summary>The stereo mode's value in VLC 3 (AOUT_VAR_CHAN_*): its place in <see cref="StereoModes"/>.</summary>
+    public static int StereoModeValue(string mode) => Math.Max(0, StereoModes.ToList().FindIndex(option => option.Value == mode));
 
     /// <summary>The audio settings a new core starts with; they apply at the next open.</summary>
     public static IReadOnlySet<string> NextOpenKeys { get; } = new HashSet<string>(StringComparer.Ordinal)
     {
         nameof(PlayerSettings.AudioEnabled), nameof(PlayerSettings.AudioOutputModule), nameof(PlayerSettings.AudioPassthrough),
         nameof(PlayerSettings.DolbySurround), nameof(PlayerSettings.ResamplerQuality), nameof(PlayerSettings.AudioDelay),
+        nameof(PlayerSettings.TimeStretch),
     };
 
     /// <summary>The audio settings a playing core also takes at once.</summary>
@@ -97,7 +109,7 @@ public static class AudioEngineOptions
         nameof(PlayerSettings.ReplayGainPreamp), nameof(PlayerSettings.Equalizer), nameof(PlayerSettings.EqualizerPreset),
         nameof(PlayerSettings.EqualizerPreamp), nameof(PlayerSettings.EqualizerBands),
         nameof(PlayerSettings.SpatialAudio), nameof(PlayerSettings.SpatialAudioMode), nameof(PlayerSettings.Compressor),
-        nameof(PlayerSettings.PitchShift), nameof(PlayerSettings.Karaoke),
+        nameof(PlayerSettings.PitchShift), nameof(PlayerSettings.Karaoke), nameof(PlayerSettings.StereoMode),
     };
 
     /// <summary>The device belongs to the MMDevice output (VLC's default on Windows).</summary>
@@ -149,6 +161,8 @@ public static class AudioEngineOptions
         else if (settings.DolbySurround == "Off") arguments.Add("--force-dolby-surround=2");
         if (settings.ResamplerQuality == "Fast") arguments.Add("--src-converter-type=4");
         else if (settings.ResamplerQuality == "Best") arguments.Add("--src-converter-type=0");
+        if (settings.StereoMode != "Unset") arguments.Add("--stereo-mode=" + StereoModeValue(settings.StereoMode).ToString(CultureInfo.InvariantCulture));
+        if (!settings.TimeStretch) arguments.Add("--no-audio-time-stretch");
         // The input's audio delay starts at this value (input_ControlVarInit).
         if (settings.AudioDelay != 0) arguments.Add("--audio-desync=" + settings.AudioDelay.ToString(CultureInfo.InvariantCulture));
         return arguments.AsReadOnly();
@@ -164,7 +178,8 @@ public static class AudioEngineOptions
         settings.SpatialAudio && settings.SpatialAudioMode != "Room",
         settings.ReplayGain,
         settings.ReplayGainPreamp,
-        UsesDevice(settings, windows) ? settings.AudioDevice : null);
+        UsesDevice(settings, windows) ? settings.AudioDevice : null,
+        StereoModeValue(settings.StereoMode));
 
     /// <summary>The preset whose preamp and bands these are, or Custom.</summary>
     public static string PresetFor(double preamp, string bands) =>
@@ -213,6 +228,7 @@ public static class AudioEngineOptions
             PitchShift = Range(value.PitchShift, -MaximumPitchShift, MaximumPitchShift, 0, 1),
             DolbySurround = Choice(value.DolbySurround, DolbySurroundModes, "Automatic"),
             ResamplerQuality = Choice(value.ResamplerQuality, ResamplerQualities, "Balanced"),
+            StereoMode = Choice(value.StereoMode, StereoModes, "Unset"),
             AudioDelay = Math.Clamp(value.AudioDelay, -MediaDelayPolicy.MaximumMilliseconds, MediaDelayPolicy.MaximumMilliseconds),
         };
     }

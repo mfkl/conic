@@ -12,6 +12,7 @@ using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Player.Contracts;
 using Conic.Interop;
+using Conic.Interop.MacOS;
 
 namespace Conic;
 
@@ -39,6 +40,11 @@ public partial class MainWindow
         {
             try
             {
+                async Task Within(Func<bool> condition, double seconds)
+                {
+                    DateTime deadline = DateTime.UtcNow.AddSeconds(seconds);
+                    while (!condition() && DateTime.UtcNow < deadline) await Task.Delay(50);
+                }
                 await Task.Delay(500);
                 MediaEngineState playing = MediaEngineState.Initial with
                 {
@@ -140,9 +146,12 @@ public partial class MainWindow
                 SavePlaybackCapture("playback-fullscreen.png");
                 _keyboardNavigation = false;
                 MuteButton.Focus(NavigationMethod.Pointer);
-                await Task.Delay(400);
-                // The real pointer over a bar rightly holds it up: park the
-                // cursor away from the screen's top and bottom edges.
+                // The real pointer over a bar rightly holds it up: on macOS the
+                // smoke parks it mid-window, where a user's rests on the video.
+                if (OperatingSystem.IsMacOS()) ParkPointerMidWindow();
+                // macOS animates into fullscreen and its events wake the bars
+                // meanwhile: they hide once it has settled.
+                await Within(() => !PlayerDock.IsVisible && !TopChrome.IsVisible, 3);
                 Require(!PlayerDock.IsVisible && !TopChrome.IsVisible, "fullscreen bars hide after inactivity; mouse focus does not block it" +
                     (TopChrome.IsPointerOver || PlayerDock.IsPointerOver ? " (the real pointer rests on a bar: park the cursor mid-screen)" : ""));
                 SavePlaybackCapture("playback-hidden.png");
@@ -150,9 +159,9 @@ public partial class MainWindow
                 Require(PlayerDock.IsVisible && TopChrome.IsVisible, "interaction reveals the fullscreen bars");
                 _presentation.ApplyEngineState(playing with { Status = PlaybackStatus.Paused, Position = .4 });
                 ToggleFullscreen();
-                await Task.Delay(200);
-                Require(WindowState == WindowState.Normal && Grid.GetRow(VideoSurface) == 1 && PlayerDock.IsVisible && TopChrome.IsVisible,
-                    "leaving fullscreen docks the bars again");
+                bool Docked() => WindowState == WindowState.Normal && Grid.GetRow(VideoSurface) == 1 && PlayerDock.IsVisible && TopChrome.IsVisible;
+                await Within(Docked, 3);
+                Require(Docked(), "leaving fullscreen docks the bars again");
                 WakeChrome();
                 Width = 900;
                 await Task.Delay(200);
@@ -190,6 +199,18 @@ public partial class MainWindow
                 desktop.Shutdown(1);
             }
         };
+    }
+
+    // Moves the real pointer to the middle of the window and tells AppKit, so
+    // the bars do not see it over them.
+    [System.Runtime.Versioning.SupportedOSPlatform("macos")]
+    private void ParkPointerMidWindow()
+    {
+        var handle = TryGetPlatformHandle() ?? throw new InvalidOperationException("No native window.");
+        Point middle = new(Bounds.Width / 2, Bounds.Height / 2);
+        PixelPoint screen = this.PointToScreen(middle);
+        MacEventInjection.Warp(screen.X / RenderScaling, screen.Y / RenderScaling);
+        MacEventInjection.Move(handle.Handle, handle.HandleDescriptor == "NSView", middle.X, middle.Y);
     }
 
     private static void Require(bool condition, string message)

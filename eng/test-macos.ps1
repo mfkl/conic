@@ -114,6 +114,12 @@ if ($Window) {
         'thumbnail', 'accessibility', 'scale', 'settings', 'settings-apply', 'audio-settings', 'engine-settings', 'interactions', 'parity', 'protocols') {
         $cases[$smoke] = @("--$smoke-smoke")
     }
+    # A virtual Mac (a CI runner) has a paravirtual GPU without Apple's
+    # scaler: VideoToolbox frames neither seek reliably nor go through the CPU
+    # filters there, so the smokes that check those decode in software.
+    if ((& sysctl -n kern.hv_vmm_present 2>$null) -eq '1') {
+        foreach ($smoke in 'interactions', 'parity') { $cases[$smoke] += '--software-decoding' }
+    }
     # The drawer's native tracks and the settings smokes play the fixtures;
     # Quick Look makes no thumbnail for Matroska, so Home's gets an MP4.
     $fixtures = Join-Path $output 'settings-fixtures'
@@ -125,18 +131,21 @@ if ($Window) {
         'thumbnail' = @{ CONIC_TEST_MEDIA = Join-Path $fixtures 'gop.mp4' }
     }
 }
+# The hardware pass logs VLC's module selection. Without a VideoToolbox
+# hardware decoder for the clip (an Intel runner), VLC falls back to avcodec.
+$iosurfaceLog = Join-Path $output 'iosurface.log'
+function Get-HardwareDecoder {
+    if (-not (Test-Path -LiteralPath $iosurfaceLog)) { return $null }
+    Select-String -LiteralPath $iosurfaceLog -Pattern 'using video decoder module "([^"]+)"' |
+        Select-Object -First 1 | ForEach-Object { $_.Matches[0].Groups[1].Value }
+}
 $failed = [Collections.Generic.List[string]]::new()
 foreach ($case in $cases.GetEnumerator()) {
     $caseOverrides = if ($overrides -and $overrides.Contains($case.Key)) { $overrides[$case.Key] } else { @{} }
     if (-not (Invoke-Case $case.Key $case.Value $caseOverrides)) { $failed.Add($case.Key) }
+    # The engine settings smoke expects the decoder this Mac has.
+    if ($case.Key -eq 'iosurface' -and ($decoder = Get-HardwareDecoder)) { $environment.CONIC_HARDWARE_DECODER = $decoder }
 }
-# The hardware pass logs VLC's module selection. Without a VideoToolbox
-# hardware decoder for the clip, VLC falls back to avcodec.
-$iosurfaceLog = Join-Path $output 'iosurface.log'
-if (Test-Path -LiteralPath $iosurfaceLog) {
-    $decoder = Select-String -LiteralPath $iosurfaceLog -Pattern 'using video decoder module "([^"]+)"' |
-        Select-Object -First 1 | ForEach-Object { $_.Matches[0].Groups[1].Value }
-    Write-Output "Hardware-decoding pass used the '$($decoder ?? 'unknown')' decoder."
-}
+if (Test-Path -LiteralPath $iosurfaceLog) { Write-Output "Hardware-decoding pass used the '$((Get-HardwareDecoder) ?? 'unknown')' decoder." }
 Write-Output "Logs: $output"
 if ($failed.Count -ne 0) { throw "Failed: $($failed -join ', ')." }

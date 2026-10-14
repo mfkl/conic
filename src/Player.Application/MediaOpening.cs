@@ -30,18 +30,30 @@ public sealed class MediaSourceValidator(IMediaFileSystem fileSystem)
     {
         if (string.IsNullOrWhiteSpace(value)) return MediaOpenResult.Fail("Choose a media file or enter a URL.", "The source was empty.");
         value = value.Trim();
-        if (requestedKind == MediaSourceKind.NetworkUrl || Uri.TryCreate(value, UriKind.Absolute, out Uri? uri) && !uri.IsFile)
+        bool network = NetworkSources.TryGetScheme(value, out string scheme);
+        if (requestedKind == MediaSourceKind.NetworkUrl || network)
         {
-            if (!Uri.TryCreate(value, UriKind.Absolute, out uri) || uri.Scheme is not ("http" or "https"))
-                return MediaOpenResult.Fail("Enter an http or https media URL.", "Unsupported URI scheme or malformed URL.");
-            if (!string.IsNullOrEmpty(uri.UserInfo))
+            if (!network || !NetworkSources.IsSupported(scheme))
+                return MediaOpenResult.Fail(NetworkSources.UnsupportedMessage, "Unsupported URI scheme or malformed URL.");
+            bool parsed = Uri.TryCreate(value, UriKind.Absolute, out Uri? uri);
+            if (parsed && !string.IsNullOrEmpty(uri!.UserInfo))
                 return MediaOpenResult.Fail("URLs with embedded credentials are not supported.", "The URL contains user-info credentials.");
-            UriBuilder builder = new(uri) { Scheme = uri.Scheme.ToLowerInvariant(), Host = uri.Host.ToLowerInvariant(), Fragment = string.Empty };
-            if ((builder.Scheme == "http" && builder.Port == 80) || (builder.Scheme == "https" && builder.Port == 443)) builder.Port = -1;
-            Uri canonical = builder.Uri;
-            string authority = canonical.Scheme + "://" + canonical.Host + (canonical.IsDefaultPort ? string.Empty : ":" + canonical.Port);
-            string display = authority + canonical.PathAndQuery;
-            return new(true, new(canonical.AbsoluteUri, MediaSourceKind.NetworkUrl, display), null, null);
+            if (scheme is "http" or "https")
+            {
+                if (!parsed) return MediaOpenResult.Fail(NetworkSources.UnsupportedMessage, "Malformed URL.");
+                UriBuilder builder = new(uri!) { Scheme = scheme, Host = uri!.Host.ToLowerInvariant(), Fragment = string.Empty };
+                if ((builder.Scheme == "http" && builder.Port == 80) || (builder.Scheme == "https" && builder.Port == 443)) builder.Port = -1;
+                Uri canonical = builder.Uri;
+                string authority = canonical.Scheme + "://" + canonical.Host + (canonical.IsDefaultPort ? string.Empty : ":" + canonical.Port);
+                string display = authority + canonical.PathAndQuery;
+                return new(true, new(canonical.AbsoluteUri, MediaSourceKind.NetworkUrl, display), null, null);
+            }
+            // Other schemes reach VLC as typed (scheme in lower case): VLC
+            // parses them itself, and .NET can't parse some, such as udp://@:1234.
+            if (!parsed && !NetworkSources.IsListenAddress(value, scheme))
+                return MediaOpenResult.Fail(NetworkSources.UnsupportedMessage, "Malformed URL.");
+            string source = scheme + value[scheme.Length..];
+            return new(true, new(source, MediaSourceKind.NetworkUrl, source), null, null);
         }
         try
         {
@@ -61,19 +73,51 @@ public sealed class MediaSourceValidator(IMediaFileSystem fileSystem)
     public static string Key(MediaSource source) => MediaSourceIdentity.Current.Key(source);
 }
 
+/// <summary>
+/// The network URLs Conic hands to VLC: the schemes VLC 3's Open Network
+/// Stream takes for playback. Credentials in the URL are refused.
+/// </summary>
+public static class NetworkSources
+{
+    public static IReadOnlyList<string> Schemes { get; } = ["http", "https", "ftp", "ftps", "sftp", "smb", "rtsp", "rtp", "udp", "mms", "mmsh", "rtmp"];
+
+    public const string UnsupportedMessage = "Enter a network URL: http, https, ftp, sftp, smb, rtsp, rtp, udp, mms or rtmp.";
+
+    public static bool IsSupported(string scheme) => Schemes.Contains(scheme);
+
+    /// <summary>True when <paramref name="value"/> is written scheme://…, other than file://; the scheme comes back in lower case.</summary>
+    public static bool TryGetScheme(string value, out string scheme)
+    {
+        scheme = string.Empty;
+        int separator = value.IndexOf("://", StringComparison.Ordinal);
+        if (separator < 2 || !char.IsAsciiLetter(value[0])) return false;
+        for (int index = 1; index < separator; index++)
+            if (!char.IsAsciiLetterOrDigit(value[index]) && value[index] is not ('+' or '-' or '.')) return false;
+        scheme = value[..separator].ToLowerInvariant();
+        if (scheme == "file") { scheme = string.Empty; return false; }
+        return true;
+    }
+
+    /// <summary>VLC's listening form for UDP and RTP, such as udp://@:1234, which .NET can't parse.</summary>
+    public static bool IsListenAddress(string value, string scheme) =>
+        scheme is "udp" or "rtp" && value.AsSpan(scheme.Length + 3).StartsWith("@") && !value.AsSpan(scheme.Length + 3).ContainsAny(' ', '#');
+}
+
 public static class MediaEngineSourceNormalizer
 {
     public static string Normalize(string source)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(source);
-        if (Uri.TryCreate(source, UriKind.Absolute, out Uri? uri))
+        if (NetworkSources.TryGetScheme(source, out string scheme))
         {
-            if (uri.IsFile)
-                return Path.GetFullPath(uri.LocalPath);
-            if (uri.Scheme is not ("http" or "https") || !string.IsNullOrEmpty(uri.UserInfo) || !string.IsNullOrEmpty(uri.Fragment))
-                throw new ArgumentException("Only credential-free http and https URLs are supported.", nameof(source));
+            bool parsed = Uri.TryCreate(source, UriKind.Absolute, out Uri? uri);
+            if (!NetworkSources.IsSupported(scheme) || (!parsed && !NetworkSources.IsListenAddress(source, scheme)) ||
+                (parsed && (!string.IsNullOrEmpty(uri!.UserInfo) || !string.IsNullOrEmpty(uri.Fragment))))
+                throw new ArgumentException("Only credential-free URLs with a supported scheme are supported.", nameof(source));
             return source;
         }
+        if (Uri.TryCreate(source, UriKind.Absolute, out Uri? file) && file.IsFile)
+            return Path.GetFullPath(file.LocalPath);
         return Path.GetFullPath(source);
     }
 }

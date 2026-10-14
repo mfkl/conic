@@ -522,7 +522,7 @@
                                           Icon="{StaticResource Icon.Link}"
                                           controls:MenuShortcuts.Command="OpenUrl"
                                           Command="{Binding OpenUrlCommand}"
-                                          ToolTip.Tip="Open an http or https media address" />
+                                          ToolTip.Tip="Open one or more network addresses" />
                         <controls:MenuRow Content="Load Playlist…"
                                           Icon="{StaticResource Icon.Playlist}"
                                           controls:MenuShortcuts.Command="LoadPlaylist"
@@ -890,9 +890,10 @@
              Transparent), the 50 px header with the title and close, the URL
              field with the open error, and Cancel / Open in the footer.
              Escape, Cancel, close and the backdrop dismiss it; focus returns
-             to the More button. The app opens one http or https address, so
-             the design's multi-link text area is a one-line field (Enter
-             opens), and the optional playlist name is left out (D2). -->
+             to the More button. The field is the design's multi-link text
+             area: one URL per line (Enter opens, Shift+Enter starts a line;
+             several URLs open as a queue). The optional playlist name is
+             left out (D2). -->
         <controls:ModalDialog x:Name="UrlPanel"
                               Grid.RowSpan="3"
                               ZIndex="30"
@@ -936,16 +937,20 @@
                 <StackPanel>
                     <TextBlock Classes="dialogHeading" Text="Network URL" />
                     <TextBlock Classes="dialogHint"
-                               Text="Paste an http or https media address, then press Open or Enter." />
+                               Text="You can enter multiple links to load, one per line." />
                 </StackPanel>
                 <StackPanel Spacing="8">
                     <TextBox x:Name="UrlTextBox"
                              Classes="dialogField"
                              Text="{Binding UrlText, Mode=TwoWay}"
-                             KeyDown="OnUrlTextKeyDown"
-                             PlaceholderText="e.g., https://www.example.com/stream.mp4"
+                             AcceptsReturn="True"
+                             TextWrapping="Wrap"
+                             MinHeight="120"
+                             MaxHeight="194"
+                             VerticalContentAlignment="Top"
+                             PlaceholderText="e.g., https://www.example.com/stream.avi"
                              AutomationProperties.Name="Media URL"
-                             ToolTip.Tip="Only http and https URLs are supported" />
+                             ToolTip.Tip="http, https, ftp, sftp, smb, rtsp, rtp, udp, mms or rtmp" />
                     <TextBlock x:Name="UrlOpenError"
                                IsVisible="{Binding HasOpenError}"
                                Text="{Binding OpenError}"

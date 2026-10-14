@@ -186,9 +186,10 @@ public partial class MainWindow
         else Dispatcher.UIThread.Post(() => { UrlTextBox.Focus(); UrlTextBox.SelectAll(); });
     }
 
+    // Enter opens; Shift+Enter starts another line for another URL.
     private void OnUrlTextKeyDown(object? sender, Avalonia.Input.KeyEventArgs e)
     {
-        if (e.Key == Avalonia.Input.Key.Enter) { OnUrlSubmit(sender, e); e.Handled = true; }
+        if (e.Key == Avalonia.Input.Key.Enter && !e.KeyModifiers.HasFlag(KeyModifiers.Shift)) { OnUrlSubmit(sender, e); e.Handled = true; }
         else if (e.Key == Avalonia.Input.Key.Escape) { CloseUrlPanel(); e.Handled = true; }
     }
 

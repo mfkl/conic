@@ -6,6 +6,10 @@ public interface IMediaSourcePicker
     Task<string?> PickMediaAsync(CancellationToken cancellationToken = default);
 
     Task<string?> PickFolderAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Open File: one or more files. A host without a multiple picker gives the one file.</summary>
+    async Task<IReadOnlyList<string>> PickMediaFilesAsync(CancellationToken cancellationToken = default) =>
+        await PickMediaAsync(cancellationToken) is { Length: > 0 } path ? [path] : [];
 }
 
 public interface IPlaylistDocumentPicker

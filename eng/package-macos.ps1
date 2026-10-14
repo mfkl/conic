@@ -127,6 +127,7 @@ $shortVersion = ($Version -split '-')[0]
   <key>CFBundleShortVersionString</key><string>$shortVersion</string>
   <key>CFBundleVersion</key><string>$Version</string>
   <key>NSHighResolutionCapable</key><true/>
+  <key>NSHumanReadableCopyright</key><string>GPL-2.0-or-later. Design: VLC Redesign by Juxtopposed. VLC is a trademark of VideoLAN.</string>
   <key>NSPrincipalClass</key><string>NSApplication</string>
 </dict>
 </plist>

@@ -30,6 +30,7 @@ internal sealed partial class SettingsViewModel
         nameof(ReplayGain), nameof(HasReplayGain), nameof(ReplayGainPreamp), nameof(Equalizer), nameof(EqualizerPreset),
         nameof(EqualizerPreamp), nameof(EqualizerPreampText), nameof(SpatialAudio), nameof(SpatialAudioMode),
         nameof(Compressor), nameof(PitchShift), nameof(Karaoke), nameof(AudioDelay), nameof(DolbySurround), nameof(ResamplerQuality),
+        nameof(StereoMode), nameof(TimeStretch),
     ];
 
     // Output. The device list is Windows' playback endpoints (the MMDevice
@@ -151,6 +152,9 @@ internal sealed partial class SettingsViewModel
     public SettingOption DolbySurround { get => Find(DolbySurroundModes, Current.DolbySurround); set { if (value is not null) Update(s => s with { DolbySurround = value.Value }); } }
     public IReadOnlyList<SettingOption> ResamplerQualities => AudioEngineOptions.ResamplerQualities;
     public SettingOption ResamplerQuality { get => Find(ResamplerQualities, Current.ResamplerQuality); set { if (value is not null) Update(s => s with { ResamplerQuality = value.Value }); } }
+    public IReadOnlyList<SettingOption> StereoModes => AudioEngineOptions.StereoModes;
+    public SettingOption StereoMode { get => Find(StereoModes, Current.StereoMode); set { if (value is not null) Update(s => s with { StereoMode = value.Value }); } }
+    public bool TimeStretch { get => Current.TimeStretch; set => Update(s => s with { TimeStretch = value }); }
 
     private void RefreshAudioRows()
     {
@@ -166,5 +170,6 @@ internal sealed partial class SettingsViewModel
         EqualizerBands = d.EqualizerBands, SpatialAudio = d.SpatialAudio, SpatialAudioMode = d.SpatialAudioMode,
         Compressor = d.Compressor, PitchShift = d.PitchShift, Karaoke = d.Karaoke, AudioLanguage = d.AudioLanguage, AudioDelay = d.AudioDelay,
         AudioOutputModule = d.AudioOutputModule, AudioPassthrough = d.AudioPassthrough, DolbySurround = d.DolbySurround, ResamplerQuality = d.ResamplerQuality,
+        StereoMode = d.StereoMode, TimeStretch = d.TimeStretch,
     };
 }

@@ -61,6 +61,10 @@ internal sealed partial class VlcCorePlayer
                 VLCCore.VarSetChecked(output, "spatialaudio-headphones", VLCVarType.Bool, new VLCValueNative { Bool = wanted.SpatialHeadphones ? (byte)1 : (byte)0 }) == 0);
             SetAudioVariable(output, "audio-replay-gain-mode", VLCVarType.String, () => variables.SetString("audio-replay-gain-mode", wanted.ReplayGainMode));
             SetAudioVariable(output, "audio-replay-gain-preamp", VLCVarType.Float, () => variables.SetFloat("audio-replay-gain-preamp", (float)wanted.ReplayGainPreamp));
+            // Audio › Stereo Mode: the output restarts with the new channel
+            // layout each time the variable is set, so only on a change.
+            if (applied is null ? wanted.StereoMode != 0 : wanted.StereoMode != applied.StereoMode)
+                SetAudioVariable(output, "stereo-mode", VLCVarType.Integer, () => variables.SetInteger("stereo-mode", wanted.StereoMode));
 
             // The output restarts its filters when "audio-filter" changes. A
             // parameter the filters read when they start needs that restart

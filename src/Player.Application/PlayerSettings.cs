@@ -99,6 +99,9 @@ public sealed record PlayerSettings(
     string DolbySurround = "Automatic",
     string ResamplerQuality = "Balanced",
     int AudioDelay = 0,
+    // VLC 3's Audio › Stereo Mode (live) and time-stretching (on in VLC).
+    string StereoMode = "Unset",
+    bool TimeStretch = true,
     // Version 8 (phase 9d): Subtitles (SubtitleEngineOptions), Controls,
     // Interface and Library (InterfaceOptions). Every field below has a
     // default; Migrate turns AutoHideControls off for a version 7 or older

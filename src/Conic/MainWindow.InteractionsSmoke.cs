@@ -163,6 +163,10 @@ public partial class MainWindow
 
                 _settings.ResetAll();
                 _settings.Update(s => s with { ResumePlayback = false });
+                // --software-decoding: VLC's software decoder for every open,
+                // as Settings › Hardware decoding Off asks; the cases reset the settings.
+                if (Environment.GetCommandLineArgs().Contains("--software-decoding", StringComparer.OrdinalIgnoreCase))
+                    VideoSurface.ExtraOpenArgumentsForSmoke = ["--avcodec-hw=none", "--no-videotoolbox"];
                 _mediaPicker.ScriptedForSmoke = true;
                 int finished = 0;
                 _presentation.PlaybackFinished += (_, _) => finished++;

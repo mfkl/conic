@@ -135,7 +135,9 @@ public partial class MainWindow
                 }
                 bool windows = OperatingSystem.IsWindows();
                 // VideoToolbox is a decoder module of its own on macOS, ahead of avcodec.
-                string HardwareDecoder = windows ? "using hw decoder module \"d3d11va\"" : "using video decoder module \"videotoolbox\"";
+                // A Mac without it (an Intel CI runner) names the one VLC uses instead.
+                string macDecoder = Environment.GetEnvironmentVariable("CONIC_HARDWARE_DECODER") is { Length: > 0 } configured ? configured : "videotoolbox";
+                string HardwareDecoder = windows ? "using hw decoder module \"d3d11va\"" : $"using video decoder module \"{macDecoder}\"";
                 // VLC logs pointers as "0x11ef77460" on macOS, "000001F3A2B4" on Windows.
                 const string Pointer = "[(](0x)?[0-9a-fA-F]+[)]";
                 string still = Fixture("still-lowq.mp4");

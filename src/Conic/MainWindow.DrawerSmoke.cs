@@ -39,6 +39,7 @@ public partial class MainWindow
                         _presentation.IsQueueOpen = true;
                         await Task.Delay(100);
                         IReadOnlyList<MediaTrack> Tracks() => kind == MediaTrackKind.Audio ? _presentation.AudioTracks : _presentation.SubtitleTracks;
+                        await WaitFor(() => Tracks().Any(t => t.IsSelected && !t.IsDisabled), $"VLC reports a selected {kind} track");
                         string previous = Tracks().First(t => t.IsSelected && !t.IsDisabled).Id;
                         var off = QueueDrawer.GetVisualDescendants().OfType<Button>().Single(b => b.IsEffectivelyVisible && b.DataContext is MediaTrack { IsDisabled: true });
                         Require(off.IsEnabled, "Disable is an enabled track choice");

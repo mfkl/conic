@@ -92,6 +92,10 @@ public partial class MainWindow
 
                 ToggleFullscreen();
                 await Task.Delay(200);
+                // macOS animates into fullscreen: PiP is asked for once the window fills the screen.
+                bool FillsScreen() => Screens.ScreenFromWindow(this) is { } screen &&
+                    Math.Abs(ClientSize.Width * RenderScaling - screen.Bounds.Width) < 2 && Math.Abs(ClientSize.Height * RenderScaling - screen.Bounds.Height) < 2;
+                for (DateTime settle = DateTime.UtcNow.AddSeconds(3); !FillsScreen() && DateTime.UtcNow < settle;) await Task.Delay(50);
                 TogglePictureInPicture();
                 await Task.Delay(200);
                 Require(WindowState == WindowState.Normal && _presentation.IsPictureInPicture, "fullscreen enters PiP");

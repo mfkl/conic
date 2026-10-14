@@ -10,6 +10,8 @@
     <ApplicationIcon>Assets\conic.ico</ApplicationIcon>
     <AssemblyName>Conic</AssemblyName>
     <RootNamespace>Conic</RootNamespace>
+    <Product>Conic</Product>
+    <Copyright>GPL-2.0-or-later. Design: VLC Redesign by Juxtopposed. VLC is a trademark of VideoLAN.</Copyright>
   </PropertyGroup>
 
   <!-- The interactive smoke harness compiles only into builds that ask for it:

@@ -64,6 +64,7 @@ proxy password storage).
 
 ## Completeness
 
+Conic reaches 59% parity with VLC 3.
 [Feature parity with VLC 3](FEATURE_PARITY.md) compares 183 VLC 3 features:
 57 work the same, 44 work differently or in part, 52 are missing and 30 were
 left out on purpose (disc menus, streaming and conversion, capture, skins,

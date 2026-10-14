@@ -21,7 +21,9 @@ public sealed class MenuTests
         MenuShortcuts.SetCommand(skip, nameof(PlayerCommandId.SkipBackward));
         MenuItem unassigned = new() { Header = "Next item" };
         MenuShortcuts.SetCommand(unassigned, nameof(PlayerCommandId.QueueNext));
-        ContextMenu menu = new() { Items = { new MenuItem { Header = "Playback", Items = { skip, unassigned } } } };
+        // Arrays, not Items.Add: an observable item list checks the dispatcher's
+        // thread, which another test class may own when xUnit runs them in parallel.
+        ContextMenu menu = new() { ItemsSource = new[] { new MenuItem { Header = "Playback", ItemsSource = new[] { skip, unassigned } } } };
         Dictionary<PlayerCommandId, string> shortcuts = new()
         {
             [PlayerCommandId.OpenMedia] = "Ctrl+M",

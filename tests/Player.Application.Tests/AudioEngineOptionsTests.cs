@@ -115,7 +115,23 @@ public sealed class AudioEngineOptionsTests
         Assert.Contains(AudioEngineOptions.SpatialAudioModes, o => o.Value == d.SpatialAudioMode);
         Assert.Contains(AudioEngineOptions.DolbySurroundModes, o => o.Value == d.DolbySurround);
         Assert.Contains(AudioEngineOptions.ResamplerQualities, o => o.Value == d.ResamplerQuality);
+        Assert.Contains(AudioEngineOptions.StereoModes, o => o.Value == d.StereoMode);
         Assert.Contains(AudioEngineOptions.EqualizerPresets, o => o.Value == d.EqualizerPreset);
         Assert.Equal(d, AudioEngineOptions.Normalize(d));
     }
+
+    [Fact]
+    public void StereoModeAndTimeStretchBecomeVlcOptions()
+    {
+        Assert.Empty(AudioEngineOptions.Arguments(PlayerSettings.Default, windows: true));
+        Assert.Equal(["--stereo-mode=7", "--no-audio-time-stretch"],
+            AudioEngineOptions.Arguments(PlayerSettings.Default with { StereoMode = "Mono", TimeStretch = false }, windows: true));
+        Assert.Equal(2, AudioEngineOptions.Live(PlayerSettings.Default with { StereoMode = "ReverseStereo" }, windows: true).StereoMode);
+        Assert.Equal(SettingApplyMode.Live, PlayerSettingsService.ApplyMode(nameof(PlayerSettings.StereoMode)));
+        Assert.Equal(SettingApplyMode.NextOpen, PlayerSettingsService.ApplyMode(nameof(PlayerSettings.TimeStretch)));
+    }
+
+    [Fact]
+    public void AnUnknownStereoModeFallsBackToAutomatic() =>
+        Assert.Equal("Unset", AudioEngineOptions.Normalize(PlayerSettings.Default with { StereoMode = "Quad" }).StereoMode);
 }

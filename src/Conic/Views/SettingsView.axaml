@@ -1197,6 +1197,12 @@
                                         <controls:SettingRow Label="Resampling quality" Badge="Next open" Help="When the sample rate changes: Best keeps the highest frequencies, Fast takes the least processor time">
                                             <ComboBox ItemsSource="{Binding ResamplerQualities}" SelectedItem="{Binding ResamplerQuality, Mode=TwoWay}" AutomationProperties.Name="Resampling quality" AutomationProperties.HelpText="When the sample rate changes: Best keeps the highest frequencies, Fast takes the least processor time" />
                                         </controls:SettingRow>
+                                        <controls:SettingRow Label="Stereo mode" Badge="Live" Help="How a stereo track reaches the speakers: swapped, one channel on both sides, mixed to mono, or for Dolby Surround or headphones. Automatic follows the media">
+                                            <ComboBox ItemsSource="{Binding StereoModes}" SelectedItem="{Binding StereoMode, Mode=TwoWay}" AutomationProperties.Name="Stereo mode" AutomationProperties.HelpText="How a stereo track reaches the speakers: swapped, one channel on both sides, mixed to mono, or for Dolby Surround or headphones. Automatic follows the media" />
+                                        </controls:SettingRow>
+                                        <controls:SettingRow Label="Keep the pitch when the speed changes" Badge="Next open" Help="Time-stretching: at another playback speed, voices and music keep their pitch" ControlWidth="68">
+                                            <CheckBox IsChecked="{Binding TimeStretch, Mode=TwoWay}" AutomationProperties.Name="Keep the pitch when the speed changes" AutomationProperties.HelpText="Time-stretching: at another playback speed, voices and music keep their pitch" />
+                                        </controls:SettingRow>
                                     </StackPanel>
 
                                     <!-- Media › Subtitles (design 3180:17989, 6536:13908): Tracks &

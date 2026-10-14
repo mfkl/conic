@@ -37,6 +37,7 @@ public sealed class KeyboardShortcutTests
     [InlineData(PlayerCommandId.Snapshot, "snapshot notice")]
     [InlineData(PlayerCommandId.TogglePictureInPicture, "picture in picture")]
     [InlineData(PlayerCommandId.ShowHome, "home")]
+    [InlineData(PlayerCommandId.ShowMessages, "messages")]
     public async Task EachDefaultShortcutKeyRunsItsCommand(PlayerCommandId command, string effect)
     {
         Player player = new();
@@ -59,7 +60,7 @@ public sealed class KeyboardShortcutTests
             .GetCustomAttributes(typeof(InlineDataAttribute), false).Cast<InlineDataAttribute>()
             .Select(data => (PlayerCommandId)data.GetData(null!).Single()[0]).ToArray();
 
-        Assert.Equal(21, checkedCommands.Length);
+        Assert.Equal(22, checkedCommands.Length);
         Assert.Equal(checkedCommands.Order(), PlayerShortcutPolicy.Defaults(player.ViewModel.Registry).Select(shortcut => shortcut.Command).Order());
     }
 
@@ -98,6 +99,7 @@ public sealed class KeyboardShortcutTests
                 sourceValidator: new MediaSourceValidator(new ExistingFiles()), history: new MediaHistoryService(new HistoryStorage()),
                 showUrlPanel: () => _effects.Add("url panel"));
             ViewModel.PictureInPictureRequested += (_, _) => _effects.Add("picture in picture");
+            ViewModel.MessagesRequested += (_, _) => _effects.Add("messages");
             ViewModel.OpenSource("a.mp4", MediaSourceKind.File);
             ViewModel.ApplyEngineState(new(1, PlaybackStatus.Playing, "a.mp4", .5, TimeSpan.FromSeconds(50), TimeSpan.FromSeconds(100), .5, true, null));
             ViewModel.ShowPlayerCommand.Execute(null);

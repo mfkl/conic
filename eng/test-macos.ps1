@@ -8,7 +8,8 @@
 #    shortcuts on the caption row, and the UI smokes (Home, drawer, menus,
 #    playback controls, Settings, accessibility), including the engine and
 #    audio settings against fixtures from eng/make-settings-fixtures.ps1
-#    (needs ffmpeg; the screen samples need the Screen Recording permission).
+#    (needs ffmpeg; the screen samples need the Screen Recording permission),
+#    and the Messages window against the engine's real log.
 # Window cases need a logged-in GUI session.
 [CmdletBinding()]
 param(
@@ -118,6 +119,7 @@ if ($Window) {
     $fixtures = Join-Path $output 'settings-fixtures'
     & (Join-Path $PSScriptRoot 'make-settings-fixtures.ps1') -Output $fixtures | Out-Null
     $cases['drawer-native'] = @('--drawer-native-smoke')
+    $cases['messages'] = @('--messages-smoke', '--video-capture')
     $overrides = @{
         'drawer-native' = @{ CONIC_TEST_MEDIA = Join-Path $fixtures 'languages.mkv' }
         'thumbnail' = @{ CONIC_TEST_MEDIA = Join-Path $fixtures 'gop.mp4' }

@@ -52,6 +52,7 @@ internal static class Program
         if (StartupFailure is { } failure)
         {
             Console.Error.WriteLine($"[startup] {failure.Message}\n{failure.Detail}");
+            VlcLog.Write(Player.Application.EngineMessageType.Error, $"{failure.Message} {failure.Detail}");
             BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
             return 2;
         }

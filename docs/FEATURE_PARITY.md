@@ -47,20 +47,20 @@ carries its tag.
 | Section | Same | Different | Partial | Missing | Out of scope | Total | Parity |
 |---|---|---|---|---|---|---|---|
 | Media menu | 3 | 4 | 3 | 0 | 4 | 14 | 85% |
-| Playback menu | 9 | 0 | 0 | 3 | 2 | 14 | 75% |
+| Playback menu | 10 | 1 | 0 | 1 | 2 | 14 | 92% |
 | Audio menu | 3 | 2 | 0 | 1 | 0 | 6 | 83% |
-| Video menu | 3 | 2 | 1 | 4 | 0 | 10 | 55% |
-| Subtitle menu | 1 | 0 | 1 | 0 | 0 | 2 | 75% |
-| Tools menu | 1 | 4 | 5 | 8 | 4 | 22 | 42% |
-| View menu | 2 | 3 | 1 | 2 | 1 | 9 | 69% |
-| Help menu | 1 | 0 | 0 | 1 | 1 | 3 | 50% |
-| Preferences | 31 | 2 | 5 | 5 | 6 | 49 | 83% |
-| Playlist and queue | 6 | 3 | 1 | 3 | 0 | 13 | 73% |
+| Video menu | 4 | 3 | 0 | 3 | 0 | 10 | 70% |
+| Subtitle menu | 2 | 0 | 0 | 0 | 0 | 2 | 100% |
+| Tools menu | 3 | 7 | 5 | 3 | 4 | 22 | 69% |
+| View menu | 3 | 4 | 0 | 1 | 1 | 9 | 88% |
+| Help menu | 1 | 1 | 0 | 0 | 1 | 3 | 100% |
+| Preferences | 33 | 2 | 5 | 3 | 6 | 49 | 87% |
+| Playlist and queue | 7 | 3 | 2 | 1 | 0 | 13 | 85% |
 | Library | 0 | 1 | 0 | 1 | 3 | 5 | 50% |
-| Hotkeys and mouse | 4 | 1 | 1 | 2 | 0 | 8 | 69% |
-| Command line and OS integration | 3 | 1 | 3 | 4 | 2 | 13 | 50% |
+| Hotkeys and mouse | 5 | 1 | 0 | 2 | 0 | 8 | 75% |
+| Command line and OS integration | 5 | 1 | 2 | 3 | 2 | 13 | 64% |
 | Network and streaming | 4 | 1 | 0 | 3 | 7 | 15 | 63% |
-| **Total** | **71** | **24** | **21** | **37** | **30** | **183** | **69%** |
+| **Total** | **83** | **31** | **17** | **22** | **30** | **183** | **80%** |
 
 The Conic only section lists 13 features VLC 3's Qt interface does not have; they are not counted above.
 
@@ -76,8 +76,8 @@ The Conic only section lists 13 features VLC 3's Qt interface does not have; the
 | Open Capture Device | Yes | None | Out of scope | Left out in the menus redesign. |
 | Open Location from clipboard | Ctrl+V | Ctrl+V, right-click Open Media, macOS File menu | Same | Each line that is a URL or a path opens; several as a queue. On macOS the File menu shows no Cmd+V, so text fields keep Paste. |
 | Open Recent Media | Submenu, clear | More menu › Open Recent page, Home › Recent | Same | 50 entries, per-entry remove, Clear recent. Settings › Privacy turns history off (clears at once). |
-| Open a playlist file | Through Open File (XSPF, M3U, PLS, and more) | Load Playlist (M3U, M3U8) | Partial | Flat, at most 2,000 entries, no nested playlists. Not verified what happens when a playlist file is opened with Open File (it is handed to VLC as a file). |
-| Save Playlist to File | Ctrl+Y, XSPF, M3U, M3U8, HTML | Save Playlist | Partial | M3U8 only. In the queue panel and the macOS File menu. |
+| Open a playlist file | Through Open File (XSPF, M3U, PLS, and more) | Load Playlist (M3U, M3U8, XSPF, PLS) | Partial | Flat, at most 2,000 entries, no nested playlists. Not verified what happens when a playlist file is opened with Open File (it is handed to VLC as a file). |
+| Save Playlist to File | Ctrl+Y, XSPF, M3U, M3U8, HTML | Save Playlist (M3U8, XSPF) | Partial | No HTML or plain M3U. In the queue panel and the macOS File menu. |
 | Convert / Save | Yes | None | Out of scope | Transcoding is a non-goal. |
 | Stream | Yes | None | Out of scope | Streaming output is a non-goal. |
 | Quit at the end of playlist | Menu toggle | Settings › Playback › When playback finishes | Different | Stop, Go to Home or Quit, remembered. A persistent setting, not a per-session toggle. |
@@ -89,7 +89,7 @@ The Conic only section lists 13 features VLC 3's Qt interface does not have; the
 |---|---|---|---|---|
 | Title | Submenu | Queue panel › Chapters tab, "Titles and chapters" | Same | Selection is read back from VLC. Disc menus are out of scope (no disc input). |
 | Chapter | Submenu, prev/next chapter | Chapters tab, right-click Playback, Shift+P / Shift+N | Same | Pick from the list, or step with VLC's keys; Previous restarts the chapter after 1.5 s, as in VLC. |
-| Program | Submenu (DVB, TS programs) | None | Missing | |
+| Program | Submenu (DVB, TS programs) | X (Next Program), right-click Playback, macOS Playback menu | Different | Steps through the programs of a multi-program stream (DVB, MPEG-TS); no list to pick from. Shown when the media has more than one. |
 | Custom Bookmarks | Ctrl+B, manage | None | Missing | Hidden on purpose (redesign decision D2). |
 | Renderer (Chromecast) | Submenu, discovery | None | Out of scope | Casting is out of this experiment. |
 | Speed | Faster, slower, normal, fine steps, 0.25x to 4x slider | Menu 0.5x to 2x, faster, slower, normal; panel slider 0.25x to 2x | Same | "]" and "[" take VLC's fine 0.1 steps and "=" resets; VLC's coarse "+" and "-" keys are not available (a shortcut cannot use them). Default speed in Settings › Playback (Next open). |
@@ -99,7 +99,7 @@ The Conic only section lists 13 features VLC 3's Qt interface does not have; the
 | Stop | S | S, bar, right-click menu, More menu | Same | |
 | Previous / Next | P / N | P / N, bar, right-click menu, macOS menu | Same | |
 | Record | Advanced controls | None | Out of scope | Recording is out of this experiment. |
-| A-B loop | Advanced controls | None | Missing | |
+| A-B loop | Advanced controls | Shift+L, right-click Playback, macOS Playback menu | Same | Set A, set B, off, as VLC; it follows the input's time, as VLC's does. |
 | Frame by frame | E, advanced controls | E, right-click Playback, macOS menu | Same | VLC's own frame-next: the first press pauses, as in VLC. |
 
 ## Audio menu
@@ -124,15 +124,15 @@ The Conic only section lists 13 features VLC 3's Qt interface does not have; the
 | Zoom | 1:4, 1:2, 1:1, 2:1 | Same choices | Same | Playback panel › Video tab (live), default in Settings (Next open). |
 | Aspect Ratio | VLC's list | VLC's list | Same | Choices read from the output; live; default in Settings. No custom ratios. |
 | Crop | VLC's ratio list | VLC's ratio list | Same | Live in the Video tab; default in Settings. Pixel crop is in Tools below. |
-| Deinterlace and mode | Live, 10 modes | Settings › Video › Deinterlacing | Partial | Next open only, not live. Automatic/On/Off and 5 methods (Blend, Bob, X, Yadif 2x, Film NTSC IVTC), the ones VLC's D3D11 deinterlacer implements. |
+| Deinterlace and mode | Live, 10 modes | Settings › Video › Deinterlacing | Different | Live. Automatic/On/Off and 5 methods (Blend, Bob, X, Yadif 2x, Film NTSC IVTC), the ones VLC's D3D11 deinterlacer implements. In Settings, not a menu. |
 | Post processing | Levels 0 to 6 | None | Missing | Removed: VLC 3.0.24's postproc had no visible effect in testing. |
-| Take Snapshot | Shift+S, saved file | Shift+S, macOS menu item | Missing | The command only shows "Snapshot unavailable"; no file is written. |
+| Take Snapshot | Shift+S, saved file | Shift+S, macOS menu | Same | VLC writes the file and shows its name over the video. Folder and format in Settings › Video › Snapshots. |
 
 ## Subtitle menu
 
 | Feature | VLC 3 | Conic | Status | Notes |
 |---|---|---|---|---|
-| Add Subtitle File | Live, while playing | Tracks panel › Subtitles › add file, or a drop | Partial | Applies from the next open of that media, not live. srt, ass, ssa, vtt, sub. Same for external audio. |
+| Add Subtitle File | Live, while playing | Tracks panel › Subtitles › add file, or a drop | Same | Live while media plays: the track is added and selected. srt, ass, ssa, vtt, sub. Same for external audio. |
 | Sub Track | Submenu, cycle (V) | Tracks panel › Subtitles, right-click Subtitle › Subtitle Tracks | Same | Includes Disable. VLC renders the subtitles, Conic composes them over the video. V cycles the tracks, Disable included, as in VLC. |
 
 ## Tools menu
@@ -140,17 +140,17 @@ The Conic only section lists 13 features VLC 3's Qt interface does not have; the
 | Feature | VLC 3 | Conic | Status | Notes |
 |---|---|---|---|---|
 | Audio equalizer | 10 bands, preamp, presets, 2-pass | Settings › Audio › Effects | Different | Live. 10 bands, preamp, VLC's 18 presets. No 2-pass. In Settings, not a Tools window. |
-| Compressor | 7 parameters | On/off | Partial | Live, VLC defaults. |
-| Spatializer | Room size, width, wet, dry, damp | Spatial audio › Room, on/off | Partial | Live. Also Headphone virtualization (VLC's spatialaudio binaural mode). |
+| Compressor | 7 parameters | On/off and its 7 parameters | Same | Live: RMS/peak, attack, release, threshold, ratio, knee radius, makeup gain (Settings › Audio). |
+| Spatializer | Room size, width, wet, dry, damp | Spatial audio › Room and its 5 parameters | Same | Live: room size, width, wet, dry, damping. Also Headphone virtualization (VLC's spatialaudio binaural mode). |
 | Stereo widener | Yes | None | Missing | Dropped: VLC 3.0.24's filter refuses the usual output chains. |
 | Advanced audio (pitch shift) | Pitch in semitones | Settings › Audio › Pitch shift | Different | Live, -12 to +12. Karaoke (voice removal) also on this page. |
-| Video essential (image adjust) | Hue, brightness, contrast, saturation, gamma, live | Settings › Video › Picture | Partial | Next open, not live. Gamma needs hardware decoding off. No sharpen, banding removal, film grain. |
-| Video crop (pixels) | Top, bottom, left, right | None | Missing | Only ratio crop. |
-| Video colors | Color extraction, threshold, invert, posterize, sepia, gradient | None | Missing | |
-| Video geometry | Transform, rotate, zoom, wall, puzzle | None | Missing | |
-| Video overlay | Logo, marquee | None | Missing | |
+| Video essential (image adjust) | Hue, brightness, contrast, saturation, gamma, live | Settings › Video › Picture and Effects | Different | Live. Hue, brightness, contrast, saturation, gamma, sharpen, banding removal, film grain. Gamma needs hardware decoding off. In Settings, not a Tools window. |
+| Video crop (pixels) | Top, bottom, left, right | Settings › Video › Framing › Crop (pixels) | Different | Live; replaces the crop ratio. In Settings, not a Tools window. |
+| Video colors | Color extraction, threshold, invert, posterize, sepia, gradient | Settings › Video › Effects | Partial | Live: invert, sepia (intensity), posterize (levels), color extraction, color threshold (color). No gradient, no saturation or similarity thresholds. |
+| Video geometry | Transform, rotate, zoom, wall, puzzle | Settings › Video › Effects › Rotate or flip | Partial | Live: 90, 180, 270, flips, transpose. No free angle, wall, puzzle or interactive zoom. |
+| Video overlay | Logo, marquee | Settings › Video › Overlay | Different | Live: logo (PNG file, position, opacity) and marquee (text, position). Fewer options than VLC's tab. |
 | AtmoLight | Yes | None | Missing | |
-| Video advanced | Denoiser, anaglyph, mirror, blur, antiflicker, and others | None | Missing | |
+| Video advanced | Denoiser, anaglyph, mirror, blur, antiflicker, and others | Settings › Video › Effects | Partial | Live: noise reduction, anaglyph 3D, mirror, motion blur, anti-flicker. No clone, water, waves, psychedelic, motion detection or spatial blur. |
 | Synchronization | Audio delay, subtitle delay, subtitle speed and duration | Tracks panel delay fields | Partial | Audio and subtitle delay, live, ±100 ms buttons, typed ms, reset, ±10 s range; VLC's J/K and G/H keys move them by 50 ms. Defaults in Settings (Next open). No subtitle speed or duration factor. |
 | Media Information | Ctrl+I, general (editable metadata), metadata, codec, statistics | Ctrl+I, Playback panel › Information tab | Partial | Read-only metadata and codec streams, refresh, Copy diagnostics (redacted). No metadata editing, no statistics tab. |
 | Codec Information | Ctrl+J | Information tab, codec streams | Different | Merged with Media Information. Ctrl+J opens the queue in Conic. |
@@ -170,9 +170,9 @@ The Conic only section lists 13 features VLC 3's Qt interface does not have; the
 | Docked playlist | Toggle | Always docked (drawer) | Different | |
 | Status bar | Toggle | None | Missing | |
 | Always on top | Toggle | More menu toggle, Settings › Interface | Same | Remembered for the next start. |
-| Minimal interface | Ctrl+H | None | Missing | Closest: picture in picture (Conic only). |
+| Minimal interface | Ctrl+H | Hide UI (Ctrl+H), right-click menu, macOS View menu | Same | The bars overlay the video and hide while it plays. The design lists Ctrl+\; Conic uses VLC's key. |
 | Fullscreen interface (controls in fullscreen) | Toggle | Settings › Interface › Show controls in fullscreen | Same | Plus auto-hide on/off and timeout. |
-| Advanced controls | Record, snapshot, A-B, frame step | Next Frame and Jump to Time in menus | Partial | Frame step is there (E); record, snapshot and A-B loop are not. |
+| Advanced controls | Record, snapshot, A-B, frame step | Next Frame, Jump to Time, A-B loop, snapshot in menus and keys | Different | No record button: recording is out of scope. |
 | Media library / playlist sidebar | Toggle | Home screen, Library panel (Ctrl+Shift+L) | Different | History only. See Library. |
 | Extensions view | Yes | None | Out of scope | |
 
@@ -180,7 +180,7 @@ The Conic only section lists 13 features VLC 3's Qt interface does not have; the
 
 | Feature | VLC 3 | Conic | Status | Notes |
 |---|---|---|---|---|
-| Help | F1 | None | Missing | Settings rows have help tooltips. |
+| Help | F1 | F1, right-click More Settings, macOS Help menu | Different | Opens Conic's README online; Settings rows also have help tooltips. |
 | Check for updates | Yes | None | Out of scope | Update checks are out of this experiment. |
 | About | Yes | Shift+F1, More menu, right-click More Settings, macOS Help menu | Same | Version, VLC engine version, credits and license. |
 
@@ -200,7 +200,7 @@ preferences categories.
 | Show controls in fullscreen | Yes | Interface › Show controls in fullscreen | Same | Live. |
 | Remember window position and size | Yes | Interface › Remember window size and position | Same | Restart. |
 | Show media title in window title | Yes | Interface › Show the file name in the title bar | Same | Live. |
-| Allow only one instance | Yes | None | Missing | |
+| Allow only one instance | Yes | Interface › Allow only one instance | Same | Restart. A second start hands its media to the open Conic, which comes forward. |
 | Systray, notifications | Yes | None | Out of scope | |
 | Save recently played items | Yes | Privacy › Remember recent media | Same | Off clears the history at once. |
 | Continue playback | Ask, always, never | Playback › Continue where you left off | Same | Next open. Also resume thresholds and Remember resume history (Privacy). |
@@ -223,7 +223,7 @@ preferences categories.
 | Disable screensaver | Yes | Video › Stop the screensaver during playback | Partial | Windows only. Live. |
 | Default deinterlace and mode | Yes | Video › Deinterlacing | Same | Next open. Fewer methods (see Video menu). |
 | Force aspect ratio | Yes | Video › Framing › Aspect ratio, Crop, Zoom | Same | Next open. |
-| Snapshot directory, format | Yes | None | Missing | No snapshots. |
+| Snapshot directory, format | Yes | Video › Snapshots › Folder, Format | Same | PNG, JPEG or TIFF. Next open. |
 | On-screen display, title on start | Yes | Subtitles › On-Screen Messages | Same | Show file name when a video starts (Next open, 1 to 10 s). Shortcut feedback is Conic's own overlay (Live). |
 | Enable subtitles | Yes | Subtitles › Enable subtitles | Same | Next open. |
 | Preferred subtitle language | Yes | Playback and Subtitles › Preferred language | Same | Next open. |
@@ -251,8 +251,8 @@ preferences categories.
 | Play an item | Double-click | Click | Same | |
 | Reorder | Drag and drop | Move earlier / later buttons | Different | The drag handle is visual only. |
 | Remove, clear | Yes | Remove per item, Clear queue | Same | |
-| Search / filter | Yes | None | Missing | |
-| Sort | By title, artist, duration, and more | None | Missing | |
+| Search / filter | Yes | Queue panel search field | Same | Shown with more than one item; matches the names. |
+| Sort | By title, artist, duration, and more | Queue panel › Sort by name | Partial | Natural name order, then reversed; no other keys (artist, duration). |
 | Repeat one / all | Yes | Repeat cycle in queue panel and right-click menu | Same | Remembered across runs (Settings › Playback › Order). |
 | Random | Yes | Shuffle | Same | Remembered. |
 | Play and stop | Option | Settings › Playback › Stop after each item | Same | Next open. |
@@ -276,9 +276,9 @@ preferences categories.
 | Feature | VLC 3 | Conic | Status | Notes |
 |---|---|---|---|---|
 | Hotkeys editor | Preferences › Hotkeys, search | Settings › Controls › Keyboard Shortcuts | Same | Search, per-row save and reset, Reset All, conflict checks. Live. |
-| Number of bindable actions | About 90 actions | 84 registered commands | Partial | Some listed commands need a value (seek, set volume, select a track) and do nothing from a key; the step commands beside them do. |
+| Number of bindable actions | About 90 actions | About 70 bindable commands | Same | The editor lists the commands a key can run; the ones that need a value (seek to, select a track) are left out. |
 | Global hotkeys | Yes | None | Missing | |
-| Default keys | VLC's set | Mostly VLC's | Different | Same: Space, S, P, N, M, E, B, V, G, H, J, K, [, ], =, Shift+P, Shift+N, Ctrl+Up, Ctrl+Down, Ctrl+O, Ctrl+V, Ctrl+T, Ctrl+I, Shift+S, Esc, skip keys. Different: F11 (fullscreen), Ctrl+L (network), Ctrl+J (queue), Ctrl+, (settings), Ctrl+Shift+M (messages); no + and -. Cmd on macOS. |
+| Default keys | VLC's set | Mostly VLC's | Different | Same: Space, S, P, N, M, E, B, V, G, H, J, K, X, [, ], =, Shift+L, Shift+P, Shift+N, Shift+S, Ctrl+Up, Ctrl+Down, Ctrl+H, Ctrl+O, Ctrl+V, Ctrl+T, Ctrl+I, F1, Esc, skip keys. Different: F11 (fullscreen), Ctrl+L (network), Ctrl+J (queue), Ctrl+, (settings), Ctrl+Shift+M (messages); no + and -. Cmd on macOS. |
 | Volume, speed, delay, track cycle, chapter keys | Yes | VLC's keys | Same | Ctrl+Up/Down, [ ] =, J/K, G/H, B, V, Shift+P/N; each can be changed in the editor and shows its feedback. |
 | Mouse wheel action | Volume or position, vertical and horizontal | Settings › Controls › Mouse | Same | Live; reverse direction option. |
 | Double-click | Fullscreen | Configurable (fullscreen default) | Same | Live. |
@@ -291,14 +291,14 @@ preferences categories.
 | Open a file from the command line | `vlc file` | `Conic file` (several files, URLs) | Same | Arguments that are not options open, several as a queue. Options (`--…`) are ignored. |
 | VLC options on the command line | Yes | None | Missing | Options come from Settings only. |
 | File associations, "Open with" | Installer, macOS document types | "Open with" by choosing Conic; macOS open-file events | Partial | Portable archives register nothing: no default-player associations, no document types in the macOS bundle. |
-| Single instance, enqueue from file manager | Option | None | Missing | |
+| Single instance, enqueue from file manager | Option | Interface › Allow only one instance | Same | Media opened from the file manager or the command line goes to the open Conic; with Library › Add to the queue it joins the queue. |
 | Tray icon | Yes | None | Out of scope | |
 | System notifications | Yes | None | Out of scope | |
 | Taskbar thumbnail buttons and progress (Windows) | Yes | None | Missing | |
 | Media keys | Global | Play/Pause, Stop, Previous, Next, window focus only | Partial | Work while the window has the focus (unless a shortcut uses the key); no global capture. |
 | OS media session (MPRIS on Linux) | Yes | None | Missing | |
 | Drag and drop files and folders | Yes | Yes | Same | Several dropped files become the queue (or join it with Add to the queue); folders follow Settings › Library. |
-| Drop a subtitle file onto the video | Adds the subtitle | Added to the playing media | Partial | As Add Subtitle File: it applies from the next open of that media, not live. With nothing playing, the file opens as media. |
+| Drop a subtitle file onto the video | Adds the subtitle | Added to the playing media | Same | Live, as Add Subtitle File. With nothing playing, the file opens as media. |
 | Drop a URL or text | Yes | Yes | Same | A dragged link, or text with one URL or path per line; several open as a queue. |
 | macOS menu bar | Cocoa interface (not Qt) | File, Playback, View, Window, Help | Different | Help has About Conic. |
 

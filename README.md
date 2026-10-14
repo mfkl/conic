@@ -33,42 +33,42 @@ rebuilds the desktop app around it:
 
 ### Parity with VLC 3
 
-Conic reaches **69% parity** with VLC 3's desktop player. Of 183 VLC 3
-features, 30 were left out on purpose. Of the 153 others, 71 work the same, 24
-work differently, 21 work in part and 37 are missing. Parity counts Same and
+Conic reaches **80% parity** with VLC 3's desktop player. Of 183 VLC 3
+features, 30 were left out on purpose. Of the 153 others, 83 work the same, 31
+work differently, 17 work in part and 22 are missing. Parity counts Same and
 Different as 1, Partial as 1/2 and Missing as 0.
 
 ```mermaid
 pie showData
     title 183 VLC 3 features in Conic
-    "Same" : 71
-    "Different" : 24
-    "Partial" : 21
-    "Missing" : 37
+    "Same" : 83
+    "Different" : 31
+    "Partial" : 17
+    "Missing" : 22
     "Out of scope" : 30
 ```
 
 | Area | Parity | Same | Different | Partial | Missing | Out of scope |
 | --- | --- | --: | --: | --: | --: | --: |
 | Media menu | █████████░ 85% | 3 | 4 | 3 | 0 | 4 |
-| Playback menu | ████████░░ 75% | 9 | 0 | 0 | 3 | 2 |
+| Playback menu | █████████░ 92% | 10 | 1 | 0 | 1 | 2 |
 | Audio menu | ████████░░ 83% | 3 | 2 | 0 | 1 | 0 |
-| Video menu | ██████░░░░ 55% | 3 | 2 | 1 | 4 | 0 |
-| Subtitle menu | ████████░░ 75% | 1 | 0 | 1 | 0 | 0 |
-| Tools menu | ████░░░░░░ 42% | 1 | 4 | 5 | 8 | 4 |
-| View menu | ███████░░░ 69% | 2 | 3 | 1 | 2 | 1 |
-| Help menu | █████░░░░░ 50% | 1 | 0 | 0 | 1 | 1 |
-| Preferences | ████████░░ 83% | 31 | 2 | 5 | 5 | 6 |
-| Playlist and queue | ███████░░░ 73% | 6 | 3 | 1 | 3 | 0 |
+| Video menu | ███████░░░ 70% | 4 | 3 | 0 | 3 | 0 |
+| Subtitle menu | ██████████ 100% | 2 | 0 | 0 | 0 | 0 |
+| Tools menu | ███████░░░ 69% | 3 | 7 | 5 | 3 | 4 |
+| View menu | █████████░ 88% | 3 | 4 | 0 | 1 | 1 |
+| Help menu | ██████████ 100% | 1 | 1 | 0 | 0 | 1 |
+| Preferences | █████████░ 87% | 33 | 2 | 5 | 3 | 6 |
+| Playlist and queue | █████████░ 85% | 7 | 3 | 2 | 1 | 0 |
 | Library | █████░░░░░ 50% | 0 | 1 | 0 | 1 | 3 |
-| Hotkeys and mouse | ███████░░░ 69% | 4 | 1 | 1 | 2 | 0 |
-| Command line and OS integration | █████░░░░░ 50% | 3 | 1 | 3 | 4 | 2 |
+| Hotkeys and mouse | ████████░░ 75% | 5 | 1 | 0 | 2 | 0 |
+| Command line and OS integration | ██████░░░░ 64% | 5 | 1 | 2 | 3 | 2 |
 | Network and streaming | ██████░░░░ 63% | 4 | 1 | 0 | 3 | 7 |
-| **Total** | **███████░░░ 69%** | **71** | **24** | **21** | **37** | **30** |
+| **Total** | **████████░░ 80%** | **83** | **31** | **17** | **22** | **30** |
 
-Missing are, among others, snapshots, an A-B loop, program selection, global
-hotkeys and single-instance mode. Disc menus, streaming and conversion,
-capture devices, skins and extensions were left out.
+Missing are, among others, visualizations, bookmarks, global hotkeys, the OS
+media controls and VLC options on the command line. Disc menus, streaming and
+conversion, capture devices, skins and extensions were left out.
 [Feature parity with VLC 3](docs/FEATURE_PARITY.md) compares the two, feature
 by feature.
 
@@ -155,7 +155,8 @@ the pre-contest baseline.
 **What was migrated.** VLC 3's everyday desktop workflows: opening files,
 folders and network streams (from the menus, the command line, the clipboard
 or a drop), the queue, transport, tracks, subtitles and delays, VLC's hotkeys,
-Jump to Time, video adjustments, media information, history and resume,
+Jump to Time, the A-B loop, snapshots, programs, video adjustments and VLC's
+video effects and overlays, media information, history and resume,
 picture in picture, the preferences that matter for playback, and VLC's log.
 The Qt
 widgets were not translated. The workflows were rebuilt as Avalonia views over
@@ -173,7 +174,7 @@ variables, rows VLC 3 can't honor in this app were dropped rather than shown,
 and smoke tests play real media to check the effect: the equalizer is measured
 on the audio output, network options against a local server.
 
-**Tests.** 635 unit tests, and about 40 smoke tests that drive the real app
+**Tests.** 666 unit tests, and about 40 smoke tests that drive the real app
 with VLC on Windows and macOS: playback paths, the default shortcuts, the
 queue, menus, Settings and picture in picture.
 

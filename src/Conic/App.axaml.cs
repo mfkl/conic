@@ -1,4 +1,5 @@
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 
@@ -31,13 +32,31 @@ public partial class App : Application
             desktop.MainWindow = window;
 #if SMOKE
             EnableSmokeMode(window, desktop.Args);
+            if (!IsSmokeOrReview(desktop.Args))
 #endif
+                OpenRequestedMedia(window, desktop.Args);
         }
 
         base.OnFrameworkInitializationCompleted();
     }
 
+    // "conic movie.mkv", and the file manager's "Open with": on Windows and
+    // Linux the files come as arguments, on macOS as an open-files event.
+    private void OpenRequestedMedia(MainWindow window, string[]? args)
+    {
+        window.OpenOnStart(Player.Application.CommandLineSources.From(args));
+        if (this.TryGetFeature<IActivatableLifetime>() is { } activatable)
+            activatable.Activated += (_, e) =>
+            {
+                if (e is FileActivatedEventArgs { Files.Count: > 0 } opened)
+                    window.OpenOnStart(opened.Files.Select(file => file.Path.IsFile ? file.Path.LocalPath : file.Path.AbsoluteUri).ToArray());
+            };
+    }
+
 #if SMOKE
+    private static bool IsSmokeOrReview(string[]? args) => args?.Any(arg => arg.StartsWith("--", StringComparison.Ordinal) &&
+        (arg.Contains("smoke", StringComparison.OrdinalIgnoreCase) || arg.Contains("capture", StringComparison.OrdinalIgnoreCase) || arg.Contains("review", StringComparison.OrdinalIgnoreCase))) == true;
+
     // Every interactive smoke mode drives the real styled window; the first
     // matching flag wins, and no flag means the window runs as the product.
     private static void EnableSmokeMode(

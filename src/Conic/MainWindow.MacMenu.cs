@@ -50,6 +50,7 @@ public partial class MainWindow
                 Item("Open File…", PlayerCommandId.OpenMedia),
                 Item("Open Folder…", PlayerCommandId.OpenFolder),
                 Item("Open Network Stream…", PlayerCommandId.OpenUrl),
+                Item("Open Location from Clipboard", PlayerCommandId.OpenFromClipboard),
                 new NativeMenuItemSeparator(),
                 Item("Load Playlist…", PlayerCommandId.LoadPlaylist),
                 Item("Save Playlist…", PlayerCommandId.SavePlaylist),
@@ -65,7 +66,18 @@ public partial class MainWindow
                 Item("Next", PlayerCommandId.QueueNext),
                 Item("Skip Backward", PlayerCommandId.SkipBackward),
                 Item("Skip Forward", PlayerCommandId.SkipForward),
+                Item("Jump to Time…", PlayerCommandId.JumpToTime),
+                Item("Next Frame", PlayerCommandId.NextFrame),
                 new NativeMenuItemSeparator(),
+                Item("Previous Chapter", PlayerCommandId.PreviousChapter),
+                Item("Next Chapter", PlayerCommandId.NextChapter),
+                new NativeMenuItemSeparator(),
+                Item("Faster", PlayerCommandId.PlaybackFaster),
+                Item("Slower", PlayerCommandId.PlaybackSlower),
+                Item("Normal Speed", PlayerCommandId.PlaybackNormal),
+                new NativeMenuItemSeparator(),
+                Item("Volume Up", PlayerCommandId.VolumeUp),
+                Item("Volume Down", PlayerCommandId.VolumeDown),
                 Item("Mute", PlayerCommandId.ToggleMute),
                 Item("Tracks and Synchronization", PlayerCommandId.ToggleMediaControls),
                 Item("Playback Queue", PlayerCommandId.ToggleQueue),
@@ -83,6 +95,8 @@ public partial class MainWindow
                 Action("Zoom", () => WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized),
                 new NativeMenuItemSeparator(),
                 Item("Messages", PlayerCommandId.ShowMessages)),
+            Submenu("Help",
+                Item("About Conic", PlayerCommandId.ShowAbout)),
         ];
         NativeMenu.SetMenu(this, bar);
 
@@ -108,6 +122,10 @@ public partial class MainWindow
     internal static KeyGesture? MenuGesture(string gesture)
     {
         if (!gesture.Split('+').SkipLast(1).Contains("Meta")) return null;
+        // Text fields own Command with the arrows and the edit keys: a key
+        // equivalent would take Cmd+V (Open Location from Clipboard) or
+        // Cmd+Up (Volume Up) from the URL field and Settings' search.
+        if (gesture is "Meta+V" or "Meta+C" or "Meta+X" or "Meta+A" or "Meta+Z" or "Meta+Up" or "Meta+Down" or "Meta+Left" or "Meta+Right") return null;
         string[] parts = gesture.Split('+');
         KeyModifiers modifiers = KeyModifiers.None;
         foreach (string modifier in parts.SkipLast(1))

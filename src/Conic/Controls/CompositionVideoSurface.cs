@@ -229,6 +229,9 @@ public sealed class CompositionVideoSurface : Control, IDisposable
     public void SelectTrack(MediaTrackKind kind, string id) => (_player as IMediaCapabilitiesTransport)?.SelectTrack(kind, id);
     public void SelectTitle(string id) => (_player as IMediaCapabilitiesTransport)?.SelectTitle(id);
     public void SelectChapter(string id) => (_player as IMediaCapabilitiesTransport)?.SelectChapter(id);
+    public void NextFrame() => (_player as IPlaybackNavigationTransport)?.NextFrame();
+    public void NextChapter() => (_player as IPlaybackNavigationTransport)?.NextChapter();
+    public void PreviousChapter() => (_player as IPlaybackNavigationTransport)?.PreviousChapter();
     public void SetDelayMilliseconds(MediaTrackKind kind, int milliseconds) => (_player as IMediaCapabilitiesTransport)?.SetDelayMilliseconds(kind, milliseconds);
     public void ResetDelay(MediaTrackKind kind) => (_player as IMediaCapabilitiesTransport)?.ResetDelay(kind);
     public ExternalTrackAttachmentState AttachExternalTrack(MediaTrackKind kind, string path) => (_player as IMediaCapabilitiesTransport)?.AttachExternalTrack(kind, path) ?? new(false, false, false, "Media controls are unavailable.");

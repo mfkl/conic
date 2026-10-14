@@ -76,6 +76,10 @@ try {
     Set-Content -NoNewline -Path chapters.txt -Value (";FFMETADATA1`n" + ((0..2 | ForEach-Object { "[CHAPTER]`nTIMEBASE=1/1000`nSTART={0}`nEND={1}`ntitle=Part {2}`n" -f ($_ * 10000), (($_ + 1) * 10000), ($_ + 1) }) -join ''))
     Invoke-Ffmpeg -f lavfi -i testsrc=size=640x360:rate=25 -f lavfi -i sine=frequency=440:duration=30 -i chapters.txt -map 0:v -map 1:a -map_chapters 2 -t 30 `
         '-c:v' libx264 -preset veryfast -g 25 -pix_fmt yuv420p '-c:a' aac chapters.mkv
+    # Two programs in one MPEG-TS (--parity-smoke), as a DVB multiplex carries several channels.
+    Invoke-Ffmpeg -f lavfi -i testsrc=size=640x360:rate=25 -f lavfi -i testsrc2=size=640x360:rate=25 -f lavfi -i sine=frequency=440:duration=20 -f lavfi -i sine=frequency=880:duration=20 -t 20 `
+        -map 0:v -map 2:a -map 1:v -map 3:a '-c:v' libx264 -preset veryfast -g 25 -pix_fmt yuv420p '-c:a' aac `
+        -program 'title=News:st=0:st=1' -program 'title=Sports:st=2:st=3' -f mpegts programs.ts
     Write-Output "Fixtures written to $Output"
 }
 finally { Pop-Location }

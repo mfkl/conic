@@ -307,6 +307,10 @@ public partial class MainWindow
                 await Shortcut(PlayerCommandId.ToggleFullscreen, () => Within(() => WindowState == WindowState.FullScreen, 3), "goes fullscreen");
                 await Shortcut(PlayerCommandId.ToggleFullscreen, () => Within(() => WindowState != WindowState.FullScreen, 3), "leaves fullscreen");
                 if (WindowState == WindowState.FullScreen) ToggleFullscreen();
+                await Shortcut(PlayerCommandId.ToggleFullscreen, () => Within(() => WindowState == WindowState.FullScreen, 3), "goes fullscreen again");
+                await Key(Avalonia.Input.Key.Escape);
+                KeyCheck(await Within(() => WindowState != WindowState.FullScreen, 3), $"Escape leaves fullscreen (focus {Describe(Focused())})");
+                if (WindowState == WindowState.FullScreen) ToggleFullscreen();
                 int requests = _mediaPicker.RequestsForSmoke.Count;
                 await Shortcut(PlayerCommandId.OpenMedia, () => Within(() => _mediaPicker.RequestsForSmoke.Count > requests && _mediaPicker.RequestsForSmoke[^1] == "media", 3), "asks for a file");
                 requests = _mediaPicker.RequestsForSmoke.Count;

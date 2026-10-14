@@ -59,6 +59,13 @@ public partial class MainWindow
             e.Handled = true;
             return;
         }
+        // As in VLC, Escape leaves fullscreen.
+        if (e.Key == Key.Escape && WindowState == WindowState.FullScreen)
+        {
+            ToggleFullscreen();
+            e.Handled = true;
+            return;
+        }
         if (SettingsPanel.IsVisible || ShortcutFocusPolicy.Suppresses(e.Source)) return;
         string gesture = MenuShortcuts.FromKey(e.Key, e.KeyModifiers);
         IReadOnlyDictionary<PlayerCommandId, string> active =

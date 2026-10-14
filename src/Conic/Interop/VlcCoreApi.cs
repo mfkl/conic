@@ -24,6 +24,20 @@ internal static unsafe class VlcCoreApi
         Exports.LogSet(core, callback, 0);
     }
 
+    /// <summary>libvlc_get_version: the engine's version, such as "3.0.24 Vetinari"; null when VLC can't be loaded.</summary>
+    public static string? TryGetVersion()
+    {
+        try
+        {
+            NativeEngineSupport.RequireAvailable();
+            return Marshal.PtrToStringUTF8((nint)PublicExports.Version());
+        }
+        catch (Exception exception) when (exception is DllNotFoundException or EntryPointNotFoundException or InvalidOperationException or PlatformNotSupportedException or TypeInitializationException)
+        {
+            return null;
+        }
+    }
+
     // Load only after the platform/architecture guard, and retain the module
     // for the process lifetime just like the other VLC core bindings.
     private static class Exports
@@ -34,5 +48,13 @@ internal static unsafe class VlcCoreApi
             (delegate* unmanaged[Cdecl]<nint, byte*, int>)NativeLibrary.GetExport(Library, "libvlc_InternalAddIntf");
         internal static readonly delegate* unmanaged[Cdecl]<nint, delegate* unmanaged[Cdecl]<nint, int, VLCLR.Types.VLCLog*, byte*, nint, void>, nint, void> LogSet =
             (delegate* unmanaged[Cdecl]<nint, delegate* unmanaged[Cdecl]<nint, int, VLCLR.Types.VLCLog*, byte*, nint, void>, nint, void>)NativeLibrary.GetExport(Library, "vlc_LogSet");
+    }
+
+    private static class PublicExports
+    {
+        static PublicExports() { }
+        private static readonly nint Library = NativeLibrary.Load(RepositoryPaths.PublicLibraryPath);
+        internal static readonly delegate* unmanaged[Cdecl]<byte*> Version =
+            (delegate* unmanaged[Cdecl]<byte*>)NativeLibrary.GetExport(Library, "libvlc_get_version");
     }
 }

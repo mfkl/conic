@@ -423,6 +423,10 @@
     <Style Selector="controls|ModalDialog.fit /template/ Panel#PART_Dialog">
         <Setter Property="VerticalAlignment" Value="Center" />
     </Style>
+    <!-- .narrow: a short dialog (Jump to Time, About), 480 wide. -->
+    <Style Selector="controls|ModalDialog.narrow /template/ Panel#PART_Dialog">
+        <Setter Property="MaxWidth" Value="480" />
+    </Style>
     <Style Selector="controls|ModalDialog /template/ Border#PART_Surface">
         <Setter Property="CornerRadius" Value="14" />
         <Setter Property="BoxShadow" Value="0 8 15 0 #75000000" />

@@ -19,3 +19,15 @@ public interface IPlayerTransport
 
     void SetPlaybackRate(double playbackRate);
 }
+
+/// <summary>VLC 3's Next Frame and chapter steps, done by the engine itself.</summary>
+public interface IPlaybackNavigationTransport
+{
+    /// <summary>Shows the next frame, pausing first if the media plays.</summary>
+    void NextFrame();
+
+    void NextChapter();
+
+    /// <summary>Goes to the previous chapter, or to the start of this one once it has played a moment.</summary>
+    void PreviousChapter();
+}

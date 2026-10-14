@@ -86,6 +86,7 @@ public partial class MainWindow : Window
         InitializeControlSettings();
         InitializeMacMenu();
         InitializeMessages();
+        InitializeDialogs();
         UpdatePlaybackRateSelection();
         UpdateHistorySettingsControls();
         _settings.Changed += (_, settings) => ApplyLiveSettings(settings);
@@ -95,7 +96,7 @@ public partial class MainWindow : Window
         {
             // Docked (windowed) chrome never hides; stop polling until it overlays the video again.
             if (!_chromeVisibility.HidesAutomatically) { _autoHideTimer.Stop(); return; }
-            bool menuOpen = (VideoArea.ContextMenu?.IsOpen ?? false) || SettingsPanel.IsVisible || OpenMenu.IsVisible || UrlPanel.IsVisible || ResumePanel.IsVisible || QueueDrawer.IsVisible || LibraryPanel.IsVisible;
+            bool menuOpen = (VideoArea.ContextMenu?.IsOpen ?? false) || SettingsPanel.IsVisible || OpenMenu.IsVisible || UrlPanel.IsVisible || IsDialogOpen || ResumePanel.IsVisible || QueueDrawer.IsVisible || LibraryPanel.IsVisible;
             bool chromeFocused = _keyboardNavigation && (PlayerDock.IsKeyboardFocusWithin || TopChrome.IsKeyboardFocusWithin || PictureInPictureChrome.IsKeyboardFocusWithin);
             bool chromePointerOver = TopChrome.IsPointerOver || PlayerDock.IsPointerOver || PictureInPictureHeader.IsPointerOver || PictureInPicturePlay.IsPointerOver || PictureInPictureTimeline.IsPointerOver;
             if (_chromeVisibility.TryHide(_isSeeking || _isVolumeDragging, menuOpen, chromePointerOver, chromeFocused))

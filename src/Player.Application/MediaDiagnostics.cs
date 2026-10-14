@@ -31,7 +31,13 @@ public sealed record MediaInformationState(long QueueGeneration, long MediaGener
     };
 }
 
-public interface IClipboardService { Task<string?> SetTextAsync(string text); }
+public interface IClipboardService
+{
+    Task<string?> SetTextAsync(string text);
+
+    /// <summary>The clipboard's text, or null when it has none or can't be read.</summary>
+    Task<string?> GetTextAsync() => Task.FromResult<string?>(null);
+}
 public interface IMediaInformationTransport
 {
     MediaInformationState MediaInformation { get; }

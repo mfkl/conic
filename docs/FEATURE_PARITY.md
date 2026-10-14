@@ -72,7 +72,7 @@ The Conic only section lists 13 features VLC 3's Qt interface does not have; the
 | Open Multiple Files | Ctrl+Shift+O, file list, subtitle file, options | Open File with several files | Different | No separate dialog, subtitle file or options field: Open File takes several files, and so does a drop. Ctrl+Shift+O opens a folder in Conic. |
 | Open Folder | Ctrl+F, opens the directory | Ctrl+Shift+O | Different | Flattened into the queue, sorted by name, at most 2,000 items. Settings › Library: subfolders or not, hidden files or not (Next open). |
 | Open Disc (DVD, Blu-ray, audio CD, VCD) | Yes | None | Out of scope | Conic opens local files and network URLs only. |
-| Open Network Stream | Ctrl+N, any VLC protocol, options | Ctrl+L, one URL per line | Partial | http, https, ftp, ftps, sftp, smb, rtsp, rtp, udp, mms, mmsh and rtmp, passed to VLC as typed; several lines open as a queue. URLs with user:password are rejected, and there is no `:option` field. Only http(s) is checked by the tests; the other protocols are VLC's own. |
+| Open Network Stream | Ctrl+N, any VLC protocol, options | Ctrl+L, one URL per line | Partial | http, https, ftp, ftps, sftp, smb, rtsp, rtp, udp, mms, mmsh and rtmp, passed to VLC as typed; several lines open as a queue. URLs with user:password are rejected, and there is no `:option` field. --protocols-smoke plays UDP, RTP, RTMP, FTP and SMB from local servers; RTSP, SFTP and MMS were not checked (no local server). |
 | Open Capture Device | Yes | None | Out of scope | Left out in the menus redesign. |
 | Open Location from clipboard | Ctrl+V | Ctrl+V, right-click Open Media, macOS File menu | Same | Each line that is a URL or a path opens; several as a queue. On macOS the File menu shows no Cmd+V, so text fields keep Paste. |
 | Open Recent Media | Submenu, clear | More menu › Open Recent page, Home › Recent | Same | 50 entries, per-entry remove, Clear recent. Settings › Privacy turns history off (clears at once). |
@@ -290,7 +290,7 @@ preferences categories.
 |---|---|---|---|---|
 | Open a file from the command line | `vlc file` | `Conic file` (several files, URLs) | Same | Arguments that are not options open, several as a queue. Options (`--…`) are ignored. |
 | VLC options on the command line | Yes | None | Missing | Options come from Settings only. |
-| File associations, "Open with" | Installer, macOS document types | "Open with" by choosing Conic; macOS open-file events | Partial | Portable archives register nothing: no default-player associations, no document types in the macOS bundle. |
+| File associations, "Open with" | Installer, macOS document types | "Open with" by choosing Conic; macOS open-file events | Partial | Windows: Open with by choosing Conic.exe; the portable archive registers no association. macOS: the bundle declares movie and audio documents (as an alternate handler), so Open With and dropping on the Dock icon reach Conic; not the default player. |
 | Single instance, enqueue from file manager | Option | Interface › Allow only one instance | Same | Media opened from the file manager or the command line goes to the open Conic; with Library › Add to the queue it joins the queue. |
 | Tray icon | Yes | None | Out of scope | |
 | System notifications | Yes | None | Out of scope | |
@@ -307,8 +307,8 @@ preferences categories.
 | Feature | VLC 3 | Conic | Status | Notes |
 |---|---|---|---|---|
 | HTTP / HTTPS streams | Yes | Yes | Same | Includes HLS and DASH over http(s) as far as the engine handles them. |
-| RTSP, RTP, UDP, MMS | Yes | Yes | Same | Passed to VLC as typed, including udp://@:port. Not checked by the tests (no stream server for them). |
-| FTP, SMB, SFTP | Yes | Yes | Same | Passed to VLC as typed, without credentials in the URL. Not checked by the tests. |
+| RTSP, RTP, UDP, MMS | Yes | Yes | Same | Passed to VLC as typed, including udp://@:port. UDP and RTP play in --protocols-smoke; RTSP and MMS were not checked (no local server). |
+| FTP, SMB, SFTP | Yes | Yes | Same | Passed to VLC as typed, without credentials in the URL. FTP and SMB play in --protocols-smoke; SFTP was not checked (no local server). |
 | Credentials in the URL | Yes | None | Missing | Rejected on purpose. |
 | Streaming output, transcoding | Yes | None | Out of scope | |
 | Web, telnet, HTTP remote interfaces | Yes | None | Out of scope | |

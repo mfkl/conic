@@ -12,9 +12,37 @@ public sealed class MediaOpeningTests
         Assert.False(result.Succeeded); Assert.DoesNotContain("secret", result.UserMessage!);
     }
     [Theory]
-    [InlineData("ftp://example.com/file")]
+    [InlineData("gopher://example.com/file")]
+    [InlineData("javascript:alert(1)")]
     [InlineData("not a url")]
+    [InlineData("smb://user:secret@server/share/a.mkv")]
+    [InlineData("udp://@:1234 #x")]
     public void RejectsUnsupportedUrls(string source) => Assert.False(new MediaSourceValidator(new FakeFiles()).Validate(source, MediaSourceKind.NetworkUrl).Succeeded);
+
+    // VLC 3's Open Network Stream protocols reach VLC as typed, scheme in lower case.
+    [Theory]
+    [InlineData("ftp://example.com/a.mp4", "ftp://example.com/a.mp4")]
+    [InlineData("RTSP://Example.com:554/live", "rtsp://Example.com:554/live")]
+    [InlineData("udp://@:1234", "udp://@:1234")]
+    [InlineData("rtp://@239.0.0.1:5004", "rtp://@239.0.0.1:5004")]
+    [InlineData("smb://server/share/a.mkv", "smb://server/share/a.mkv")]
+    [InlineData("sftp://host/path/a.mkv", "sftp://host/path/a.mkv")]
+    [InlineData("mms://host/stream", "mms://host/stream")]
+    [InlineData("rtmp://host/app/stream", "rtmp://host/app/stream")]
+    public void AcceptsVlcNetworkProtocols(string typed, string expected)
+    {
+        foreach (MediaSourceKind kind in new[] { MediaSourceKind.NetworkUrl, MediaSourceKind.DragDrop, MediaSourceKind.File })
+        {
+            MediaOpenResult result = new MediaSourceValidator(new FakeFiles()).Validate(typed, kind);
+            Assert.True(result.Succeeded, result.Diagnostic);
+            Assert.Equal((expected, MediaSourceKind.NetworkUrl), (result.Source!.CanonicalSource, result.Source.Kind));
+            Assert.Equal(expected, MediaEngineSourceNormalizer.Normalize(expected));
+        }
+    }
+
+    [Fact]
+    public void HttpUrlsAreStillCanonicalized() =>
+        Assert.Equal("https://example.com/a?q=1", new MediaSourceValidator(new FakeFiles()).Validate("HTTPS://EXAMPLE.com:443/a?q=1#t", MediaSourceKind.NetworkUrl).Source!.CanonicalSource);
 
     [Fact]
     public void AcceptsFoldersForQueueExpansion()
@@ -28,6 +56,7 @@ public sealed class MediaOpeningTests
     {
         Assert.Equal("https://example.com/A?q=x", MediaEngineSourceNormalizer.Normalize("https://example.com/A?q=x"));
         Assert.Throws<ArgumentException>(() => MediaEngineSourceNormalizer.Normalize("https://user:secret@example.com/a"));
+        Assert.Throws<ArgumentException>(() => MediaEngineSourceNormalizer.Normalize("gopher://example.com/a"));
     }
     [Fact]
     public void UrlIdentityKeepsPathCaseSignificant()

@@ -113,14 +113,7 @@ if ($Window) {
     foreach ($smoke in 'home', 'home-session', 'layout', 'drawer', 'menu', 'playback-controls', 'stop', 'media-information',
         'thumbnail', 'accessibility', 'scale', 'settings', 'settings-apply', 'audio-settings', 'engine-settings', 'interactions', 'parity', 'protocols') {
         $cases[$smoke] = @("--$smoke-smoke")
-    }
-    # A virtual Mac (a CI runner) has a paravirtual GPU without Apple's
-    # scaler: VideoToolbox frames neither seek reliably nor go through the CPU
-    # filters there, so the smokes that check those decode in software.
-    if ((& sysctl -n kern.hv_vmm_present 2>$null) -eq '1') {
-        foreach ($smoke in 'interactions', 'parity') { $cases[$smoke] += '--software-decoding' }
-    }
-    # The drawer's native tracks and the settings smokes play the fixtures;
+    }    # The drawer's native tracks and the settings smokes play the fixtures;
     # Quick Look makes no thumbnail for Matroska, so Home's gets an MP4.
     $fixtures = Join-Path $output 'settings-fixtures'
     & (Join-Path $PSScriptRoot 'make-settings-fixtures.ps1') -Output $fixtures | Out-Null

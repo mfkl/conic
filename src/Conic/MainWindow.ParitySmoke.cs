@@ -150,7 +150,8 @@ public partial class MainWindow
                 // picture keeps coming. gop.mp4 (640x360) repeats meanwhile.
                 Check(await Open(gop), "gop.mp4 opens for the video settings");
                 Check(await Within(() => _presentation.QueueState.Repeat == QueueRepeatMode.CurrentItem, 3), "its item repeats too");
-                Check(await FramesIn(1) > 5, "and presents frames");
+                int reopenedFrames = await FramesIn(1);
+                Check(reopenedFrames > 5, $"and presents frames ({reopenedFrames} in 1 s, {_presentation.PlaybackStatus} at {Elapsed():0.0} s)");
                 Size landscape = VideoSurface.NaturalVideoSize;
                 await Set(s => s with { Sepia = true, VideoTransform = "90" });
                 Check(await Applied(), "the playing core takes the video settings");

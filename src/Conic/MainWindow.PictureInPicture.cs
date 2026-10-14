@@ -36,6 +36,7 @@ public partial class MainWindow
         if (_presentation.IsPictureInPicture) { ExitPictureInPicture(); return; }
         if (!_presentation.CanTogglePlayback) return;
         RememberNormalPlacement();
+        bool fromFullscreen = WindowState == WindowState.FullScreen;
         _pictureInPictureRestore = new(_normalPlacement ?? new(1280, 720, Position), WindowState,
             WindowDecorations, MinWidth, MinHeight, MaxWidth, MaxHeight, Topmost, _presentation.IsHomeOpen);
         _changingWindowMode = true;
@@ -61,6 +62,20 @@ public partial class MainWindow
             Dispatcher.UIThread.Post(() => PictureInPictureChrome.Focus());
         }
         finally { _changingWindowMode = false; }
+        if (fromFullscreen && OperatingSystem.IsMacOS()) PlacePictureInPictureAfterFullscreen();
+    }
+
+    // macOS leaves fullscreen with an animation that ends by putting back the
+    // window's frame from before fullscreen, over the compact one (CI saw PiP
+    // at 1920x970): place it again until the animation is over.
+    private async void PlacePictureInPictureAfterFullscreen()
+    {
+        for (DateTime settled = DateTime.UtcNow.AddSeconds(3); DateTime.UtcNow < settled && _presentation.IsPictureInPicture;)
+        {
+            await Task.Delay(100);
+            if (_presentation.IsPictureInPicture && (Math.Abs(ClientSize.Width - 480) >= 2 || Math.Abs(ClientSize.Height - 270) >= 2))
+                PlacePictureInPicture();
+        }
     }
 
     // macOS applies frame changes and fullscreen exits asynchronously; CI

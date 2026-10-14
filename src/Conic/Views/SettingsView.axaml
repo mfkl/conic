@@ -1399,6 +1399,11 @@
                                                     Content="Media information"
                                                     Command="{Binding OpenMediaInformationCommand}" />
                                         </controls:SettingRow>
+                                        <controls:SettingRow Label="Messages" Help="VLC's log, live: choose Debug to see what the engine does while media opens and plays">
+                                            <Button Classes="secondary settingAction"
+                                                    Content="Show messages"
+                                                    Command="{Binding OpenMessagesCommand}" />
+                                        </controls:SettingRow>
                                     </StackPanel>
 
                                     <WrapPanel x:Name="SettingsResetRow" Orientation="Horizontal" x:FieldModifier="internal">

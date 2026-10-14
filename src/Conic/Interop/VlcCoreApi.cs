@@ -17,6 +17,13 @@ internal static unsafe class VlcCoreApi
         finally { Marshal.FreeCoTaskMem(pointer); }
     }
 
+    /// <summary>vlc_LogSet: VLC 3 calls <paramref name="callback"/> for every message of <paramref name="core"/>.</summary>
+    public static void SetLogger(nint core, delegate* unmanaged[Cdecl]<nint, int, VLCLR.Types.VLCLog*, byte*, nint, void> callback)
+    {
+        NativeEngineSupport.RequireAvailable();
+        Exports.LogSet(core, callback, 0);
+    }
+
     // Load only after the platform/architecture guard, and retain the module
     // for the process lifetime just like the other VLC core bindings.
     private static class Exports
@@ -25,5 +32,7 @@ internal static unsafe class VlcCoreApi
         private static readonly nint Library = NativeLibrary.Load(RepositoryPaths.CoreLibraryPath);
         internal static readonly delegate* unmanaged[Cdecl]<nint, byte*, int> AddInterface =
             (delegate* unmanaged[Cdecl]<nint, byte*, int>)NativeLibrary.GetExport(Library, "libvlc_InternalAddIntf");
+        internal static readonly delegate* unmanaged[Cdecl]<nint, delegate* unmanaged[Cdecl]<nint, int, VLCLR.Types.VLCLog*, byte*, nint, void>, nint, void> LogSet =
+            (delegate* unmanaged[Cdecl]<nint, delegate* unmanaged[Cdecl]<nint, int, VLCLR.Types.VLCLog*, byte*, nint, void>, nint, void>)NativeLibrary.GetExport(Library, "vlc_LogSet");
     }
 }

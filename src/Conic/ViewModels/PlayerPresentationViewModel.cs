@@ -266,6 +266,7 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
         SnapshotCommand = new RegistryCommand(registry, PlayerCommandId.Snapshot);
         InitializeHomeCommands(registry);
         InitializePictureInPictureCommands(registry);
+        InitializeMessagesCommand(registry);
     }
 
     public IPlayerCommandRegistry Registry { get; }

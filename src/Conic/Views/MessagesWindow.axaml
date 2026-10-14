@@ -1,0 +1,172 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:app="clr-namespace:Player.Application;assembly=Player.Application"
+        xmlns:vm="clr-namespace:Conic.ViewModels"
+        xmlns:views="clr-namespace:Conic.Views"
+        x:Class="Conic.Views.MessagesWindow"
+        x:DataType="vm:MessagesViewModel"
+        Title="Messages"
+        Icon="avares://Conic/Assets/conic.ico"
+        Width="960" Height="600" MinWidth="560" MinHeight="320"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource Vlc.Bg.A2}"
+        Foreground="{DynamicResource Vlc.Fg.1}">
+    <!-- VLC's Tools › Messages: the engine's log at a chosen verbosity
+         (0 errors and information, 1 warnings, 2 debug), filtered by text,
+         cleared, copied or saved. -->
+    <Window.Resources>
+        <!-- Module hues, kept apart from the level colours (blue, amber, red)
+             and the quoted values, readable on the list in each theme. -->
+        <ResourceDictionary>
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Default">
+                    <SolidColorBrush x:Key="Messages.Hue0" Color="#C49BFF" />
+                    <SolidColorBrush x:Key="Messages.Hue1" Color="#FF8FB1" />
+                    <SolidColorBrush x:Key="Messages.Hue2" Color="#5ED1E0" />
+                    <SolidColorBrush x:Key="Messages.Hue3" Color="#B9D46A" />
+                    <SolidColorBrush x:Key="Messages.Hue4" Color="#F2A97E" />
+                    <SolidColorBrush x:Key="Messages.Hue5" Color="#A9B4FF" />
+                    <SolidColorBrush x:Key="Messages.Info" Color="#7AB8FF" />
+                    <SolidColorBrush x:Key="Messages.Warning" Color="#F5B841" />
+                    <SolidColorBrush x:Key="Messages.Error" Color="#FF7A6E" />
+                    <SolidColorBrush x:Key="Messages.ErrorRow" Color="#2AFF5A4A" />
+                    <SolidColorBrush x:Key="Messages.Value" Color="#9FE0C8" />
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Light">
+                    <SolidColorBrush x:Key="Messages.Hue0" Color="#6B3FB5" />
+                    <SolidColorBrush x:Key="Messages.Hue1" Color="#B0306A" />
+                    <SolidColorBrush x:Key="Messages.Hue2" Color="#13808F" />
+                    <SolidColorBrush x:Key="Messages.Hue3" Color="#557A1F" />
+                    <SolidColorBrush x:Key="Messages.Hue4" Color="#A8501A" />
+                    <SolidColorBrush x:Key="Messages.Hue5" Color="#4450B8" />
+                    <SolidColorBrush x:Key="Messages.Info" Color="#1F5FAF" />
+                    <SolidColorBrush x:Key="Messages.Warning" Color="#9A6200" />
+                    <SolidColorBrush x:Key="Messages.Error" Color="#B3261E" />
+                    <SolidColorBrush x:Key="Messages.ErrorRow" Color="#1FD13B2E" />
+                    <SolidColorBrush x:Key="Messages.Value" Color="#0F6E58" />
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
+    <Window.Styles>
+        <Style Selector="ListBox#MessageList">
+            <Setter Property="Background" Value="{DynamicResource Vlc.Bg.B1}" />
+            <Setter Property="FontFamily" Value="Cascadia Mono, Consolas, Menlo, DejaVu Sans Mono, monospace" />
+            <Setter Property="FontSize" Value="12" />
+        </Style>
+        <Style Selector="ListBox#MessageList ListBoxItem">
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="MinHeight" Value="0" />
+        </Style>
+        <Style Selector="Border.row">
+            <Setter Property="Padding" Value="16,2" />
+        </Style>
+        <Style Selector="Border.row.error">
+            <Setter Property="Background" Value="{DynamicResource Messages.ErrorRow}" />
+        </Style>
+        <Style Selector="TextBlock.time"><Setter Property="Foreground" Value="{DynamicResource Vlc.Fg.A3}" /></Style>
+        <Style Selector="Run.objectType"><Setter Property="Foreground" Value="{DynamicResource Vlc.Fg.A3}" /></Style>
+
+        <!-- The module: core neutral, the app in the accent, plugins in their hue. -->
+        <Style Selector="Run.core"><Setter Property="Foreground" Value="{DynamicResource Vlc.Fg.A1}" /></Style>
+        <Style Selector="Run.app"><Setter Property="Foreground" Value="{DynamicResource Vlc.Accent.Text}" /></Style>
+        <Style Selector="Run.hue0"><Setter Property="Foreground" Value="{DynamicResource Messages.Hue0}" /></Style>
+        <Style Selector="Run.hue1"><Setter Property="Foreground" Value="{DynamicResource Messages.Hue1}" /></Style>
+        <Style Selector="Run.hue2"><Setter Property="Foreground" Value="{DynamicResource Messages.Hue2}" /></Style>
+        <Style Selector="Run.hue3"><Setter Property="Foreground" Value="{DynamicResource Messages.Hue3}" /></Style>
+        <Style Selector="Run.hue4"><Setter Property="Foreground" Value="{DynamicResource Messages.Hue4}" /></Style>
+        <Style Selector="Run.hue5"><Setter Property="Foreground" Value="{DynamicResource Messages.Hue5}" /></Style>
+
+        <!-- The level: debug grey, info blue, warning amber, error red. -->
+        <Style Selector="TextBlock.kind">
+            <Setter Property="Foreground" Value="{DynamicResource Vlc.Fg.A3}" />
+        </Style>
+        <Style Selector="TextBlock.kind.info"><Setter Property="Foreground" Value="{DynamicResource Messages.Info}" /></Style>
+        <Style Selector="TextBlock.kind.warning"><Setter Property="Foreground" Value="{DynamicResource Messages.Warning}" /></Style>
+        <Style Selector="TextBlock.kind.error">
+            <Setter Property="Foreground" Value="{DynamicResource Messages.Error}" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+
+        <!-- The text: debug, the bulk, dim; the rest bright; warnings and
+             errors in their colour; quoted values highlighted. -->
+        <Style Selector="TextBlock.text">
+            <Setter Property="Foreground" Value="{DynamicResource Vlc.Fg.1}" />
+        </Style>
+        <Style Selector="TextBlock.text.debug"><Setter Property="Foreground" Value="{DynamicResource Vlc.Fg.A1}" /></Style>
+        <Style Selector="TextBlock.text.warning"><Setter Property="Foreground" Value="{DynamicResource Messages.Warning}" /></Style>
+        <Style Selector="TextBlock.text.error"><Setter Property="Foreground" Value="{DynamicResource Messages.Error}" /></Style>
+        <Style Selector="Run.value"><Setter Property="Foreground" Value="{DynamicResource Messages.Value}" /></Style>
+        <Style Selector="TextBlock.text.warning Run.value">
+            <Setter Property="Foreground" Value="{DynamicResource Messages.Warning}" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="TextBlock.text.error Run.value">
+            <Setter Property="Foreground" Value="{DynamicResource Messages.Error}" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+    </Window.Styles>
+
+    <DockPanel>
+        <Border DockPanel.Dock="Top" Padding="16,12"
+                BorderThickness="0,0,0,1" BorderBrush="{DynamicResource Vlc.Divider.Dim}">
+            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <TextBlock Text="Verbosity" VerticalAlignment="Center" />
+                    <ComboBox x:Name="VerbositySelector" Width="200"
+                              ItemsSource="{Binding VerbosityChoices}"
+                              SelectedItem="{Binding SelectedVerbosity, Mode=TwoWay}"
+                              AutomationProperties.Name="Verbosity"
+                              AutomationProperties.HelpText="Errors and information, plus warnings, plus debug messages" />
+                </StackPanel>
+                <TextBox x:Name="FilterBox" Grid.Column="1" Classes="search" MaxWidth="420" HorizontalAlignment="Stretch"
+                         PlaceholderText="Filter messages"
+                         Text="{Binding Filter, Mode=TwoWay}"
+                         AutomationProperties.Name="Filter messages" />
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
+                    <Button Classes="secondary" Content="Clear" Click="OnClear" AutomationProperties.Name="Clear messages" />
+                    <Button Classes="secondary" Content="Copy" Click="OnCopy" AutomationProperties.Name="Copy messages"
+                            ToolTip.Tip="Copies the selected messages, or all shown" />
+                    <Button Classes="secondary" Content="Save…" Click="OnSave" AutomationProperties.Name="Save messages" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Border DockPanel.Dock="Bottom" Padding="16,8"
+                BorderThickness="0,1,0,0" BorderBrush="{DynamicResource Vlc.Divider.Dim}">
+            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                <TextBlock x:Name="SummaryText" Text="{Binding Summary}" Classes="panelHint" VerticalAlignment="Center" />
+                <TextBlock x:Name="NoticeText" Grid.Column="1" Classes="panelHint" VerticalAlignment="Center" Margin="0,0,16,0" />
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
+                    <TextBlock Text="Follow new messages" VerticalAlignment="Center" />
+                    <CheckBox x:Name="FollowToggle" IsChecked="True" AutomationProperties.Name="Follow new messages" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Panel>
+            <ListBox x:Name="MessageList" ItemsSource="{Binding Messages}" SelectionMode="Multiple"
+                     AutomationProperties.Name="Messages">
+                <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="app:EngineMessage">
+                        <Border Classes="row" Classes.error="{Binding IsError}">
+                            <Grid ColumnDefinitions="96,Auto,Auto,*" ColumnSpacing="8">
+                                <TextBlock Classes="time" Text="{Binding Time, StringFormat='{}{0:HH:mm:ss.fff}'}" />
+                                <TextBlock Grid.Column="1" Classes="source"
+                                           Inlines="{Binding ., Converter={x:Static views:MessageColors.Source}}" />
+                                <TextBlock Grid.Column="2" Classes="kind" Text="{Binding TypeName}"
+                                           Classes.info="{Binding IsInfo}" Classes.error="{Binding IsError}" Classes.warning="{Binding IsWarning}" />
+                                <TextBlock Grid.Column="3" Classes="text" TextWrapping="Wrap"
+                                           Inlines="{Binding ., Converter={x:Static views:MessageColors.Text}}"
+                                           Classes.error="{Binding IsError}" Classes.warning="{Binding IsWarning}" Classes.debug="{Binding IsDebug}" />
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+            <TextBlock x:Name="EmptyText" Classes="panelHint" HorizontalAlignment="Center" VerticalAlignment="Center"
+                       TextAlignment="Center" MaxWidth="420"
+                       Text="No messages yet. Raise the verbosity to Debug, then open or play media to see what VLC does." />
+        </Panel>
+    </DockPanel>
+</Window>

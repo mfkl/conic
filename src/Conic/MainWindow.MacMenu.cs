@@ -80,7 +80,9 @@ public partial class MainWindow
                     new KeyGesture(Key.F, KeyModifiers.Control | KeyModifiers.Meta))),
             Submenu("Window",
                 Action("Minimize", () => WindowState = WindowState.Minimized, new KeyGesture(Key.M, KeyModifiers.Meta)),
-                Action("Zoom", () => WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized)),
+                Action("Zoom", () => WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized),
+                new NativeMenuItemSeparator(),
+                Item("Messages", PlayerCommandId.ShowMessages)),
         ];
         NativeMenu.SetMenu(this, bar);
 

@@ -58,6 +58,7 @@ internal sealed unsafe partial class VlcCorePlayer : IMediaEngine, IQueueTranspo
         ArgumentException.ThrowIfNullOrWhiteSpace(videoOutput);
         _hardwareDecoding = hardwareDecoding;
         _verboseLogging = verboseLogging;
+        if (verboseLogging) VlcLog.EnableVerboseConsole();
         _videoOutput = videoOutput;
         _controlHost = new VlcControlHost();
         _controlHost.Connect();
@@ -728,6 +729,10 @@ internal sealed unsafe partial class VlcCorePlayer : IMediaEngine, IQueueTranspo
                 throw new InvalidOperationException(
                     $"libvlc_InternalInit failed with {result}.");
             initialized = true;
+            // vlc_LogSet replaces VLC's whole logger, its log file included:
+            // a core asked to write one (the settings smokes) keeps VLC's.
+            if (!openArguments.Contains("--file-logging", StringComparer.Ordinal))
+                VlcLog.Attach(core);
 
             result = VlcCoreApi.AddInterface(
                 core,
@@ -780,6 +785,7 @@ internal sealed unsafe partial class VlcCorePlayer : IMediaEngine, IQueueTranspo
         catch (Exception exception)
         {
             faulted = true;
+            VlcLog.Write(EngineMessageType.Error, $"playback failed: {exception.Message}");
             _states.Fault(generation, exception.Message);
         }
         finally
@@ -944,6 +950,7 @@ internal sealed unsafe partial class VlcCorePlayer : IMediaEngine, IQueueTranspo
         {
             string message =
                 $"VLC playback did not stop within {ShutdownTimeout.TotalSeconds:0} seconds.";
+            VlcLog.Write(EngineMessageType.Error, message);
             if (generation != 0)
                 _states.Fault(generation, message);
             throw new TimeoutException(message);

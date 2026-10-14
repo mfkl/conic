@@ -10,7 +10,7 @@ and macOS. On Linux the engine runs, but video output isn't written yet.
 > will not be maintained, and issues and pull requests may go unanswered. To
 > watch videos, use [VLC](https://www.videolan.org/vlc/).
 
-<!-- SCREENSHOT: hero, Home and the player side by side, Dark, 1920x1080 -->
+![Conic's Home, with recently played media](docs/images/home.png)
 
 ## What it is
 
@@ -27,9 +27,13 @@ rebuilds the desktop app around it:
 - **Messages**, VLC's log, live, as in VLC.
 - **Dark and Light themes**, accent colors and a compact density.
 
-<!-- SCREENSHOT: the player with the queue panel open -->
-<!-- SCREENSHOT: Settings, Audio page with the equalizer -->
-<!-- SCREENSHOT: picture in picture over another window -->
+| | |
+| --- | --- |
+| ![The player with the queue panel open](docs/images/queue.png) | ![The right-click menu, with VLC 3's entries](docs/images/context-menu.png) |
+| ![Settings, Audio: the equalizer](docs/images/settings-equalizer.png) | ![Settings, Video: picture adjustments](docs/images/settings-video.png) |
+
+[VLC 3 and Conic, side by side](docs/contest/COMPARISON.md) compares the same
+workflows in both apps.
 
 ### Parity with VLC 3
 
@@ -66,9 +70,21 @@ pie showData
 | Network and streaming | ██████░░░░ 63% | 4 | 1 | 0 | 3 | 7 |
 | **Total** | **████████░░ 80%** | **83** | **31** | **17** | **22** | **30** |
 
-Missing are, among others, visualizations, bookmarks, global hotkeys, the OS
-media controls and VLC options on the command line. Disc menus, streaming and
-conversion, capture devices, skins and extensions were left out.
+#### What's missing, and why
+
+| Why | Missing features |
+| --- | --- |
+| Not in the redesign | Bookmarks, the Video Track menu, library folders (My Videos…), status bar, system title bar |
+| Broken in VLC 3.0.24 | Post-processing (no visible effect), stereo widener (refuses the usual output chains) |
+| Need VLC's own video window | Set as wallpaper, 360° video navigation |
+| Need TV input or extra hardware | Program guide (EPG), Teletext, AtmoLight |
+| Refused on purpose | Credentials in URLs (they would be kept in the history) |
+| Not done (this is an experiment) | Visualizations, global hotkeys, the OS media controls, taskbar buttons, VLC options on the command line, mouse gestures, nested playlists |
+
+The 17 partial features mostly have fewer options than VLC (some video
+filters, playlist formats, queue sort) or work on Windows only (screensaver,
+HTTP proxy). Disc menus, streaming and conversion, capture devices, skins and
+extensions were left out from the start.
 [Feature parity with VLC 3](docs/FEATURE_PARITY.md) compares the two, feature
 by feature.
 
@@ -91,6 +107,9 @@ by feature.
   Windows, an IOSurface on macOS. The controls draw over the video in the same
   window, with hardware decoding on and no copy through the CPU on the
   validated paths.
+
+Conic was built with AI assistance (Claude Code) for implementation and
+testing.
 
 ## Design credit
 
@@ -139,49 +158,23 @@ Remember that Conic is not maintained.
 | macOS arm64/x64 | VideoToolbox decoding, IOSurface presentation | M1 Pro; CI's arm64 and x64 runners |
 | Linux x64 | Engine only (queue, transport, tracks, lifecycle); no video output yet, so the app reports playback as unavailable | CI, against Ubuntu's VLC 3 |
 
+Status, October 2026: the parity features (80%) are checked on Windows by
+the smoke tests below, with hardware and software decoding, and the network
+protocols by `--protocols-smoke` (UDP, RTP, RTMP, FTP, SMB). Their macOS run
+is pending; Linux has no video output yet.
+
+| Checked on Windows | Smoke |
+| --- | --- |
+| Next Frame, Jump to Time, A-B loop, snapshots, chapters, programs, Hide UI | `--parity-smoke` |
+| Live video effects, overlays, crop, deinterlacing, stereo mode, live subtitles | `--parity-smoke` |
+| UDP, RTP, RTMP, FTP, SMB from local servers | `--protocols-smoke` |
+| One instance: a second start hands its file over | two processes, by hand |
+
 Windows checks cover H.264 (NV12) and HEVC Main 10 (P010) hardware decoding,
 software decoding uploaded to the GPU, and the CPU bitmap fallback. Subtitles
 are rendered by VLC and drawn above the video, so they also show with hardware
 decoding. Multi-GPU switching, sleep and resume, and styled ASS or image
 subtitles are not qualified.
-
-## Avalonia Port Challenge
-
-Conic is an entry in the
-[Avalonia Port Challenge](https://avaloniaui.net/blog/avalonia-port-challenge).
-The application ported is VLC's desktop player; VLC 3.0.23 (December 2025) is
-the pre-contest baseline.
-
-**What was migrated.** VLC 3's everyday desktop workflows: opening files,
-folders and network streams (from the menus, the command line, the clipboard
-or a drop), the queue, transport, tracks, subtitles and delays, VLC's hotkeys,
-Jump to Time, the A-B loop, snapshots, programs, video adjustments and VLC's
-video effects and overlays, media information, history and resume,
-picture in picture, the preferences that matter for playback, and VLC's log.
-The Qt
-widgets were not translated. The workflows were rebuilt as Avalonia views over
-an engine contract, with VLC 3's core underneath.
-
-**The hard part** was video. VLC normally draws into its own native window,
-which Avalonia controls can't sit on top of. Conic's video output is a C# VLC
-plugin that passes decoded GPU frames to Avalonia's compositor, so video is
-one more visual in the window. Proving a frame renders was only the start:
-surface ownership, stale callbacks, stopping and reopening, and package
-discovery each needed their own checks.
-
-**Settings that are real.** The engine rows map to VLC 3 options or
-variables, rows VLC 3 can't honor in this app were dropped rather than shown,
-and smoke tests play real media to check the effect: the equalizer is measured
-on the audio output, network options against a local server.
-
-**Tests.** 666 unit tests, and about 40 smoke tests that drive the real app
-with VLC on Windows and macOS: playback paths, the default shortcuts, the
-queue, menus, Settings and picture in picture.
-
-AI assistance (Claude Code) was used for implementation and testing.
-[The migration write-up](docs/WRITEUP.md) ·
-[Before and after captures](docs/contest/COMPARISON.md) ·
-[Evidence and status](docs/contest/STATUS.md)
 
 ## Building from source
 

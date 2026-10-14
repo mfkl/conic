@@ -1,27 +1,37 @@
-# VLC desktop → Avalonia
+# VLC 3 and Conic, side by side
 
-Native window captures, September 12, 2026, at 1280×800 physical pixels on the
-same Windows display. Before: installed VLC 3.0.23. After: the extracted
-Windows package identified in [qualification](QUALIFICATION.md).
+Native window captures taken October 14, 2026 on one Windows display (Intel
+Iris Xe). Before: the installed VLC 3.0.24 with its default Qt
+interface. After: Conic built from `feature/vlc3-parity`, on the same VLC
+3.0.24 engine. Main windows are 1280×800; VLC's dialogs and menus are shown
+at their own size.
 
-| Workflow | VLC 3.0.23 | Conic |
+| Workflow | VLC 3.0.24 | Conic |
 |---|---|---|
-| Empty Home / player | ![VLC 3 empty player](images/vlc-3-home.png) | ![Avalonia Home](images/avalonia-home.png) |
-| Playback with controls | ![VLC 3 playback](images/vlc-3-playback.png) | ![Avalonia playback](images/avalonia-playback.png) |
+| Start screen | ![VLC 3 empty player](images/vlc-home.png) | ![Conic Home, empty](images/conic-start.png) |
+| Playback with controls | ![VLC 3 playback](images/vlc-playback.png) | ![Conic playback](images/conic-playback.png) |
+| Playlist / queue | ![VLC 3 playlist window](images/vlc-playlist.png) | ![Conic queue panel](../images/queue.png) |
+| Right-click menu | ![VLC 3 context menu](images/vlc-menu.png) | ![Conic context menu, Playback submenu](../images/context-menu.png) |
+| Preferences | ![VLC 3 Simple Preferences](images/vlc-preferences.png) | ![Conic Settings, Audio](images/conic-preferences.png) |
+| Equalizer | ![VLC 3 Audio Effects, Equalizer](images/vlc-effects.png) | ![Conic Settings, Audio, equalizer](../images/settings-equalizer.png) |
+| Picture adjustments | ![VLC 3 Video Effects, Essential](images/vlc-video-effects.png) | ![Conic Settings, Video, Picture](../images/settings-video.png) |
 
-Playback uses the same generated H.264 test pattern at different timestamps;
-this illustrates layout, not a frame-accurate color/performance comparison.
-The Avalonia image contains actual GPU video. Native window captions and the
-responsive control layout are part of the captured application.
+Both players show the same generated H.264 test pattern at different
+timestamps, so the frames illustrate layout, not color or performance. The
+Conic captures contain real GPU video: the frame is composed by Avalonia, under
+the controls, in the same window. VLC's floating playlist window is a setting of
+this machine's VLC; VLC can also dock it in the main window.
 
-The existing root `home.PNG` and `playback on hover.PNG` are UI references,
-not these captures. The comparison does not claim VLC feature or subtitle
-parity. Further queue/settings/PiP comparisons and a final-release demo remain
-to be prepared.
+Equivalents, not one-to-one copies: VLC's Effects and Filters dialog becomes
+rows of Settings > Audio and Settings > Video in Conic, and Conic's context
+menu is the redesign's, with VLC 3's entries.
 
-Capture a running review process with
-`eng/capture-window.ps1 -ProcessId <id> -OutputFile <png>`. The tool selects
-only that process's window, sizes it for comparison, and captures its native
-pixels with DPI awareness; inspect the PNG before accepting video evidence.
-`-Pause` sends Space to that window, so use it only when playback is active and
-the player owns that shortcut.
+## How the captures were taken
+
+`eng/capture-window.ps1 -ProcessId <id> -OutputFile <png>` sizes a process's
+main window and captures its native pixels (PrintWindow, DPI aware). VLC's
+dialogs and Conic's panels were opened with clicks posted to each app's own
+window, so nothing took the foreground. Conic's context menu comes from
+`--menu-review=context-playback`. Inspect each PNG before using it as video
+evidence: a successful capture call alone doesn't prove the video frame was
+captured.

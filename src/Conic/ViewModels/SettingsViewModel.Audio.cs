@@ -30,7 +30,8 @@ internal sealed partial class SettingsViewModel
         nameof(ReplayGain), nameof(HasReplayGain), nameof(ReplayGainPreamp), nameof(Equalizer), nameof(EqualizerPreset),
         nameof(EqualizerPreamp), nameof(EqualizerPreampText), nameof(SpatialAudio), nameof(SpatialAudioMode),
         nameof(Compressor), nameof(PitchShift), nameof(Karaoke), nameof(AudioDelay), nameof(DolbySurround), nameof(ResamplerQuality),
-        nameof(StereoMode), nameof(TimeStretch),
+        nameof(StereoMode), nameof(TimeStretch), nameof(HasRoomSettings),
+        nameof(CompressorRmsPeak), nameof(CompressorAttack), nameof(CompressorRelease), nameof(CompressorThreshold), nameof(CompressorRatio), nameof(CompressorKnee), nameof(CompressorMakeupGain), nameof(SpatializerRoomSize), nameof(SpatializerWidth), nameof(SpatializerWet), nameof(SpatializerDry), nameof(SpatializerDamp),
     ];
 
     // Output. The device list is Windows' playback endpoints (the MMDevice
@@ -142,6 +143,20 @@ internal sealed partial class SettingsViewModel
     public bool Compressor { get => Current.Compressor; set => Update(s => s with { Compressor = value }); }
     public decimal PitchShift { get => (decimal)Current.PitchShift; set => Update(s => s with { PitchShift = (double)value }); }
     public bool Karaoke { get => Current.Karaoke; set => Update(s => s with { Karaoke = value }); }
+    // The compressor's and the Room spatializer's parameters, shown while each is on.
+    public bool HasRoomSettings => Current.SpatialAudio && Current.SpatialAudioMode == "Room";
+    public decimal CompressorRmsPeak { get => (decimal)Current.CompressorRmsPeak; set => Update(s => s with { CompressorRmsPeak = (double)value }); }
+    public decimal CompressorAttack { get => (decimal)Current.CompressorAttack; set => Update(s => s with { CompressorAttack = (double)value }); }
+    public decimal CompressorRelease { get => (decimal)Current.CompressorRelease; set => Update(s => s with { CompressorRelease = (double)value }); }
+    public decimal CompressorThreshold { get => (decimal)Current.CompressorThreshold; set => Update(s => s with { CompressorThreshold = (double)value }); }
+    public decimal CompressorRatio { get => (decimal)Current.CompressorRatio; set => Update(s => s with { CompressorRatio = (double)value }); }
+    public decimal CompressorKnee { get => (decimal)Current.CompressorKnee; set => Update(s => s with { CompressorKnee = (double)value }); }
+    public decimal CompressorMakeupGain { get => (decimal)Current.CompressorMakeupGain; set => Update(s => s with { CompressorMakeupGain = (double)value }); }
+    public decimal SpatializerRoomSize { get => (decimal)Current.SpatializerRoomSize; set => Update(s => s with { SpatializerRoomSize = (double)value }); }
+    public decimal SpatializerWidth { get => (decimal)Current.SpatializerWidth; set => Update(s => s with { SpatializerWidth = (double)value }); }
+    public decimal SpatializerWet { get => (decimal)Current.SpatializerWet; set => Update(s => s with { SpatializerWet = (double)value }); }
+    public decimal SpatializerDry { get => (decimal)Current.SpatializerDry; set => Update(s => s with { SpatializerDry = (double)value }); }
+    public decimal SpatializerDamp { get => (decimal)Current.SpatializerDamp; set => Update(s => s with { SpatializerDamp = (double)value }); }
 
     // Tracks: the preferred language is Playback › Tracks' setting, shown on both pages.
     public decimal AudioDelay { get => Current.AudioDelay; set => Update(s => s with { AudioDelay = (int)value }); }
@@ -171,5 +186,6 @@ internal sealed partial class SettingsViewModel
         Compressor = d.Compressor, PitchShift = d.PitchShift, Karaoke = d.Karaoke, AudioLanguage = d.AudioLanguage, AudioDelay = d.AudioDelay,
         AudioOutputModule = d.AudioOutputModule, AudioPassthrough = d.AudioPassthrough, DolbySurround = d.DolbySurround, ResamplerQuality = d.ResamplerQuality,
         StereoMode = d.StereoMode, TimeStretch = d.TimeStretch,
+        CompressorRmsPeak = d.CompressorRmsPeak, CompressorAttack = d.CompressorAttack, CompressorRelease = d.CompressorRelease, CompressorThreshold = d.CompressorThreshold, CompressorRatio = d.CompressorRatio, CompressorKnee = d.CompressorKnee, CompressorMakeupGain = d.CompressorMakeupGain, SpatializerRoomSize = d.SpatializerRoomSize, SpatializerWidth = d.SpatializerWidth, SpatializerWet = d.SpatializerWet, SpatializerDry = d.SpatializerDry, SpatializerDamp = d.SpatializerDamp,
     };
 }

@@ -68,6 +68,8 @@ public partial class MainWindow
                 Item("Skip Forward", PlayerCommandId.SkipForward),
                 Item("Jump to Time…", PlayerCommandId.JumpToTime),
                 Item("Next Frame", PlayerCommandId.NextFrame),
+                Item("A-B Loop", PlayerCommandId.ToggleABLoop),
+                Item("Next Program", PlayerCommandId.CycleProgram),
                 new NativeMenuItemSeparator(),
                 Item("Previous Chapter", PlayerCommandId.PreviousChapter),
                 Item("Next Chapter", PlayerCommandId.NextChapter),
@@ -88,6 +90,7 @@ public partial class MainWindow
                 Item("Library", PlayerCommandId.OpenLibrary),
                 new NativeMenuItemSeparator(),
                 Item("Picture in Picture", PlayerCommandId.TogglePictureInPicture),
+                Item("Hide UI", PlayerCommandId.ToggleMinimalInterface),
                 Action("Enter Full Screen", () => _presentation.Registry.Execute(PlayerCommandId.ToggleFullscreen),
                     new KeyGesture(Key.F, KeyModifiers.Control | KeyModifiers.Meta))),
             Submenu("Window",
@@ -96,6 +99,7 @@ public partial class MainWindow
                 new NativeMenuItemSeparator(),
                 Item("Messages", PlayerCommandId.ShowMessages)),
             Submenu("Help",
+                Item("Conic Help", PlayerCommandId.ShowHelp),
                 Item("About Conic", PlayerCommandId.ShowAbout)),
         ];
         NativeMenu.SetMenu(this, bar);

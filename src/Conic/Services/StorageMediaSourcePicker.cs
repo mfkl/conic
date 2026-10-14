@@ -69,13 +69,13 @@ internal sealed class StorageMediaSourcePicker(IStorageProvider storageProvider)
 
     public async Task<string?> PickPlaylistToOpenAsync(CancellationToken cancellationToken = default)
     {
-        IReadOnlyList<IStorageFile> result = await storageProvider.OpenFilePickerAsync(new FilePickerOpenOptions { Title = "Load playlist", AllowMultiple = false, FileTypeFilter = new[] { new FilePickerFileType("M3U playlists") { Patterns = new[] { "*.m3u", "*.m3u8" } } } });
+        IReadOnlyList<IStorageFile> result = await storageProvider.OpenFilePickerAsync(new FilePickerOpenOptions { Title = "Load playlist", AllowMultiple = false, FileTypeFilter = new[] { new FilePickerFileType("Playlists") { Patterns = new[] { "*.m3u", "*.m3u8", "*.xspf", "*.pls" } } } });
         return result.Count == 0 ? null : result[0].Path.LocalPath;
     }
 
     public async Task<string?> PickPlaylistToSaveAsync(CancellationToken cancellationToken = default)
     {
-        IStorageFile? result = await storageProvider.SaveFilePickerAsync(new FilePickerSaveOptions { Title = "Save playlist", SuggestedFileName = "playlist.m3u8", FileTypeChoices = new[] { new FilePickerFileType("M3U8 playlist") { Patterns = new[] { "*.m3u8" } } } });
+        IStorageFile? result = await storageProvider.SaveFilePickerAsync(new FilePickerSaveOptions { Title = "Save playlist", SuggestedFileName = "playlist.m3u8", FileTypeChoices = new[] { new FilePickerFileType("M3U8 playlist") { Patterns = new[] { "*.m3u8" } }, new FilePickerFileType("XSPF playlist") { Patterns = new[] { "*.xspf" } } } });
         return result?.Path.LocalPath;
     }
 

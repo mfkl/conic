@@ -37,6 +37,7 @@ public partial class MainWindow
         VideoSurface.OpenArguments = EngineArguments(settings);
         VideoSurface.LiveAudio = AudioEngineOptions.Live(settings);
         VideoSurface.LiveSubtitles = SubtitleEngineOptions.Live(settings);
+        VideoSurface.LiveVideo = VideoEngineOptions.Live(settings);
         VideoSurface.QueueModes = (QueueModeSettings.Repeat(settings.QueueRepeat), QueueModeSettings.Order(settings.QueueShuffle));
         UpdateDisplayRequest();
     }

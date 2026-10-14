@@ -219,9 +219,13 @@ artifacts/dependencies/vlc-3.0.24/vlc-cache-gen.exe `
 dotnet run --project src/Conic
 ```
 
-Smoke tests use `../vlclr/test_01.mkv` by default:
+Smoke tests play the clip named by `CONIC_TEST_MEDIA`. The repository has
+no media; `eng/make-settings-fixtures.ps1` generates synthetic clips with
+ffmpeg into `artifacts/settings-fixtures`:
 
 ```powershell
+./eng/make-settings-fixtures.ps1
+$env:CONIC_TEST_MEDIA = "$PWD/artifacts/settings-fixtures/gop.mp4"
 dotnet run --project src/Conic -- `
   --smoke --expect-path=hardware-opaque-gpu
 dotnet run --project src/Conic -- `
@@ -232,12 +236,11 @@ dotnet run --project src/Conic -- --ui-smoke
 dotnet run --project src/Conic -- --engine-smoke --cycles=25
 ```
 
-Override local paths with `VLCLR_ROOT`, `VLC_DIRECTORY`, and `CONIC_TEST_MEDIA`.
+Override local paths with `VLC_DIRECTORY` and `CONIC_TEST_MEDIA`.
 Installed applications find VLC in an adjacent `vlc` directory.
 `VLC_DIRECTORY` takes precedence and must point to the directory containing the
 native VLC libraries. The default plugin location is `plugins/video_output`
-beneath that directory. `VLCLR_ROOT` only points development runs at a
-directory containing the default smoke media (`test_01.mkv`).
+beneath that directory.
 
 On macOS, `eng/get-vlc.ps1` downloads the pinned VLC 3.0.24 DMG (an installed
 `/Applications/VLC.app` also works), `eng/test-macos.ps1 -Media <clip> [-Window]`

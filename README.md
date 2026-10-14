@@ -33,44 +33,44 @@ rebuilds the desktop app around it:
 
 ### Parity with VLC 3
 
-Conic reaches **59% parity** with VLC 3's desktop player. Of 183 VLC 3
-features, 30 were left out on purpose. Of the 153 others, 57 work the same, 22
-work differently, 22 work in part and 52 are missing. Parity counts Same and
+Conic reaches **69% parity** with VLC 3's desktop player. Of 183 VLC 3
+features, 30 were left out on purpose. Of the 153 others, 71 work the same, 24
+work differently, 21 work in part and 37 are missing. Parity counts Same and
 Different as 1, Partial as 1/2 and Missing as 0.
 
 ```mermaid
 pie showData
     title 183 VLC 3 features in Conic
-    "Same" : 57
-    "Different" : 22
-    "Partial" : 22
-    "Missing" : 52
+    "Same" : 71
+    "Different" : 24
+    "Partial" : 21
+    "Missing" : 37
     "Out of scope" : 30
 ```
 
 | Area | Parity | Same | Different | Partial | Missing | Out of scope |
 | --- | --- | --: | --: | --: | --: | --: |
-| Media menu | ██████░░░░ 60% | 1 | 3 | 4 | 2 | 4 |
-| Playback menu | █████░░░░░ 50% | 5 | 0 | 2 | 5 | 2 |
-| Audio menu | ██████░░░░ 58% | 2 | 1 | 1 | 2 | 0 |
+| Media menu | █████████░ 85% | 3 | 4 | 3 | 0 | 4 |
+| Playback menu | ████████░░ 75% | 9 | 0 | 0 | 3 | 2 |
+| Audio menu | ████████░░ 83% | 3 | 2 | 0 | 1 | 0 |
 | Video menu | ██████░░░░ 55% | 3 | 2 | 1 | 4 | 0 |
 | Subtitle menu | ████████░░ 75% | 1 | 0 | 1 | 0 | 0 |
 | Tools menu | ████░░░░░░ 42% | 1 | 4 | 5 | 8 | 4 |
-| View menu | ██████░░░░ 63% | 2 | 3 | 0 | 3 | 1 |
-| Help menu | ░░░░░░░░░░ 0% | 0 | 0 | 0 | 2 | 1 |
-| Preferences | ████████░░ 80% | 30 | 2 | 5 | 6 | 6 |
+| View menu | ███████░░░ 69% | 2 | 3 | 1 | 2 | 1 |
+| Help menu | █████░░░░░ 50% | 1 | 0 | 0 | 1 | 1 |
+| Preferences | ████████░░ 83% | 31 | 2 | 5 | 5 | 6 |
 | Playlist and queue | ███████░░░ 73% | 6 | 3 | 1 | 3 | 0 |
 | Library | █████░░░░░ 50% | 0 | 1 | 0 | 1 | 3 |
-| Hotkeys and mouse | ██████░░░░ 56% | 3 | 1 | 1 | 3 | 0 |
-| Command line and OS integration | ██░░░░░░░░ 23% | 1 | 1 | 1 | 8 | 2 |
-| Network and streaming | ████░░░░░░ 38% | 2 | 1 | 0 | 5 | 7 |
-| **Total** | **██████░░░░ 59%** | **57** | **22** | **22** | **52** | **30** |
+| Hotkeys and mouse | ███████░░░ 69% | 4 | 1 | 1 | 2 | 0 |
+| Command line and OS integration | █████░░░░░ 50% | 3 | 1 | 3 | 4 | 2 |
+| Network and streaming | ██████░░░░ 63% | 4 | 1 | 0 | 3 | 7 |
+| **Total** | **███████░░░ 69%** | **71** | **24** | **21** | **37** | **30** |
 
-Missing are, among others, opening files from the command line or as the
-default player, snapshots, and network protocols other than HTTP(S). Disc
-menus, streaming and conversion, capture devices, skins and extensions were
-left out. [Feature parity with VLC 3](docs/FEATURE_PARITY.md) compares the two,
-feature by feature.
+Missing are, among others, snapshots, an A-B loop, program selection, global
+hotkeys and single-instance mode. Disc menus, streaming and conversion,
+capture devices, skins and extensions were left out.
+[Feature parity with VLC 3](docs/FEATURE_PARITY.md) compares the two, feature
+by feature.
 
 ## How it's built
 
@@ -153,9 +153,11 @@ The application ported is VLC's desktop player; VLC 3.0.23 (December 2025) is
 the pre-contest baseline.
 
 **What was migrated.** VLC 3's everyday desktop workflows: opening files,
-folders and network streams, the queue, transport, tracks, subtitles and
-delays, video adjustments, media information, history and resume, picture in
-picture, the preferences that matter for playback, and VLC's log. The Qt
+folders and network streams (from the menus, the command line, the clipboard
+or a drop), the queue, transport, tracks, subtitles and delays, VLC's hotkeys,
+Jump to Time, video adjustments, media information, history and resume,
+picture in picture, the preferences that matter for playback, and VLC's log.
+The Qt
 widgets were not translated. The workflows were rebuilt as Avalonia views over
 an engine contract, with VLC 3's core underneath.
 
@@ -171,8 +173,8 @@ variables, rows VLC 3 can't honor in this app were dropped rather than shown,
 and smoke tests play real media to check the effect: the equalizer is measured
 on the audio output, network options against a local server.
 
-**Tests.** 557 unit tests, and about 40 smoke tests that drive the real app
-with VLC on Windows and macOS: playback paths, every default shortcut, the
+**Tests.** 635 unit tests, and about 40 smoke tests that drive the real app
+with VLC on Windows and macOS: playback paths, the default shortcuts, the
 queue, menus, Settings and picture in picture.
 
 AI assistance (Claude Code) was used for implementation and testing.

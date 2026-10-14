@@ -31,8 +31,11 @@ Conic is an experiment; no maintenance is planned.
 | Different | Works, but the behavior, scope or place differs in a way that matters. |
 | Partial | Some of VLC 3's feature is there, some is not. |
 | Missing | Not in Conic. |
-| Out of scope | Deliberately left out of this experiment (recorded in the redesign plan or capability matrix). |
+| Out of scope | Deliberately left out of this experiment. |
 | Conic only | Not in VLC 3's Qt interface (used only in the last section). |
+
+**Parity** counts Same and Different as 1, Partial as 1/2 and Missing as 0,
+over the features in scope (Out of scope is not counted).
 
 Apply timing in Conic's Settings: **Live** applies at once, **Next open**
 applies from the next media opened (each open starts a new VLC core with the
@@ -41,23 +44,23 @@ carries its tag.
 
 ## Summary
 
-| Section | Same | Different | Partial | Missing | Out of scope | Total |
-|---|---|---|---|---|---|---|
-| Media menu | 1 | 3 | 4 | 2 | 4 | 14 |
-| Playback menu | 5 | 0 | 2 | 5 | 2 | 14 |
-| Audio menu | 2 | 1 | 1 | 2 | 0 | 6 |
-| Video menu | 3 | 2 | 1 | 4 | 0 | 10 |
-| Subtitle menu | 1 | 0 | 1 | 0 | 0 | 2 |
-| Tools menu | 1 | 4 | 5 | 8 | 4 | 22 |
-| View menu | 2 | 3 | 0 | 3 | 1 | 9 |
-| Help menu | 0 | 0 | 0 | 2 | 1 | 3 |
-| Preferences | 30 | 2 | 5 | 6 | 6 | 49 |
-| Playlist and queue | 6 | 3 | 1 | 3 | 0 | 13 |
-| Library | 0 | 1 | 0 | 1 | 3 | 5 |
-| Hotkeys and mouse | 3 | 1 | 1 | 3 | 0 | 8 |
-| Command line and OS integration | 1 | 1 | 1 | 8 | 2 | 13 |
-| Network and streaming | 2 | 1 | 0 | 5 | 7 | 15 |
-| **Total** | **57** | **22** | **22** | **52** | **30** | **183** |
+| Section | Same | Different | Partial | Missing | Out of scope | Total | Parity |
+|---|---|---|---|---|---|---|---|
+| Media menu | 1 | 3 | 4 | 2 | 4 | 14 | 60% |
+| Playback menu | 5 | 0 | 2 | 5 | 2 | 14 | 50% |
+| Audio menu | 2 | 1 | 1 | 2 | 0 | 6 | 58% |
+| Video menu | 3 | 2 | 1 | 4 | 0 | 10 | 55% |
+| Subtitle menu | 1 | 0 | 1 | 0 | 0 | 2 | 75% |
+| Tools menu | 1 | 4 | 5 | 8 | 4 | 22 | 42% |
+| View menu | 2 | 3 | 0 | 3 | 1 | 9 | 63% |
+| Help menu | 0 | 0 | 0 | 2 | 1 | 3 | 0% |
+| Preferences | 30 | 2 | 5 | 6 | 6 | 49 | 80% |
+| Playlist and queue | 6 | 3 | 1 | 3 | 0 | 13 | 73% |
+| Library | 0 | 1 | 0 | 1 | 3 | 5 | 50% |
+| Hotkeys and mouse | 3 | 1 | 1 | 3 | 0 | 8 | 56% |
+| Command line and OS integration | 1 | 1 | 1 | 8 | 2 | 13 | 23% |
+| Network and streaming | 2 | 1 | 0 | 5 | 7 | 15 | 38% |
+| **Total** | **57** | **22** | **22** | **52** | **30** | **183** | **59%** |
 
 The Conic only section lists 13 features VLC 3's Qt interface does not have; they are not counted above.
 
@@ -107,7 +110,7 @@ The Conic only section lists 13 features VLC 3's Qt interface does not have; the
 | Audio Device | Submenu, live | Settings › Audio › Output device | Different | Windows only (MMDevice endpoints), Live. Not in a menu. macOS and Linux use the system default. |
 | Stereo Mode | Stereo, reverse, left, right, mono, Dolby Surround | None | Missing | Settings › Audio has Detect Dolby Surround (Next open) only. |
 | Visualizations | Spectrometer, scope, VU meter, goom, projectM | None | Missing | Not built (phase 9c scope). |
-| Increase / Decrease Volume | Ctrl+Up / Ctrl+Down, menu | Volume slider, scroll wheel over video | Partial | No volume up/down commands, so no hotkeys. Arrow keys move the focused slider by the volume step. Maximum volume 100 to 300 % (default 200 %), Settings › Audio. |
+| Increase / Decrease Volume | Ctrl+Up / Ctrl+Down, menu | Volume slider, scroll wheel over video | Partial | No volume up/down commands, so no hotkeys. Arrow keys move the focused slider by the volume step. Maximum volume 100 to 300% (default 200%), Settings › Audio. |
 | Mute | M | M | Same | Bar, right-click menu, macOS menu. |
 
 ## Video menu
@@ -226,7 +229,7 @@ preferences categories.
 | Preferred subtitle language | Yes | Playback and Subtitles › Preferred language | Same | Next open. |
 | Default subtitle encoding | Yes | Subtitles › Text encoding | Same | Automatic plus 21 encodings. Next open. |
 | Autodetect subtitle files, fuzziness | Yes | Subtitles › Loading Subtitles | Same | Next open. |
-| Font, size, color, outline, shadow, background | Yes | Subtitles › Appearance | Same | Size is relative (50 to 300 %). Size, color, outline thickness and background are Live; the rest Next open. |
+| Font, size, color, outline, shadow, background | Yes | Subtitles › Appearance | Same | Size is relative (50 to 300%). Size, color, outline thickness and background are Live; the rest Next open. |
 | Subtitle position | Yes | Subtitles › Distance from the bottom | Same | Next open. |
 | Hardware-accelerated decoding | Automatic, DXVA2, D3D11, disable | Performance › Automatic, Direct3D 11, Off | Partial | No DXVA2 (its surfaces cannot reach the D3D11 output without a copy). macOS: Automatic or Off. Next open. |
 | Skip H.264 loop filter, threads | Yes | Performance | Same | Next open. |

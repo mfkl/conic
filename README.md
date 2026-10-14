@@ -31,14 +31,46 @@ rebuilds the desktop app around it:
 <!-- SCREENSHOT: Settings, Audio page with the equalizer -->
 <!-- SCREENSHOT: picture in picture over another window -->
 
-Most of what you use VLC 3 for every day is there. Of 183 VLC 3 features
-compared, 57 work the same, 44 work differently or in part, 52 are missing and
-30 were left out on purpose. Missing are, among others, opening files from the
-command line or as the default player, snapshots, and network protocols other
-than HTTP(S). Disc menus, streaming and conversion,
-capture devices, skins and extensions were left out.
-[Feature parity with VLC 3](docs/FEATURE_PARITY.md) compares the two, feature by
-feature.
+### Parity with VLC 3
+
+Conic reaches **59% parity** with VLC 3's desktop player. Of 183 VLC 3
+features, 30 were left out on purpose. Of the 153 others, 57 work the same, 22
+work differently, 22 work in part and 52 are missing. Parity counts Same and
+Different as 1, Partial as 1/2 and Missing as 0.
+
+```mermaid
+pie showData
+    title 183 VLC 3 features in Conic
+    "Same" : 57
+    "Different" : 22
+    "Partial" : 22
+    "Missing" : 52
+    "Out of scope" : 30
+```
+
+| Area | Parity | Same | Different | Partial | Missing | Out of scope |
+| --- | --- | --: | --: | --: | --: | --: |
+| Media menu | ██████░░░░ 60% | 1 | 3 | 4 | 2 | 4 |
+| Playback menu | █████░░░░░ 50% | 5 | 0 | 2 | 5 | 2 |
+| Audio menu | ██████░░░░ 58% | 2 | 1 | 1 | 2 | 0 |
+| Video menu | ██████░░░░ 55% | 3 | 2 | 1 | 4 | 0 |
+| Subtitle menu | ████████░░ 75% | 1 | 0 | 1 | 0 | 0 |
+| Tools menu | ████░░░░░░ 42% | 1 | 4 | 5 | 8 | 4 |
+| View menu | ██████░░░░ 63% | 2 | 3 | 0 | 3 | 1 |
+| Help menu | ░░░░░░░░░░ 0% | 0 | 0 | 0 | 2 | 1 |
+| Preferences | ████████░░ 80% | 30 | 2 | 5 | 6 | 6 |
+| Playlist and queue | ███████░░░ 73% | 6 | 3 | 1 | 3 | 0 |
+| Library | █████░░░░░ 50% | 0 | 1 | 0 | 1 | 3 |
+| Hotkeys and mouse | ██████░░░░ 56% | 3 | 1 | 1 | 3 | 0 |
+| Command line and OS integration | ██░░░░░░░░ 23% | 1 | 1 | 1 | 8 | 2 |
+| Network and streaming | ████░░░░░░ 38% | 2 | 1 | 0 | 5 | 7 |
+| **Total** | **██████░░░░ 59%** | **57** | **22** | **22** | **52** | **30** |
+
+Missing are, among others, opening files from the command line or as the
+default player, snapshots, and network protocols other than HTTP(S). Disc
+menus, streaming and conversion, capture devices, skins and extensions were
+left out. [Feature parity with VLC 3](docs/FEATURE_PARITY.md) compares the two,
+feature by feature.
 
 ## How it's built
 

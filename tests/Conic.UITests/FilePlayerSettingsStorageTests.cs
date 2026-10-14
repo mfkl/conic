@@ -20,6 +20,23 @@ public sealed class FilePlayerSettingsStorageTests : IDisposable
         Assert.Empty(Directory.GetFiles(_directory, ".settings-*.tmp"));
     }
 
+    // An antivirus or the indexer can hold the file just after a write; the
+    // next write waits for it instead of failing.
+    [Fact]
+    public async Task AWriteWaitsForAFileHeldForAMoment()
+    {
+        FilePlayerSettingsStorage storage = new(SettingsPath);
+        storage.WriteAtomically("first");
+        FileStream held = new(SettingsPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+        Task release = Task.Run(async () => { await Task.Delay(150); held.Dispose(); });
+
+        storage.WriteAtomically("second");
+
+        await release;
+        Assert.Equal("second", storage.Read());
+        Assert.Empty(Directory.GetFiles(_directory, ".settings-*.tmp"));
+    }
+
     [Fact]
     public void CorruptDocumentIsBackedUpAndRewrittenAsDefaults()
     {

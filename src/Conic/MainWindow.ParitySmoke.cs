@@ -92,6 +92,9 @@ public partial class MainWindow
 
                 // Snapshots go to the work folder: the core starts with the option.
                 await Set(s => s with { SnapshotFolder = snapshots, SnapshotFormat = "png", ResumePlayback = false });
+                // --software-decoding: the same checks on VLC's software decoder (CPU pictures).
+                if (Environment.GetCommandLineArgs().Contains("--software-decoding", StringComparer.OrdinalIgnoreCase))
+                    await Set(s => s with { HardwareDecoding = "Off" });
 
                 // ---- gop.mp4: 30 s, 640x360 ----
                 Check(await Open(gop), "gop.mp4 plays");

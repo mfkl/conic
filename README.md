@@ -10,7 +10,9 @@ macOS and Linux.
 > will not be maintained, and issues and pull requests may go unanswered. To
 > watch videos, use [VLC](https://www.videolan.org/vlc/).
 
-![Conic's Home, with recently played media](docs/images/home.png)
+[![Watch Conic in a 42-second demo](docs/images/demo-poster.png)](docs/media/conic-demo.mp4)
+
+<sub>The demo plays Sintel, Big Buck Bunny, Tears of Steel and Caminandes, © Blender Foundation, CC BY.</sub>
 
 ## Install
 

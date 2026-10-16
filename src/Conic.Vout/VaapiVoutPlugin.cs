@@ -27,6 +27,7 @@ public static unsafe class VaapiVoutPlugin
     private const int Success = 0;
     private const int GenericError = -1;
     private const int RingSize = 3;
+    private const uint MaximumHardwarePictures = 64;
 
     private const uint ChromaNv12 = VaApi.FourCCNv12;
     private const uint ChromaP010 = VaApi.FourCCP010;
@@ -56,6 +57,10 @@ public static unsafe class VaapiVoutPlugin
         public ulong Generation;
         public int ColorStandard;
         public bool FullRange;
+        /// <summary>The decoder hands VA-API surfaces (VAOP/VAO0) instead of system-memory pictures.</summary>
+        public bool Hardware;
+        /// <summary>The <see cref="VLCVaapiInstance"/> the surface pool and the converter share; one reference is the display's.</summary>
+        public nint Instance;
     }
 
     internal static int Register(nint vlcSet, nint opaque) =>
@@ -116,18 +121,30 @@ public static unsafe class VaapiVoutPlugin
             return GenericError;
 
         VLCVoutDisplay* display = (VLCVoutDisplay*)displayPtr;
-        if (IsOpaqueHardwareChroma(display->Source.Chroma))
+        if (IsVdpauChroma(display->Source.Chroma))
             return GenericError;
+        bool hardware = VLCFourCC.IsVaapiOpaque(display->Source.Chroma);
         GCHandle stateHandle = default;
-        DisplayState state = new() { OriginalSource = display->Source };
+        DisplayState state = new() { OriginalSource = display->Source, Hardware = hardware };
         try
         {
             bool useDmaBuf;
             lock (CallbackGate)
                 useDmaBuf = s_dmaBufCallback != 0;
+            if (hardware && !useDmaBuf)
+                return GenericError;
 
             display->Format = display->Source;
-            if (useDmaBuf && TryOpenConverter(state, in display->Source, out uint chroma))
+            if (hardware)
+            {
+                state.ColorStandard = VaapiConverter.ColorStandardFor(display->Source.Space, (int)VisibleHeight(in display->Source));
+                state.FullRange = display->Source.ColorRangeFull != 0;
+                VLCVaapiInstance* instance = VaapiPicturePool.CreateInstance();
+                state.Instance = (nint)instance;
+                if (!AttachDecoderDisplay(state, instance->Display))
+                    throw new InvalidOperationException("VA-API video processing is unavailable.");
+            }
+            else if (useDmaBuf && TryOpenConverter(state, in display->Source, out uint chroma))
             {
                 display->Format.Chroma = chroma;
             }
@@ -165,6 +182,8 @@ public static unsafe class VaapiVoutPlugin
         catch
         {
             state.Converter?.Dispose();
+            if (state.Instance != 0)
+                VaapiPicturePool.Release((VLCVaapiInstance*)state.Instance);
             if (stateHandle.IsAllocated)
                 stateHandle.Free();
             display->Sys = 0;
@@ -172,17 +191,19 @@ public static unsafe class VaapiVoutPlugin
         }
     }
 
-    private static bool IsOpaqueHardwareChroma(uint chroma) =>
-        VLCFourCC.IsVaapiOpaque(chroma) ||
-        (chroma & 0x00FFFFFF) == 0x00564456;
+    private static bool IsVdpauChroma(uint chroma) => (chroma & 0x00FFFFFF) == 0x00564456;
+
+    private static uint VisibleWidth(in VLCVideoFormat format) => format.VisibleWidth != 0 ? format.VisibleWidth : format.Width;
+
+    private static uint VisibleHeight(in VLCVideoFormat format) => format.VisibleHeight != 0 ? format.VisibleHeight : format.Height;
 
     /// <summary>Opens VA-API for the source's decoded size and exports the ring; false leaves the CPU path.</summary>
     private static bool TryOpenConverter(DisplayState state, in VLCVideoFormat source, out uint chroma)
     {
         bool tenBit = source.Chroma is ChromaI0AL or ChromaI0AB or ChromaP010 or ChromaP016 or VLCFourCC.VaapiOpaque420TenBit;
         chroma = tenBit ? ChromaP010 : ChromaNv12;
-        uint visibleWidth = source.VisibleWidth != 0 ? source.VisibleWidth : source.Width;
-        uint visibleHeight = source.VisibleHeight != 0 ? source.VisibleHeight : source.Height;
+        uint visibleWidth = VisibleWidth(in source);
+        uint visibleHeight = VisibleHeight(in source);
         if (source.Width == 0 || source.Height == 0 ||
             (ulong)source.XOffset + visibleWidth > source.Width || (ulong)source.YOffset + visibleHeight > source.Height)
             return false;
@@ -236,6 +257,11 @@ public static unsafe class VaapiVoutPlugin
                 }
                 state.Converter?.Dispose();
                 state.Converter = null;
+                if (state.Instance != 0)
+                {
+                    VaapiPicturePool.Release((VLCVaapiInstance*)state.Instance);
+                    state.Instance = 0;
+                }
             }
         }
         catch
@@ -261,10 +287,12 @@ public static unsafe class VaapiVoutPlugin
             {
                 if (state.Pool != 0)
                     return state.Pool;
-                state.Pool = VLCCore.PicturePoolNewFromFormat(in display->Format, Math.Clamp(requestedPictures, 3u, 8u));
+                state.Pool = state.Hardware
+                    ? VaapiPicturePool.Create((VLCVaapiInstance*)state.Instance, in display->Format, Math.Clamp(requestedPictures, 3u, MaximumHardwarePictures))
+                    : VLCCore.PicturePoolNewFromFormat(in display->Format, Math.Clamp(requestedPictures, 3u, 8u));
                 if (state.Pool != 0)
                 {
-                    if (state.Converter is not null)
+                    if (state.Converter is not null || state.Hardware)
                         PicturePoolTelemetry.OpaquePoolCreated();
                     else
                         PicturePoolTelemetry.CpuPoolCreated();
@@ -285,18 +313,17 @@ public static unsafe class VaapiVoutPlugin
         try
         {
             DisplayState? state = displayPtr != 0 ? GetState((VLCVoutDisplay*)displayPtr) : null;
-            if (state?.Converter is not { } converter || picturePtr == 0)
+            if (state is null || picturePtr == 0)
                 return;
             state.Prepared = -1;
-            int slot = -1;
-            lock (state)
+            if (state.Hardware)
             {
-                for (int i = 0; i < RingSize && slot < 0; i++)
-                {
-                    int candidate = (state.Next + i) % RingSize;
-                    if (!state.Lent[candidate]) slot = candidate;
-                }
+                PrepareHardware(state, (VLCPicture*)picturePtr);
+                return;
             }
+            if (state.Converter is not { } converter)
+                return;
+            int slot = FreeSlot(state);
             if (slot < 0)
                 return;
 
@@ -315,6 +342,78 @@ public static unsafe class VaapiVoutPlugin
         }
     }
 
+    private static int FreeSlot(DisplayState state)
+    {
+        lock (state)
+        {
+            for (int i = 0; i < RingSize; i++)
+            {
+                int candidate = (state.Next + i) % RingSize;
+                if (!state.Lent[candidate]) return candidate;
+            }
+        }
+        return -1;
+    }
+
+    /// <summary>
+    /// Converts the surface VLC's vaapi decoder decoded into, one of this
+    /// display's pool, named by the picture's context.
+    /// </summary>
+    private static void PrepareHardware(DisplayState state, VLCPicture* picture)
+    {
+        if (picture->Context == 0)
+            return;
+        VLCVaapiPictureContext* context = (VLCVaapiPictureContext*)picture->Context;
+        VLCPicture* owner = (VLCPicture*)context->PictureReference;
+        if (owner == null || owner->Sys == 0)
+            return;
+        VLCVaapiPoolInstance* pool = (VLCVaapiPoolInstance*)((VLCVaapiPictureSys*)owner->Sys)->Instance;
+        if (pool == null || pool->Display == 0)
+            return;
+        if (state.Converter is null || state.Converter.Display != pool->Display)
+            return;
+        int slot = FreeSlot(state);
+        if (slot < 0)
+            return;
+        state.Converter!.Convert(slot, context->Surface, state.ColorStandard, state.FullRange);
+        state.Prepared = slot;
+        state.Next = (slot + 1) % RingSize;
+    }
+
+    /// <summary>Opens a converter on the decoding display and exports a new ring under a new generation.</summary>
+    private static bool AttachDecoderDisplay(DisplayState state, nint vaDisplay)
+    {
+        lock (DisplaysGate)
+            s_displays.Remove(state.Generation);
+        state.Converter?.Dispose();
+        state.Converter = null;
+        VLCVideoFormat source = state.OriginalSource;
+        int width = (int)VisibleWidth(in source), height = (int)VisibleHeight(in source);
+        VaapiConverter? converter = null;
+        try
+        {
+            converter = VaapiConverter.OpenOnDisplay(vaDisplay, width, height, 0, 0, width, height, RingSize);
+            ExportedSurface[] exports = new ExportedSurface[RingSize];
+            for (int i = 0; i < RingSize; i++)
+                exports[i] = converter.Export(i);
+            lock (state)
+            {
+                state.Converter = converter;
+                state.Exports = exports;
+                state.Lent = new bool[RingSize];
+                state.Generation = Interlocked.Increment(ref s_lastGeneration);
+            }
+            lock (DisplaysGate)
+                s_displays[state.Generation] = state;
+            return true;
+        }
+        catch
+        {
+            converter?.Dispose();
+            return false;
+        }
+    }
+
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
     private static void Display(nint displayPtr, nint picturePtr, nint subpicturePtr)
     {
@@ -325,8 +424,9 @@ public static unsafe class VaapiVoutPlugin
             if (picturePtr != 0 && state is not null)
             {
                 VLCPicture* picture = (VLCPicture*)picturePtr;
-                PicturePoolTelemetry.CpuPictureReceived();
-                if (state.Converter is not null)
+                if (!state.Hardware)
+                    PicturePoolTelemetry.CpuPictureReceived();
+                if (state.Converter is not null || state.Hardware)
                 {
                     int slot = state.Prepared;
                     state.Prepared = -1;

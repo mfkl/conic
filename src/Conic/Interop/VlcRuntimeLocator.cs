@@ -93,17 +93,17 @@ internal sealed class VlcRuntimeLocator(
                 candidates.Add(platform == VlcRuntimePlatform.MacOS
                     ? Path.Combine(repository, "artifacts", "dependencies", $"vlc-3.0.24-macos-{architecture}", "lib")
                     : Path.Combine(repository, "artifacts", "dependencies", "vlc-3.0.24"));
-            // Linux: the distribution's VLC 3 packages; macOS: an installed VLC.app.
-            // Both come after any bundled or development runtime.
+            // Linux: the VLC snap, then the distribution's VLC 3 packages; macOS:
+            // an installed VLC.app. Both come after any bundled or development runtime.
             candidates.AddRange(systemDirectories ?? SystemDirectories);
             return candidates.FirstOrDefault(HasLibraries) is { } found ? Path.GetFullPath(found)
                 : throw new DirectoryNotFoundException($"Set VLC_DIRECTORY or bundle VLC 3 in the application's vlc directory for {RuntimeIdentifier}.");
         }
     }
 
-    private string[] SystemDirectories => (platform, architecture) switch
+    internal string[] SystemDirectories => (platform, architecture) switch
     {
-        (VlcRuntimePlatform.Linux, "x64") => ["/usr/lib/x86_64-linux-gnu", "/usr/lib64", "/usr/lib"],
+        (VlcRuntimePlatform.Linux, "x64") => [SnapRuntime, "/usr/lib/x86_64-linux-gnu", "/usr/lib64", "/usr/lib"],
         (VlcRuntimePlatform.Linux, "arm64") => ["/usr/lib/aarch64-linux-gnu", "/usr/lib64", "/usr/lib"],
         (VlcRuntimePlatform.MacOS, _) =>
         [
@@ -112,6 +112,13 @@ internal sealed class VlcRuntimeLocator(
         ],
         _ => [],
     };
+
+    /// <summary>
+    /// VideoLAN's VLC snap, preferred to the distribution's packages: it is
+    /// VLC 3.0.24 with its VA-API decoder, which distribution builds before
+    /// 3.0.22 lack.
+    /// </summary>
+    public const string SnapRuntime = "/snap/vlc/current/usr/lib";
 
     private bool HasLibraries(string directory) => FindLibrary(directory, true) is not null && FindLibrary(directory, false) is not null;
     public string CoreLibraryPath => FindLibrary(RuntimeDirectory, true)!;
@@ -143,11 +150,34 @@ internal sealed class VlcRuntimeLocator(
         return candidates.FirstOrDefault(Directory.Exists);
     }
 
-    /// <summary>macOS: VLC's data directory (Lua scripts and other resources), when the runtime has one.</summary>
-    public string? DataDirectory => platform == VlcRuntimePlatform.MacOS
-        ? new[] { Path.Combine(RuntimeDirectory, "share"), Path.GetFullPath(Path.Combine(RuntimeDirectory, "..", "share")) }
-            .FirstOrDefault(Directory.Exists)
-        : null;
+    /// <summary>VLC's data directory (Lua scripts and other resources), when the runtime has its own.</summary>
+    public string? DataDirectory => platform switch
+    {
+        VlcRuntimePlatform.MacOS => new[] { Path.Combine(RuntimeDirectory, "share"), Path.GetFullPath(Path.Combine(RuntimeDirectory, "..", "share")) }
+            .FirstOrDefault(Directory.Exists),
+        VlcRuntimePlatform.Linux => new[] { Path.Combine(RuntimeDirectory, "share", "vlc"), Path.GetFullPath(Path.Combine(RuntimeDirectory, "..", "share", "vlc")) }
+            .FirstOrDefault(Directory.Exists),
+        _ => null,
+    };
+
+    /// <summary>
+    /// Linux: libraries a bundled runtime carries for VLC beyond what the
+    /// desktop provides, in <c>deps/</c>, in the order <c>deps/load-order.txt</c>
+    /// lists them (each after those it needs), as eng/get-vlc.ps1 assembles it.
+    /// </summary>
+    /// <remarks>Loaded by path before VLC, they satisfy VLC's dependencies by soname.</remarks>
+    public IReadOnlyList<string> DependencyLibraries => platform == VlcRuntimePlatform.Linux && Path.Combine(RuntimeDirectory, "deps") is var deps
+        && File.Exists(Path.Combine(deps, "load-order.txt"))
+        ? File.ReadAllLines(Path.Combine(deps, "load-order.txt")).Where(name => name.Length > 0).Select(name => Path.Combine(deps, name)).ToArray()
+        : [];
+
+    /// <summary>
+    /// Linux: libraries VLC's plugins link to that live beside them rather
+    /// than in a library search path (<c>vlc/libvlc_pulse.so.0</c> and others).
+    /// </summary>
+    public IReadOnlyList<string> HelperLibraries => platform == VlcRuntimePlatform.Linux && Directory.Exists(Path.Combine(RuntimeDirectory, "vlc"))
+        ? Directory.GetFiles(Path.Combine(RuntimeDirectory, "vlc"), "libvlc_*.so.*").Order(StringComparer.Ordinal).ToArray()
+        : [];
 
     public string PluginPath
     {

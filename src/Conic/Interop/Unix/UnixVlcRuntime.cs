@@ -49,9 +49,13 @@ internal static unsafe class UnixVlcRuntime
 
         // Distribution packages ship versioned sonames only (libvlccore.so.9), and
         // VLC.app is outside every library search path, so load them by path.
+        foreach (string dependency in RepositoryPaths.DependencyLibraries)
+            NativeLibrary.TryLoad(dependency, out _);
         VLCCore.UseLibraries(
             NativeLibrary.Load(RepositoryPaths.CoreLibraryPath),
             NativeLibrary.Load(RepositoryPaths.PublicLibraryPath));
+        foreach (string helper in RepositoryPaths.HelperLibraries)
+            NativeLibrary.TryLoad(helper, out _);
     }
 
     private static bool IsWithin(string directory, string root) =>

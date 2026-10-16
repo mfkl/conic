@@ -1,6 +1,6 @@
 {
   "dotnetSdk": "10.0.102",
-  "avalonia": "12.1.1",
+  "avalonia": "12.2.999-cibuild0100450-alpha",
   "vlc": {
     "repository": "videolan/vlc",
     "version": "3.0.24",

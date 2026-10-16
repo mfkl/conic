@@ -17,9 +17,8 @@ Platform scope:
   bar replaces the in-window menus. Shortcuts use Cmd instead of Ctrl. Note
   that VLC on macOS ships a Cocoa interface, not Qt; the VLC 3 column always
   describes the Qt interface.
-- **Linux x64**: the engine runs, but there is no GPU video output yet, so the
-  app reports playback as unavailable. Rows marked Same or Different below
-  do not apply to Linux playback.
+- **Linux x64**: full playback (VA-API, DMA-BUF) on X11, and XWayland in
+  Wayland sessions.
 
 Conic is an experiment; no maintenance is planned.
 
@@ -63,6 +62,22 @@ carries its tag.
 | **Total** | **83** | **31** | **17** | **22** | **30** | **183** | **80%** |
 
 The Conic only section lists 13 features VLC 3's Qt interface does not have; they are not counted above.
+
+### What's missing, and why
+
+| Why | Missing features |
+| --- | --- |
+| Not in the redesign | Bookmarks, the Video Track menu, library folders (My Videos…), status bar, system title bar |
+| Broken in VLC 3.0.24 | Post-processing (no visible effect), stereo widener (refuses the usual output chains) |
+| Need VLC's own video window | Set as wallpaper, 360° video navigation |
+| Need TV input or extra hardware | Program guide (EPG), Teletext, AtmoLight |
+| Refused on purpose | Credentials in URLs (they would be kept in the history) |
+| Not done (this is an experiment) | Visualizations, global hotkeys, the OS media controls, taskbar buttons, VLC options on the command line, mouse gestures, nested playlists |
+
+The 17 partial features mostly have fewer options than VLC (some video
+filters, playlist formats, queue sort) or work on Windows only (screensaver,
+HTTP proxy). Disc menus, streaming and conversion, capture devices, skins and
+extensions were left out from the start.
 
 ## Media menu
 

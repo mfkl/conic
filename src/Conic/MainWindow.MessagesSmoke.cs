@@ -61,7 +61,7 @@ public partial class MainWindow
                     using (RenderTargetBitmap bitmap = new(new PixelSize((int)messages.ClientSize.Width, (int)messages.ClientSize.Height)))
                     {
                         bitmap.Render(messages);
-                        bitmap.Save(Path.Combine(directory, $"{name}.png"));
+                        bitmap.Save(Path.Combine(directory, $"{name}.png"), PngBitmapEncoderOptions.Default);
                     }
                     if (desktop.Args?.Contains("--video-capture") != true) return;
                     messages.Activate();

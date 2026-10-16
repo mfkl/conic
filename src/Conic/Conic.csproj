@@ -27,6 +27,7 @@
     <PackageReference Include="Avalonia.Desktop" Version="12.2.999-cibuild0100450-alpha" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="12.2.999-cibuild0100450-alpha" />
     <PackageReference Include="Avalonia.Fonts.Inter" Version="12.2.999-cibuild0100450-alpha" />
+    <PackageReference Include="Avalonia.Wayland" Version="12.2.999-cibuild0100450-alpha" />
     <PackageReference Include="AvaloniaUI.DiagnosticsSupport" Version="2.2.3">
       <IncludeAssets Condition="'$(Configuration)' != 'Debug'">None</IncludeAssets>
       <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
@@ -43,6 +44,7 @@
     <Compile Include="..\Shared\VideoGeometry.cs" Link="Interop\VideoGeometry.cs" />
     <Compile Include="..\Shared\SubtitleComposer.cs" Link="Interop\SubtitleComposer.cs" />
     <Compile Include="..\Shared\Linux\VaApi.cs" Link="Interop\Linux\VaApi.cs" />
+    <Compile Include="..\Shared\Linux\VaapiConverter.cs" Link="Interop\Linux\VaapiConverter.cs" />
     <Compile Include="..\Shared\MacOS\CoreVideo.cs" Link="Interop\MacOS\CoreVideo.cs" />
     <ProjectReference Include="..\Player.Contracts\Player.Contracts.csproj" />
     <ProjectReference Include="..\Player.Domain\Player.Domain.csproj" />

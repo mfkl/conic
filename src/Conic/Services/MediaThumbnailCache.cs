@@ -13,7 +13,12 @@ internal sealed class MediaThumbnailCache(string directory, Func<string, Task<by
     public static MediaThumbnailCache Shared { get; } = new(PlayerProfile.FilePath("thumbnails"),
         OperatingSystem.IsWindows() ? WindowsMediaThumbnail.ReadAsync
         : OperatingSystem.IsMacOS() ? QuickLookThumbnail.ReadAsync
+        : OperatingSystem.IsLinux() ? ReadLinuxAsync
         : FreedesktopThumbnail.ReadAsync);
+
+    [System.Runtime.Versioning.SupportedOSPlatform("linux")]
+    private static async Task<byte[]?> ReadLinuxAsync(string path) =>
+        await FreedesktopThumbnail.ReadAsync(path).ConfigureAwait(false) ?? await VlcThumbnail.ReadAsync(path).ConfigureAwait(false);
 
     public async Task<byte[]?> GetAsync(string source, CancellationToken cancellationToken = default)
     {

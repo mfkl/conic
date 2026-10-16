@@ -22,6 +22,12 @@ public partial class App : Application
                 base.OnFrameworkInitializationCompleted();
                 return;
             }
+            if (OperatingSystem.IsLinux() && desktop.Args?.Contains("--dmabuf-probe", StringComparer.OrdinalIgnoreCase) == true)
+            {
+                desktop.MainWindow = Video.Linux.DmaBufProbe.CreateWindow(desktop, desktop.Args);
+                base.OnFrameworkInitializationCompleted();
+                return;
+            }
             if (Program.StartupFailure is { } failure)
             {
                 desktop.MainWindow = new Views.StartupFailureWindow(failure);
@@ -125,13 +131,13 @@ public partial class App : Application
             window.EnableSettingsApplySmoke(desktopArg());
         else if (args.Contains("--engine-settings-smoke", StringComparer.OrdinalIgnoreCase))
         {
-            if (OperatingSystem.IsWindows() || OperatingSystem.IsMacOS()) window.EnableEngineSettingsSmoke(desktopArg());
-            else throw new PlatformNotSupportedException("The settings smokes run on Windows and macOS.");
+            if (OperatingSystem.IsWindows() || OperatingSystem.IsMacOS() || OperatingSystem.IsLinux()) window.EnableEngineSettingsSmoke(desktopArg());
+            else throw new PlatformNotSupportedException("The settings smokes run on Windows, macOS and Linux.");
         }
         else if (args.Contains("--audio-settings-smoke", StringComparer.OrdinalIgnoreCase))
         {
-            if (OperatingSystem.IsWindows() || OperatingSystem.IsMacOS()) window.EnableAudioSettingsSmoke(desktopArg());
-            else throw new PlatformNotSupportedException("The settings smokes run on Windows and macOS.");
+            if (OperatingSystem.IsWindows() || OperatingSystem.IsMacOS() || OperatingSystem.IsLinux()) window.EnableAudioSettingsSmoke(desktopArg());
+            else throw new PlatformNotSupportedException("The settings smokes run on Windows, macOS and Linux.");
         }
         else if (args.Contains("--interface-settings-smoke", StringComparer.OrdinalIgnoreCase))
             window.EnableInterfaceSettingsSmoke(desktopArg());

@@ -452,7 +452,8 @@ public partial class MainWindow
                 await Delay("Increase subtitle delay by 100 milliseconds", Subtitle, 100);
                 await Delay("Decrease subtitle delay by 100 milliseconds", Subtitle, 0);
                 await Delay("Decrease subtitle delay by 100 milliseconds", Subtitle, -100);
-                Require(_presentation.SubtitleDelayMilliseconds == -100 && (int)(SubtitleDelayInput.Value ?? 0) == -100, $"the drawer shows -100 ms ({SubtitleDelayInput.Value})");
+                // VLC's read-back reaches the drawer through the dispatcher, after the surface.
+                await WaitFor(() => _presentation.SubtitleDelayMilliseconds == -100 && (int)(SubtitleDelayInput.Value ?? 0) == -100, $"the drawer shows -100 ms ({_presentation.SubtitleDelayMilliseconds}, {SubtitleDelayInput.Value})", 5);
                 await Delay("Reset subtitle delay", Subtitle, 0);
                 Pass("subtitle delay −100, +100 and Reset");
                 _presentation.DrawerTab = "Audio";

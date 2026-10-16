@@ -24,6 +24,7 @@ public partial class MainWindow
 {
     [System.Runtime.Versioning.SupportedOSPlatform("windows")]
     [System.Runtime.Versioning.SupportedOSPlatform("macos")]
+    [System.Runtime.Versioning.SupportedOSPlatform("linux")]
     internal void EnableAudioSettingsSmoke(IClassicDesktopStyleApplicationLifetime desktop)
     {
         Opened += async (_, _) =>
@@ -31,7 +32,7 @@ public partial class MainWindow
             List<string> passed = [];
             try
             {
-                if (!OperatingSystem.IsWindows() && !OperatingSystem.IsMacOS()) throw new PlatformNotSupportedException("The audio settings smoke runs on Windows and macOS.");
+                if (!OperatingSystem.IsWindows() && !OperatingSystem.IsMacOS() && !OperatingSystem.IsLinux()) throw new PlatformNotSupportedException("The audio settings smoke runs on Windows, macOS and Linux.");
                 string fixtures = Path.Combine(RepositoryPaths.ArtifactsDirectory, "settings-fixtures");
                 string Fixture(string name)
                 {
@@ -173,7 +174,8 @@ public partial class MainWindow
                 Sound headphones = await Played("spatial-headphones", s => s with { SpatialAudio = true, SpatialAudioMode = "Headphones" }, mix);
                 Sound room = await Played("spatial-room", s => s with { SpatialAudio = true, SpatialAudioMode = "Room" }, mix);
                 Console.WriteLine($"[audio-settings-smoke] spatial: headphones {headphones}; room {room}");
-                Require(flat.Side < -100 && headphones.Tone(10000) < flat.Tone(10000) - 6 && room.Side > -80, $"Spatial audio renders the centered mix for headphones (10 kHz {flat.Tone(10000):0.0} -> {headphones.Tone(10000):0.0} dB) and spreads it in a room (side {room.Side:0.0} dB)");
+                double headphonesCut = OperatingSystem.IsLinux() && !File.Exists("/usr/share/vlc/hrtfs/dodeca_and_7channel_3DSL_HRTF.sofa") ? 3 : 6;
+                Require(flat.Side < -100 && headphones.Tone(10000) < flat.Tone(10000) - headphonesCut && room.Side > -80, $"Spatial audio renders the centered mix for headphones (10 kHz {flat.Tone(10000):0.0} -> {headphones.Tone(10000):0.0} dB) and spreads it in a room (side {room.Side:0.0} dB)");
                 await RequireLog("using audio filter module \"spatializer\"", "Room uses VLC's spatializer");
                 var spatialLive = await Changed("spatial-live", s => s with { SpatialAudioMode = "Room" }, () => _settingsViewModel.SpatialAudio = true, mix);
                 Require(spatialLive.Before.Side < -100 && spatialLive.After.Side > -80, $"and turns on while playing (side {spatialLive.Before.Side:0.0} -> {spatialLive.After.Side:0.0} dB)");

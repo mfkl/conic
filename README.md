@@ -2,8 +2,8 @@
 
 Conic is a modern copy of VLC 3's desktop player. Media plays through VLC
 3.0.24's own engine, and a new interface, written in C# with
-[Avalonia](https://avaloniaui.net/), replaces VLC's Qt one. It runs on Windows
-and macOS. On Linux the engine runs, but video output isn't written yet.
+[Avalonia](https://avaloniaui.net/), replaces VLC's Qt one. It runs on Windows,
+macOS and Linux.
 
 > [!NOTE]
 > Conic is a one-off experiment. It is not made or endorsed by VideoLAN, it
@@ -104,7 +104,7 @@ by feature.
   and its video output are VLCLR plugins, so there is no native C shim.
 - **Video inside Avalonia's composition.** The video output plugin hands
   decoded frames to Avalonia as GPU textures: a D3D11 shared texture on
-  Windows, an IOSurface on macOS. The controls draw over the video in the same
+  Windows, an IOSurface on macOS, a DMA-BUF converted by VA-API on Linux. The controls draw over the video in the same
   window, with hardware decoding on and no copy through the CPU on the
   validated paths.
 
@@ -135,8 +135,9 @@ each OS warns on the first launch.
   silicon, `x64` for Intel) and move `Conic.app` to Applications. On the
   first launch macOS refuses to open it; open **System Settings > Privacy &
   Security** and choose **Open Anyway**.
-- **Linux x64:** not available, because video output on Linux isn't written
-  yet.
+- **Linux x64:** not published yet. `eng/package-linux.ps1` builds a tarball
+  that uses the distribution's VLC 3 packages (`libvlccore9`, `libvlc5`,
+  `vlc-plugin-base`) and a VA-API driver.
 
 To remove the app, delete its folder (Windows) or the app (macOS). Settings
 and history stay in your user profile.
@@ -156,12 +157,13 @@ Remember that Conic is not maintained.
 | --- | --- | --- |
 | Windows x64 | D3D11 hardware decoding, GPU presentation, CPU fallback | Intel Iris Xe; 14-case package qualification |
 | macOS arm64/x64 | VideoToolbox decoding, IOSurface presentation | M1 Pro; CI's arm64 and x64 runners |
-| Linux x64 | Engine only (queue, transport, tracks, lifecycle); no video output yet, so the app reports playback as unavailable | CI, against Ubuntu's VLC 3 |
+| Linux x64 | Software decoding (distribution VLC 3.0.20 has no VA-API decoder), VA-API conversion, DMA-BUF presentation, CPU fallback; Wayland and X11 | Intel Iris Xe (iHD), GNOME 46; engine in CI |
 
 Status, October 2026: the parity features (80%) are checked on Windows by
 the smoke tests below, with hardware and software decoding, and the network
 protocols by `--protocols-smoke` (UDP, RTP, RTMP, FTP, SMB). Their macOS run
-is pending; Linux has no video output yet.
+is pending; on Linux they run headless with `eng/test-linux.ps1 -Window
+-Headless`.
 
 | Checked on Windows | Smoke |
 | --- | --- |
@@ -248,9 +250,13 @@ runs the engine, IOSurface and window smokes, and `eng/package-macos.ps1`
 builds an ad hoc signed `Conic.app`. See
 [the cross-platform status](docs/CROSS_PLATFORM.md).
 
-On Linux x64, `eng/test-linux-engine.ps1 -Media <clip>` builds the plugin and
-app and runs the engine smokes against the installed VLC 3 packages
-(`libvlccore9`, `libvlc5`, `vlc-plugin-base`).
+On Linux x64, install the distribution's VLC 3 packages (`libvlccore9`,
+`libvlc5`, `vlc-plugin-base`) and a VA-API driver (`intel-media-va-driver` or
+`mesa-va-drivers`). `eng/test-linux.ps1 -Media <clip> [-Window] [-Headless]
+[-X11]` builds the plugin and app and runs the engine smokes and, with
+`-Window`, the video and UI smokes; `-Headless` runs them in a private
+headless GNOME Shell so no window reaches the desktop.
+`eng/test-linux-engine.ps1` runs the engine smokes only, as CI does.
 
 ### Packages
 

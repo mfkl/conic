@@ -35,6 +35,7 @@ public partial class MainWindow
                     Width = compact ? 480 : 1280;
                     Height = compact ? 360 : 720;
                     await Task.Delay(200);
+                    for (DateTime settle = DateTime.UtcNow.AddSeconds(3); Math.Abs(ClientSize.Width - Width) > 1 && DateTime.UtcNow < settle;) await Task.Delay(50);
                     ValidateSettingsDialog(compact);
                     foreach (SettingsPage page in _settingsViewModel.Pages)
                     {

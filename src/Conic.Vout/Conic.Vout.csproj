@@ -46,10 +46,15 @@
     <Compile Remove="IOSurfaceVoutPlugin.cs" />
   </ItemGroup>
 
-  <!-- Linux: the playlist control interface only. The GPU video output is not
-       implemented yet, so VLC must be started with another video output. -->
+  <PropertyGroup Condition="'$(RuntimeIdentifier)' == 'linux-x64'">
+    <DefineConstants>$(DefineConstants);CONIC_VAAPI</DefineConstants>
+  </PropertyGroup>
   <ItemGroup Condition="'$(RuntimeIdentifier)' == 'linux-x64'">
     <Compile Include="..\Shared\Linux\VaApi.cs" Link="Linux\VaApi.cs" />
+    <Compile Include="..\Shared\Linux\VaapiConverter.cs" Link="Linux\VaapiConverter.cs" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(RuntimeIdentifier)' != 'linux-x64'">
+    <Compile Remove="VaapiVoutPlugin.cs" />
   </ItemGroup>
 
   <Target Name="RequireImplementedPluginTarget" BeforeTargets="PrepareForBuild"

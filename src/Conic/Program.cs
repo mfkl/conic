@@ -27,7 +27,8 @@ internal static class Program
 #if SMOKE
         _overlayPopups = args.Any(arg => arg.StartsWith("--menu-review=", StringComparison.OrdinalIgnoreCase));
 #endif
-        if (args.Contains("--graphics-probe", StringComparer.OrdinalIgnoreCase))
+        if (args.Contains("--graphics-probe", StringComparer.OrdinalIgnoreCase) ||
+            OperatingSystem.IsLinux() && args.Contains("--dmabuf-probe", StringComparer.OrdinalIgnoreCase))
             return BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
 #if SMOKE
         if (IsSmokeRequested(args))
@@ -173,10 +174,12 @@ internal static class Program
             .LogToTrace();
         if (_overlayPopups)
             builder = builder.With(new Win32PlatformOptions { OverlayPopups = true });
-        // Diagnostics: pick the X11 rendering backend (glx, egl, vulkan, software)
-        // so --graphics-probe can report each one's GPU interop on Linux.
         if (Enum.TryParse(Environment.GetEnvironmentVariable("CONIC_X11_RENDERING"), ignoreCase: true, out X11RenderingMode mode))
             builder = builder.With(new X11PlatformOptions { RenderingMode = [mode] });
+        else if (OperatingSystem.IsLinux())
+            builder = builder.With(new X11PlatformOptions { RenderingMode = [X11RenderingMode.Egl, X11RenderingMode.Glx, X11RenderingMode.Software] });
+        if (OperatingSystem.IsLinux() && Environment.GetEnvironmentVariable("CONIC_WAYLAND") != "0")
+            builder = builder.UseWaylandWithFallback();
         return builder;
     }
 }

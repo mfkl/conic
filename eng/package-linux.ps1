@@ -106,7 +106,9 @@ $manifest = [ordered]@{
     source = 'https://github.com/mfkl/conic'; selfContained = $true
     vlcRuntime = if ($runtime) { 'bundled' } else { 'distribution' }
     distributionStatus = 'local-review'
-    distributionBlockers = @('Linux GPU video output is not implemented yet; the app reports playback as unavailable.')
+    distributionBlockers = @(
+        'Distribution VLC 3 builds before 3.0.22 have no VA-API decoder: video decodes in software and each frame is copied into a VA-API surface before GPU conversion and presentation.',
+        'Qualified on one Intel GPU (iHD) under GNOME only.')
     hardwarePlaybackQualified = $false
     files = @(Get-ChildItem -LiteralPath $stage -Recurse -File | Sort-Object FullName | ForEach-Object {
         [ordered]@{ path = [IO.Path]::GetRelativePath($stage, $_.FullName); bytes = $_.Length; sha256 = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant() }

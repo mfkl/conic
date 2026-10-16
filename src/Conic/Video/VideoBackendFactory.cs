@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using Conic.Interop;
+using Conic.Video.Linux;
 using Conic.Video.MacOS;
 using Conic.Video.Windows;
 
@@ -15,8 +16,10 @@ internal static class VideoBackendFactory
     public static IVideoBackend Create(Control host, VideoBackendOptions options)
     {
         NativePlaybackSupport.RequireAvailable();
-        return OperatingSystem.IsMacOS()
-            ? new IOSurfaceVideoBackend(host, options)
-            : new D3D11VideoBackend(host, options);
+        if (OperatingSystem.IsMacOS())
+            return new IOSurfaceVideoBackend(host, options);
+        if (OperatingSystem.IsLinux())
+            return new DmaBufVideoBackend(host, options);
+        return new D3D11VideoBackend(host, options);
     }
 }

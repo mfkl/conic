@@ -166,6 +166,7 @@ public partial class MainWindow
         Width = 1280;
         Height = 720;
         int phase = 0;
+        int resizeWaits = 0;
         DispatcherTimer? timeout = null;
         DispatcherTimer timer = new() { Interval = TimeSpan.FromMilliseconds(250) };
         timer.Tick += (_, _) =>
@@ -191,6 +192,7 @@ public partial class MainWindow
                     case 7: ValidateSettingsControl("resume-clear", SettingsPanel.SettingsClearResumeButton); SettingsPanel.SettingsClearResumePrompt.IsVisible = true; BringSettingsControlIntoView(SettingsPanel.SettingsConfirmClearResumeButton); phase++; return;
                     case 8: ValidateSettingsControl("resume-confirm", SettingsPanel.SettingsConfirmClearResumeButton); SettingsPanel.SettingsClearResumePrompt.IsVisible = false; CloseSettings(); OpenErrorToast.IsVisible = true; phase++; return;
                     case 9: ValidateToastForSmoke(); OpenErrorToast.IsVisible = false; Width = 480; phase++; return;
+                    case 10 when Math.Abs(width - 480) > 1 && ++resizeWaits < 12: return;
                     case 10: ApplyResponsiveChrome(); ApplyResponsiveSettings(); ValidateLayout(width, true); ValidateTopChrome(width); OpenMenu.IsVisible = true; UrlPanel.IsVisible = true; SettingsPanel.IsVisible = true; _presentation.IsQueueOpen = true; _presentation.IsLibraryOpen = true; phase = 31; return;
                     case 31: ValidateLibraryDrawer(width); _presentation.IsLibraryOpen = false; ShowOpenMenuForSmoke(); _presentation.IsQueueOpen = true; phase = 11; return;
                     case 11: ValidateQueueDrawer(width); _presentation.DrawerTab = "Audio"; phase = 21; return;

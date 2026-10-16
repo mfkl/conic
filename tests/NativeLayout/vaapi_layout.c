@@ -30,6 +30,17 @@ OFFSET(VADRMPRIMESurfaceDescriptor, layers, 84);
 SIZE(((VADRMPRIMESurfaceDescriptor *)0)->objects[0], 16);
 SIZE(((VADRMPRIMESurfaceDescriptor *)0)->layers[0], 56);
 
+SIZE(VAImage, 120);
+OFFSET(VAImage, format, 4);
+OFFSET(VAImage, buf, 52);
+OFFSET(VAImage, width, 56);
+OFFSET(VAImage, height, 58);
+OFFSET(VAImage, data_size, 60);
+OFFSET(VAImage, num_planes, 64);
+OFFSET(VAImage, pitches, 68);
+OFFSET(VAImage, offsets, 80);
+OFFSET(VAImageFormat, fourcc, 0);
+
 SIZE(VAProcColorProperties, 8);
 SIZE(VAProcPipelineParameterBuffer, 224);
 OFFSET(VAProcPipelineParameterBuffer, surface, 0);
@@ -83,6 +94,12 @@ VALUE(VASurfaceAttribPixelFormat, 1);
 VALUE(VA_SURFACE_ATTRIB_SETTABLE, 2);
 VALUE(VAGenericValueTypeInteger, 1);
 VALUE(VA_INVALID_ID, 0xFFFFFFFF);
+VALUE(VASurfaceAttribUsageHint, 8);
+VALUE(VA_SURFACE_ATTRIB_USAGE_HINT_VPP_READ, 0x4);
+VALUE(VA_SURFACE_ATTRIB_USAGE_HINT_VPP_WRITE, 0x8);
+VALUE(VA_SURFACE_ATTRIB_USAGE_HINT_EXPORT, 0x20);
+VALUE(VA_SOURCE_RANGE_REDUCED, 1);
+VALUE(VA_SOURCE_RANGE_FULL, 2);
 
 int main(void)
 {

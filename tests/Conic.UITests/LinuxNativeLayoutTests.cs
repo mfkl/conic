@@ -24,6 +24,11 @@ public sealed unsafe class LinuxNativeLayoutTests
         Assert.Equal(312, sizeof(VADRMPRIMESurfaceDescriptor));
         Assert.Equal(80, Offset<VADRMPRIMESurfaceDescriptor>(nameof(VADRMPRIMESurfaceDescriptor.LayerCount)));
         Assert.Equal(84, Offset<VADRMPRIMESurfaceDescriptor>(nameof(VADRMPRIMESurfaceDescriptor.Layer0)));
+        Assert.Equal(120, sizeof(VAImage));
+        Assert.Equal(52, Offset<VAImage>(nameof(VAImage.Buffer)));
+        Assert.Equal(64, Offset<VAImage>(nameof(VAImage.PlaneCount)));
+        Assert.Equal(68, Offset<VAImage>("Pitches"));
+        Assert.Equal(80, Offset<VAImage>("Offsets"));
         Assert.Equal(8, sizeof(VAProcColorProperties));
         Assert.Equal(224, sizeof(VAProcPipelineParameterBuffer));
         Assert.Equal(132, Offset<VAProcPipelineParameterBuffer>(nameof(VAProcPipelineParameterBuffer.InputColorProperties)));

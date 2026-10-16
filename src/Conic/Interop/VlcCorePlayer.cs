@@ -720,6 +720,7 @@ internal sealed unsafe partial class VlcCorePlayer : IMediaEngine, IQueueTranspo
             _hardwareDecoding ? "--avcodec-hw=any" : "--avcodec-hw=none",
             // VideoToolbox is a separate decoder module on macOS, ahead of avcodec.
             .. (!_hardwareDecoding && OperatingSystem.IsMacOS() ? new[] { "--no-videotoolbox" } : []),
+            .. (OperatingSystem.IsLinux() && LinuxHrtfFile() is { } hrtf ? new[] { $"--hrtf-file={hrtf}" } : []),
             .. openArguments,
             .. sources,
         ];
@@ -753,6 +754,8 @@ internal sealed unsafe partial class VlcCorePlayer : IMediaEngine, IQueueTranspo
                 throw new InvalidOperationException(
                     $"libvlc_InternalInit failed with {result}.");
             initialized = true;
+            if (OperatingSystem.IsLinux())
+                SuppressVideoWindow(core);
             // vlc_LogSet replaces VLC's whole logger, its log file included:
             // a core asked to write one (the settings smokes) keeps VLC's.
             if (!openArguments.Contains("--file-logging", StringComparer.Ordinal))
@@ -1018,4 +1021,27 @@ internal sealed unsafe partial class VlcCorePlayer : IMediaEngine, IQueueTranspo
             Volatile.Read(ref _disposed) != 0,
             this);
 
+
+    /// <summary>
+    /// VLC 3 opens a window of its own for every video output (an X11 or
+    /// Wayland toplevel beside Conic's), looked up through the inherited
+    /// <c>window</c> variable. Conic's outputs draw into Avalonia and never
+    /// use it, so name a window module that does not exist: VLC opens none.
+    /// </summary>
+    private static void SuppressVideoWindow(nint core)
+    {
+        nint none = Marshal.StringToCoTaskMemUTF8("conic-none");
+        try
+        {
+            VLCCore.VarCreate(core, "window", VLCLR.Types.VLCVarType.String);
+            VLCCore.VarSetChecked(core, "window", VLCLR.Types.VLCVarType.String, new VLCValueNative { String = none });
+        }
+        finally { Marshal.FreeCoTaskMem(none); }
+    }
+
+    private const string VlcHrtf = "/usr/share/vlc/hrtfs/dodeca_and_7channel_3DSL_HRTF.sofa";
+    private const string LibmysofaHrtf = "/usr/share/libmysofa/default.sofa";
+
+    private static string? LinuxHrtfFile() =>
+        !File.Exists(VlcHrtf) && File.Exists(LibmysofaHrtf) ? LibmysofaHrtf : null;
 }

@@ -10,6 +10,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Player.Application;
 using Player.Contracts;
 using Conic.Interop;
+using Conic.Interop.Linux;
 using Conic.Interop.MacOS;
 using Conic.Interop.Windows;
 using Sample = Conic.Interop.ScreenSample;
@@ -22,13 +23,13 @@ namespace Conic;
 // artifacts/settings-fixtures (eng/make-settings-fixtures.ps1) and checks
 // the result where it shows: VLC's own log of that core (--file-logging),
 // the engine state, the window, or the pixels on screen (the composed GPU
-// video, sampled with GDI on Windows and screencapture on macOS). Direct3D
 // 11 decoding, the display request and the DPAPI proxy password are Windows
 // only.
 public partial class MainWindow
 {
     [System.Runtime.Versioning.SupportedOSPlatform("windows")]
     [System.Runtime.Versioning.SupportedOSPlatform("macos")]
+    [System.Runtime.Versioning.SupportedOSPlatform("linux")]
     internal void EnableEngineSettingsSmoke(IClassicDesktopStyleApplicationLifetime desktop)
     {
         WindowState = WindowState.Normal; Width = 1280; Height = 720;
@@ -120,7 +121,8 @@ public partial class MainWindow
                     Require(area.Width > 50 && area.Height > 50, $"video area on screen ({area})");
                     return OperatingSystem.IsMacOS() ? MacScreenSampler.Capture(area, RenderScaling, columns, rows)
                         : OperatingSystem.IsWindows() ? ScreenSampler.Capture(area.X, area.Y, area.Width, area.Height, columns, rows)
-                        : throw new PlatformNotSupportedException("The engine settings smoke samples the screen on Windows and macOS.");
+                        : OperatingSystem.IsLinux() ? X11ScreenSampler.Capture(area.X, area.Y, area.Width, area.Height, columns, rows)
+                        : throw new PlatformNotSupportedException("The engine settings smoke samples the screen on Windows, macOS and Linux (X11).");
                 }
                 // How much media VLC buffered before it started, as its log
                 // reports it: "Stream buffering done (4250 ms in 3 ms)". It is
@@ -134,10 +136,13 @@ public partial class MainWindow
                     return int.Parse(match.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
                 }
                 bool windows = OperatingSystem.IsWindows();
+                bool linux = OperatingSystem.IsLinux();
                 // VideoToolbox is a decoder module of its own on macOS, ahead of avcodec.
                 // A Mac without it (an Intel CI runner) names the one VLC uses instead.
                 string macDecoder = Environment.GetEnvironmentVariable("CONIC_HARDWARE_DECODER") is { Length: > 0 } configured ? configured : "videotoolbox";
-                string HardwareDecoder = windows ? "using hw decoder module \"d3d11va\"" : $"using video decoder module \"{macDecoder}\"";
+                string? linuxDecoder = Environment.GetEnvironmentVariable("CONIC_HARDWARE_DECODER") is { Length: > 0 } linuxConfigured
+                    ? $"using hw decoder module \"{linuxConfigured}\"" : null;
+                string? HardwareDecoder = windows ? "using hw decoder module \"d3d11va\"" : linux ? linuxDecoder : $"using video decoder module \"{macDecoder}\"";
                 // VLC logs pointers as "0x11ef77460" on macOS, "000001F3A2B4" on Windows.
                 const string Pointer = "[(](0x)?[0-9a-fA-F]+[)]";
                 string still = Fixture("still-lowq.mp4");
@@ -145,12 +150,12 @@ public partial class MainWindow
                 // ---- Video › Picture, with hardware decoding (Direct3D 11 adjust filter, zero copy kept) ----
                 await OpenPlaying("picture-default", s => s, still);
                 Sample neutral = await SampleVideo();
-                await WaitForLog(Regex.Escape(HardwareDecoder), "hardware decoding is on by default");
+                if (HardwareDecoder is not null) await WaitForLog(Regex.Escape(HardwareDecoder), "hardware decoding is on by default");
                 Console.WriteLine($"[engine-settings-smoke] neutral picture {neutral}");
                 Require(neutral.Chroma > 25, "the fixture is colorful");
                 await OpenPlaying("picture-brightness", s => s with { Brightness = 1.5 }, still);
                 Sample bright = await SampleVideo();
-                await WaitForLog(Regex.Escape(HardwareDecoder), "brightness keeps hardware decoding");
+                if (HardwareDecoder is not null) await WaitForLog(Regex.Escape(HardwareDecoder), "brightness keeps hardware decoding");
                 await WaitForLog($"Filter 'adjust' {Pointer} appended to chain", "brightness adds the adjust filter to the chain");
                 // On Windows the adjust filter runs on the GPU (Direct3D 11), so frames stay there.
                 // On macOS VLC's GPU filters (ci_filters) need VLC.app's OpenGL
@@ -159,7 +164,7 @@ public partial class MainWindow
                 else await WaitForLog("using video filter module \"adjust\"", "the adjust filter runs (on the CPU)");
                 Console.WriteLine($"[engine-settings-smoke] brightness 1.5 {bright}");
                 Require(bright.Luma > neutral.Luma + 15, $"Brightness 1.5 brightens the picture ({neutral.Luma:0.0} -> {bright.Luma:0.0})");
-                Pass($"Brightness ({neutral.Luma:0.0} -> {bright.Luma:0.0}) with hardware decoding");
+                Pass($"Brightness ({neutral.Luma:0.0} -> {bright.Luma:0.0}){(HardwareDecoder is null ? "" : " with hardware decoding")}");
                 await OpenPlaying("picture-saturation", s => s with { Saturation = 0 }, still);
                 Sample grey = await SampleVideo();
                 Require(grey.Chroma < neutral.Chroma / 4, $"Saturation 0 removes the color ({neutral.Chroma:0.0} -> {grey.Chroma:0.0})");
@@ -180,13 +185,13 @@ public partial class MainWindow
                 Sample softwareFine = await SampleVideo(320, 180);
                 await WaitForLog("allowing \\d+ thread\\(s\\) for decoding", "software decoding starts");
                 if (windows) await WaitForLog("no hw decoder modules matched", "Off turns the hardware decoder away");
-                await RequireNoLog(windows ? "using hw decoder module" : "using video decoder module \"videotoolbox\"", "Off uses no hardware decoder");
+                await RequireNoLog(windows || linux ? "using hw decoder module" : "using video decoder module \"videotoolbox\"", "Off uses no hardware decoder");
                 Pass("Hardware decoding Off decodes in software");
                 if (windows)
                 {
                     await OpenPlaying("decoding-d3d11", s => s with { HardwareDecoding = "Direct3D11" }, still);
                     await Task.Delay(1500);
-                    await WaitForLog(Regex.Escape(HardwareDecoder), "Direct3D 11 uses d3d11va");
+                    await WaitForLog(Regex.Escape(HardwareDecoder!), "Direct3D 11 uses d3d11va");
                     Pass("Hardware decoding Direct3D 11 uses d3d11va");
                 }
 
@@ -424,7 +429,7 @@ public partial class MainWindow
 
                 // ---- Network › Security ----
                 // GnuTLS options: VLC on macOS uses securetransport, and Settings hides them.
-                if (!windows)
+                if (OperatingSystem.IsMacOS())
                 {
                     await Open("tls-macos", s => s, "https://127.0.0.1:9/clip.mp4");
                     await Task.Delay(1500);

@@ -6,8 +6,9 @@ namespace Conic.Vout;
 
 /// <summary>
 /// VLC 3 module entry points. The playlist control interface is registered on
-/// every target; the D3D11 video output in the Windows build and the IOSurface
-/// video output in the macOS builds.
+/// every target; the D3D11 video output in the Windows build, the IOSurface
+/// video output in the macOS builds and the DMA-BUF video output in the Linux
+/// build.
 /// </summary>
 /// <remarks>
 /// Debian and Ubuntu builds of VLC 3 look for the <c>3_0_0ft64</c> suffix
@@ -60,6 +61,20 @@ public static unsafe class PluginEntry
             return -1;
         }
         int result = IOSurfaceVoutPlugin.Register(vlcSet, opaque);
+        if (result != 0)
+            return result;
+#elif CONIC_VAAPI
+        if (!OperatingSystem.IsLinux())
+            return -1;
+        try
+        {
+            VLCCore.UseLibraryContaining(vlcSet);
+        }
+        catch
+        {
+            return -1;
+        }
+        int result = VaapiVoutPlugin.Register(vlcSet, opaque);
         if (result != 0)
             return result;
 #endif

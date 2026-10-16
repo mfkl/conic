@@ -77,7 +77,6 @@ public sealed class VlcRuntimeLocatorTests : IDisposable
     }
 
     [Theory]
-    [InlineData("Linux", Architecture.X64)]
     [InlineData("Linux", Architecture.Arm64)]
     [InlineData("Windows", Architecture.Arm64)]
     public void LibraryDiscoveryDoesNotEnableAnUnimplementedHardwareBackend(string platform, Architecture architecture)
@@ -91,6 +90,10 @@ public sealed class VlcRuntimeLocatorTests : IDisposable
     [InlineData(Architecture.X64)]
     public void MacOSHasTheIOSurfaceBackend(Architecture architecture) =>
         Assert.Null(NativePlaybackSupport.UnavailableReason(VlcRuntimePlatform.MacOS, architecture));
+
+    [Fact]
+    public void LinuxX64HasTheDmaBufBackend() =>
+        Assert.Null(NativePlaybackSupport.UnavailableReason(VlcRuntimePlatform.Linux, Architecture.X64));
 
     [Fact]
     public void LinuxFallsBackToTheDistributionRuntimeAfterBundledOnes()

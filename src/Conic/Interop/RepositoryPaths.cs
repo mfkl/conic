@@ -14,6 +14,8 @@ internal static class RepositoryPaths
     public static string PluginPath => Locator.PluginPath;
     public static string ModuleDirectory => Locator.ModuleDirectory;
     public static string? DataDirectory => Locator.DataDirectory;
+    public static IReadOnlyList<string> HelperLibraries => Locator.HelperLibraries;
+    public static IReadOnlyList<string> DependencyLibraries => Locator.DependencyLibraries;
     public static string ArtifactsDirectory => Environment.GetEnvironmentVariable("CONIC_ARTIFACTS") is { Length: > 0 } directory
         ? Path.GetFullPath(directory) : Path.Combine(Root, "artifacts");
     public static string TestMediaPath => Environment.GetEnvironmentVariable("CONIC_TEST_MEDIA") is { Length: > 0 } configured

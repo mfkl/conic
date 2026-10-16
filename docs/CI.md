@@ -93,19 +93,27 @@ manual runs: `eng/package-macos.ps1` builds an ad hoc signed
 `Conic.app` with VLC bundled in `Contents/Frameworks/vlc` and uploads
 the ZIP.
 
+`Package / Linux x64` runs on the same events: `eng/get-vlc.ps1` downloads
+VideoLAN's VLC snap at the revision pinned in `eng/versions.json`, checks its
+SHA-256 and assembles a runtime of VLC's libraries and plugins plus the
+libraries they need that a desktop does not provide; `eng/package-linux.ps1`
+bundles it in the tarball. A smoke build of the same package, extracted on
+the runner (which has no VLC), runs the engine smokes through
+`eng/test-linux.ps1 -Package`.
+
 ## Releases
 
-The `Release` job runs after the Windows and both macOS package jobs:
+The `Release` job runs after the Windows, both macOS and the Linux package
+jobs:
 
-- A `v*` tag publishes that release with the three ZIPs and one combined
+- A `v*` tag publishes that release with the three ZIPs, the Linux tarball and one combined
   `SHA256SUMS.txt`. A tag with a suffix, such as `v0.2.0-preview.1`, is a
   pre-release. The notes come from `docs/releases/<tag>.md` when that file
   exists. Re-running the job on an existing release replaces its files.
 - A push to `main` replaces the `continuous` pre-release with the latest
   builds of `main`.
 
-Linux joins the releases once it has a GPU video output. The builds are not
-signed.
+The builds are not signed.
 
 ## Full Windows coverage
 

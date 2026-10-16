@@ -7,8 +7,7 @@ namespace Conic.Interop.Linux;
 /// <summary>
 /// Reads back what is on screen for the engine settings smoke with X11's
 /// XGetImage on the root window, which includes the composited DMA-BUF video.
-/// It needs an X11 display: run the smoke with CONIC_WAYLAND=0 (XWayland or
-/// Xorg). Wayland compositors do not let clients read the screen.
+/// Conic runs on X11 on Linux (Xorg, or XWayland in a Wayland session).
 /// </summary>
 [SupportedOSPlatform("linux")]
 internal static unsafe partial class X11ScreenSampler
@@ -28,7 +27,7 @@ internal static unsafe partial class X11ScreenSampler
     public static ScreenSample Capture(int left, int top, int width, int height, int columns = 64, int rows = 36)
     {
         if (Environment.GetEnvironmentVariable("DISPLAY") is not { Length: > 0 })
-            throw new PlatformNotSupportedException("The screen is read through X11: run with an X11 display (CONIC_WAYLAND=0).");
+            throw new PlatformNotSupportedException("The screen is read through X11, and no X11 display is set.");
         nint display = XOpenDisplay(0);
         if (display == 0)
             throw new InvalidOperationException("XOpenDisplay failed.");

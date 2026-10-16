@@ -109,6 +109,25 @@ public sealed class VlcRuntimeLocatorTests : IDisposable
     }
 
     [Fact]
+    public void LinuxSnapLayoutExposesItsHelperLibrariesAndDataDirectory()
+    {
+        string lib = Path.Combine(_root, "snap", "usr", "lib");
+        Touch(lib, "libvlccore.so.9"); Touch(lib, "libvlc.so.5");
+        string pulse = Touch(Path.Combine(lib, "vlc"), "libvlc_pulse.so.0");
+        Touch(Path.Combine(lib, "vlc", "plugins", "codec"), "libvaapi_plugin.so");
+        string data = Path.Combine(_root, "snap", "usr", "share", "vlc");
+        Directory.CreateDirectory(Path.Combine(data, "lua"));
+        VlcRuntimeLocator locator = new(Path.Combine(_root, "app"), VlcRuntimePlatform.Linux, "x64", systemDirectories: [lib]);
+        Assert.Equal(lib, locator.RuntimeDirectory);
+        Assert.Equal([pulse], locator.HelperLibraries);
+        Assert.Equal(data, locator.DataDirectory);
+    }
+
+    [Fact]
+    public void LinuxPrefersTheVlcSnapToTheDistributionPackages() =>
+        Assert.Equal(VlcRuntimeLocator.SnapRuntime, new VlcRuntimeLocator(_root, VlcRuntimePlatform.Linux, "x64").SystemDirectories[0]);
+
+    [Fact]
     public void LinuxPackagesUsingTheDistributionRuntimeShipThePluginBesideTheApp()
     {
         string system = Path.Combine(_root, "usr", "lib", "x86_64-linux-gnu");

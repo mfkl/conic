@@ -54,7 +54,7 @@
     <Compile Include="..\Shared\Linux\VaapiConverter.cs" Link="Linux\VaapiConverter.cs" />
   </ItemGroup>
   <ItemGroup Condition="'$(RuntimeIdentifier)' != 'linux-x64'">
-    <Compile Remove="VaapiVoutPlugin.cs" />
+    <Compile Remove="VaapiVoutPlugin.cs;VaapiPicturePool.cs" />
   </ItemGroup>
 
   <Target Name="RequireImplementedPluginTarget" BeforeTargets="PrepareForBuild"

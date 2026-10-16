@@ -23,6 +23,7 @@ namespace Conic;
 // artifacts/settings-fixtures (eng/make-settings-fixtures.ps1) and checks
 // the result where it shows: VLC's own log of that core (--file-logging),
 // the engine state, the window, or the pixels on screen (the composed GPU
+// video, sampled with GDI on Windows and screencapture on macOS). Direct3D
 // 11 decoding, the display request and the DPAPI proxy password are Windows
 // only.
 public partial class MainWindow
@@ -151,6 +152,7 @@ public partial class MainWindow
                 await OpenPlaying("picture-default", s => s, still);
                 Sample neutral = await SampleVideo();
                 if (HardwareDecoder is not null) await WaitForLog(Regex.Escape(HardwareDecoder), "hardware decoding is on by default");
+                bool linuxHardware = linux && Regex.IsMatch(await ClosedLog(), "using hw decoder module");
                 Console.WriteLine($"[engine-settings-smoke] neutral picture {neutral}");
                 Require(neutral.Chroma > 25, "the fixture is colorful");
                 await OpenPlaying("picture-brightness", s => s with { Brightness = 1.5 }, still);
@@ -161,6 +163,7 @@ public partial class MainWindow
                 // On macOS VLC's GPU filters (ci_filters) need VLC.app's OpenGL
                 // output: the VideoToolbox frames go through I420 to the CPU filter.
                 if (windows) await WaitForLog("using video filter module \"d3d11_filters\"", "the adjust filter runs on the GPU (Direct3D 11), so frames stay there");
+                else if (linuxHardware) await WaitForLog("using video filter module \"vaapi_filters\"", "the adjust filter runs on the GPU (VA-API), so frames stay there");
                 else await WaitForLog("using video filter module \"adjust\"", "the adjust filter runs (on the CPU)");
                 Console.WriteLine($"[engine-settings-smoke] brightness 1.5 {bright}");
                 Require(bright.Luma > neutral.Luma + 15, $"Brightness 1.5 brightens the picture ({neutral.Luma:0.0} -> {bright.Luma:0.0})");
@@ -176,7 +179,7 @@ public partial class MainWindow
                 await OpenPlaying("picture-hue", s => s with { Hue = 120 }, still);
                 Sample turned = await SampleVideo();
                 double hueShift = turned.ColorDifference(neutral);
-                Require(hueShift > 20 && Math.Abs(turned.Luma - neutral.Luma) < 10, $"Hue 120 turns the colors, not the brightness ({neutral} -> {turned}, color difference {hueShift:0.0})");
+                Require(hueShift > 20 && Math.Abs(turned.Luma - neutral.Luma) < (linuxHardware ? 15 : 10), $"Hue 120 turns the colors, not the brightness ({neutral} -> {turned}, color difference {hueShift:0.0})");
                 Pass($"Hue (color shift {hueShift:0})");
 
                 // ---- Performance: hardware decoding Off and Direct3D 11 ----

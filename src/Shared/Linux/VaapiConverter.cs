@@ -24,6 +24,7 @@ internal sealed unsafe partial class VaapiConverter : IDisposable
     private readonly uint _sourceFourCC;
     private int _drmFd = -1;
     private nint _display;
+    private bool _ownsDisplay = true;
     private uint _config = VaApi.InvalidId;
     private uint _context = VaApi.InvalidId;
     private uint _source = VaApi.InvalidId;
@@ -39,6 +40,8 @@ internal sealed unsafe partial class VaapiConverter : IDisposable
     public int TargetWidth => _visible.Width;
     public int TargetHeight => _visible.Height;
     public int RingSize => _targets.Length;
+    /// <summary>The VADisplay the converter works on.</summary>
+    public nint Display => _display;
 
     private VaapiConverter(int width, int height, VARectangle visible, uint sourceFourCC, int ringSize)
     {
@@ -70,15 +73,7 @@ internal sealed unsafe partial class VaapiConverter : IDisposable
             converter._source = converter.CreateSurface(
                 sourceFourCC == VaApi.FourCCP010 ? VaApi.RtFormatYuv420TenBit : VaApi.RtFormatYuv420,
                 sourceFourCC, VaApi.UsageHintVppRead, width, height);
-            for (int i = 0; i < ringSize; i++)
-                converter._targets[i] = converter.CreateSurface(VaApi.RtFormatRgb32, VaApi.FourCCBgra,
-                    VaApi.UsageHintVppWrite | VaApi.UsageHintExport, visibleWidth, visibleHeight);
-            uint config, context;
-            Check(VaApi.CreateConfig(converter._display, VaApi.ProfileNone, VaApi.EntrypointVideoProc, 0, 0, &config), "vaCreateConfig");
-            converter._config = config;
-            fixed (uint* targets = converter._targets)
-                Check(VaApi.CreateContext(converter._display, config, visibleWidth, visibleHeight, 0, targets, ringSize, &context), "vaCreateContext");
-            converter._context = context;
+            converter.CreateTargets(visibleWidth, visibleHeight, ringSize);
             return converter;
         }
         catch
@@ -88,24 +83,74 @@ internal sealed unsafe partial class VaapiConverter : IDisposable
         }
     }
 
+    /// <summary>
+    /// Opens a converter on a VADisplay owned by someone else, such as a
+    /// decoder: it converts that display's surfaces with
+    /// <see cref="Convert(int, uint, int, bool)"/> and never terminates it. The
+    /// owner must keep the display alive until the converter is disposed.
+    /// </summary>
+    public static VaapiConverter OpenOnDisplay(nint display, int width, int height,
+        int visibleX, int visibleY, int visibleWidth, int visibleHeight, int ringSize)
+    {
+        ArgumentOutOfRangeException.ThrowIfZero(display);
+        if (width is <= 0 or > 8192 || height is <= 0 or > 8192 || visibleX < 0 || visibleY < 0 ||
+            visibleWidth <= 0 || visibleHeight <= 0 || visibleX + visibleWidth > width || visibleY + visibleHeight > height)
+            throw new ArgumentOutOfRangeException(nameof(visibleWidth), $"Visible {visibleX},{visibleY} {visibleWidth}x{visibleHeight} of {width}x{height}.");
+        VARectangle visible = new() { X = (short)visibleX, Y = (short)visibleY, Width = (ushort)visibleWidth, Height = (ushort)visibleHeight };
+        VaapiConverter converter = new(width, height, visible, 0, ringSize) { _display = display, _ownsDisplay = false };
+        try
+        {
+            converter.Vendor = Marshal.PtrToStringUTF8(VaApi.QueryVendorString(display)) ?? "";
+            converter.CreateTargets(visibleWidth, visibleHeight, ringSize);
+            return converter;
+        }
+        catch
+        {
+            converter.Dispose();
+            throw;
+        }
+    }
+
+    private void CreateTargets(int width, int height, int ringSize)
+    {
+        for (int i = 0; i < ringSize; i++)
+            _targets[i] = CreateSurface(VaApi.RtFormatRgb32, VaApi.FourCCBgra,
+                VaApi.UsageHintVppWrite | VaApi.UsageHintExport, width, height);
+        uint config, context;
+        Check(VaApi.CreateConfig(_display, VaApi.ProfileNone, VaApi.EntrypointVideoProc, 0, 0, &config), "vaCreateConfig");
+        _config = config;
+        fixed (uint* targets = _targets)
+            Check(VaApi.CreateContext(_display, config, width, height, 0, targets, ringSize, &context), "vaCreateContext");
+        _context = context;
+    }
+
     private void OpenDisplay()
     {
-        foreach (string node in Directory.GetFiles("/dev/dri", "renderD*").Order(StringComparer.Ordinal))
+        _display = OpenDrmDisplay(out _drmFd, out string node);
+        RenderNode = node;
+        Vendor = Marshal.PtrToStringUTF8(VaApi.QueryVendorString(_display)) ?? "";
+    }
+
+    /// <summary>
+    /// Initializes VA-API on the first DRM render node that supports it. The
+    /// caller owns the display (vaTerminate) and then the descriptor (close).
+    /// </summary>
+    public static nint OpenDrmDisplay(out int fd, out string node)
+    {
+        foreach (string candidate in Directory.GetFiles("/dev/dri", "renderD*").Order(StringComparer.Ordinal))
         {
-            int fd = OpenFile(node, OpenReadWrite | OpenCloseOnExec);
-            if (fd < 0) continue;
-            nint display = VaApi.GetDisplayDrm(fd);
+            int descriptor = OpenFile(candidate, OpenReadWrite | OpenCloseOnExec);
+            if (descriptor < 0) continue;
+            nint display = VaApi.GetDisplayDrm(descriptor);
             int major, minor;
             if (display != 0 && VaApi.Initialize(display, &major, &minor) == VaApi.Success)
             {
-                _drmFd = fd;
-                _display = display;
-                RenderNode = node;
-                Vendor = Marshal.PtrToStringUTF8(VaApi.QueryVendorString(display)) ?? "";
-                return;
+                fd = descriptor;
+                node = candidate;
+                return display;
             }
             if (display != 0) VaApi.Terminate(display);
-            CloseFile(fd);
+            CloseFile(descriptor);
         }
         throw new InvalidOperationException("No DRM render node initializes VA-API.");
     }
@@ -190,13 +235,20 @@ internal sealed unsafe partial class VaapiConverter : IDisposable
     /// Converts the visible source to full-range sRGB BGRA in target
     /// <paramref name="index"/>, on the GPU, finished before returning.
     /// </summary>
-    public void Convert(int index, int colorStandard = VaApi.ColorStandardBT709, bool fullRange = false)
+    public void Convert(int index, int colorStandard = VaApi.ColorStandardBT709, bool fullRange = false) =>
+        Convert(index, _source, colorStandard, fullRange);
+
+    /// <summary>
+    /// Converts the visible part of <paramref name="source"/>, a surface of the
+    /// converter's display at its decoded size, into target <paramref name="index"/>.
+    /// </summary>
+    public void Convert(int index, uint source, int colorStandard, bool fullRange)
     {
         uint target = _targets[index];
         VARectangle visible = _visible;
         VAProcPipelineParameterBuffer parameters = new()
         {
-            Surface = _source,
+            Surface = source,
             SurfaceRegion = (nint)(&visible),
             SurfaceColorStandard = colorStandard,
             OutputColorStandard = VaApi.ColorStandardSRGB,
@@ -268,7 +320,7 @@ internal sealed unsafe partial class VaapiConverter : IDisposable
             uint[] surfaces = [.. _targets.Where(s => s != VaApi.InvalidId), .. _source != VaApi.InvalidId ? [_source] : Array.Empty<uint>()];
             fixed (uint* pointer = surfaces)
                 if (surfaces.Length > 0) VaApi.DestroySurfaces(_display, pointer, surfaces.Length);
-            VaApi.Terminate(_display);
+            if (_ownsDisplay) VaApi.Terminate(_display);
             _display = 0;
         }
         if (_drmFd >= 0) CloseFile(_drmFd);

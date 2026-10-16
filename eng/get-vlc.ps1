@@ -3,8 +3,13 @@
 # SHA-256. Windows x64: extracts the ZIP to <OutputDirectory>/vlc-<version>.
 # macOS: copies lib/, plugins/ and share/ out of the DMG's VLC.app/Contents/MacOS
 # to <OutputDirectory>/vlc-<version>-macos-<arch>, keeping the layout VLC's
-# libraries reference each other through. Prints the directory holding
-# libvlccore (the runtime directory).
+# libraries reference each other through. Linux x64: downloads VideoLAN's VLC
+# snap at the pinned revision and assembles <OutputDirectory>/vlc-<version>-linux:
+# libvlccore and libvlc, vlc/ (plugins and their helper libraries), share/vlc,
+# and deps/ with the libraries those need that a desktop does not provide,
+# listed in deps/load-order.txt in the order to load them. Graphics, audio and
+# core system libraries are left to the host, so its drivers are used.
+# Prints the directory holding libvlccore (the runtime directory).
 [CmdletBinding()]
 param(
     [string] $OutputDirectory = 'artifacts/dependencies'
@@ -68,7 +73,96 @@ if ($IsMacOS) {
     return
 }
 
-if (-not $IsWindows) { throw 'VLC is pinned for Windows x64 and macOS. On Linux, install the distribution''s VLC 3 packages.' }
+if ($IsLinux) {
+    if ([Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture -ne 'X64') { throw 'No VLC build is pinned for Linux on this architecture.' }
+    $pin = $pins.linux
+    $destination = Join-Path $root "vlc-$($pins.version)-linux"
+    if (Test-Path -LiteralPath (Join-Path $destination 'deps/load-order.txt') -PathType Leaf) {
+        Write-Output $destination
+        return
+    }
+    if (Test-Path -LiteralPath $destination) { throw "Incomplete VLC runtime at $destination; delete it and retry." }
+    foreach ($tool in 'snap', 'unsquashfs', 'readelf') {
+        if (-not (Get-Command $tool -ErrorAction SilentlyContinue)) { throw "Assembling the Linux VLC runtime needs $tool." }
+    }
+    New-Item -ItemType Directory -Path $root -Force | Out-Null
+    $work = Join-Path $root ('vlc-snap-' + [Guid]::NewGuid().ToString('N'))
+    New-Item -ItemType Directory -Path $work | Out-Null
+    try {
+        $basename = "$($pin.snap)-$($pin.revision)"
+        & snap download $pin.snap "--revision=$($pin.revision)" "--target-directory=$work" "--basename=$basename" *> (Join-Path $work 'download.log')
+        if ($LASTEXITCODE -ne 0) { throw "snap download failed: $(Get-Content -Raw (Join-Path $work 'download.log'))" }
+        $package = Join-Path $work "$basename.snap"
+        $hash = (Get-FileHash -LiteralPath $package -Algorithm SHA256).Hash.ToLowerInvariant()
+        if ($hash -ne $pin.sha256) { throw "SHA-256 mismatch for snap ${basename}: expected $($pin.sha256), got $hash." }
+        $tree = Join-Path $work 'tree'
+        & unsquashfs -no-progress -quiet -d $tree $package usr/lib usr/share/vlc *> (Join-Path $work 'unsquashfs.log')
+        if ($LASTEXITCODE -ne 0) { throw "unsquashfs failed: $(Get-Content -Raw (Join-Path $work 'unsquashfs.log'))" }
+        $lib = Join-Path $tree 'usr/lib'
+        $staging = Join-Path $work 'runtime'
+        New-Item -ItemType Directory -Path $staging | Out-Null
+        foreach ($name in 'libvlccore.so.9', 'libvlc.so.5') {
+            if (-not (Test-Path -LiteralPath (Join-Path $lib $name))) { throw "The snap has no usr/lib/$name." }
+            Copy-Item -LiteralPath (Join-Path $lib $name) -Destination (Join-Path $staging $name)
+        }
+        Copy-Item -LiteralPath (Join-Path $lib 'vlc') -Destination (Join-Path $staging 'vlc') -Recurse
+        foreach ($unused in 'vlc/plugins/gui', 'vlc/libcompat.a', 'vlc/plugins/plugins.dat') {
+            Remove-Item -LiteralPath (Join-Path $staging $unused) -Recurse -Force -ErrorAction SilentlyContinue
+        }
+        New-Item -ItemType Directory -Path (Join-Path $staging 'share') | Out-Null
+        Copy-Item -LiteralPath (Join-Path $tree 'usr/share/vlc') -Destination (Join-Path $staging 'share/vlc') -Recurse
+
+        $hostPatterns = @(
+            'ld-linux*', 'libc.so*', 'libm.so*', 'libdl.so*', 'libpthread.so*', 'librt.so*', 'libresolv.so*', 'libutil.so*',
+            'libstdc++.so*', 'libgcc_s.so*', 'libatomic.so*', 'libcrypt.so*',
+            'libGL*', 'libEGL*', 'libOpenGL*', 'libOpenCL*', 'libgbm.so*', 'libdrm*', 'libva*', 'libvdpau*', 'libvulkan*',
+            'libX*', 'libxcb*', 'libxkb*', 'libwayland*', 'libxshmfence*', 'libdecor*', 'libLLVM*', 'libgallium*', 'libsensors*',
+            'libasound*', 'libpulse*', 'libpipewire*', 'libjack*', 'libsndio*',
+            'libdbus-1*', 'libsystemd*', 'libudev*', 'libglib-2.0*', 'libgobject-2.0*', 'libgio-2.0*', 'libgmodule-2.0*', 'libgthread-2.0*',
+            'libgtk*', 'libgdk*', 'libcairo*', 'libpango*', 'libatk*', 'libatspi*', 'libharfbuzz*', 'libfontconfig*', 'libfreetype*', 'libepoxy*',
+            'libexpat*', 'libz.so*', 'libuuid*', 'libmount*', 'libblkid*', 'libselinux*', 'libffi*', 'libpcre2*',
+            'libgnutls*', 'libnettle*', 'libhogweed*', 'libgmp*', 'libp11-kit*', 'libtasn1*', 'libidn2*', 'libunistring*',
+            'libssl.so*', 'libcrypto.so*', 'libgcrypt*', 'libgpg-error*', 'libcom_err*', 'libkrb5*', 'libgssapi*', 'libk5crypto*', 'libkeyutils*',
+            'liblzma*', 'libzstd*', 'libbz2*', 'liblz4*', 'libbsd*', 'libmd.so*', 'libcap*', 'libtinfo*', 'libncurses*')
+        function Test-HostLibrary([string] $Name) { foreach ($pattern in $hostPatterns) { if ($Name -like $pattern) { return $true } } return $false }
+        function Get-Needed([string] $Path) {
+            foreach ($line in (& readelf -d $Path 2>$null)) { if ($line -match 'Shared library: \[(.+)\]') { $Matches[1] } }
+        }
+        $provided = [Collections.Generic.HashSet[string]]::new([string[]]@('libvlccore.so.9', 'libvlc.so.5'))
+        Get-ChildItem -Path (Join-Path $staging 'vlc') -Filter 'libvlc_*.so.*' -File | ForEach-Object { [void]$provided.Add($_.Name) }
+        $sources = @(Join-Path $lib 'x86_64-linux-gnu'; $lib)
+        $dependencies = [ordered]@{}
+        $missing = [Collections.Generic.SortedSet[string]]::new()
+        $order = [Collections.Generic.List[string]]::new()
+        $visiting = [Collections.Generic.HashSet[string]]::new()
+        function Add-Dependencies([string] $Path) {
+            foreach ($name in (Get-Needed $Path)) {
+                if ($provided.Contains($name) -or (Test-HostLibrary $name) -or $dependencies.Contains($name)) { continue }
+                $source = $sources | ForEach-Object { Join-Path $_ $name } | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
+                if (-not $source) { [void]$missing.Add($name); continue }
+                if (-not $visiting.Add($name)) { continue }
+                $dependencies[$name] = $source
+                Add-Dependencies $source
+                $order.Add($name)
+            }
+        }
+        $roots = @(Get-ChildItem -LiteralPath $staging -Recurse -File -Filter '*.so*' | Where-Object { $_.FullName -notlike '*/share/*' })
+        foreach ($root in $roots) { Add-Dependencies $root.FullName }
+        $deps = Join-Path $staging 'deps'
+        New-Item -ItemType Directory -Path $deps | Out-Null
+        foreach ($name in $order) { Copy-Item -LiteralPath $dependencies[$name] -Destination (Join-Path $deps $name) }
+        $order | Set-Content -LiteralPath (Join-Path $deps 'load-order.txt')
+        $missing | Set-Content -LiteralPath (Join-Path $deps 'host-libraries.txt')
+        Move-Item -LiteralPath $staging -Destination $destination
+    }
+    finally {
+        Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue
+    }
+    Write-Output $destination
+    return
+}
+
+if (-not $IsWindows) { throw 'VLC is pinned for Windows x64, macOS and Linux x64.' }
 $destination = Join-Path $root "vlc-$($pins.version)"
 if (Test-Path -LiteralPath (Join-Path $destination 'libvlccore.dll') -PathType Leaf) {
     Write-Output $destination

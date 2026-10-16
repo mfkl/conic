@@ -1,14 +1,16 @@
 #requires -Version 7.0
 # Builds a self-contained Linux x64 package: the app, the Native AOT plugin
-# and, with -VlcDirectory, a bundled VLC 3 runtime. Without one, the package
-# uses the distribution's VLC 3 packages (libvlccore9, libvlc5, vlc-plugin-base).
+# and, with -VlcDirectory, a bundled VLC 3 runtime (eng/get-vlc.ps1 assembles
+# one from VideoLAN's snap). Without one, the package uses an installed VLC 3:
+# the VLC snap, or the distribution's packages.
 [CmdletBinding()]
 param(
     [ValidateSet('Release', 'Debug')][string] $Configuration = 'Release',
     [ValidatePattern('^\d+\.\d+\.\d+(-[A-Za-z0-9.-]+)?$')][string] $Version = '0.1.0-preview.1',
     [string] $OutputDirectory = 'artifacts/packages',
-    # The lib directory of a Linux x64 VLC 3 install (libvlccore.so.9, libvlc.so.5,
-    # vlc/plugins/), bundled under vlc/. VLC finds its plugins relative to libvlccore.
+    # A Linux x64 VLC 3 runtime (libvlccore.so.9, libvlc.so.5, vlc/plugins/, and
+    # optionally deps/ and share/vlc/), bundled under vlc/. VLC finds its plugins
+    # relative to libvlccore.
     [string] $VlcDirectory,
     # Native AOT compiler driver. Defaults to clang; gcc works where clang is not installed.
     [string] $Compiler,
@@ -106,9 +108,7 @@ $manifest = [ordered]@{
     source = 'https://github.com/mfkl/conic'; selfContained = $true
     vlcRuntime = if ($runtime) { 'bundled' } else { 'distribution' }
     distributionStatus = 'local-review'
-    distributionBlockers = @(
-        'Distribution VLC 3 builds before 3.0.22 have no VA-API decoder: video decodes in software and each frame is copied into a VA-API surface before GPU conversion and presentation.',
-        'Qualified on one Intel GPU (iHD) under GNOME only.')
+    distributionBlockers = @('Qualified on one Intel GPU (iHD) under GNOME only.')
     hardwarePlaybackQualified = $false
     files = @(Get-ChildItem -LiteralPath $stage -Recurse -File | Sort-Object FullName | ForEach-Object {
         [ordered]@{ path = [IO.Path]::GetRelativePath($stage, $_.FullName); bytes = $_.Length; sha256 = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant() }

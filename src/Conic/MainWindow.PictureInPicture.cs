@@ -67,6 +67,7 @@ public partial class MainWindow
 
     // macOS leaves fullscreen with an animation that ends by putting back the
     // window's frame from before fullscreen, over the compact one (CI saw PiP
+    // at 1920x970): place it again until the animation is over.
     private async void PlacePictureInPictureAfterFullscreen()
     {
         for (DateTime settled = DateTime.UtcNow.AddSeconds(3); DateTime.UtcNow < settled && _presentation.IsPictureInPicture;)

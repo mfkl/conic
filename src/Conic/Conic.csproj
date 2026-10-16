@@ -27,7 +27,6 @@
     <PackageReference Include="Avalonia.Desktop" Version="12.2.999-cibuild0100450-alpha" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="12.2.999-cibuild0100450-alpha" />
     <PackageReference Include="Avalonia.Fonts.Inter" Version="12.2.999-cibuild0100450-alpha" />
-    <PackageReference Include="Avalonia.Wayland" Version="12.2.999-cibuild0100450-alpha" />
     <PackageReference Include="AvaloniaUI.DiagnosticsSupport" Version="2.2.3">
       <IncludeAssets Condition="'$(Configuration)' != 'Debug'">None</IncludeAssets>
       <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>

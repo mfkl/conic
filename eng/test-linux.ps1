@@ -6,12 +6,12 @@
 #  - with -Window, the DMA-BUF video output (VA-API conversion, Avalonia EGL
 #    import), its CPU fallback, compositor reattachment, PiP and the UI and
 #    settings smokes, against eng/make-settings-fixtures.ps1's fixtures
-#    (needs ffmpeg). Avalonia's native Wayland backend is used unless -X11.
-#    The engine settings smoke reads the screen through X11, so it always
-#    runs on X11 (Xwayland in a Wayland session).
+#    (needs ffmpeg). Conic runs on X11 (XWayland in a Wayland session).
+#  - with -Package, the cases run an extracted package built with
+#    eng/package-linux.ps1 -Smoke instead of building the repository.
 #  - with -Headless, window cases run in a private headless GNOME Shell
-#    (Wayland, and a nested Xwayland with its own window manager for X11),
-#    so no window reaches the desktop and none takes the focus.
+#    with a nested Xwayland and its own window manager, so no window reaches
+#    the desktop and none takes the focus.
 # Distribution VLC 3 before 3.0.22 has no VA-API decoder: video decodes in
 # software and is copied into VA-API surfaces, so this qualifies the GPU
 # conversion and presentation, not hardware decoding.
@@ -21,9 +21,9 @@ param(
     [ValidateRange(1, 100)][int] $Cycles = 10,
     [switch] $Window,
     [switch] $Headless,
-    [switch] $X11,
     [string] $OutputDirectory = 'artifacts/linux',
     [string[]] $Only,
+    [string] $Package,
     [string] $Compiler,
     [ValidateRange(30, 3600)][int] $CaseTimeoutSeconds = 600
 )
@@ -38,19 +38,25 @@ $output = [IO.Path]::GetFullPath($OutputDirectory)
 New-Item -ItemType Directory -Force -Path $output | Out-Null
 $mediaPath = (Resolve-Path -LiteralPath $Media).Path
 
-[string[]] $aot = if ($Compiler) { "-p:CppCompilerAndLinker=$Compiler" } else { @() }
-& dotnet publish (Join-Path $productRoot 'src/Conic.Vout/Conic.Vout.csproj') -c Release -r linux-x64 -nologo @aot *> (Join-Path $output 'plugin-publish.log')
-if ($LASTEXITCODE -ne 0) { throw "Plugin publish failed; see $output/plugin-publish.log" }
-& dotnet build (Join-Path $productRoot 'src/Conic/Conic.csproj') -c Debug -nologo *> (Join-Path $output 'app-build.log')
-if ($LASTEXITCODE -ne 0) { throw "App build failed; see $output/app-build.log" }
+if ($Package) {
+    $executable = (Resolve-Path -LiteralPath (Join-Path $Package 'Conic')).Path
+    $prefix = @()
+}
+else {
+    [string[]] $aot = if ($Compiler) { "-p:CppCompilerAndLinker=$Compiler" } else { @() }
+    & dotnet publish (Join-Path $productRoot 'src/Conic.Vout/Conic.Vout.csproj') -c Release -r linux-x64 -nologo @aot *> (Join-Path $output 'plugin-publish.log')
+    if ($LASTEXITCODE -ne 0) { throw "Plugin publish failed; see $output/plugin-publish.log" }
+    & dotnet build (Join-Path $productRoot 'src/Conic/Conic.csproj') -c Debug -nologo *> (Join-Path $output 'app-build.log')
+    if ($LASTEXITCODE -ne 0) { throw "App build failed; see $output/app-build.log" }
+    $executable = (Get-Command dotnet).Source
+    $prefix = @(Join-Path $productRoot 'src/Conic/bin/Debug/net10.0/Conic.dll')
+}
 
-$app = Join-Path $productRoot 'src/Conic/bin/Debug/net10.0/Conic.dll'
 $environment = @{
     CONIC_TEST_MEDIA = $mediaPath
     CONIC_ARTIFACTS = $output
-    VLCLR_ROOT = Join-Path $productRoot 'external/vlclr'
 }
-if ($X11) { $environment.CONIC_WAYLAND = '0' }
+if (-not $Package) { $environment.VLCLR_ROOT = Join-Path $productRoot 'external/vlclr' }
 
 $session = $null
 function Start-Owned([string] $File, [string[]] $Arguments, [hashtable] $Environment) {
@@ -131,11 +137,11 @@ function Stop-HeadlessSession($Session) {
 
 function Invoke-Case([string] $Name, [string[]] $Arguments, [hashtable] $Overrides = @{}) {
     $log = Join-Path $output "$Name.log"
-    $start = [Diagnostics.ProcessStartInfo]::new((Get-Command dotnet).Source)
+    $start = [Diagnostics.ProcessStartInfo]::new($executable)
     $start.UseShellExecute = $false
     $start.RedirectStandardOutput = $true
     $start.RedirectStandardError = $true
-    $start.ArgumentList.Add($app)
+    foreach ($argument in $prefix) { $start.ArgumentList.Add($argument) }
     foreach ($argument in $Arguments) { $start.ArgumentList.Add($argument) }
     $caseProfile = Join-Path $output "profile-$Name"
     if (Test-Path -LiteralPath $caseProfile) { Remove-Item -LiteralPath $caseProfile -Recurse -Force }
@@ -181,7 +187,6 @@ if ($Window) {
     $overrides = @{
         'drawer-native' = @{ CONIC_TEST_MEDIA = Join-Path $fixtures 'languages.mkv' }
         'thumbnail' = @{ CONIC_TEST_MEDIA = Join-Path $fixtures 'gop.mp4' }
-        'engine-settings' = @{ CONIC_WAYLAND = '0' }
     }
 }
 

@@ -1023,8 +1023,8 @@ internal sealed unsafe partial class VlcCorePlayer : IMediaEngine, IQueueTranspo
 
 
     /// <summary>
-    /// VLC 3 opens a window of its own for every video output (an X11 or
-    /// Wayland toplevel beside Conic's), looked up through the inherited
+    /// VLC 3 opens a window of its own for every video output (an X11
+    /// toplevel beside Conic's), looked up through the inherited
     /// <c>window</c> variable. Conic's outputs draw into Avalonia and never
     /// use it, so name a window module that does not exist: VLC opens none.
     /// </summary>

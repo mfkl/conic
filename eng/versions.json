@@ -10,6 +10,11 @@
       "url": "https://download.videolan.org/pub/videolan/vlc/3.0.24/win64/vlc-3.0.24-win64.zip",
       "sha256": "fcf30850371ad10c9373cc4f0f4501e7dee49e3e9ae9f20c72fb2661a1ca6323"
     },
+    "linux": {
+      "snap": "vlc",
+      "revision": 4472,
+      "sha256": "27fd7f7b6641a976060b0c9fbeb78e61a3f557947259db30548700e59793219d"
+    },
     "macos": {
       "arm64": {
         "url": "https://download.videolan.org/pub/videolan/vlc/3.0.24/macosx/vlc-3.0.24-arm64.dmg",

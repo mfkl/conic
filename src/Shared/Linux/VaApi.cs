@@ -83,6 +83,22 @@ internal struct VADRMPRIMESurfaceDescriptor
     };
 }
 
+/// <summary>VAImage: a CPU view of a surface, from vaDeriveImage.</summary>
+[StructLayout(LayoutKind.Explicit, Size = 120)]
+internal unsafe struct VAImage
+{
+    [FieldOffset(0)] public uint Id;
+    /// <summary>VAImageFormat.fourcc, the first of its 48 bytes.</summary>
+    [FieldOffset(4)] public uint FourCC;
+    [FieldOffset(52)] public uint Buffer;
+    [FieldOffset(56)] public ushort Width;
+    [FieldOffset(58)] public ushort Height;
+    [FieldOffset(60)] public uint DataSize;
+    [FieldOffset(64)] public uint PlaneCount;
+    [FieldOffset(68)] public fixed uint Pitches[3];
+    [FieldOffset(80)] public fixed uint Offsets[3];
+}
+
 /// <summary>VAProcColorProperties.</summary>
 [StructLayout(LayoutKind.Sequential, Size = 8)]
 internal struct VAProcColorProperties
@@ -158,6 +174,14 @@ internal static partial class VaApi
     public const int ColorStandardSRGB = 8;
     public const int ColorStandardBT2020 = 12;
 
+    public const int SurfaceAttribUsageHint = 8;
+    public const int UsageHintVppRead = 0x4;
+    public const int UsageHintVppWrite = 0x8;
+    public const int UsageHintExport = 0x20;
+
+    public const byte SourceRangeReduced = 1;
+    public const byte SourceRangeFull = 2;
+
     public const uint SurfaceAttribMemTypeDrmPrime2 = 0x40000000;
     public const uint ExportSurfaceReadOnly = 0x1;
     public const uint ExportSurfaceSeparateLayers = 0x4;
@@ -191,6 +215,18 @@ internal static partial class VaApi
     [LibraryImport(Library, EntryPoint = "vaExportSurfaceHandle")]
     public static unsafe partial int ExportSurfaceHandle(nint display, uint surface, uint memoryType,
         uint flags, VADRMPRIMESurfaceDescriptor* descriptor);
+
+    [LibraryImport(Library, EntryPoint = "vaDeriveImage")]
+    public static unsafe partial int DeriveImage(nint display, uint surface, VAImage* image);
+
+    [LibraryImport(Library, EntryPoint = "vaDestroyImage")]
+    public static partial int DestroyImage(nint display, uint image);
+
+    [LibraryImport(Library, EntryPoint = "vaMapBuffer")]
+    public static unsafe partial int MapBuffer(nint display, uint buffer, void** data);
+
+    [LibraryImport(Library, EntryPoint = "vaUnmapBuffer")]
+    public static partial int UnmapBuffer(nint display, uint buffer);
 
     [LibraryImport(Library, EntryPoint = "vaCreateConfig")]
     public static unsafe partial int CreateConfig(nint display, int profile, int entrypoint,

@@ -150,6 +150,11 @@ public partial class MainWindow
                 // The real pointer over a bar rightly holds it up: on macOS the
                 // smoke parks it mid-window, where a user's rests on the video.
                 if (OperatingSystem.IsMacOS()) ParkPointerMidWindow();
+                else if (OperatingSystem.IsLinux() && TryGetPlatformHandle()?.HandleDescriptor == "XID")
+                {
+                    PixelPoint middle = this.PointToScreen(new Point(Bounds.Width / 2, Bounds.Height / 2));
+                    Conic.Interop.Linux.X11ScreenSampler.WarpPointer(middle.X, middle.Y);
+                }
                 // macOS animates into fullscreen and its events wake the bars
                 // meanwhile: they hide once it has settled.
                 await Within(() => !PlayerDock.IsVisible && !TopChrome.IsVisible, 3);

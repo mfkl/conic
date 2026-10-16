@@ -83,10 +83,12 @@ public partial class MainWindow
 
                 WindowState = WindowState.Maximized;
                 await Task.Delay(150);
+                for (DateTime settle = DateTime.UtcNow.AddSeconds(3); WindowState != WindowState.Maximized && DateTime.UtcNow < settle;) await Task.Delay(50);
                 TogglePictureInPicture();
                 await Task.Delay(150);
                 TogglePictureInPicture();
-                Require(WindowState == WindowState.Maximized, "maximized state restored");
+                for (DateTime settle = DateTime.UtcNow.AddSeconds(3); WindowState != WindowState.Maximized && DateTime.UtcNow < settle;) await Task.Delay(50);
+                Require(WindowState == WindowState.Maximized, $"maximized state restored (got {WindowState})");
                 WindowState = WindowState.Normal;
                 await Task.Delay(150);
 

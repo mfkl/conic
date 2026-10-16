@@ -92,8 +92,14 @@ function Invoke-Case([string] $Name, [string[]] $Arguments, [hashtable] $Overrid
     }
     elseif ($process.ExitCode -eq 0) { 'passed' }
     else { "failed with exit $($process.ExitCode)" }
-    @(($lines -join [Environment]::NewLine), $stderr.GetAwaiter().GetResult()) | Set-Content -LiteralPath $log
+    $errors = $stderr.GetAwaiter().GetResult()
+    @(($lines -join [Environment]::NewLine), $errors) | Set-Content -LiteralPath $log
     Write-Host ('{0} {1} ({2:0.0} s)' -f $Name, $outcome, $watch.Elapsed.TotalSeconds)
+    # The job's own log says why, without downloading the logs artifact.
+    if ($outcome -ne 'passed') {
+        @($lines) + @($errors -split '\r?\n') | Where-Object { $_ -match 'FAIL|key miss|Unhandled exception' } |
+            Select-Object -First 20 | ForEach-Object { Write-Host "    $_" }
+    }
     return $outcome -eq 'passed'
 }
 

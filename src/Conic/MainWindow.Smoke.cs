@@ -35,7 +35,7 @@ public partial class MainWindow
         {
             timeout.Stop();
             Console.Error.WriteLine(
-                "[composition-ui-smoke] Timed out waiting for a GPU frame.");
+                $"[composition-ui-smoke] Timed out waiting for a GPU frame (phase {phase}, reattach {reattachments}).");
             desktop.Shutdown(1);
         };
         VideoSurface.StatusChanged += status =>
@@ -67,6 +67,7 @@ public partial class MainWindow
                         return;
                     }
                     Console.WriteLine($"[composition-ui-smoke] PASS reattach={++reattachments} adapter-luid={adapter}");
+                    RestartTimeout();
                     if (reattachments == 3)
                     {
                         timeout.Stop();
@@ -95,6 +96,7 @@ public partial class MainWindow
                 if (phase == 1)
                 {
                     phase = 2;
+                    RestartTimeout();
                     WindowState = WindowState.Normal;
                     Console.WriteLine(
                         "[composition-ui-smoke] PASS resize-fullscreen " +
@@ -132,9 +134,15 @@ public partial class MainWindow
                     $"device-generation={deviceGeneration} " +
                     $"resource-generation={resourceGeneration} " +
                     $"adapter-luid={adapter}");
+                RestartTimeout();
                 ReattachSurface();
             };
 
+        void RestartTimeout()
+        {
+            timeout.Stop();
+            timeout.Start();
+        }
         void ReattachSurface()
         {
             playerBeforeDetach = VideoSurface.Player;

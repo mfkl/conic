@@ -130,9 +130,12 @@ public partial class MainWindow
                 // B is where playback is when pressed; the press itself goes back to A.
                 double b = Shown();
                 Run(PlayerCommandId.ToggleABLoop);
-                bool loopedOnce = await Within(() => Elapsed() < b - 1, 4);
-                bool cameBack = loopedOnce && await Within(() => Elapsed() >= b - .3, 4) && await Within(() => Elapsed() < b - 1, 5);
-                Check(loopedOnce && cameBack, $"the A-B loop goes back to A from B, again and again (A {a:0.0} s, B {b:0.0} s)");
+                string stage = "B pressed, back to A";
+                bool looped = await Within(() => Elapsed() < b - 1, 4);
+                if (looped) { stage = "playing on to B"; looped = await Within(() => Elapsed() >= b - .3, 4); }
+                if (looped) { stage = "back to A again"; looped = await Within(() => Elapsed() < b - 1, 5); }
+                Check(looped, $"the A-B loop goes back to A from B, again and again (A {a:0.0} s, B {b:0.0} s" +
+                    (looped ? ")" : $"; stuck at '{stage}' with the engine at {Elapsed():0.00} s, {Engine().Status})"));
                 Run(PlayerCommandId.ToggleABLoop);
                 Check(!_presentation.IsABLoopActive, "a third press clears the loop");
 

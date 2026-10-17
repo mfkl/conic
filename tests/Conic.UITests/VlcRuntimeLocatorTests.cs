@@ -124,6 +124,17 @@ public sealed class VlcRuntimeLocatorTests : IDisposable
     }
 
     [Fact]
+    public void LinuxDevelopmentUsesTheRuntimeGetVlcAssembles()
+    {
+        Touch(_root, "conic.slnx");
+        string system = Path.Combine(_root, "usr", "lib", "x86_64-linux-gnu");
+        Touch(system, "libvlccore.so.9"); Touch(system, "libvlc.so.5");
+        string assembled = Path.Combine(_root, "artifacts", "dependencies", "vlc-3.0.24-linux");
+        Touch(assembled, "libvlccore.so.9"); Touch(assembled, "libvlc.so.5");
+        Assert.Equal(assembled, new VlcRuntimeLocator(Path.Combine(_root, "src", "Conic", "bin"), VlcRuntimePlatform.Linux, "x64", systemDirectories: [system]).RuntimeDirectory);
+    }
+
+    [Fact]
     public void LinuxPrefersTheVlcSnapToTheDistributionPackages() =>
         Assert.Equal(VlcRuntimeLocator.SnapRuntime, new VlcRuntimeLocator(_root, VlcRuntimePlatform.Linux, "x64").SystemDirectories[0]);
 

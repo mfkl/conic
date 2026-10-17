@@ -1039,9 +1039,13 @@ internal sealed unsafe partial class VlcCorePlayer : IMediaEngine, IQueueTranspo
         finally { Marshal.FreeCoTaskMem(none); }
     }
 
-    private const string VlcHrtf = "/usr/share/vlc/hrtfs/dodeca_and_7channel_3DSL_HRTF.sofa";
+    private const string VlcHrtf = "hrtfs/dodeca_and_7channel_3DSL_HRTF.sofa";
     private const string LibmysofaHrtf = "/usr/share/libmysofa/default.sofa";
 
+    internal static bool HasVlcHrtf =>
+        File.Exists(Path.Combine(Environment.GetEnvironmentVariable("VLC_DATA_PATH") is { Length: > 0 } data ? data
+            : RepositoryPaths.DataDirectory ?? "/usr/share/vlc", VlcHrtf));
+
     private static string? LinuxHrtfFile() =>
-        !File.Exists(VlcHrtf) && File.Exists(LibmysofaHrtf) ? LibmysofaHrtf : null;
+        !HasVlcHrtf && File.Exists(LibmysofaHrtf) ? LibmysofaHrtf : null;
 }

@@ -90,9 +90,12 @@ internal sealed class VlcRuntimeLocator(
             if (candidates.FirstOrDefault(HasLibraries) is { } bundled) return Path.GetFullPath(bundled);
             // Development fallback: the pinned runtime downloaded by eng/get-vlc.ps1.
             if (RepositoryRoot is { } repository)
-                candidates.Add(platform == VlcRuntimePlatform.MacOS
-                    ? Path.Combine(repository, "artifacts", "dependencies", $"vlc-3.0.24-macos-{architecture}", "lib")
-                    : Path.Combine(repository, "artifacts", "dependencies", "vlc-3.0.24"));
+                candidates.Add(platform switch
+                {
+                    VlcRuntimePlatform.MacOS => Path.Combine(repository, "artifacts", "dependencies", $"vlc-3.0.24-macos-{architecture}", "lib"),
+                    VlcRuntimePlatform.Linux => Path.Combine(repository, "artifacts", "dependencies", "vlc-3.0.24-linux"),
+                    _ => Path.Combine(repository, "artifacts", "dependencies", "vlc-3.0.24"),
+                });
             // Linux: the VLC snap, then the distribution's VLC 3 packages; macOS:
             // an installed VLC.app. Both come after any bundled or development runtime.
             candidates.AddRange(systemDirectories ?? SystemDirectories);

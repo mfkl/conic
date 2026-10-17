@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using Conic.Interop.Linux;
+using Conic.Interop.MacOS;
 using Conic.Interop.Windows;
 using Conic.Services;
 
@@ -17,6 +18,7 @@ public partial class MainWindow
             _mediaSession.Attach(SystemMediaControls.Create(handle.Handle, _mediaSession));
             _mediaSession.Attach(TaskbarButtons.Create(this, _mediaSession));
         }
+        if (OperatingSystem.IsMacOS()) _mediaSession.Attach(MacNowPlaying.Create(_mediaSession));
         if (OperatingSystem.IsLinux()) _ = AttachMprisAsync(_mediaSession);
         Closed += (_, _) => { _mediaSession?.Dispose(); _mediaSession = null; };
     }

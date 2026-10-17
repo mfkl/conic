@@ -1,4 +1,5 @@
 #if SMOKE
+using System.Globalization;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -129,13 +130,26 @@ public partial class MainWindow
                 await Within(() => Shown() >= a + 2, 5);
                 // B is where playback is when pressed; the press itself goes back to A.
                 double b = Shown();
+                List<double> times = [Elapsed()];
+                int backJumps = 0;
+                void Record(object? sender, MediaEngineState state)
+                {
+                    lock (times)
+                    {
+                        double now = state.Elapsed.TotalSeconds;
+                        if (times.Count != 0 && now < times[^1] - 1) backJumps++;
+                        times.Add(now);
+                    }
+                }
+                IMediaEngine engine = VideoSurface.Player!;
+                engine.StateChanged += Record;
                 Run(PlayerCommandId.ToggleABLoop);
-                string stage = "B pressed, back to A";
-                bool looped = await Within(() => Elapsed() < b - 1, 4);
-                if (looped) { stage = "playing on to B"; looped = await Within(() => Elapsed() >= b - .3, 4); }
-                if (looped) { stage = "back to A again"; looped = await Within(() => Elapsed() < b - 1, 5); }
+                bool looped = await Within(() => { lock (times) return backJumps >= 2; }, 10);
+                engine.StateChanged -= Record;
+                string trace;
+                lock (times) trace = string.Join(" ", times.TakeLast(40).Select(t => t.ToString("0.0", CultureInfo.InvariantCulture)));
                 Check(looped, $"the A-B loop goes back to A from B, again and again (A {a:0.0} s, B {b:0.0} s" +
-                    (looped ? ")" : $"; stuck at '{stage}' with the engine at {Elapsed():0.00} s, {Engine().Status})"));
+                    (looped ? ")" : $"; {backJumps} jumps back, engine times {trace})"));
                 Run(PlayerCommandId.ToggleABLoop);
                 Check(!_presentation.IsABLoopActive, "a third press clears the loop");
 

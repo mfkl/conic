@@ -1,19 +1,19 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
+using Conic.Interop.Linux;
 
 namespace Conic.Video.Linux;
 
 /// <summary>
-/// Decoded frames from the distribution's libvlc through its public video
+/// Decoded frames from the runtime's libvlc through its public video
 /// callbacks, for the DMA-BUF probe: VLC decodes and converts to NV12 or P010
 /// on the CPU, into buffers owned here. The latest displayed frame wins;
 /// frames not yet taken when a newer one is displayed are dropped.
 /// </summary>
 [SupportedOSPlatform("linux")]
-internal sealed partial class LibVlcFrameSource : IDisposable
+internal sealed class LibVlcFrameSource : IDisposable
 {
-    private const string Library = "libvlc.so.5";
     private const int BufferCount = 8;
 
     private enum BufferState { Free, Decoding, Ready, Taken }
@@ -21,11 +21,13 @@ internal sealed partial class LibVlcFrameSource : IDisposable
     private readonly object _gate = new();
     private readonly BufferState[] _states = new BufferState[BufferCount];
     private readonly nint[] _buffers = new nint[BufferCount];
+    private nint _spare;
     private readonly long[] _lockSequence = new long[BufferCount];
     private long _nextSequence;
     private readonly TaskCompletionSource<(int Width, int Height)> _format = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private readonly SemaphoreSlim _frameReady = new(0);
     private readonly string _chroma;
+    private readonly LibVlcApi _api = LibVlcApi.Runtime;
     private GCHandle _self;
     private nint _instance;
     private nint _player;
@@ -53,17 +55,20 @@ internal sealed partial class LibVlcFrameSource : IDisposable
         try
         {
             fixed (nint* argv = native)
-                _instance = New(native.Length, argv);
+                _instance = _api.New(native.Length, argv);
         }
         finally { foreach (nint argument in native) Marshal.FreeCoTaskMem(argument); }
         if (_instance == 0) throw new InvalidOperationException("libvlc_new failed.");
-        nint media = MediaNewPath(_instance, path);
+        nint pathUtf8 = Marshal.StringToCoTaskMemUTF8(path);
+        nint media;
+        try { media = _api.MediaNewPath(_instance, (byte*)pathUtf8); }
+        finally { Marshal.FreeCoTaskMem(pathUtf8); }
         if (media == 0) throw new InvalidOperationException($"libvlc could not open {path}.");
-        _player = PlayerNewFromMedia(media);
-        MediaRelease(media);
+        _player = _api.PlayerNewFromMedia(media);
+        _api.MediaRelease(media);
         nint opaque = GCHandle.ToIntPtr(_self);
-        SetFormatCallbacks(_player, &Setup, &Cleanup);
-        SetCallbacks(_player, &Lock, &Unlock, &Display, opaque);
+        _api.SetFormatCallbacks(_player, &Setup, &Cleanup);
+        _api.SetCallbacks(_player, &Lock, &Unlock, &Display, opaque);
     }
 
     public Task<(int Width, int Height)> Format => _format.Task;
@@ -74,13 +79,13 @@ internal sealed partial class LibVlcFrameSource : IDisposable
         get
         {
             uint width, height;
-            return GetSize(_player, 0, &width, &height) == 0 && width > 0 && height > 0 ? ((int)width & ~1, (int)height & ~1) : null;
+            return _api.GetSize(_player, 0, &width, &height) == 0 && width > 0 && height > 0 ? ((int)width & ~1, (int)height & ~1) : null;
         }
     }
 
-    public void Play()
+    public unsafe void Play()
     {
-        if (Play(_player) != 0) throw new InvalidOperationException("libvlc_media_player_play failed.");
+        if (_api.Play(_player) != 0) throw new InvalidOperationException("libvlc_media_player_play failed.");
     }
 
     /// <summary>Waits for a displayed frame and takes it; release it with <see cref="Release"/>.</summary>
@@ -112,13 +117,13 @@ internal sealed partial class LibVlcFrameSource : IDisposable
     {
         if (_player != 0)
         {
-            Stop(_player);
-            PlayerRelease(_player);
+            _api.Stop(_player);
+            _api.PlayerRelease(_player);
             _player = 0;
         }
         if (_instance != 0)
         {
-            ReleaseInstance(_instance);
+            _api.Release(_instance);
             _instance = 0;
         }
         for (int i = 0; i < BufferCount; i++)
@@ -126,6 +131,8 @@ internal sealed partial class LibVlcFrameSource : IDisposable
             if (_buffers[i] != 0) NativeMemory.AlignedFree((void*)_buffers[i]);
             _buffers[i] = 0;
         }
+        if (_spare != 0) NativeMemory.AlignedFree((void*)_spare);
+        _spare = 0;
         if (_self.IsAllocated) _self.Free();
     }
 
@@ -157,6 +164,8 @@ internal sealed partial class LibVlcFrameSource : IDisposable
                 source._buffers[i] = (nint)NativeMemory.AlignedAlloc((nuint)(pitch * lumaLines * 3 / 2), 64);
                 source._states[i] = BufferState.Free;
             }
+            if (source._spare != 0) NativeMemory.AlignedFree((void*)source._spare);
+            source._spare = (nint)NativeMemory.AlignedAlloc((nuint)(pitch * lumaLines * 3 / 2), 64);
             source._ready = -1;
         }
         source._format.TrySetResult((w, h));
@@ -187,6 +196,12 @@ internal sealed partial class LibVlcFrameSource : IDisposable
                         index = i;
                 source.Overruns++;
             }
+            if (index < 0)
+            {
+                planes[0] = source._spare;
+                planes[1] = source._spare + source._lumaPitch * source._lumaLines;
+                return 0;
+            }
             source._lockSequence[index] = ++source._nextSequence;
             source._states[index] = BufferState.Decoding;
             planes[0] = source._buffers[index];
@@ -206,6 +221,11 @@ internal sealed partial class LibVlcFrameSource : IDisposable
         int index = (int)picture - 1;
         lock (source._gate)
         {
+            if (index < 0)
+            {
+                source.FramesDropped++;
+                return;
+            }
             if (source._states[index] != BufferState.Decoding) return;
             if (source._ready >= 0)
             {
@@ -218,43 +238,4 @@ internal sealed partial class LibVlcFrameSource : IDisposable
         }
         source._frameReady.Release();
     }
-
-    [LibraryImport(Library, EntryPoint = "libvlc_new")]
-    private static unsafe partial nint New(int argc, nint* argv);
-
-    [LibraryImport(Library, EntryPoint = "libvlc_release")]
-    private static partial void ReleaseInstance(nint instance);
-
-    [LibraryImport(Library, EntryPoint = "libvlc_media_new_path", StringMarshalling = StringMarshalling.Utf8)]
-    private static partial nint MediaNewPath(nint instance, string path);
-
-    [LibraryImport(Library, EntryPoint = "libvlc_media_release")]
-    private static partial void MediaRelease(nint media);
-
-    [LibraryImport(Library, EntryPoint = "libvlc_media_player_new_from_media")]
-    private static partial nint PlayerNewFromMedia(nint media);
-
-    [LibraryImport(Library, EntryPoint = "libvlc_media_player_release")]
-    private static partial void PlayerRelease(nint player);
-
-    [LibraryImport(Library, EntryPoint = "libvlc_media_player_play")]
-    private static partial int Play(nint player);
-
-    [LibraryImport(Library, EntryPoint = "libvlc_media_player_stop")]
-    private static partial void Stop(nint player);
-
-    [LibraryImport(Library, EntryPoint = "libvlc_video_get_size")]
-    private static unsafe partial int GetSize(nint player, uint number, uint* width, uint* height);
-
-    [LibraryImport(Library, EntryPoint = "libvlc_video_set_format_callbacks")]
-    private static unsafe partial void SetFormatCallbacks(nint player,
-        delegate* unmanaged[Cdecl]<nint*, byte*, uint*, uint*, uint*, uint*, uint> setup,
-        delegate* unmanaged[Cdecl]<nint, void> cleanup);
-
-    [LibraryImport(Library, EntryPoint = "libvlc_video_set_callbacks")]
-    private static unsafe partial void SetCallbacks(nint player,
-        delegate* unmanaged[Cdecl]<nint, nint*, nint> @lock,
-        delegate* unmanaged[Cdecl]<nint, nint, nint*, void> unlock,
-        delegate* unmanaged[Cdecl]<nint, nint, void> display,
-        nint opaque);
 }

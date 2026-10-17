@@ -5,6 +5,7 @@ using Avalonia;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using Conic.Interop;
+using Conic.Interop.Linux;
 
 namespace Conic.Services;
 
@@ -21,9 +22,10 @@ internal static unsafe class VlcThumbnail
     private const int MaximumWidth = 384;
     private const int MaximumHeight = 216;
     private const int ParsedDone = 4;
+    private const int TrackVideo = 1;
+    private const int TrackTypeOffset = 12;
     private static readonly TimeSpan FrameTimeout = TimeSpan.FromSeconds(5);
     private static readonly SemaphoreSlim Gate = new(1);
-    private static Api? s_api;
     private static nint s_instance;
 
     public static Task<byte[]?> ReadAsync(string path) =>
@@ -37,7 +39,7 @@ internal static unsafe class VlcThumbnail
 
     private static byte[]? Extract(string path)
     {
-        Api api = s_api ??= new Api(NativeLibrary.Load(RepositoryPaths.PublicLibraryPath));
+        LibVlcApi api = LibVlcApi.Runtime;
         if (s_instance == 0)
         {
             string[] arguments = ["--intf=dummy", "--no-audio", "--no-spu", "--no-osd", "--no-video-title-show",
@@ -65,6 +67,8 @@ internal static unsafe class VlcThumbnail
             if (api.MediaParseWithOptions(media, 0, 3000) == 0)
                 for (DateTime deadline = DateTime.UtcNow.AddSeconds(3); api.MediaGetParsedStatus(media) != ParsedDone && DateTime.UtcNow < deadline;)
                     Thread.Sleep(20);
+            bool parsed = api.MediaGetParsedStatus(media) == ParsedDone;
+            if (parsed && !HasVideoTrack(api, media)) return null;
             long duration = api.MediaGetDuration(media);
             AddOption(api, media, ":no-audio");
             if (duration > 2000)
@@ -91,7 +95,20 @@ internal static unsafe class VlcThumbnail
         }
     }
 
-    private static void AddOption(Api api, nint media, string option)
+    private static bool HasVideoTrack(LibVlcApi api, nint media)
+    {
+        nint* tracks = null;
+        uint count = api.MediaTracksGet(media, &tracks);
+        try
+        {
+            for (uint i = 0; i < count; i++)
+                if (*(int*)(tracks[i] + TrackTypeOffset) == TrackVideo) return true;
+            return false;
+        }
+        finally { if (tracks != null) api.MediaTracksRelease(tracks, count); }
+    }
+
+    private static void AddOption(LibVlcApi api, nint media, string option)
     {
         nint value = Marshal.StringToCoTaskMemUTF8(option);
         try { api.MediaAddOption(media, (byte*)value); }
@@ -158,25 +175,4 @@ internal static unsafe class VlcThumbnail
 
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
     private static void Display(nint opaque, nint picture) => From(opaque).Done.Set();
-
-    /// <summary>The libvlc 3 calls used here, bound to the runtime's own libvlc.</summary>
-    private sealed class Api(nint library)
-    {
-        private nint Export(string name) => NativeLibrary.GetExport(library, name);
-        public delegate* unmanaged[Cdecl]<int, nint*, nint> New => (delegate* unmanaged[Cdecl]<int, nint*, nint>)Export("libvlc_new");
-        public delegate* unmanaged[Cdecl]<nint, byte*, nint> MediaNewPath => (delegate* unmanaged[Cdecl]<nint, byte*, nint>)Export("libvlc_media_new_path");
-        public delegate* unmanaged[Cdecl]<nint, byte*, void> MediaAddOption => (delegate* unmanaged[Cdecl]<nint, byte*, void>)Export("libvlc_media_add_option");
-        public delegate* unmanaged[Cdecl]<nint, int, int, int> MediaParseWithOptions => (delegate* unmanaged[Cdecl]<nint, int, int, int>)Export("libvlc_media_parse_with_options");
-        public delegate* unmanaged[Cdecl]<nint, int> MediaGetParsedStatus => (delegate* unmanaged[Cdecl]<nint, int>)Export("libvlc_media_get_parsed_status");
-        public delegate* unmanaged[Cdecl]<nint, long> MediaGetDuration => (delegate* unmanaged[Cdecl]<nint, long>)Export("libvlc_media_get_duration");
-        public delegate* unmanaged[Cdecl]<nint, void> MediaRelease => (delegate* unmanaged[Cdecl]<nint, void>)Export("libvlc_media_release");
-        public delegate* unmanaged[Cdecl]<nint, nint> PlayerNewFromMedia => (delegate* unmanaged[Cdecl]<nint, nint>)Export("libvlc_media_player_new_from_media");
-        public delegate* unmanaged[Cdecl]<nint, int> Play => (delegate* unmanaged[Cdecl]<nint, int>)Export("libvlc_media_player_play");
-        public delegate* unmanaged[Cdecl]<nint, void> Stop => (delegate* unmanaged[Cdecl]<nint, void>)Export("libvlc_media_player_stop");
-        public delegate* unmanaged[Cdecl]<nint, void> PlayerRelease => (delegate* unmanaged[Cdecl]<nint, void>)Export("libvlc_media_player_release");
-        public delegate* unmanaged[Cdecl]<nint, delegate* unmanaged[Cdecl]<nint*, byte*, uint*, uint*, uint*, uint*, uint>, delegate* unmanaged[Cdecl]<nint, void>, void> SetFormatCallbacks =>
-            (delegate* unmanaged[Cdecl]<nint, delegate* unmanaged[Cdecl]<nint*, byte*, uint*, uint*, uint*, uint*, uint>, delegate* unmanaged[Cdecl]<nint, void>, void>)Export("libvlc_video_set_format_callbacks");
-        public delegate* unmanaged[Cdecl]<nint, delegate* unmanaged[Cdecl]<nint, nint*, nint>, delegate* unmanaged[Cdecl]<nint, nint, nint*, void>, delegate* unmanaged[Cdecl]<nint, nint, void>, nint, void> SetCallbacks =>
-            (delegate* unmanaged[Cdecl]<nint, delegate* unmanaged[Cdecl]<nint, nint*, nint>, delegate* unmanaged[Cdecl]<nint, nint, nint*, void>, delegate* unmanaged[Cdecl]<nint, nint, void>, nint, void>)Export("libvlc_video_set_callbacks");
-    }
 }

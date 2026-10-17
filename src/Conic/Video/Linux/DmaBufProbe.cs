@@ -9,6 +9,7 @@ using Avalonia.Media;
 using Avalonia.Platform;
 using Avalonia.Rendering.Composition;
 using Avalonia.Threading;
+using Conic.Interop;
 using Conic.Interop.Linux;
 
 namespace Conic.Video.Linux;
@@ -107,6 +108,7 @@ internal static class DmaBufProbe
                 }
                 else
                 {
+                    VlcRuntime.Initialize();
                     source = new LibVlcFrameSource(media, chroma);
                     source.Play();
                     Task first = await Task.WhenAny(source.Format, Task.Delay(TimeSpan.FromSeconds(10)));

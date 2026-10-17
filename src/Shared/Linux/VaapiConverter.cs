@@ -270,6 +270,42 @@ internal sealed unsafe partial class VaapiConverter : IDisposable
         Check(VaApi.SyncSurface(_display, target), "vaSyncSurface");
     }
 
+    public readonly ref struct TargetView
+    {
+        private readonly VaapiConverter _owner;
+        private readonly VAImage _image;
+        public readonly byte* Pixels;
+        public readonly int Pitch;
+
+        internal TargetView(VaapiConverter owner, VAImage image, byte* data)
+        {
+            _owner = owner;
+            _image = image;
+            Pixels = data + image.Offsets[0];
+            Pitch = (int)image.Pitches[0];
+        }
+
+        public void Dispose()
+        {
+            VaApi.UnmapBuffer(_owner._display, _image.Buffer);
+            VaApi.DestroyImage(_owner._display, _image.Id);
+        }
+    }
+
+    public TargetView MapTarget(int index)
+    {
+        VAImage image;
+        Check(VaApi.DeriveImage(_display, _targets[index], &image), "vaDeriveImage");
+        void* data = null;
+        int status = VaApi.MapBuffer(_display, image.Buffer, &data);
+        if (status != VaApi.Success)
+        {
+            VaApi.DestroyImage(_display, image.Id);
+            throw new InvalidOperationException($"vaMapBuffer failed: {VaApi.Describe(status)}");
+        }
+        return new TargetView(this, image, (byte*)data);
+    }
+
     /// <summary>Reads BGRA pixels of one row of a converted target (diagnostics only).</summary>
     public byte[] ReadBackRow(int index, int y, int[] columns)
     {

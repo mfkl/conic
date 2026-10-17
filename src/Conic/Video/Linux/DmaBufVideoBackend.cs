@@ -45,6 +45,7 @@ internal sealed class DmaBufVideoBackend : IVideoBackend
     private int _videoHeight;
     private bool _gpuUpdatePending;
     private bool _gpuEnabled;
+    private bool _showingCpuFrame;
     private bool _reportedFirstGpuFrame;
     private bool _reportedFirstCpuFrame;
     private long _gpuFramesPresented;
@@ -186,6 +187,8 @@ internal sealed class DmaBufVideoBackend : IVideoBackend
         CopyFrameToBitmap(frame, _bitmap);
         _videoWidth = frame.Width;
         _videoHeight = frame.Height;
+        _showingCpuFrame = true;
+        UpdateLayout();
         if (!_reportedFirstCpuFrame)
         {
             _reportedFirstCpuFrame = true;
@@ -205,9 +208,10 @@ internal sealed class DmaBufVideoBackend : IVideoBackend
 
     private async Task PresentDmaBufFrameAsync(DmaBufPluginBridge.DmaBufFrame frame)
     {
+        DmaBufPluginBridge? bridge = _bridge;
         if (_interop is null || _drawingSurface is null)
         {
-            _bridge?.Release(frame);
+            bridge?.Release(frame);
             return;
         }
 
@@ -219,10 +223,11 @@ internal sealed class DmaBufVideoBackend : IVideoBackend
                 return;
             _videoWidth = frame.Width;
             _videoHeight = frame.Height;
-            UpdateLayout();
 
             await _drawingSurface.UpdateAsync(image);
             if (_disposed || !_gpuEnabled) return;
+            _showingCpuFrame = false;
+            UpdateLayout();
             _gpuFramesPresented++;
             if (_targets.Count < 1024)
                 _targets.Add((frame.Generation, frame.Slot));
@@ -240,7 +245,7 @@ internal sealed class DmaBufVideoBackend : IVideoBackend
         }
         finally
         {
-            _bridge?.Release(frame);
+            bridge?.Release(frame);
             _gpuUpdatePending = false;
         }
     }
@@ -290,6 +295,11 @@ internal sealed class DmaBufVideoBackend : IVideoBackend
             await image.DisposeAsync();
             throw;
         }
+        if (_disposed || !_gpuEnabled)
+        {
+            await image.DisposeAsync();
+            throw new ObjectDisposedException(nameof(DmaBufVideoBackend));
+        }
         _imported[frame.Slot] = image;
         return image;
     }
@@ -300,7 +310,7 @@ internal sealed class DmaBufVideoBackend : IVideoBackend
             return;
         _bridge?.DisableDmaBufFrames();
         ReleaseGpuResources();
-        ReportStatus($"DMA-BUF {reason}; using CPU BGRA fallback for the next video");
+        ReportStatus($"DMA-BUF {reason}; using CPU BGRA fallback");
         _host.InvalidateVisual();
     }
 
@@ -322,7 +332,7 @@ internal sealed class DmaBufVideoBackend : IVideoBackend
     {
         if (_surfaceVisual is null || _videoClip is null || _videoWidth <= 0 || _videoHeight <= 0)
             return;
-        _videoClip.Opacity = _geometry.Active != 0 ? 1 : 0;
+        _videoClip.Opacity = _geometry.Active != 0 && !_showingCpuFrame ? 1 : 0;
         VideoSurfaceLayout layout = CurrentVideoLayout;
         _videoClip.Size = new Vector(layout.Destination.Width, layout.Destination.Height);
         _videoClip.Offset = new Vector3D(layout.Destination.X, layout.Destination.Y, 0);
@@ -332,7 +342,7 @@ internal sealed class DmaBufVideoBackend : IVideoBackend
 
     public void Render(DrawingContext context)
     {
-        if (_gpuEnabled || _bitmap is null || _geometry.Active == 0)
+        if ((_gpuEnabled && !_showingCpuFrame) || _bitmap is null || _geometry.Active == 0)
             return;
         VideoSurfaceLayout layout = CurrentVideoLayout;
         context.DrawImage(_bitmap, layout.Source, layout.Destination);

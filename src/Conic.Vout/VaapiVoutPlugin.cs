@@ -459,7 +459,11 @@ public static unsafe class VaapiVoutPlugin
         lock (CallbackGate)
         {
             if (s_dmaBufCallback == 0)
+            {
+                using VaapiConverter.TargetView view = converter.MapTarget(slot);
+                VoutHost.PublishFrame((uint)converter.TargetWidth, (uint)converter.TargetHeight, view.Pitch, (nint)view.Pixels, presentationTimestamp);
                 return;
+            }
             lock (state)
                 state.Lent[slot] = true;
             PicturePoolTelemetry.OpaquePictureReceived();

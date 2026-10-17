@@ -49,6 +49,8 @@ rebuilds the desktop app around it:
   **Live**, at the **Next open**, or after a **Restart**.
 - **Messages**, VLC's log, live.
 - **Dark and Light themes**, accent colors and a compact density.
+- **The system's media controls**: media keys, Windows' media flyout and
+  taskbar buttons, macOS Now Playing, and MPRIS on Linux.
 
 ![Conic's Home, with recently played media](docs/images/home.png)
 
@@ -170,6 +172,38 @@ texture on Windows, an IOSurface on macOS, a DMA-BUF on Linux. Video becomes
 one more visual in the window, so z-order, transparency and animation just
 work.
 
+```mermaid
+flowchart LR
+    decoder["VLC 3.0.24 decoder"]
+    decoder -- "D3D11VA NV12 / P010" --> win["Conic vout, Windows<br/>ID3D11VideoProcessor to a<br/>BGRA keyed-mutex texture"]
+    decoder -- "VideoToolbox CVPixelBuffer" --> mac["Conic vout, macOS<br/>IOSurface and a<br/>Metal shared event"]
+    decoder -- "VA-API surface" --> linux["Conic vout, Linux<br/>VA-API video processing<br/>to a BGRA DMA-BUF"]
+    win -- "D3D11 shared handle" --> avalonia["Avalonia compositor<br/>ICompositionGpuInterop"]
+    mac -- "IOSurfaceRef" --> avalonia
+    linux -- "DMA-BUF fd" --> avalonia
+    avalonia --> window["One visual, under the<br/>controls, panels and menus"]
+```
+
+The three imports differ only in the handle and how the compositor waits
+for the producer:
+
+```csharp
+// Windows: a shared D3D11 texture, handed over with its keyed mutex.
+image = interop.ImportImage(new PlatformHandle(frame.SharedHandle,
+    KnownPlatformGraphicsExternalImageHandleTypes.D3D11TextureGlobalSharedHandle), properties);
+await surface.UpdateWithKeyedMutexAsync(image, 1, 0);
+
+// macOS: the IOSurface behind VLC's pixel buffer, fenced by Metal shared events.
+image = interop.ImportImage(new PlatformHandle(frame.Surface,
+    KnownPlatformGraphicsExternalImageHandleTypes.IOSurfaceRef), properties);
+await surface.UpdateWithTimelineSemaphoresAsync(image, ready, value, done, value);
+
+// Linux: a DMA-BUF exported by VA-API, described by its DRM format and modifier.
+image = interop.ImportImage(new PlatformHandle(frame.Fd,
+    KnownPlatformGraphicsExternalImageHandleTypes.DmaBufFileDescriptor), dmaBufProperties);
+await surface.UpdateAsync(image);
+```
+
 Linux came last. VLC's VA-API decoder decodes into surfaces the video output
 provides; the output converts each one to BGRA with VA-API video processing
 and exports it as a DMA-BUF, which Avalonia imports into its EGL compositor.
@@ -202,20 +236,26 @@ discovery inside a portable package. Each got its own smoke test.
 ### Cross-platform
 
 - **Windows x64:** D3D11 hardware decoding and GPU presentation, with a
-  software upload path and a CPU bitmap fallback.
+  software upload path and a CPU bitmap fallback. The System Media Transport
+  Controls and the taskbar button show and control what plays.
 - **macOS arm64 and x64:** VideoToolbox decoding and IOSurface presentation,
-  native fullscreen, the app menu, an `.app` bundle.
+  native fullscreen, the app menu, an `.app` bundle, and Now Playing.
 - **Linux x64:** VA-API decoding and DMA-BUF presentation, with a CPU
   fallback when VA-API or the import is unavailable. It runs on X11, and
-  through XWayland in Wayland sessions.
+  through XWayland in Wayland sessions, and publishes MPRIS on the session
+  bus.
 
 One C# codebase covers all three. Platform code is limited to the video
 backends, window chrome and a few OS services (audio devices, screensaver,
-proxy password storage). Builds are portable archives that bundle VLC 3.0.24.
+proxy password storage, the media session). One media session follows the
+player and feeds each system's controls, so media keys and the system's
+own play, pause, seek, previous and next reach the same commands as the
+app's buttons. Builds are portable archives that bundle VLC 3.0.24.
 
 ### Quality
 
-- 670 unit tests for the engine contract, state, settings and view models.
+- 679 unit tests for the engine contract, state, settings, view models and
+  the media session, the MPRIS one against a real session bus in CI.
 - About 30 smoke modes drive the real app with real VLC and real media on
   Windows and macOS: every playback path, the default shortcuts, the queue,
   menus, Settings (the equalizer is measured on the audio output, network

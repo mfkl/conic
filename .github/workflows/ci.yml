@@ -190,7 +190,17 @@ jobs:
         with:
           dotnet-version: ${{ steps.pins.outputs.sdk }}
       - name: Build app and run managed UI tests
+        if: matrix.os != 'ubuntu-24.04'
         run: ./eng/test.ps1 -Scope Desktop -Configuration '${{ matrix.configuration }}'
+      - name: Build app and run managed UI tests on a private session bus
+        if: matrix.os == 'ubuntu-24.04'
+        shell: bash
+        run: |
+          if ! command -v dbus-run-session > /dev/null; then
+            sudo apt-get update
+            sudo apt-get install --no-install-recommends -y dbus-daemon
+          fi
+          dbus-run-session -- pwsh ./eng/test.ps1 -Scope Desktop -Configuration '${{ matrix.configuration }}'
       - name: Install Linux virtual display tools
         if: matrix.os == 'ubuntu-24.04' && matrix.configuration == 'Release'
         shell: bash

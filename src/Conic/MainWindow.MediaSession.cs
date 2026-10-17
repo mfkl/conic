@@ -1,3 +1,5 @@
+using Avalonia.Controls;
+using Conic.Interop.Linux;
 using Conic.Interop.Windows;
 using Conic.Services;
 
@@ -15,6 +17,22 @@ public partial class MainWindow
             _mediaSession.Attach(SystemMediaControls.Create(handle.Handle, _mediaSession));
             _mediaSession.Attach(TaskbarButtons.Create(this, _mediaSession));
         }
+        if (OperatingSystem.IsLinux()) _ = AttachMprisAsync(_mediaSession);
         Closed += (_, _) => { _mediaSession?.Dispose(); _mediaSession = null; };
+    }
+
+    [System.Runtime.Versioning.SupportedOSPlatform("linux")]
+    private async Task AttachMprisAsync(MediaSession session)
+    {
+        MprisService? mpris = await MprisService.StartAsync(session, RaiseFromMediaSession);
+        if (mpris is null) return;
+        if (_mediaSession != session) { mpris.Dispose(); return; }
+        session.Attach(mpris);
+    }
+
+    private void RaiseFromMediaSession()
+    {
+        if (WindowState == WindowState.Minimized) WindowState = WindowState.Normal;
+        Activate();
     }
 }

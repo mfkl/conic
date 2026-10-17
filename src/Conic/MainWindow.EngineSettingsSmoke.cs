@@ -432,21 +432,23 @@ public partial class MainWindow
 
                 // ---- Network › Security ----
                 // GnuTLS options: VLC on macOS uses securetransport, and Settings hides them.
+                async Task OpenUnreachable(string name, Func<PlayerSettings, PlayerSettings> change)
+                {
+                    await Open(name, change, "https://127.0.0.1:9/clip.mp4");
+                    await Task.Delay(4000);
+                }
                 if (OperatingSystem.IsMacOS())
                 {
-                    await Open("tls-macos", s => s, "https://127.0.0.1:9/clip.mp4");
-                    await Task.Delay(1500);
+                    await OpenUnreachable("tls-macos", s => s);
                     await WaitForLog("using tls client module \"securetransport\"", "VLC uses Secure Transport on macOS");
                     Require(!_settingsViewModel.ShowsSecurity, "Settings hides the GnuTLS security options");
                     Pass("Security: Secure Transport, GnuTLS options hidden");
                 }
                 else
                 {
-                    await Open("tls-trust-on", s => s, "https://127.0.0.1:9/clip.mp4");
-                    await Task.Delay(1500);
+                    await OpenUnreachable("tls-trust-on", s => s);
                     await WaitForLog("loaded \\d+ trusted CAs from system", "certificates are verified against the system store");
-                    await Open("tls-trust-off", s => s with { VerifyCertificates = false }, "https://127.0.0.1:9/clip.mp4");
-                    await Task.Delay(1500);
+                    await OpenUnreachable("tls-trust-off", s => s with { VerifyCertificates = false });
                     await WaitForLog("tls client", "a TLS client starts");
                     await RequireNoLog("trusted CAs from system", "the system store is not loaded when off");
                     Pass("Verify certificates against the system trust store");

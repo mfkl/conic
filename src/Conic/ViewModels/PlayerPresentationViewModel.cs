@@ -450,6 +450,7 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
     public string SeekPreviewText => FormatTime(_duration * Position);
     public string ElapsedText { get => _elapsedText; private set => Set(ref _elapsedText, value); }
     public string DurationText { get => _durationText; private set => Set(ref _durationText, value); }
+    public TimeSpan Duration => _duration;
     public bool IsPlaying { get => _isPlaying; private set => Set(ref _isPlaying, value); }
     public PlaybackStatus PlaybackStatus
     {

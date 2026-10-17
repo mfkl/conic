@@ -96,7 +96,7 @@ else {
     New-Item -ItemType Directory -Path (Join-Path $stage 'plugins') | Out-Null
     Copy-Item -LiteralPath $plugin -Destination (Join-Path $stage 'plugins/libvlc_avalonia_plugin.so')
 }
-foreach ($file in @('LICENSE', 'docs/contest/DEPENDENCIES.md')) {
+foreach ($file in @('LICENSE')) {
     Copy-Item -LiteralPath (Join-Path $productRoot $file) -Destination $stage
 }
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'versions.json') -Destination $stage

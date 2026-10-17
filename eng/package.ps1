@@ -119,7 +119,7 @@ $cache = [IO.Path]::GetFullPath((Join-Path $vlcStage 'plugins/plugins.dat'))
 if (-not $cache.StartsWith($stage + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) { throw 'Plugin cache is outside staging.' }
 if (-not (Test-Path -LiteralPath $cache -PathType Leaf)) { throw 'VLC plugin cache was not generated.' }
 Remove-Item -LiteralPath $cache
-foreach ($file in @('LICENSE', 'docs/WINDOWS_QUICK_START.md', 'docs/contest/DEPENDENCIES.md')) {
+foreach ($file in @('LICENSE')) {
     Copy-Item -LiteralPath (Join-Path $productRoot $file) -Destination $stage
 }
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'versions.json') -Destination $stage
@@ -130,7 +130,6 @@ $manifest = [ordered]@{
     createdUtc = [DateTime]::UtcNow.ToString('o'); productCommit = $productCommit; workingTreeChanges = $productChanges
     frameworkCommit = $frameworkCommit; sdk = $sdk; pinnedSdk = $pins.dotnetSdk; pins = $pins
     source = 'https://github.com/mfkl/conic'; selfContained = $true
-    distributionStatus = 'local-review'; distributionBlockers = @('Public release not yet approved by the maintainer; see DEPENDENCIES.md.')
     hardwarePlaybackQualified = $false
     files = @(Get-ChildItem -LiteralPath $stage -Recurse -File | Sort-Object FullName | ForEach-Object {
         [ordered]@{ path = [IO.Path]::GetRelativePath($stage, $_.FullName).Replace('\', '/'); bytes = $_.Length; sha256 = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant() }

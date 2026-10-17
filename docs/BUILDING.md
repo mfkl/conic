@@ -14,8 +14,7 @@ git submodule update --init
 ```
 
 [`eng/versions.json`](../eng/versions.json) pins the native and framework
-inputs, including the VLCLR commit and the VLC runtime. The architecture
-boundary is recorded in [`rfc/0001-port-boundaries.md`](rfc/0001-port-boundaries.md).
+inputs, including the VLCLR commit and the VLC runtime.
 
 ## Windows
 
@@ -49,8 +48,7 @@ adjacent `vlc` directory.
 `eng/get-vlc.ps1` downloads the pinned VLC 3.0.24 DMG (an installed
 `/Applications/VLC.app` also works). `eng/test-macos.ps1 -Media <clip> [-Window]`
 runs the engine, IOSurface and window smokes, and `eng/package-macos.ps1`
-builds an ad hoc signed `Conic.app`. See
-[the cross-platform status](CROSS_PLATFORM.md).
+builds an ad hoc signed `Conic.app`.
 
 ## Linux
 
@@ -114,8 +112,7 @@ Build a portable Windows ZIP with the pinned VLC runtime, which
 ```
 
 CI builds the Windows, macOS and Linux packages on pushes to `main` and on `v*`
-tags, and publishes them as a GitHub release (see the
-[CI guide](CI.md#releases)).
+tags, and publishes them as a GitHub release.
 
 ## Platform status
 
@@ -131,7 +128,3 @@ hardware decoding, software decoding uploaded to the GPU, and the CPU bitmap
 fallback. Subtitles are rendered by VLC and drawn above the video, so they also
 show with hardware decoding. Multi-GPU switching, sleep and resume, and styled
 ASS or image subtitles are not qualified.
-
-More: [CI setup](CI.md), [video backends](VIDEO_BACKENDS.md),
-[D3D11 composition](D3D11_COMPOSITION.md),
-[target qualification](TARGET_QUALIFICATION.md).

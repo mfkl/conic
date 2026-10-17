@@ -99,7 +99,7 @@ internal objects and variables, not through the public LibVLC API.
 
 ### What it cost
 
-- **Time.** 314 commits on 16 working days between August 31 and October 17,
+- **Time.** 290 commits on 16 working days between August 31 and October 17,
   2026. Most of the app was built in two bursts: the player itself in early
   September, and VLC 3 parity, macOS and Linux in October.
 - **Size.** About 28,000 lines of C# in `src` (of which about 5,900 drive the

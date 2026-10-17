@@ -104,7 +104,7 @@ else {
     New-Item -ItemType Directory -Path (Join-Path $executables 'plugins') | Out-Null
     Copy-Item -LiteralPath $plugin -Destination (Join-Path $executables 'plugins/libvlc_avalonia_plugin.dylib')
 }
-foreach ($file in @('LICENSE', 'docs/contest/DEPENDENCIES.md')) {
+foreach ($file in @('LICENSE')) {
     Copy-Item -LiteralPath (Join-Path $productRoot $file) -Destination (Join-Path $contents 'Resources')
 }
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'versions.json') -Destination (Join-Path $contents 'Resources')

@@ -12,7 +12,7 @@ and this README is also its migration write-up.
 > will not be maintained, and issues and pull requests may go unanswered. To
 > watch videos, use [VLC](https://www.videolan.org/vlc/).
 
-[![Watch the demo: Conic playing Sintel](docs/media/demo-poster.png)](docs/media/conic-demo.mp4)
+https://github.com/user-attachments/assets/e3d355eb-d84d-4d31-9c52-2dbd8bb15854
 
 ## Install
 

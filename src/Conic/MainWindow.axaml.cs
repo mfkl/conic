@@ -82,6 +82,7 @@ public partial class MainWindow : Window
         _volumeSaveTimer.Tick += (_, _) => { _volumeSaveTimer.Stop(); _presentation.SaveVolume(); };
         InitializePictureInPicture();
         InitializePlaybackSettings();
+        InitializeMediaSession();
         InitializeInterfaceSettings();
         InitializeControlSettings();
         InitializeMacMenu();

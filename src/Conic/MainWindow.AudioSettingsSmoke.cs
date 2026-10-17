@@ -174,7 +174,7 @@ public partial class MainWindow
                 Sound headphones = await Played("spatial-headphones", s => s with { SpatialAudio = true, SpatialAudioMode = "Headphones" }, mix);
                 Sound room = await Played("spatial-room", s => s with { SpatialAudio = true, SpatialAudioMode = "Room" }, mix);
                 Console.WriteLine($"[audio-settings-smoke] spatial: headphones {headphones}; room {room}");
-                double headphonesCut = OperatingSystem.IsLinux() && !File.Exists("/usr/share/vlc/hrtfs/dodeca_and_7channel_3DSL_HRTF.sofa") ? 3 : 6;
+                double headphonesCut = OperatingSystem.IsLinux() && !VlcCorePlayer.HasVlcHrtf ? 3 : 6;
                 Require(flat.Side < -100 && headphones.Tone(10000) < flat.Tone(10000) - headphonesCut && room.Side > -80, $"Spatial audio renders the centered mix for headphones (10 kHz {flat.Tone(10000):0.0} -> {headphones.Tone(10000):0.0} dB) and spreads it in a room (side {room.Side:0.0} dB)");
                 await RequireLog("using audio filter module \"spatializer\"", "Room uses VLC's spatializer");
                 var spatialLive = await Changed("spatial-live", s => s with { SpatialAudioMode = "Room" }, () => _settingsViewModel.SpatialAudio = true, mix);

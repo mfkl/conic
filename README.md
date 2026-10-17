@@ -8,9 +8,14 @@ macOS and Linux. It is an entry in the
 and this README is also its migration write-up.
 
 > [!NOTE]
-> Conic is a one-off experiment. It is not made or endorsed by VideoLAN, it
-> will not be maintained, and issues and pull requests may go unanswered. To
-> watch videos, use [VLC](https://www.videolan.org/vlc/).
+> Conic is an independent experiment. It is not made or endorsed by VideoLAN.
+
+| VLC 3.0.24 | Conic |
+| --- | --- |
+| ![VLC 3 playback](docs/contest/images/vlc-playback.png) | ![Conic playback](docs/contest/images/conic-playback.png) |
+| ![VLC 3 Simple Preferences](docs/contest/images/vlc-preferences.png) | ![Conic Settings](docs/contest/images/conic-preferences.png) |
+
+More pairs: [VLC 3 and Conic, side by side](docs/contest/COMPARISON.md).
 
 https://github.com/user-attachments/assets/e3d355eb-d84d-4d31-9c52-2dbd8bb15854
 
@@ -24,8 +29,8 @@ each OS warns on the first launch.
 | Platform | Download | First launch |
 | --- | --- | --- |
 | Windows x64 | `Conic-<version>-win-x64.zip` | Unzip, run `Conic.exe`. If SmartScreen stops it: **More info**, **Run anyway**. |
-| macOS | `Conic-<version>-osx-arm64.zip` (Apple silicon) or `-osx-x64.zip` (Intel) | Move `Conic.app` to Applications. When macOS refuses it: **System Settings > Privacy & Security**, **Open Anyway**. |
-| Linux x64 | `Conic-<version>-linux-x64.tar.gz` | Extract, run `./Conic`. Needs glibc 2.39 or later (Ubuntu 24.04). |
+| macOS | `Conic-<version>-osx-arm64.zip` (Apple silicon) or `-osx-x64.zip` (Intel) | Move `Conic.app` to Applications. When macOS refuses it: **System Settings > Privacy & Security**, **Open Anyway**, or run `xattr -dr com.apple.quarantine /Applications/Conic.app` once in Terminal. |
+| Linux x64 | `Conic-<version>-linux-x64.tar.gz` | Extract, run `./Conic`. Needs glibc 2.38 or later: Ubuntu 24.04, Debian 13, Fedora 39 or newer. |
 
 To remove Conic, delete its folder or app. Settings and history stay in your
 user profile. To build it yourself, see [Building Conic](docs/BUILDING.md).
@@ -51,15 +56,6 @@ rebuilds the desktop app around it:
 | --- | --- |
 | ![The player with the queue panel open](docs/images/queue.png) | ![The right-click menu, with VLC 3's entries](docs/images/context-menu.png) |
 | ![Settings, Audio: the equalizer](docs/images/settings-equalizer.png) | ![Settings, Video: picture adjustments](docs/images/settings-video.png) |
-
-## Before and after
-
-| VLC 3.0.24 | Conic |
-| --- | --- |
-| ![VLC 3 playback](docs/contest/images/vlc-playback.png) | ![Conic playback](docs/contest/images/conic-playback.png) |
-| ![VLC 3 Simple Preferences](docs/contest/images/vlc-preferences.png) | ![Conic Settings](docs/contest/images/conic-preferences.png) |
-
-More pairs: [VLC 3 and Conic, side by side](docs/contest/COMPARISON.md).
 
 ## Parity with VLC 3
 

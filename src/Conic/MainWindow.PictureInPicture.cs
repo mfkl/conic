@@ -70,11 +70,16 @@ public partial class MainWindow
     // at 1920x970): place it again until the animation is over.
     private async void PlacePictureInPictureAfterFullscreen()
     {
-        for (DateTime settled = DateTime.UtcNow.AddSeconds(3); DateTime.UtcNow < settled && _presentation.IsPictureInPicture;)
+        DateTime deadline = DateTime.UtcNow.AddSeconds(10);
+        for (DateTime settled = DateTime.UtcNow.AddSeconds(3); DateTime.UtcNow < settled && DateTime.UtcNow < deadline && _presentation.IsPictureInPicture;)
         {
             await Task.Delay(100);
             if (_presentation.IsPictureInPicture && (Math.Abs(ClientSize.Width - 480) >= 2 || Math.Abs(ClientSize.Height - 270) >= 2))
+            {
+                Console.WriteLine($"[pip] window left at {ClientSize.Width}x{ClientSize.Height} after fullscreen; placing it again");
                 PlacePictureInPicture();
+                if (DateTime.UtcNow.AddSeconds(1.5) > settled) settled = DateTime.UtcNow.AddSeconds(1.5);
+            }
         }
     }
 

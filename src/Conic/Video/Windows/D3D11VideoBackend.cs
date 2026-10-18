@@ -59,6 +59,10 @@ internal sealed class D3D11VideoBackend : IVideoBackend
     public Size VideoSize => new(_videoWidth, _videoHeight);
     public bool HasCpuFrame => _reportedFirstCPUFrame;
     public bool HasGpuFrame => _reportedFirstGPUFrame;
+    public SharedVideoSurface? SharedSurface =>
+        _GPUEnabled && _reportedFirstGPUFrame && _drawingSurface is not null && _videoWidth > 0 && _videoHeight > 0
+            ? new(_drawingSurface, new Size(_videoWidth, _videoHeight), new Rect(0, 0, _videoWidth, _videoHeight))
+            : null;
 
     public IMediaEngine CreatePlayer()
     {

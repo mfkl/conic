@@ -28,6 +28,11 @@ public sealed class CompositionVideoSurface : Control, IDisposable
     internal VideoSubtitle? Subtitle => Backend?.Geometry.Active != 0 ? Backend?.Subtitle : null;
     /// <summary>Raised when the subtitle overlay or the video placement changes.</summary>
     internal event Action? PresentationChanged;
+    /// <summary>The GPU surface the video is on, for <see cref="VideoMirror"/>; null on the CPU path.</summary>
+    internal SharedVideoSurface? SharedSurface => Backend?.SharedSurface;
+    /// <summary>Raised when <see cref="SharedSurface"/> or the geometry changes.</summary>
+    internal event Action? SharedSurfaceChanged;
+    private (SharedVideoSurface?, VideoGeometry) _notifiedShare;
     internal VideoSurfaceLayout CurrentVideoLayout => VideoSurfaceLayout.Calculate(
         Bounds.Size, Backend?.VideoSize ?? default, GeometryForSmoke,
         TopLevel.GetTopLevel(this)?.RenderScaling ?? 1);
@@ -149,7 +154,10 @@ public sealed class CompositionVideoSurface : Control, IDisposable
             Interval = TimeSpan.FromMilliseconds(16),
         };
         _frameTimer.Tick += async (_, _) =>
+        {
+            NotifySharedSurface();
             await PresentLatestFrameAsync();
+        };
     }
 
     protected override void OnAttachedToVisualTree(
@@ -167,6 +175,7 @@ public sealed class CompositionVideoSurface : Control, IDisposable
             _session = new VideoBackendSession(VideoBackendFactory.Create(this, new VideoBackendOptions(
                 ForceUnavailableAdapterForSmoke, ProbeSharedTextureForSmoke)));
             _session.Backend.StatusChanged += ReportStatus;
+            _session.Backend.StatusChanged += OnBackendStatusChanged;
             _session.Backend.GpuFramePresented += OnGpuFramePresented;
             _session.Backend.PresentationChanged += OnPresentationChanged;
             _ = InitializeBackendAsync(_session);
@@ -372,11 +381,25 @@ public sealed class CompositionVideoSurface : Control, IDisposable
             VideoBackendSession session = _session;
             _session = null;
             session.Backend.StatusChanged -= ReportStatus;
+            session.Backend.StatusChanged -= OnBackendStatusChanged;
             session.Backend.GpuFramePresented -= OnGpuFramePresented;
             session.Backend.PresentationChanged -= OnPresentationChanged;
             session.Dispose();
             PresentationChanged?.Invoke();
+            NotifySharedSurface();
         }
+    }
+
+    // A backend reports a fallback after releasing its surface; tell mirrors
+    // in the same UI pass, before the compositor draws the released surface.
+    private void OnBackendStatusChanged(string status) => NotifySharedSurface();
+
+    private void NotifySharedSurface()
+    {
+        var share = (SharedSurface, GeometryForSmoke);
+        if (share.Equals(_notifiedShare)) return;
+        _notifiedShare = share;
+        SharedSurfaceChanged?.Invoke();
     }
 
     public void Dispose()

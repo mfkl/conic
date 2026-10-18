@@ -29,6 +29,13 @@ public partial class HomeView : UserControl
 
     public event EventHandler? MoreRequested;
 
+    /// <summary>The player's video, shown live in the mini player.</summary>
+    internal CompositionVideoSurface? VideoSource
+    {
+        get => MiniPlayerVideo.Source;
+        set => MiniPlayerVideo.Source = value;
+    }
+
     public HomeView()
     {
         InitializeComponent();

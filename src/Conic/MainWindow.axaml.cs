@@ -108,6 +108,7 @@ public partial class MainWindow : Window
         };
         VideoSurface.EngineStateChanged += OnEngineStateChanged;
         SubtitleLayer.Surface = VideoSurface;
+        HomeScreen.VideoSource = VideoSurface;
         Closed += (_, _) => { SaveWindowGeometry(); _presentation.OnClosing(); _autoHideTimer.Stop(); _volumeSaveTimer.Stop(); };
         SizeChanged += (_, _) => { ApplyResponsiveChrome(); ApplyResponsiveSettings(); PlaceCaptionButtons(); };
         Activated += (_, _) => { WakeChrome(); PlaceCaptionButtons(); };

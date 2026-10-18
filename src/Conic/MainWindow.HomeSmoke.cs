@@ -67,6 +67,7 @@ public partial class MainWindow
                     _presentation.ShowHomeCommand.Execute(null);
                     await Task.Delay(1000);
                     Require(_presentation.ShowMiniPlayer && HomeScreen.IsVisible, "Home shows now playing");
+                    Require(!VideoSurface.HasGpuFrameForSmoke || HomeScreen.MiniPlayerVideo.HasVideo, "the mini player shows the live GPU video");
                     Require(ReferenceEquals(engine, VideoSurface.Player) && engine.State.Generation == generation && engine.State.Position > before,
                         "Home preserves the engine and advancing playback");
                     CaptureHome("home-now-playing");

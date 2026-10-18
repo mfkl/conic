@@ -72,6 +72,11 @@ internal sealed class IOSurfaceVideoBackend : IVideoBackend
     public Size VideoSize => new(_videoWidth, _videoHeight);
     public bool HasCpuFrame => _reportedFirstCpuFrame;
     public bool HasGpuFrame => _reportedFirstGpuFrame;
+    // The imported surface can be larger than the visible picture.
+    public SharedVideoSurface? SharedSurface =>
+        _gpuEnabled && _reportedFirstGpuFrame && _drawingSurface is not null && _videoWidth > 0 && _videoHeight > 0
+            ? new(_drawingSurface, new Size(Math.Max(_surfaceWidth, _videoWidth), Math.Max(_surfaceHeight, _videoHeight)), new Rect(_visibleX, _visibleY, _videoWidth, _videoHeight))
+            : null;
     internal VideoSurfaceLayout CurrentVideoLayout => VideoSurfaceLayout.Calculate(
         _host.Bounds.Size, VideoSize, _geometry, TopLevel.GetTopLevel(_host)?.RenderScaling ?? 1);
 

@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
+using Avalonia.Rendering.Composition;
 using Player.Contracts;
 using Conic.Interop;
 
@@ -22,6 +23,9 @@ internal interface IVideoBackend : IDisposable
     Size VideoSize { get; }
     bool HasCpuFrame { get; }
     bool HasGpuFrame { get; }
+    /// <summary>The drawing surface GPU frames are presented into, for showing the
+    /// video a second time; null while no GPU frame is on it.</summary>
+    SharedVideoSurface? SharedSurface { get; }
     Task InitializeAsync();
     IMediaEngine CreatePlayer();
     Task PresentLatestFrameAsync();
@@ -31,6 +35,9 @@ internal interface IVideoBackend : IDisposable
 
 /// <summary>Subtitle overlay at Bounds on a canvas covering the visible video.</summary>
 internal sealed record VideoSubtitle(Bitmap Image, SubtitleBounds Bounds, int CanvasWidth, int CanvasHeight);
+
+/// <summary>A backend's drawing surface, its size in pixels and where the picture sits on it.</summary>
+internal sealed record SharedVideoSurface(CompositionDrawingSurface Surface, Size SurfaceSize, Rect Picture);
 
 internal readonly record struct VideoBackendOptions(
     bool ForceUnavailableAdapter = false,

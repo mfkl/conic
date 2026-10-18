@@ -121,6 +121,7 @@ public sealed class VideoBackendSessionTests
         public Size VideoSize => default;
         public bool HasCpuFrame => false;
         public bool HasGpuFrame => false;
+        public SharedVideoSurface? SharedSurface => null;
         public Task InitializeAsync() => Ready.Task;
         public IMediaEngine CreatePlayer()
         {

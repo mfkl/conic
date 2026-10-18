@@ -893,8 +893,9 @@
             </Border>
             <!-- Floating mini player (design 970:3091), over the end of the
                  content while something plays or is paused. The preview is
-                 the media's thumbnail (never the video surface); clicking it
-                 returns to the player. Transport, stop and picture in picture
+                 the playing video (VideoMirror, on the player's GPU surface),
+                 or the media's thumbnail before the first GPU frame, on the
+                 CPU path and for audio; clicking it returns to the player. Transport, stop and picture in picture
                  overlay the preview on hover or keyboard focus, and stay shown
                  while paused. The .compact card (HomeView.axaml.cs: narrow or
                  short windows) drops the preview and lines everything up in
@@ -914,7 +915,9 @@
                                 ToolTip.Tip="Return to player">
                             <Panel>
                                 <controls:MediaThumbnail x:Name="MiniPlayerThumbnail"
-                                                         Source="{Binding NowPlayingSource}" />
+                                                         Source="{Binding NowPlayingSource}"
+                                                         IsVisible="{Binding !#MiniPlayerVideo.HasVideo}" />
+                                <controls:VideoMirror x:Name="MiniPlayerVideo" />
                                 <Border Classes="miniScrim" />
                             </Panel>
                         </Border>

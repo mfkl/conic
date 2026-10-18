@@ -66,6 +66,10 @@ internal sealed class DmaBufVideoBackend : IVideoBackend
     public Size VideoSize => new(_videoWidth, _videoHeight);
     public bool HasCpuFrame => _reportedFirstCpuFrame;
     public bool HasGpuFrame => _reportedFirstGpuFrame;
+    public SharedVideoSurface? SharedSurface =>
+        _gpuEnabled && !_showingCpuFrame && _reportedFirstGpuFrame && _drawingSurface is not null && _videoWidth > 0 && _videoHeight > 0
+            ? new(_drawingSurface, new Size(_videoWidth, _videoHeight), new Rect(0, 0, _videoWidth, _videoHeight))
+            : null;
     internal VideoSurfaceLayout CurrentVideoLayout => VideoSurfaceLayout.Calculate(
         _host.Bounds.Size, VideoSize, _geometry, TopLevel.GetTopLevel(_host)?.RenderScaling ?? 1);
 

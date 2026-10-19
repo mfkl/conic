@@ -55,9 +55,9 @@ carries its tag.
 | Playlist and queue | 7 | 3 | 2 | 1 | 0 | 13 | 85% |
 | Library | 0 | 1 | 0 | 1 | 3 | 5 | 50% |
 | Hotkeys and mouse | 5 | 1 | 0 | 2 | 0 | 8 | 75% |
-| Command line and OS integration | 5 | 1 | 2 | 3 | 2 | 13 | 64% |
+| Command line and OS integration | 8 | 1 | 1 | 1 | 2 | 13 | 86% |
 | Network and streaming | 4 | 1 | 0 | 3 | 7 | 15 | 63% |
-| **Total** | **83** | **31** | **17** | **22** | **30** | **183** | **80%** |
+| **Total** | **86** | **31** | **16** | **20** | **30** | **183** | **82%** |
 
 The Conic only section lists 13 features VLC 3's Qt interface does not have; they are not counted above.
 
@@ -70,9 +70,9 @@ The Conic only section lists 13 features VLC 3's Qt interface does not have; the
 | Need VLC's own video window | Set as wallpaper, 360° video navigation |
 | Need TV input or extra hardware | Program guide (EPG), Teletext, AtmoLight |
 | Refused on purpose | Credentials in URLs (they would be kept in the history) |
-| Not done | Visualizations, global hotkeys, the OS media controls, taskbar buttons, VLC options on the command line, mouse gestures, nested playlists |
+| Not done | Visualizations, global hotkeys, VLC options on the command line, mouse gestures, nested playlists |
 
-The 17 partial features mostly have fewer options than VLC (some video
+The 16 partial features mostly have fewer options than VLC (some video
 filters, playlist formats, queue sort) or work on Windows only (screensaver,
 HTTP proxy). Disc menus, streaming and conversion, capture devices, skins and
 extensions were left out from the start.
@@ -307,9 +307,9 @@ preferences categories.
 | Single instance, enqueue from file manager | Option | Interface › Allow only one instance | Same | Media opened from the file manager or the command line goes to the open Conic; with Library › Add to the queue it joins the queue. |
 | Tray icon | Yes | None | Out of scope | |
 | System notifications | Yes | None | Out of scope | |
-| Taskbar thumbnail buttons and progress (Windows) | Yes | None | Missing | |
-| Media keys | Global | Play/Pause, Stop, Previous, Next, window focus only | Partial | Work while the window has the focus (unless a shortcut uses the key); no global capture. |
-| OS media session (MPRIS on Linux) | Yes | None | Missing | |
+| Taskbar thumbnail buttons and progress (Windows) | Yes | Previous, Play/Pause and Next buttons, progress | Same | Follow the media session, with the app's own icons. |
+| Media keys | Global | Play/Pause, Stop, Previous, Next, global | Same | The system's media session brings them to Conic without the window focus: Windows' System Media Transport Controls, macOS Now Playing, MPRIS on Linux. |
+| OS media session (MPRIS on Linux) | Yes | MPRIS on Linux, Windows' media flyout, macOS Now Playing | Same | Title, length, position, state and rate; play, pause, stop, seek, previous and next. |
 | Drag and drop files and folders | Yes | Yes | Same | Several dropped files become the queue (or join it with Add to the queue); folders follow Settings › Library. |
 | Drop a subtitle file onto the video | Adds the subtitle | Added to the playing media | Same | Live, as Add Subtitle File. With nothing playing, the file opens as media. |
 | Drop a URL or text | Yes | Yes | Same | A dragged link, or text with one URL or path per line; several open as a queue. |

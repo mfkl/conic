@@ -70,19 +70,19 @@ rebuilds the desktop app around it:
 
 ## Parity with VLC 3
 
-Conic reaches **80% parity** with VLC 3's desktop player.
+Conic reaches **82% parity** with VLC 3's desktop player.
 [Feature parity with VLC 3](docs/FEATURE_PARITY.md) compares 183 VLC 3
-features: 83 work the same, 48 work differently or in part, 22 are missing and
+features: 86 work the same, 47 work differently or in part, 20 are missing and
 30 were left out on purpose (disc menus, streaming and conversion, capture,
 skins, extensions).
 
 ```mermaid
 pie showData
     title 183 VLC 3 features in Conic
-    "Same" : 83
+    "Same" : 86
     "Different" : 31
-    "Partial" : 17
-    "Missing" : 22
+    "Partial" : 16
+    "Missing" : 20
     "Out of scope" : 30
 ```
 

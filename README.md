@@ -1,14 +1,23 @@
 # Conic
 
-Conic is a modern copy of VLC 3's desktop player. Media plays through VLC
-3.0.24's own engine, and a new interface, written in C# with
-[Avalonia](https://avaloniaui.net/), replaces VLC's Qt one. It runs on Windows,
-macOS and Linux. It is an entry in the
+Conic is VLC 3's desktop player with a new interface written in C# with
+[Avalonia](https://avaloniaui.net/), for Windows, macOS and Linux. Media plays
+through VLC 3.0.24's own engine; the interface replaces VLC's Qt one.
+
+**Hardware-decoded video stays on the GPU, inside Avalonia's compositor.**
+Conic's VLC video output plugin, written in C# and compiled with Native AOT,
+hands each decoded frame to Avalonia as a shared GPU texture: a D3D11 texture
+on Windows, an IOSurface on macOS, a DMA-BUF on Linux. The video is one more
+visual in the window, so the controls, panels and menus draw over it and
+Home's mini player shows it a second time, with no copy through the CPU.
+[How it works](#the-hard-part-video).
+
+Conic is an entry in the
 [Avalonia Port Challenge](https://avaloniaui.net/blog/avalonia-port-challenge),
 and this README is also its migration write-up.
 
 > [!NOTE]
-> Conic is an independent experiment. It is not made or endorsed by VideoLAN.
+> Conic is an independent project. It is not made or endorsed by VideoLAN.
 
 | VLC 3.0.24 | Conic |
 | --- | --- |
@@ -290,7 +299,7 @@ app's buttons. Builds are portable archives that bundle VLC 3.0.24.
 
 Open **Messages** (**Ctrl+Shift+M**, **Cmd+Shift+M** on macOS), set
 **Verbosity** to **Debug**, reproduce the problem, then **Save…** the log and
-attach it to your report. Remember that Conic is not maintained.
+attach it to your report.
 
 ## Credits
 

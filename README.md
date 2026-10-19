@@ -41,7 +41,7 @@ Conic keeps VLC 3 as it is (the same engine, codecs, filters and options) and
 rebuilds the desktop app around it:
 
 - **Home**, with recent media, favorites and saved positions, and a floating
-  mini player while something plays.
+  mini player that keeps playing the video live.
 - **The player**, with a docked control bar and side panels for the queue,
   audio, video, subtitles, chapters and media information.
 - **Picture in picture**, an always-on-top compact player.
@@ -52,7 +52,7 @@ rebuilds the desktop app around it:
 - **The system's media controls**: media keys, Windows' media flyout and
   taskbar buttons, macOS Now Playing, and MPRIS on Linux.
 
-![Conic's Home, with recently played media](docs/images/home.png)
+![Conic's Home, with recently played media and the mini player playing the video](docs/images/home.png)
 
 | | |
 | --- | --- |
@@ -94,6 +94,16 @@ against 3.0.24. VLC 3 is a C codebase whose desktop interface is a Qt 5 module
 (`modules/gui/qt`) loaded by libvlccore like any other plugin. Qt 5 itself has
 been out of support since 2023. The interface talks to the core through VLC's
 internal objects and variables, not through the public LibVLC API.
+
+That Qt module is the application people know as VLC: every window, menu and
+dialog, the playlist and the preferences. At 3.0.24 it is 157 C++ files,
+about 48,000 lines, plus 21 Qt Designer forms. The core and its plugins below
+it play the media. Porting VLC's desktop app to Avalonia therefore means
+replacing that module and keeping the core, and that is what Conic does: its
+interface takes the Qt module's place and drives the core through the same
+internal objects and variables, from a control interface plugin of its own,
+instead of wrapping a player library. Everything a user sees and touches was
+ported; the decoding was not, because it was never part of the interface.
 
 ### What it cost
 
@@ -170,7 +180,9 @@ menus over the video. Conic's video output plugin instead hands each decoded
 frame to Avalonia's compositor as a GPU texture: a D3D11 keyed-mutex shared
 texture on Windows, an IOSurface on macOS, a DMA-BUF on Linux. Video becomes
 one more visual in the window, so z-order, transparency and animation just
-work.
+work. It can also be shown twice: Home's mini player is a second visual on
+the player's drawing surface, so the video keeps playing in the card with no
+second decode and no copy.
 
 ```mermaid
 flowchart LR
@@ -181,7 +193,8 @@ flowchart LR
     win -- "D3D11 shared handle" --> avalonia["Avalonia compositor<br/>ICompositionGpuInterop"]
     mac -- "IOSurfaceRef" --> avalonia
     linux -- "DMA-BUF fd" --> avalonia
-    avalonia --> window["One visual, under the<br/>controls, panels and menus"]
+    avalonia --> window["The player's visual, under the<br/>controls, panels and menus"]
+    avalonia --> mini["A second visual on the same<br/>surface: Home's mini player"]
 ```
 
 The three imports differ only in the handle and how the compositor waits

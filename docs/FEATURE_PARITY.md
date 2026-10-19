@@ -20,8 +20,6 @@ Platform scope:
 - **Linux x64**: full playback (VA-API, DMA-BUF) on X11, and XWayland in
   Wayland sessions.
 
-Conic is an experiment; no maintenance is planned.
-
 ## Status legend
 
 | Status | Meaning |
@@ -30,7 +28,7 @@ Conic is an experiment; no maintenance is planned.
 | Different | Works, but the behavior, scope or place differs in a way that matters. |
 | Partial | Some of VLC 3's feature is there, some is not. |
 | Missing | Not in Conic. |
-| Out of scope | Deliberately left out of this experiment. |
+| Out of scope | Deliberately left out of Conic. |
 | Conic only | Not in VLC 3's Qt interface (used only in the last section). |
 
 **Parity** counts Same and Different as 1, Partial as 1/2 and Missing as 0,
@@ -72,7 +70,7 @@ The Conic only section lists 13 features VLC 3's Qt interface does not have; the
 | Need VLC's own video window | Set as wallpaper, 360° video navigation |
 | Need TV input or extra hardware | Program guide (EPG), Teletext, AtmoLight |
 | Refused on purpose | Credentials in URLs (they would be kept in the history) |
-| Not done (this is an experiment) | Visualizations, global hotkeys, the OS media controls, taskbar buttons, VLC options on the command line, mouse gestures, nested playlists |
+| Not done | Visualizations, global hotkeys, the OS media controls, taskbar buttons, VLC options on the command line, mouse gestures, nested playlists |
 
 The 17 partial features mostly have fewer options than VLC (some video
 filters, playlist formats, queue sort) or work on Windows only (screensaver,
@@ -106,14 +104,14 @@ extensions were left out from the start.
 | Chapter | Submenu, prev/next chapter | Chapters tab, right-click Playback, Shift+P / Shift+N | Same | Pick from the list, or step with VLC's keys; Previous restarts the chapter after 1.5 s, as in VLC. |
 | Program | Submenu (DVB, TS programs) | X (Next Program), right-click Playback, macOS Playback menu | Different | Steps through the programs of a multi-program stream (DVB, MPEG-TS); no list to pick from. Shown when the media has more than one. |
 | Custom Bookmarks | Ctrl+B, manage | None | Missing | Hidden on purpose (redesign decision D2). |
-| Renderer (Chromecast) | Submenu, discovery | None | Out of scope | Casting is out of this experiment. |
+| Renderer (Chromecast) | Submenu, discovery | None | Out of scope | Casting is out of scope. |
 | Speed | Faster, slower, normal, fine steps, 0.25x to 4x slider | Menu 0.5x to 2x, faster, slower, normal; panel slider 0.25x to 2x | Same | "]" and "[" take VLC's fine 0.1 steps and "=" resets; VLC's coarse "+" and "-" keys are not available (a shortcut cannot use them). Default speed in Settings › Playback (Next open). |
 | Jump forward / backward | 4 sizes, Shift/Alt/Ctrl/Ctrl+Alt with arrows | Same 4 sizes and keys | Same | Defaults 3, 10, 60, 300 s as in VLC; Settings › Controls › Skip Amounts (Live). Short skip in bar, right-click menu, macOS menu. |
 | Jump to specific time | Ctrl+T dialog | Ctrl+T dialog | Same | h:mm:ss, m:ss or seconds. Right-click Playback, macOS Playback menu. |
 | Play / Pause | Space | Space | Same | Bar, right-click menu, macOS Playback menu. |
 | Stop | S | S, bar, right-click menu, More menu | Same | |
 | Previous / Next | P / N | P / N, bar, right-click menu, macOS menu | Same | |
-| Record | Advanced controls | None | Out of scope | Recording is out of this experiment. |
+| Record | Advanced controls | None | Out of scope | Recording is out of scope. |
 | A-B loop | Advanced controls | Shift+L, right-click Playback, macOS Playback menu | Same | Set A, set B, off, as VLC; it follows the input's time, as VLC's does. |
 | Frame by frame | E, advanced controls | E, right-click Playback, macOS menu | Same | VLC's own frame-next: the first press pauses, as in VLC. |
 
@@ -172,7 +170,7 @@ extensions were left out from the start.
 | VLM Configuration | Yes | None | Out of scope | Broadcasting is a non-goal. |
 | Program Guide (EPG) | Yes | None | Missing | No DVB or EPG input. |
 | Messages | Ctrl+M, verbosity, filter, save, modules tree | Ctrl+Shift+M, separate window | Same | Verbosity, filter, clear, Save. No modules tree tab. Also from right-click More Settings, Settings › Advanced, macOS Window menu. |
-| Plugins and extensions | Yes | None | Out of scope | Extensions are out of this experiment. |
+| Plugins and extensions | Yes | None | Out of scope | Extensions are out of scope. |
 | Customize Interface | Toolbar editor | None | Out of scope | Customize player deferred (D4). |
 | Preferences (simple) | Ctrl+P | Ctrl+, Settings dialog | Different | 12 pages with search and Live/Next open/Restart tags. See Preferences below. |
 | Preferences (all, advanced tree) | Yes | None | Out of scope | Expert variable tree is a non-goal. |
@@ -196,7 +194,7 @@ extensions were left out from the start.
 | Feature | VLC 3 | Conic | Status | Notes |
 |---|---|---|---|---|
 | Help | F1 | F1, right-click More Settings, macOS Help menu | Different | Opens Conic's README online; Settings rows also have help tooltips. |
-| Check for updates | Yes | None | Out of scope | Update checks are out of this experiment. |
+| Check for updates | Yes | None | Out of scope | Update checks are out of scope. |
 | About | Yes | Shift+F1, More menu, right-click More Settings, macOS Help menu | Same | Version, VLC engine version, credits and license. |
 
 ## Preferences

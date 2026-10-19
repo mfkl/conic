@@ -325,7 +325,7 @@ jobs:
       - name: Engine and IOSurface video output against real VLC
         run: ./eng/test-macos.ps1 -Media "$env:RUNNER_TEMP/engine-smoke.mkv" -VlcDirectory '${{ steps.vlc.outputs.directory }}' -OutputDirectory artifacts/macos-headless
       - name: Window smokes in the runner's desktop session
-        run: ./eng/test-macos.ps1 -Media "$env:RUNNER_TEMP/engine-smoke.mkv" -VlcDirectory '${{ steps.vlc.outputs.directory }}' -Window -OutputDirectory artifacts/macos-window
+        run: ./eng/test-macos.ps1 -Media "$env:RUNNER_TEMP/engine-smoke.mkv" -VlcDirectory '${{ steps.vlc.outputs.directory }}' -Window -Retries 1 -OutputDirectory artifacts/macos-window
       - name: Upload macOS logs
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

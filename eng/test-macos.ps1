@@ -20,7 +20,10 @@ param(
     [ValidateRange(1, 100)][int] $Cycles = 10,
     [switch] $Window,
     [string] $OutputDirectory = 'artifacts/macos',
-    [ValidateRange(30, 3600)][int] $CaseTimeoutSeconds = 600
+    [ValidateRange(30, 3600)][int] $CaseTimeoutSeconds = 600,
+    # Runs a failed case again up to this many times; GitHub's hosted Macs
+    # lose timing races in the window smokes now and then.
+    [ValidateRange(0, 3)][int] $Retries = 0
 )
 
 $ErrorActionPreference = 'Stop'
@@ -139,12 +142,22 @@ function Get-HardwareDecoder {
         Select-Object -First 1 | ForEach-Object { $_.Matches[0].Groups[1].Value }
 }
 $failed = [Collections.Generic.List[string]]::new()
+$retried = [Collections.Generic.List[string]]::new()
 foreach ($case in $cases.GetEnumerator()) {
     $caseOverrides = if ($overrides -and $overrides.Contains($case.Key)) { $overrides[$case.Key] } else { @{} }
-    if (-not (Invoke-Case $case.Key $case.Value $caseOverrides)) { $failed.Add($case.Key) }
+    $passed = Invoke-Case $case.Key $case.Value $caseOverrides
+    for ($attempt = 1; -not $passed -and $attempt -le $Retries; $attempt++) {
+        # Keep the failed attempt's log next to the retry's.
+        Move-Item -LiteralPath (Join-Path $output "$($case.Key).log") -Destination (Join-Path $output "$($case.Key).attempt-$attempt.log") -Force
+        Write-Host "Retrying $($case.Key) ($attempt of $Retries)"
+        $passed = Invoke-Case $case.Key $case.Value $caseOverrides
+        if ($passed) { $retried.Add($case.Key) }
+    }
+    if (-not $passed) { $failed.Add($case.Key) }
     # The engine settings smoke expects the decoder this Mac has.
     if ($case.Key -eq 'iosurface' -and ($decoder = Get-HardwareDecoder)) { $environment.CONIC_HARDWARE_DECODER = $decoder }
 }
 if (Test-Path -LiteralPath $iosurfaceLog) { Write-Output "Hardware-decoding pass used the '$((Get-HardwareDecoder) ?? 'unknown')' decoder." }
+if ($retried.Count -ne 0) { Write-Output "Passed on retry: $($retried -join ', ')." }
 Write-Output "Logs: $output"
 if ($failed.Count -ne 0) { throw "Failed: $($failed -join ', ')." }

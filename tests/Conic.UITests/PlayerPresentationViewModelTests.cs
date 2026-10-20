@@ -645,6 +645,30 @@ public sealed class PlayerPresentationViewModelTests
         vm.Registry.Execute(PlayerCommandId.DeclineResume); Assert.Empty(transport.Seeks); Assert.Null(history.FindResume(new("a.mp4", MediaSourceKind.File, "a")));
     }
 
+    // VLC reports the playlist running before the demuxer knows the length:
+    // the first Playing state can have no duration and no seeking.
+    [Fact]
+    public void ResumeIsOfferedOnceTheLengthArrivesAfterTheFirstPlayingState()
+    {
+        MediaHistoryService history = SeedHistory(); PlayerPresentationViewModel vm = CreateOpeningViewModel(new RecordingTransport(), history);
+        vm.OpenSource("a.mp4", MediaSourceKind.File);
+        vm.ApplyEngineState(State(0, PlaybackStatus.Playing, false) with { Generation = 1, Source = "a.mp4", Duration = TimeSpan.Zero }); Assert.False(vm.HasPendingResume);
+        vm.ApplyEngineState(State(.01, PlaybackStatus.Playing, true) with { Generation = 1, Source = "a.mp4" }); Assert.True(vm.HasPendingResume);
+        Assert.Single(history.Recent);
+    }
+
+    [Fact]
+    public void AlwaysResumesOnceTheLengthArrivesAfterTheFirstPlayingState()
+    {
+        RecordingTransport transport = new(); MediaHistoryService history = SeedHistory();
+        PlayerSettingsService settings = new(new SettingsStorage()); settings.Update(s => s with { ResumeAutomatically = true });
+        PlayerPresentationViewModel vm = new(transport, new EmptyPicker(), () => { }, settings: settings, sourceValidator: new MediaSourceValidator(new ExistingFiles()), history: history);
+        vm.OpenSource("a.mp4", MediaSourceKind.File);
+        vm.ApplyEngineState(State(0, PlaybackStatus.Playing, false) with { Generation = 1, Source = "a.mp4", Duration = TimeSpan.Zero }); Assert.Empty(transport.Seeks);
+        vm.ApplyEngineState(State(.01, PlaybackStatus.Playing, true) with { Generation = 1, Source = "a.mp4" });
+        Assert.Single(transport.Seeks); Assert.Equal(.4, transport.Seeks[0]); Assert.False(vm.HasPendingResume);
+    }
+
     [Fact]
     public void DismissClosesTheResumePromptAndKeepsTheSavedPosition()
     {

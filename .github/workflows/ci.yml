@@ -333,6 +333,7 @@ jobs:
           name: macos-${{ matrix.architecture }}
           path: |
             conic/artifacts/macos-*/*.log
+            conic/artifacts/macos-*/settings-*/*.log
             conic/artifacts/macos-*/video-review/**
             conic/artifacts/macos-*/*.png
           if-no-files-found: warn

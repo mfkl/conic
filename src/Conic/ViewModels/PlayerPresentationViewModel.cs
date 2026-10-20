@@ -767,13 +767,16 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
             if (_currentSource is not null && state.Generation > 0 && state.Generation != _recordedOpenGeneration && state.Status is PlaybackStatus.Playing or PlaybackStatus.Paused)
             {
                 if (TryHistory(() => _history?.RecordOpened(_currentSource, _settings?.Current.RememberRecentMedia ?? true))) { _recordedOpenGeneration = state.Generation; NotifyLibrary(); }
-                if (_pendingResume is not null && state.Generation == _activeGeneration && state.CanSeek && state.Duration > TimeSpan.Zero)
-                {
-                    _resumeReady = true;
-                    // Continue where you left off: Always resumes without asking.
-                    if (_settings?.Current.ResumeAutomatically == true) ApplyResume();
-                    else NotifyPendingResume();
-                }
+            }
+            // VLC reports the playlist running before the demuxer knows the
+            // length, so the resume waits for a state that can seek, not the first one.
+            if (_pendingResume is not null && !_resumeReady && _currentSource is not null && state.Generation > 0 && state.Generation == _activeGeneration &&
+                state.Status is PlaybackStatus.Playing or PlaybackStatus.Paused && state.CanSeek && state.Duration > TimeSpan.Zero)
+            {
+                _resumeReady = true;
+                // Continue where you left off: Always resumes without asking.
+                if (_settings?.Current.ResumeAutomatically == true) ApplyResume();
+                else NotifyPendingResume();
             }
             if (_currentSource is not null && state.Status is PlaybackStatus.Playing or PlaybackStatus.Paused && _clock() - _lastCheckpointUtc >= TimeSpan.FromSeconds(10))
                 CheckpointCurrent(false);

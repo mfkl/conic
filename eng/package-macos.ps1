@@ -96,6 +96,9 @@ if ($runtime) {
         $source = Join-Path $vlcRoot $directory
         if (Test-Path -LiteralPath $source) { Invoke-Checked 'ditto' @($source, (Join-Path $vlcStage $directory)) (Join-Path $logs "ditto-$directory.log") }
     }
+    # The Intel VLC.app ships a plugin cache; signing the bundle rewrites every
+    # plugin, so VLC would find that cache stale on each start.
+    Remove-Item -LiteralPath (Join-Path $vlcStage 'plugins/plugins.dat') -ErrorAction SilentlyContinue
     New-Item -ItemType Directory -Force -Path (Join-Path $vlcStage 'plugins/video_output') | Out-Null
     Copy-Item -LiteralPath $plugin -Destination (Join-Path $vlcStage 'plugins/video_output/libvlc_avalonia_plugin.dylib')
 }

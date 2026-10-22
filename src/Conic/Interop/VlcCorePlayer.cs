@@ -39,6 +39,7 @@ internal sealed unsafe partial class VlcCorePlayer : IMediaEngine, IQueueTranspo
     private readonly VLCMediaCapabilities _mediaControls;
     private readonly VLCPlayerCapabilities _playerCapabilities;
     private VLCCurrentInputLease? _itemSourceLease;
+    private string? _itemSourcePlaylistItem;
     private string? _itemSource;
     private MediaInformationState _mediaInformation = MediaInformationState.Unavailable;
     private readonly ConcurrentQueue<Action> _mediaRequests = new();
@@ -914,7 +915,7 @@ internal sealed unsafe partial class VlcCorePlayer : IMediaEngine, IQueueTranspo
                 playbackRate = rate;
         }
 
-        string? source = PlayingItemSource();
+        string? source = PlayingItemSource(generation);
         _states.Update(
             generation,
             status,
@@ -934,15 +935,19 @@ internal sealed unsafe partial class VlcCorePlayer : IMediaEngine, IQueueTranspo
     /// <summary>
     /// The item VLC plays, in the form opened sources take, or null when it
     /// can't be read: a queue moves on to its next item within one open. It is
-    /// read again only when VLC starts another input.
+    /// read again when VLC starts another input or its playlist another item;
+    /// a new input can reuse the old one's address, so the input alone can't
+    /// tell. Until the input plays the playlist's item, it is read every poll.
     /// </summary>
-    private string? PlayingItemSource()
+    private string? PlayingItemSource(long generation)
     {
         if (TryGetCurrentInputLease() is not { } lease)
             return null;
+        string? playlistItem;
         lock (_gate)
         {
-            if (lease == _itemSourceLease)
+            playlistItem = _queueState.Generation == generation ? _queueState.Items.FirstOrDefault(item => item.IsCurrent)?.Source : null;
+            if (lease == _itemSourceLease && playlistItem == _itemSourcePlaylistItem)
                 return _itemSource;
         }
         VLCMediaInformationSnapshot? snapshot = _playerCapabilities.TryGetMediaInformation(out _);
@@ -951,10 +956,14 @@ internal sealed unsafe partial class VlcCorePlayer : IMediaEngine, IQueueTranspo
         string? source;
         try { source = string.IsNullOrWhiteSpace(snapshot.Uri) ? null : MediaEngineSourceNormalizer.Normalize(snapshot.Uri); }
         catch (ArgumentException) { source = null; }
-        lock (_gate)
+        if (playlistItem is null || snapshot.Uri == playlistItem)
         {
-            _itemSourceLease = lease;
-            _itemSource = source;
+            lock (_gate)
+            {
+                _itemSourceLease = lease;
+                _itemSourcePlaylistItem = playlistItem;
+                _itemSource = source;
+            }
         }
         return source;
     }

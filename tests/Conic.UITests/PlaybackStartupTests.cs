@@ -31,10 +31,21 @@ public sealed class PlaybackStartupTests
             "missing-export" => new EntryPointNotFoundException("runtime detail"),
             _ => new UnauthorizedAccessException("runtime detail"),
         };
-        var failure = PlaybackStartup.TryInitialize(() => throw error);
+        var failure = PlaybackStartup.TryInitialize(() => throw error, VlcRuntimePlatform.Windows);
         Assert.NotNull(failure);
         Assert.Contains("Extract the complete Windows x64 package", failure.Message);
         Assert.Equal(error.Message, failure.Detail);
+    }
+
+    [Theory]
+    [InlineData(nameof(VlcRuntimePlatform.MacOS), "replace Conic.app")]
+    [InlineData(nameof(VlcRuntimePlatform.Linux), "Extract the complete Linux x64 package")]
+    public void BrokenInstallationNamesThisPlatformsPackage(string platform, string advice)
+    {
+        var failure = PlaybackStartup.TryInitialize(() => throw new DllNotFoundException("runtime detail"), Enum.Parse<VlcRuntimePlatform>(platform));
+        Assert.NotNull(failure);
+        Assert.Contains(advice, failure.Message);
+        Assert.DoesNotContain("Windows", failure.Message);
     }
 
     [Fact]

@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text;
 
 namespace Player.Application;
 
@@ -54,5 +55,25 @@ public static class CommandLineSources
             sources.Add(arg);
         }
         return sources;
+    }
+
+    /// <summary>
+    /// The files of an open-files event that the command line did not already name. macOS's
+    /// AppKit hands the files named on the command line to the app again, as its first
+    /// open-files event; opening them twice leaves the window on an open error.
+    /// </summary>
+    public static IReadOnlyList<string> NotOnCommandLine(IEnumerable<string> opened, IEnumerable<string> commandLine, string workingDirectory)
+    {
+        List<string> named = commandLine.Select(source => SameFileKey(source, workingDirectory)).ToList();
+        return opened.Where(file => !named.Remove(SameFileKey(file, workingDirectory))).ToArray();
+    }
+
+    private static string SameFileKey(string source, string workingDirectory)
+    {
+        if (Uri.TryCreate(source, UriKind.Absolute, out Uri? uri) && !uri.IsFile && !Path.IsPathRooted(source)) return source;
+        string path = uri is { IsFile: true } ? uri.LocalPath : source;
+        try { path = Path.GetFullPath(path, workingDirectory); }
+        catch (Exception e) when (e is ArgumentException or NotSupportedException or PathTooLongException) { }
+        return path.TrimEnd(Path.DirectorySeparatorChar).Normalize(NormalizationForm.FormC);
     }
 }

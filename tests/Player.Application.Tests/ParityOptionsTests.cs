@@ -49,4 +49,20 @@ public sealed class ParityOptionsTests
         Assert.Equal(["-odd name.mp4"], CommandLineSources.From(["--", "-odd name.mp4"]));
         Assert.Empty(CommandLineSources.From(null));
     }
+
+    [Fact]
+    public void MacOpenFilesEventSkipsTheCommandLinesFiles()
+    {
+        string cwd = Path.Combine(Path.GetTempPath(), "movies");
+        string movie = Path.Combine(cwd, "Test clip é.mkv");
+        // AppKit echoes a relative argument as an absolute path, possibly decomposed.
+        Assert.Empty(CommandLineSources.NotOnCommandLine([movie.Normalize(System.Text.NormalizationForm.FormD)], ["Test clip é.mkv"], cwd));
+        Assert.Empty(CommandLineSources.NotOnCommandLine([new Uri(movie).AbsoluteUri], [movie], cwd));
+        string other = Path.Combine(cwd, "other.mkv");
+        Assert.Equal([other], CommandLineSources.NotOnCommandLine([movie, other], [movie], cwd));
+        // Each argument stands for one echoed file; a Finder start names none.
+        Assert.Equal([movie], CommandLineSources.NotOnCommandLine([movie, movie], [movie], cwd));
+        Assert.Equal([movie], CommandLineSources.NotOnCommandLine([movie], [], cwd));
+        Assert.Equal(["https://example.com/a.mp4"], CommandLineSources.NotOnCommandLine(["https://example.com/a.mp4"], [movie], cwd));
+    }
 }

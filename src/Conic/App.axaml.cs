@@ -50,18 +50,28 @@ public partial class App : Application
     // Linux the files come as arguments, on macOS as an open-files event.
     private void OpenRequestedMedia(MainWindow window, string[]? args)
     {
-        window.OpenOnStart(Player.Application.CommandLineSources.From(args));
+        IReadOnlyList<string> startup = Player.Application.CommandLineSources.From(args);
+        window.OpenOnStart(startup);
         if (Program.ListensForOtherStarts)
         {
             Services.SingleInstance listener = Services.SingleInstance.Listen(sources => Avalonia.Threading.Dispatcher.UIThread.Post(() => window.OpenFromOtherStart(sources)));
             window.Closed += (_, _) => listener.Dispose();
         }
         if (this.TryGetFeature<IActivatableLifetime>() is { } activatable)
+        {
+            // "Conic movie.mkv" from a terminal: AppKit also sends movie.mkv as the
+            // first open-files event, which must not open it a second time.
+            IReadOnlyList<string>? alreadyOpened = OperatingSystem.IsMacOS() ? startup : null;
+            string workingDirectory = Environment.CurrentDirectory;
             activatable.Activated += (_, e) =>
             {
-                if (e is FileActivatedEventArgs { Files.Count: > 0 } opened)
-                    window.OpenOnStart(opened.Files.Select(file => file.Path.IsFile ? file.Path.LocalPath : file.Path.AbsoluteUri).ToArray());
+                if (e is not FileActivatedEventArgs { Files.Count: > 0 } opened) return;
+                string[] files = opened.Files.Select(file => file.Path.IsFile ? file.Path.LocalPath : file.Path.AbsoluteUri).ToArray();
+                IReadOnlyList<string> sources = alreadyOpened is null ? files : Player.Application.CommandLineSources.NotOnCommandLine(files, alreadyOpened, workingDirectory);
+                alreadyOpened = null;
+                window.OpenOnStart(sources);
             };
+        }
     }
 
 #if SMOKE

@@ -58,15 +58,20 @@ public static class CommandLineSources
     }
 
     /// <summary>
-    /// The files of an open-files event that the command line did not already name. macOS's
-    /// AppKit hands the files named on the command line to the app again, as its first
-    /// open-files event; opening them twice leaves the window on an open error.
+    /// The files of an open-files event that the command line did not already open. macOS's
+    /// AppKit hands the files named on the command line to the app again, in one or more
+    /// open-files events; opening them twice leaves the window on an open error. Each file
+    /// named on the command line is skipped once; <paramref name="pending"/> keeps the rest.
     /// </summary>
-    public static IReadOnlyList<string> NotOnCommandLine(IEnumerable<string> opened, IEnumerable<string> commandLine, string workingDirectory)
-    {
-        List<string> named = commandLine.Select(source => SameFileKey(source, workingDirectory)).ToList();
-        return opened.Where(file => !named.Remove(SameFileKey(file, workingDirectory))).ToArray();
-    }
+    public static IReadOnlyList<string> NotOnCommandLine(IEnumerable<string> opened, List<string> pending, string workingDirectory) =>
+        opened.Where(file => !pending.Remove(SameFileKey(file, workingDirectory))).ToArray();
+
+    /// <summary>The command line's files that AppKit will hand over again: existing files and folders, not URLs.</summary>
+    public static List<string> EchoedByMacOS(IEnumerable<string> commandLine, string workingDirectory) =>
+        commandLine.Where(source => !NetworkSources.TryGetScheme(source, out _))
+            .Select(source => SameFileKey(source, workingDirectory))
+            .Where(path => File.Exists(path) || Directory.Exists(path))
+            .ToList();
 
     private static string SameFileKey(string source, string workingDirectory)
     {

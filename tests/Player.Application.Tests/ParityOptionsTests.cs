@@ -51,18 +51,25 @@ public sealed class ParityOptionsTests
     }
 
     [Fact]
-    public void MacOpenFilesEventSkipsTheCommandLinesFiles()
+    public void MacOpenFilesEventsSkipTheCommandLinesFilesOnce()
     {
-        string cwd = Path.Combine(Path.GetTempPath(), "movies");
-        string movie = Path.Combine(cwd, "Test clip é.mkv");
-        // AppKit echoes a relative argument as an absolute path, possibly decomposed.
-        Assert.Empty(CommandLineSources.NotOnCommandLine([movie.Normalize(System.Text.NormalizationForm.FormD)], ["Test clip é.mkv"], cwd));
-        Assert.Empty(CommandLineSources.NotOnCommandLine([new Uri(movie).AbsoluteUri], [movie], cwd));
-        string other = Path.Combine(cwd, "other.mkv");
-        Assert.Equal([other], CommandLineSources.NotOnCommandLine([movie, other], [movie], cwd));
-        // Each argument stands for one echoed file; a Finder start names none.
-        Assert.Equal([movie], CommandLineSources.NotOnCommandLine([movie, movie], [movie], cwd));
-        Assert.Equal([movie], CommandLineSources.NotOnCommandLine([movie], [], cwd));
-        Assert.Equal(["https://example.com/a.mp4"], CommandLineSources.NotOnCommandLine(["https://example.com/a.mp4"], [movie], cwd));
+        string cwd = Directory.CreateTempSubdirectory("conic-args").FullName;
+        try
+        {
+            string movie = Path.Combine(cwd, "Test clip \u00e9.mkv"), other = Path.Combine(cwd, "other.mkv");
+            File.WriteAllText(movie, ""); File.WriteAllText(other, "");
+            // AppKit echoes a relative argument as an absolute path, possibly decomposed, and may
+            // send each file in its own event; a URL or a missing file is never echoed.
+            List<string> echoed = CommandLineSources.EchoedByMacOS(["Test clip \u00e9.mkv", new Uri(other).AbsoluteUri, "https://example.com/a.mp4", "missing.mkv"], cwd);
+            Assert.Equal(2, echoed.Count);
+            Assert.Empty(CommandLineSources.NotOnCommandLine([movie.Normalize(System.Text.NormalizationForm.FormD)], echoed, cwd));
+            Assert.Empty(CommandLineSources.NotOnCommandLine([other], echoed, cwd));
+            // Each argument stands for one echoed file; later opens go through.
+            Assert.Equal([movie], CommandLineSources.NotOnCommandLine([movie], echoed, cwd));
+            Assert.Empty(echoed);
+            // A Finder start names nothing on the command line.
+            Assert.Equal([movie, other], CommandLineSources.NotOnCommandLine([movie, other], CommandLineSources.EchoedByMacOS([], cwd), cwd));
+        }
+        finally { Directory.Delete(cwd, recursive: true); }
     }
 }

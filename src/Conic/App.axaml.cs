@@ -59,17 +59,15 @@ public partial class App : Application
         }
         if (this.TryGetFeature<IActivatableLifetime>() is { } activatable)
         {
-            // "Conic movie.mkv" from a terminal: AppKit also sends movie.mkv as the
-            // first open-files event, which must not open it a second time.
-            IReadOnlyList<string>? alreadyOpened = OperatingSystem.IsMacOS() ? startup : null;
+            // "Conic a.mkv b.mkv" from a terminal: AppKit also sends a.mkv and
+            // b.mkv as open-files events, which must not open them a second time.
             string workingDirectory = Environment.CurrentDirectory;
+            List<string> echoed = OperatingSystem.IsMacOS() ? Player.Application.CommandLineSources.EchoedByMacOS(startup, workingDirectory) : [];
             activatable.Activated += (_, e) =>
             {
                 if (e is not FileActivatedEventArgs { Files.Count: > 0 } opened) return;
                 string[] files = opened.Files.Select(file => file.Path.IsFile ? file.Path.LocalPath : file.Path.AbsoluteUri).ToArray();
-                IReadOnlyList<string> sources = alreadyOpened is null ? files : Player.Application.CommandLineSources.NotOnCommandLine(files, alreadyOpened, workingDirectory);
-                alreadyOpened = null;
-                window.OpenOnStart(sources);
+                window.OpenOnStart(Player.Application.CommandLineSources.NotOnCommandLine(files, echoed, workingDirectory));
             };
         }
     }

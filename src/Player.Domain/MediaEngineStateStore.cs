@@ -76,7 +76,8 @@ public sealed class MediaEngineStateStore
         string? error = null,
         bool isMuted = false,
         double playbackRate = 1,
-        string? title = null)
+        string? title = null,
+        string? source = null)
     {
         MediaEngineState? next = null;
         lock (_gate)
@@ -98,7 +99,9 @@ public sealed class MediaEngineStateStore
                 PlaybackRate = double.IsFinite(playbackRate)
                     ? Math.Clamp(playbackRate, 1d / 32, 31.25)
                     : _state.PlaybackRate,
-                Title = title ?? _state.Title,
+                // A queue moves on to its next item within one generation.
+                Source = source ?? _state.Source,
+                Title = title ?? (source is not null && source != _state.Source ? Path.GetFileNameWithoutExtension(source) : _state.Title),
             };
             _state = next;
         }

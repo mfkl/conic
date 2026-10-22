@@ -94,8 +94,21 @@ internal static class EngineSmoke
             WaitForQueueState(player, "queue recovery enqueue", state => state.Status == QueueLoadState.Ready && state.Items.Count == 1, PlaybackStageTimeout);
             player.SelectAndPlay(player.QueueState.Items[0].Token);
             WaitForState(player, "queue recovery play", state => state.Status is PlaybackStatus.Playing or PlaybackStatus.Paused, PlaybackStageTimeout);
+            // The playback state names the item VLC plays: history, the title and
+            // Continue follow it when the queue moves on within one open.
+            // The shuffle phase may leave either copy first.
+            string[] pair = [copies[0], copies[1]];
+            player.OpenQueue(pair);
+            WaitForState(player, "queue first item", state => state.Status == PlaybackStatus.Playing && pair.Any(path => SamePath(state.Source, path)), PlaybackStageTimeout);
+            long queueGeneration = player.State.Generation;
+            string other = pair.First(path => !SamePath(player.State.Source, path));
+            WaitForQueueState(player, "queue pair ready", state => state.Status == QueueLoadState.Ready && state.Items.Count == 2, PlaybackStageTimeout);
+            player.SelectAndPlay(player.QueueState.Items.First(item => SamePath(new Uri(item.Source).LocalPath, other)).Token);
+            WaitForState(player, "queue next item", state => state.Status == PlaybackStatus.Playing && SamePath(state.Source, other), PlaybackStageTimeout);
+            if (player.State.Generation != queueGeneration || player.State.Title != Path.GetFileNameWithoutExtension(other))
+                throw new InvalidOperationException($"Queue item change reported generation={player.State.Generation} (expected {queueGeneration}) title={player.State.Title}.");
             if (!DisposeQueueSmokePlayer(player)) return 1;
-            Console.WriteLine("[queue-smoke] PASS add clear reorder select remove previous next repeat shuffle clear");
+            Console.WriteLine("[queue-smoke] PASS add clear reorder select remove previous next repeat shuffle clear item-source");
             return 0;
         }
         catch (Exception exception) { Console.Error.WriteLine($"[queue-smoke] FAIL {exception}"); return 1; }
@@ -105,6 +118,9 @@ internal static class EngineSmoke
             catch (Exception exception) { Console.Error.WriteLine($"[queue-smoke] cleanup failed: {exception.Message}"); }
         }
     }
+
+    private static bool SamePath(string? source, string path) =>
+        source is not null && string.Equals(Path.GetFullPath(source), Path.GetFullPath(path), StringComparison.Ordinal);
 
     private static bool DisposeQueueSmokePlayer(VlcCorePlayer player)
     {
@@ -565,7 +581,8 @@ internal static class EngineSmoke
             $"Stage '{stage}' timed out after {timeout.TotalSeconds:0.#} " +
             $"seconds. Last state: status={last.Status}, " +
             $"position={last.Position:F3}, volume={last.Volume:F2}, " +
-            $"canSeek={last.CanSeek}, error={last.Error ?? "<none>"}.");
+            $"canSeek={last.CanSeek}, error={last.Error ?? "<none>"}, " +
+            $"generation={last.Generation}, source={last.Source ?? "<none>"}.");
     }
 }
 #endif // SMOKE

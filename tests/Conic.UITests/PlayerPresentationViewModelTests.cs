@@ -744,6 +744,26 @@ public sealed class PlayerPresentationViewModelTests
     }
 
     [Fact]
+    public void QueueAdvanceMovesHistoryAndTitleToThePlayingItem()
+    {
+        HistoryStorage storage = new(); MediaHistoryService history = new(storage); PlayerPresentationViewModel vm = CreateOpeningViewModel(new RecordingTransport(), history);
+        vm.OpenSource("a.mp4", MediaSourceKind.File); vm.ApplyEngineState(State(.4, PlaybackStatus.Playing, true) with { Generation = 1, Source = "a.mp4", Title = "a" });
+        // VLC moves on to the queue's next item within the same open.
+        vm.ApplyEngineState(State(.05, PlaybackStatus.Playing, true) with { Generation = 1, Source = "b.mp4", Title = "b" });
+        Assert.Equal("b", vm.MediaTitle);
+        Assert.Contains(history.Recent, x => x.Source == "b.mp4");
+        Assert.Equal(TimeSpan.FromSeconds(40), history.FindResume(new("a.mp4", MediaSourceKind.File, "a"))!.Position);
+        // b's position is b's own, and a keeps the one it had.
+        vm.ApplyEngineState(State(.5, PlaybackStatus.Playing, true) with { Generation = 1, Source = "b.mp4", Title = "b" }); vm.CheckpointCurrent(true);
+        Assert.Equal(TimeSpan.FromSeconds(50), history.FindResume(new("b.mp4", MediaSourceKind.File, "b"))!.Position);
+        Assert.Equal(TimeSpan.FromSeconds(40), history.FindResume(new("a.mp4", MediaSourceKind.File, "a"))!.Position);
+        // A state of an earlier open never moves the new one.
+        vm.OpenSource("c.mp4", MediaSourceKind.File); vm.ApplyEngineState(State(.9, PlaybackStatus.Playing, true) with { Generation = 1, Source = "b.mp4", Title = "b" });
+        vm.CheckpointCurrent(true);
+        Assert.Equal(TimeSpan.FromSeconds(50), history.FindResume(new("b.mp4", MediaSourceKind.File, "b"))!.Position);
+    }
+
+    [Fact]
     public void StopAndClosingFlushActivePosition()
     {
         HistoryStorage storage = new(); MediaHistoryService history = new(storage); RecordingTransport transport = new(); PlayerPresentationViewModel vm = CreateOpeningViewModel(transport, history);

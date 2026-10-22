@@ -717,7 +717,8 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
     public void ApplyEngineState(MediaEngineState state)
     {
         _lastObservedGeneration = Math.Max(_lastObservedGeneration, state.Generation);
-        if (_currentSource is not null && (state.Source is null || !string.Equals(MediaHistoryService.KeyFromCanonicalSource(state.Source), MediaHistoryService.KeyFromCanonicalSource(_currentSource.CanonicalSource), StringComparison.Ordinal)))
+        if (_currentSource is not null && (state.Source is null || !string.Equals(MediaHistoryService.KeyFromCanonicalSource(state.Source), MediaHistoryService.KeyFromCanonicalSource(_currentSource.CanonicalSource), StringComparison.Ordinal)) &&
+            !FollowQueueItem(state))
             return;
         if (_currentSource is not null && state.Generation <= _generationFloor) return;
         if (_activeGeneration < 0 && _currentSource is not null) _activeGeneration = state.Generation;
@@ -782,6 +783,24 @@ internal sealed partial class PlayerPresentationViewModel : INotifyPropertyChang
                 CheckpointCurrent(false);
         }
         finally { _isUpdatingFromEngine = false; }
+    }
+
+    /// <summary>
+    /// The queue moved on within this open, by itself or through Next, Previous
+    /// or a queue row: VLC plays another item, and Recent, Continue, the title
+    /// and favorites follow it. The last state still describes the item that
+    /// played, so its position is saved first.
+    /// </summary>
+    private bool FollowQueueItem(MediaEngineState state)
+    {
+        if (state.Source is null || _activeGeneration < 0 || state.Generation != _activeGeneration) return false;
+        MediaOpenResult result = _sourceValidator.Validate(state.Source, MediaSourceKind.File);
+        CheckpointCurrent(true);
+        _currentSource = result.Succeeded && result.Source is not null ? result.Source : new(state.Source, MediaSourceKind.File, Path.GetFileName(state.Source));
+        _recordedOpenGeneration = -1;
+        _pendingResume = null; _resumeReady = false; NotifyPendingResume();
+        OnPropertyChanged(nameof(IsCurrentFavorite));
+        return true;
     }
 
     private async Task OpenMediaAsync()

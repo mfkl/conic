@@ -38,6 +38,8 @@ internal sealed unsafe partial class VlcCorePlayer : IMediaEngine, IQueueTranspo
     private MediaCapabilitiesState _mediaCapabilities = MediaCapabilitiesState.Initial;
     private readonly VLCMediaCapabilities _mediaControls;
     private readonly VLCPlayerCapabilities _playerCapabilities;
+    private VLCCurrentInputLease? _itemSourceLease;
+    private string? _itemSource;
     private MediaInformationState _mediaInformation = MediaInformationState.Unavailable;
     private readonly ConcurrentQueue<Action> _mediaRequests = new();
     private QueueRepeatMode _requestedRepeat = QueueRepeatMode.None;
@@ -912,6 +914,7 @@ internal sealed unsafe partial class VlcCorePlayer : IMediaEngine, IQueueTranspo
                 playbackRate = rate;
         }
 
+        string? source = PlayingItemSource();
         _states.Update(
             generation,
             status,
@@ -921,10 +924,39 @@ internal sealed unsafe partial class VlcCorePlayer : IMediaEngine, IQueueTranspo
             volume,
             canSeek,
             isMuted: muted,
-            playbackRate: playbackRate);
+            playbackRate: playbackRate,
+            source: source);
         PublishQueueSnapshot(generation);
         PublishMediaCapabilitiesSnapshot(generation);
         PublishVideoAdjustments();
+    }
+
+    /// <summary>
+    /// The item VLC plays, in the form opened sources take, or null when it
+    /// can't be read: a queue moves on to its next item within one open. It is
+    /// read again only when VLC starts another input.
+    /// </summary>
+    private string? PlayingItemSource()
+    {
+        if (TryGetCurrentInputLease() is not { } lease)
+            return null;
+        lock (_gate)
+        {
+            if (lease == _itemSourceLease)
+                return _itemSource;
+        }
+        VLCMediaInformationSnapshot? snapshot = _playerCapabilities.TryGetMediaInformation(out _);
+        if (snapshot is null || snapshot.Generation.MediaGeneration != lease.MediaGeneration)
+            return null;
+        string? source;
+        try { source = string.IsNullOrWhiteSpace(snapshot.Uri) ? null : MediaEngineSourceNormalizer.Normalize(snapshot.Uri); }
+        catch (ArgumentException) { source = null; }
+        lock (_gate)
+        {
+            _itemSourceLease = lease;
+            _itemSource = source;
+        }
+        return source;
     }
 
     VLCPlaylistSnapshot? IVLCPlaylistQueueSmokeAdapter.TryGetSnapshot(out VLCPlaylistResult result)

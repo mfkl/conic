@@ -159,4 +159,23 @@ public sealed class MediaEngineStateStoreTests
         Assert.Null(store.State.Error);
         Assert.False(store.State.CanSeek);
     }
+
+    [Fact]
+    public void QueueItemChangeKeepsTheGenerationAndRenamesTheState()
+    {
+        MediaEngineStateStore store = new();
+        long generation = store.BeginOpen("/media/first.mp4");
+        store.Update(generation, PlaybackStatus.Playing, .5, TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(10), .6, true);
+        Assert.Equal("first", store.State.Title);
+
+        store.Update(generation, PlaybackStatus.Playing, .1, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(10), .6, true, source: "/media/second.mp4");
+        Assert.Equal(generation, store.State.Generation);
+        Assert.Equal("/media/second.mp4", store.State.Source);
+        Assert.Equal("second", store.State.Title);
+
+        // A poll that can't read the item keeps the one it knows.
+        store.Update(generation, PlaybackStatus.Playing, .2, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(10), .6, true);
+        Assert.Equal("/media/second.mp4", store.State.Source);
+        Assert.Equal("second", store.State.Title);
+    }
 }

@@ -116,11 +116,11 @@ ported; the decoding was not, because it was never part of the interface.
 
 ### What it cost
 
-- **Time.** 290 commits on 16 working days between August 31 and October 17,
+- **Time.** 311 commits on 20 working days between August 31 and October 22,
   2026. Most of the app was built in two bursts: the player itself in early
   September, and VLC 3 parity, macOS and Linux in October.
-- **Size.** About 28,000 lines of C# in `src` (of which about 5,900 drive the
-  smoke tests), 6,800 lines of AXAML and 6,900 lines of unit tests.
+- **Size.** About 30,000 lines of C# in `src` (of which about 5,900 drive the
+  smoke tests), 6,800 lines of AXAML and 7,300 lines of unit tests.
 - **Prior work.** [VLCLR](https://github.com/mfkl/vlclr), the C# framework for
   VLC plugins, existed before the challenge. Its `3.x` branch, for VLC 3, was
   written for Conic.
@@ -276,7 +276,7 @@ app's buttons. Builds are portable archives that bundle VLC 3.0.24.
 
 ### Quality
 
-- 679 unit tests for the engine contract, state, settings, view models and
+- 686 unit tests for the engine contract, state, settings, view models and
   the media session, the MPRIS one against a real session bus in CI.
 - About 30 smoke modes drive the real app with real VLC and real media on
   Windows and macOS: every playback path, the default shortcuts, the queue,
